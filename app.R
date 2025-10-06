@@ -554,17 +554,7 @@ server <- function(input, output, session) {
                       "Median of Absolute Differences",
                       "Number of Replicates (n_robust)",
                       "Robust SD (MADe)",
-                      "Uncertainty of Assigned Value (u_xpt)",level,       sample_1,        sample_2
-40-nmol/mol, 40.827,        40.2069
-40-nmol/mol, 40.8568,        40.218
-40-nmol/mol, 40.8296,        40.236
-40-nmol/mol, 40.8426,        40.2574
-40-nmol/mol, 40.896, 40.1529
-40-nmol/mol, 40.8928,    40.2197
-40-nmol/mol, 40.8622,     40.2111
-40-nmol/mol, 40.9133,      40.1834
-40-nmol/mol, 40.8383,       40.1796
-40-nmol/mol, 40.8964,        40.2325
+                      "Uncertainty of Assigned Value (u_xpt)",
                       "---",
                       "0.3 * sigma_pt", 
                       "Criterion c"),
