@@ -64,7 +64,7 @@ ui <- fluidPage(
                    class = "btn-primary btn-block"),
 
       hr(),
-      p("Esta aplicación evalúa la homogeneidad y estabilidad de los ítems de EP de acuerdo con los principios de la norma ISO 13528:2022.")
+      p("Esta aplicación evalúa la homogeneidad y estabilidad de los ítems de EP de acuerdo con los principios de la norma ISO 13528:2022."),
       h4("4. Download Report"),
       downloadButton("download_report", "Download HTML Report",
                      class = "btn-success btn-block"),
@@ -101,20 +101,6 @@ ui <- fluidPage(
                  verbatimTextOutput("validation_message")
         ),
 
-        # Tab 2: Homogeneity Assessment
-        tabPanel("Evaluación de Homogeneidad",
-                 h4("Conclusión"),
-                 uiOutput("homog_conclusion"),
-                 hr(),
-                 h4("Componentes de Varianza"),
-                 p("Desviaciones estándar estimadas del cálculo manual."),
-                 tableOutput("variance_components")
-        ),
-
-        # Tab 3: Calculation Details
-        tabPanel("Detalles del Cálculo",
-                 h4("Cálculos por Ítem"),
-                 p("Esta tabla muestra los cálculos para cada ítem (fila) en el conjunto de datos para el nivel seleccionado, incluyendo el promedio y el rango de las mediciones."),
         # Tab 2: Homogeneity Assessment (Combined)
         tabPanel("Homogeneity Assessment",
                  h4("Homogeneity Conclusion"),
@@ -133,9 +119,6 @@ ui <- fluidPage(
                  tableOutput("details_summary_stats_table")
         ),
 
-        # Tab 4: Stability Assessment
-        tabPanel("Evaluación de Estabilidad",
-                 h4("Conclusión"),
         # Tab 3: Stability Assessment
         tabPanel("Stability Assessment",
                  h4("Conclusion"),
@@ -577,11 +560,6 @@ server <- function(input, output, session) {
                       "Número de Réplicas (n_robust)",
                       "DE Robusta (MADe)",
                       "Incertidumbre del Valor Asignado (u_xpt)",
-                      "Assigned Value (xpt)",
-                      "Median of Absolute Differences",
-                      "Number of Replicates (n_robust)",
-                      "Robust SD (MADe)",
-                      "Uncertainty of Assigned Value (u_xpt)",
                       "---",
                       "0.3 * sigma_pt", 
                       "Criterio c"),
@@ -690,7 +668,6 @@ knitr::kable(var_comp, caption = "Key variance components.")
 # ===================================================================
 # III. Run the Application
 # ===================================================================
-shinyApp(ui = ui, server = server)
 shinyApp(ui = ui, server = server)
 
 
