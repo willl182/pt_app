@@ -14,6 +14,12 @@ library(vroom)
 library(DT)
 library(rhandsontable)
 
+# Source Modules
+source("R/reports_module.R")
+source("R/homogeneity_stability_report_module.R")
+source("R/pt_report_module.R")
+
+
 # ===================================================================
 # I. User Interface (UI)
 # ===================================================================
@@ -155,6 +161,11 @@ ui <- fluidPage(
                  h4("T-test for Stability"),
                  p("A two-sample t-test to check for statistically significant differences."),
                  verbatimTextOutput("stability_ttest")
+        ),
+
+        # Tab 5: Reports
+        tabPanel("Reports",
+                 reports_ui("reports_tab")
         )
       )
     )
@@ -873,6 +884,9 @@ Stability Criterion (0.3 * sigma_pt):", fmt),
       )
     }
   }, spacing = "l")
+
+  # --- Module Server Calls ---
+  reports_server("reports_tab", raw_data_hom = raw_data, raw_data_stab = stability_data_raw)
 
 }
 
