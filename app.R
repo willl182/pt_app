@@ -19,7 +19,7 @@ library(DT)
 ui <- fluidPage(
 
   # 1. Application Title
-  titlePanel("Homogeneity and Stability Assessment for PT Items"),
+  titlePanel("Evaluación de Homogeneidad y Estabilidad para Ítems de EP"),
 
   # 2. Main Layout: Sidebar
   sidebarLayout(
@@ -27,43 +27,42 @@ ui <- fluidPage(
     # 2.1. Input Panel (Sidebar)
     sidebarPanel(
       width = 3,
-      h4("1. Provide Data"),
-      radioButtons("input_method", "Input method:",
-                   choices = c("Upload File" = "upload", "Paste Text" = "paste"),
+      h4("1. Proporcionar Datos"),
+      radioButtons("input_method", "Método de entrada:",
+                   choices = c("Subir Archivo" = "upload", "Pegar Texto" = "paste"),
                    selected = "upload", inline = TRUE),
 
       conditionalPanel(
         condition = "input.input_method == 'upload'",
         fileInput("datafile", NULL,
                   accept = c(".csv", ".tsv", ".txt"),
-                  placeholder = "Select a CSV/TSV file")
+                  placeholder = "Seleccione un archivo CSV/TSV")
       ),
 
       conditionalPanel(
         condition = "input.input_method == 'paste'",
         textAreaInput("pasted_data", NULL,
-                      placeholder = "level,sample_1,sample_2,...
-2-ppm,1.95,1.98,...",
+                      placeholder = "level,sample_1,sample_2,...\n2-ppm,1.95,1.98,...",
                       rows = 8),
-        radioButtons("paste_delim", "Separator:",
-                     choices = c("Comma" = ",", "Tab" = "\t", "Semicolon" = ";"),
+        radioButtons("paste_delim", "Separador:",
+                     choices = c("Coma" = ",", "Tabulador" = "\t", "Punto y coma" = ";"),
                      selected = ",", inline = TRUE)
       ),
       hr(),
 
-      h4("2. Select Parameters"),
+      h4("2. Seleccionar Parámetros"),
       # Dynamic UI to select the level
       uiOutput("level_selector"),
 
 
 
-      h4("3. Run Analysis"),
+      h4("3. Ejecutar Análisis"),
       # Button to run the analysis
-      actionButton("run_analysis", "Run Analysis",
+      actionButton("run_analysis", "Ejecutar Análisis",
                    class = "btn-primary btn-block"),
 
       hr(),
-      p("This app assesses homogeneity and stability of PT items according to ISO 13528:2022 principles.")
+      p("Esta aplicación evalúa la homogeneidad y estabilidad de los ítems de EP de acuerdo con los principios de la norma ISO 13528:2022.")
     ),
 
     # 2.2. Main Panel for Results
@@ -74,13 +73,13 @@ ui <- fluidPage(
         id = "analysis_tabs",
 
         # Tab 1: Data Preview
-        tabPanel("Data Preview",
-                 h4("Uploaded Data Preview"),
-                 p("This table shows the first 10 rows of your uploaded data."),
+        tabPanel("Vista Previa de Datos",
+                 h4("Vista Previa de Datos Cargados"),
+                 p("Esta tabla muestra las primeras 10 filas de sus datos cargados."),
                  dataTableOutput("raw_data_preview"),
                  hr(),
-                 h4("Data Distribution"),
-                 p("The histogram and boxplot below show the distribution of all results from the 'sample_*' columns for the selected level."),
+                 h4("Distribución de Datos"),
+                 p("El histograma y el diagrama de caja a continuación muestran la distribución de todos los resultados de las columnas 'sample_*' para el nivel seleccionado."),
                  fluidRow(
                    column(width = 6,
                           plotOutput("results_histogram")
@@ -90,42 +89,42 @@ ui <- fluidPage(
                    )
                  ),
                  hr(),
-                 h4("Data Validation"),
+                 h4("Validación de Datos"),
                  verbatimTextOutput("validation_message")
         ),
 
         # Tab 2: Homogeneity Assessment
-        tabPanel("Homogeneity Assessment",
-                 h4("Conclusion"),
+        tabPanel("Evaluación de Homogeneidad",
+                 h4("Conclusión"),
                  uiOutput("homog_conclusion"),
                  hr(),
-                 h4("Variance Components"),
-                 p("Estimated standard deviations from the manual calculation."),
+                 h4("Componentes de Varianza"),
+                 p("Desviaciones estándar estimadas del cálculo manual."),
                  tableOutput("variance_components")
         ),
 
         # Tab 3: Calculation Details
-        tabPanel("Calculation Details",
-                 h4("Per-Item Calculations"),
-                 p("This table shows calculations for each item (row) in the dataset for the selected level, including the average and range of measurements."),
+        tabPanel("Detalles del Cálculo",
+                 h4("Cálculos por Ítem"),
+                 p("Esta tabla muestra los cálculos para cada ítem (fila) en el conjunto de datos para el nivel seleccionado, incluyendo el promedio y el rango de las mediciones."),
                  tableOutput("details_per_item_table"),
                  hr(),
-                 h4("Summary Statistics"),
-                 p("This table shows the overall statistics used for the homogeneity assessment."),
+                 h4("Estadísticas de Resumen"),
+                 p("Esta tabla muestra las estadísticas generales utilizadas para la evaluación de la homogeneidad."),
                  tableOutput("details_summary_stats_table")
         ),
 
         # Tab 4: Stability Assessment
-        tabPanel("Stability Assessment",
-                 h4("Conclusion"),
+        tabPanel("Evaluación de Estabilidad",
+                 h4("Conclusión"),
                  uiOutput("stability_conclusion"),
                  hr(),
-                 h4("Stability Analysis Details"),
-                 p("Comparison of means between two measurement periods (simulated by splitting data)."),
+                 h4("Detalles del Análisis de Estabilidad"),
+                 p("Comparación de medias entre dos períodos de medición (simulados dividiendo los datos)."),
                  verbatimTextOutput("stability_details"),
                  hr(),
-                 h4("T-test for Stability"),
-                 p("A two-sample t-test to check for statistically significant differences."),
+                 h4("Prueba T para Estabilidad"),
+                 p("Una prueba t de dos muestras para verificar diferencias estadísticamente significativas."),
                  verbatimTextOutput("stability_ttest")
         )
       )
@@ -147,7 +146,7 @@ server <- function(input, output, session) {
              csv = vroom::vroom(input$datafile$datapath, delim = ","),
              tsv = vroom::vroom(input$datafile$datapath, delim = "\t"),
              txt = vroom::vroom(input$datafile$datapath, delim = ","), # Assuming txt is csv
-             validate("Invalid file type. Please upload a .csv or .tsv file.")
+             validate("Tipo de archivo no válido. Por favor, suba un archivo .csv o .tsv.")
       )
     } else { # "paste"
       req(input$pasted_data)
@@ -160,9 +159,9 @@ server <- function(input, output, session) {
     data <- raw_data()
     if ("level" %in% names(data)) {
       levels <- unique(data$level)
-      selectInput("target_level", "2. Select PT Level", choices = levels, selected = levels[1])
+      selectInput("target_level", "2. Seleccionar Nivel de EP", choices = levels, selected = levels[1])
     } else {
-      p("Column 'level' not found in the uploaded data.")
+      p("No se encontró la columna 'level' en los datos cargados.")
     }
   })
 
@@ -181,10 +180,10 @@ server <- function(input, output, session) {
     m <- ncol(level_data)
 
     if (m < 2) {
-        return(list(error = "Not enough replicate runs (at least 2 required) for homogeneity assessment."))
+        return(list(error = "No hay suficientes réplicas (se requieren al menos 2) para la evaluación de la homogeneidad."))
     }
     if (g < 2) {
-        return(list(error = "Not enough items (at least 2 required) for homogeneity assessment."))
+        return(list(error = "No hay suficientes ítems (se requieren al menos 2) para la evaluación de la homogeneidad."))
     }
 
     # Create the intermediate calculations table data
@@ -194,16 +193,16 @@ server <- function(input, output, session) {
       level_data %>%
         mutate(
           Item = row_number(),
-          average = (s1 + s2) / 2,
-          range = abs(s1 - s2)
+          promedio = (s1 + s2) / 2,
+          rango = abs(s1 - s2)
         ) %>%
         select(Item, everything())
     } else {
       level_data %>%
         mutate(
           Item = row_number(),
-          average = rowMeans(., na.rm = TRUE),
-          range = apply(., 1, function(x) max(x, na.rm=TRUE) - min(x, na.rm=TRUE))
+          promedio = rowMeans(., na.rm = TRUE),
+          rango = apply(., 1, function(x) max(x, na.rm=TRUE) - min(x, na.rm=TRUE))
         ) %>%
         select(Item, everything())
     }
@@ -219,7 +218,7 @@ server <- function(input, output, session) {
 
     # Calculate sigma_pt as MADe from the first sample column ('sample_1')
     if (!"sample_1" %in% names(level_data)) {
-        return(list(error = "Column 'sample_1' not found. It is required to calculate sigma_pt."))
+        return(list(error = "No se encontró la columna 'sample_1'. Es necesaria para calcular sigma_pt."))
     }
     first_sample_results <- level_data %>% pull(sample_1)
     median_val <- median(first_sample_results, na.rm = TRUE)
@@ -261,14 +260,14 @@ server <- function(input, output, session) {
     ss <- sqrt(ss_sq)
 
     # For display purposes, we can create a data frame that mimics the ANOVA table
-anova_summary_df <- data.frame(
-  "Df" = c(g - 1, g * (m - 1)),
-  "Sum Sq" = c(s_x_bar_sq * m * (g - 1), sw^2 * g * (m - 1)),
-  "Mean Sq" = c(s_x_bar_sq * m, sw^2),
-  check.names = FALSE
-)
+    anova_summary_df <- data.frame(
+      "Df" = c(g - 1, g * (m - 1)),
+      "Suma Cuad." = c(s_x_bar_sq * m * (g - 1), sw^2 * g * (m - 1)),
+      "Media Cuad." = c(s_x_bar_sq * m, sw^2),
+      check.names = FALSE
+    )
 
-    rownames(anova_summary_df) <- c("Item", "Residuals")
+    rownames(anova_summary_df) <- c("Ítem", "Residuales")
 
     # For the list returned by the reactive
     anova_summary <- anova_summary_df
@@ -341,7 +340,7 @@ anova_summary_df <- data.frame(
     n_runs <- nrow(stab_data_all)
     if (n_runs < 2) {
       return(list(
-          error = "Not enough replicate runs (at least 2 required) to perform a stability check.",
+          error = "No hay suficientes réplicas (se requieren al menos 2) para realizar una verificación de estabilidad.",
           conclusion = "",
           details = "",
           ttest = ""
@@ -368,15 +367,15 @@ anova_summary_df <- data.frame(
     fmt <- "%.9f"
 
     details_text <- sprintf(
-      paste("Mean 'Before' (y1):", fmt, "(using first %d runs)\nMean 'After' (y2):", fmt, "(using last %d runs)\nObserved Absolute Difference:", fmt, "\nStability Criterion (0.3 * sigma_pt):", fmt),
+      paste("Media 'Antes' (y1):", fmt, "(usando las primeras %d corridas)\nMedia 'Después' (y2):", fmt, "(usando las últimas %d corridas)\nDiferencia Absoluta Observada:", fmt, "\nCriterio de Estabilidad (0.3 * sigma_pt):", fmt),
       y1, split_point, y2, n_runs - split_point, diff_observed, stab_criterion_value
     )
 
     if (diff_observed <= stab_criterion_value) {
-      conclusion <- "Conclusion (Criterion B.5.1): PT Items are adequately stable."
+      conclusion <- "Conclusión (Criterio B.5.1): Los ítems de EP son adecuadamente estables."
       conclusion_class <- "alert alert-success"
     } else {
-      conclusion <- "Conclusion (Criterion B.5.1): WARNING: PT Items may show unacceptable drift."
+      conclusion <- "Conclusión (Criterio B.5.1): ADVERTENCIA: Los ítems de EP pueden mostrar una deriva inaceptable."
       conclusion_class <- "alert alert-warning"
     }
 
@@ -384,9 +383,9 @@ anova_summary_df <- data.frame(
     t_test_result <- t.test(data_t1$Result, data_t2$Result)
     
     if (t_test_result$p.value > 0.05) {
-      ttest_conclusion <- "T-test: No statistically significant difference detected (p > 0.05), supporting stability."
+      ttest_conclusion <- "Prueba T: No se detectó diferencia estadísticamente significativa (p > 0.05), lo que respalda la estabilidad."
     } else {
-      ttest_conclusion <- "T-test: Statistically significant difference detected (p <= 0.05), indicating potential instability."
+      ttest_conclusion <- "Prueba T: Se detectó una diferencia estadísticamente significativa (p <= 0.05), lo que indica una posible inestabilidad."
     }
 
     list(
@@ -424,22 +423,22 @@ anova_summary_df <- data.frame(
   # Output: Validation Message
   output$validation_message <- renderPrint({
     data <- raw_data()
-    cat("Data loaded successfully.\n")
-    cat(paste("Dimensions:", paste(dim(data), collapse = " x "), "\n"))
+    cat("Datos cargados con éxito.\n")
+    cat(paste("Dimensiones:", paste(dim(data), collapse = " x "), "\n"))
     
     required_cols <- c("level")
     has_samples <- any(str_detect(names(data), "sample_"))
     
     if(!all(required_cols %in% names(data))) {
-        cat(paste("ERROR: Missing required column(s):", paste(setdiff(required_cols, names(data)), collapse=", "), "\n"))
+        cat(paste("ERROR: Falta(n) la(s) siguiente(s) columna(s) requerida(s):", paste(setdiff(required_cols, names(data)), collapse=", "), "\n"))
     } else {
-        cat("Found 'level' column.\n")
+        cat("Se encontró la columna 'level'.\n")
     }
     
     if(!has_samples) {
-        cat("ERROR: No columns with 'sample_' prefix found. These are needed for the analysis.\n")
+        cat("ERROR: No se encontraron columnas con el prefijo 'sample_'. Son necesarias para el análisis.\n")
     } else {
-        cat("Found 'sample_*' columns.\n")
+        cat("Se encontraron columnas 'sample_*'.\n")
     }
   })
 
@@ -458,8 +457,8 @@ anova_summary_df <- data.frame(
     ggplot(plot_data_long(), aes(x = result)) + 
       geom_histogram(aes(y = after_stat(density)), color = "black", fill = "skyblue", bins = 20) + 
       geom_density(alpha = 0.4, fill = "lightblue") + 
-      labs(title = paste("Distribution for Level:", input$target_level),
-           x = "Result", y = "Density") + 
+      labs(title = paste("Distribución para el Nivel:", input$target_level),
+           x = "Resultado", y = "Densidad") +
       theme_minimal()
   })
 
@@ -468,8 +467,8 @@ anova_summary_df <- data.frame(
     req(plot_data_long())
     ggplot(plot_data_long(), aes(x = result)) + 
       geom_boxplot(fill = "lightgreen", outlier.colour = "red") + 
-      labs(title = paste("Boxplot for Level:", input$target_level),
-           x = "Result") + 
+      labs(title = paste("Diagrama de Caja para el Nivel:", input$target_level),
+           x = "Resultado") +
       theme_minimal() + 
       theme(axis.text.y=element_blank(),
             axis.ticks.y=element_blank(),
@@ -483,16 +482,16 @@ anova_summary_df <- data.frame(
     res <- homogeneity_run()
     if (is.null(res$error)) {
         df <- data.frame(
-          Component = c("Assigned Value (xpt)",
-                        "Robust SD (sigma_pt)",
-                        "Uncertainty of Assigned Value (u_xpt)",
-                        "Between-Sample SD (ss)", 
-                        "Within-Sample SD (sw)",
+          Componente = c("Valor Asignado (xpt)",
+                        "DE Robusta (sigma_pt)",
+                        "Incertidumbre del Valor Asignado (u_xpt)",
+                        "DE Entre Muestras (ss)",
+                        "DE Dentro de la Muestra (sw)",
                         "---",
                         "0.3 * Sigma PT",
-                        "Sigma Allowed Sq", 
-                        "Criterion c"),
-          Value = c(
+                        "Sigma Permitida Cuad.",
+                        "Criterio c"),
+          Valor = c(
             format(c(res$median_val, res$sigma_pt, res$u_xpt, res$ss, res$sw), digits = 15, scientific = FALSE),
             "",
             format(c(res$hom_criterion_value, res$sigma_allowed_sq, res$c_criterion), digits = 15, scientific = FALSE)
@@ -542,22 +541,22 @@ anova_summary_df <- data.frame(
     res <- homogeneity_run()
     if (is.null(res$error)) {
       data.frame(
-        Parameter = c("General Mean", 
-                      "SD of Means",
-                      "Variance of Means (s_x_bar_sq)",
+        Parámetro = c("Media General",
+                      "DE de las Medias",
+                      "Varianza de las Medias (s_x_bar_sq)",
                       "sw", 
-                      "Within-Sample Variance (s_w_sq)",
+                      "Varianza Dentro de la Muestra (s_w_sq)",
                       "ss",
                       "---",
-                      "Assigned Value (xpt)",
-                      "Median of Absolute Differences",
-                      "Number of Replicates (n_robust)",
-                      "Robust SD (MADe)",
-                      "Uncertainty of Assigned Value (u_xpt)",
+                      "Valor Asignado (xpt)",
+                      "Mediana de las Diferencias Absolutas",
+                      "Número de Réplicas (n_robust)",
+                      "DE Robusta (MADe)",
+                      "Incertidumbre del Valor Asignado (u_xpt)",
                       "---",
                       "0.3 * sigma_pt", 
-                      "Criterion c"),
-        Value = c(
+                      "Criterio c"),
+        Valor = c(
           format(c(res$general_mean, res$sd_of_means, res$s_x_bar_sq, res$sw, res$s_w_sq, res$ss), digits = 15, scientific = FALSE),
           "",
           format(c(res$median_val, res$median_abs_diff, res$n_robust, res$sigma_pt, res$u_xpt), digits = 15, scientific = FALSE),
