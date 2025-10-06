@@ -20,18 +20,17 @@ library(rhandsontable)
 ui <- fluidPage(
 
   # 1. Application Title
-  titlePanel("Homogeneity and Stability Assessment for PT Items"),
+  titlePanel("Modulo Evaluación Estabilidad y Homogeneidad del Item de Ensayo"),
 
   # 2. Main Layout: Sidebar
   sidebarLayout(
 
     # 2.1. Input Panel (Sidebar)
     sidebarPanel(
-      width = 3,
-      h4("1. Provide Data"),
+      width = 2,
+      h4("1. Cargue de Datos (Provide Data)"),
       radioButtons("input_method", "Input method:",
                    choices = c("Upload File" = "upload",
-                               "Paste Text" = "paste",
                                "Editable Table" = "table"),
                    selected = "upload", inline = TRUE),
 
@@ -42,38 +41,28 @@ ui <- fluidPage(
                   placeholder = "Select a CSV/TSV file")
       ),
 
-      conditionalPanel(
-        condition = "input.input_method == 'paste'",
-        textAreaInput("pasted_data", NULL,
-                      placeholder = "level,sample_1,sample_2,...
-2-ppm,1.95,1.98,...",
-                      rows = 8),
-        radioButtons("paste_delim", "Separator:",
-                     choices = c("Comma" = ",", "Tab" = "\t", "Semicolon" = ";"),
-                     selected = ",", inline = TRUE)
-      ),
 
       conditionalPanel(
         condition = "input.input_method == 'table'",
-        numericInput("num_rows", "Number of Rows:", 20, min = 1),
-        numericInput("num_cols", "Number of Columns:", 10, min = 1)
+        numericInput("num_rows", "Number of Rows:", 10, min = 1),
+        numericInput("num_cols", "Number of Columns:", 3, min = 1)
       ),
 
       hr(),
 
-      h4("2. Select Parameters"),
+      h4("2. Seleccionar Parámetros (Select Parameters)"),
       # Dynamic UI to select the level
       uiOutput("level_selector"),
 
 
 
-      h4("3. Run Analysis"),
+      h4("3. Ejecutar Análisis (Run Analysis)"),
       # Button to run the analysis
       actionButton("run_analysis", "Run Analysis",
                    class = "btn-primary btn-block"),
 
       hr(),
-      p("This app assesses homogeneity and stability of PT items according to ISO 13528:2022 principles.")
+      p("Este aplicativo evalua la homogeneidad y estabilidad del item de ensayo de acuerdo a los princiios de la ISO 13528:2022.")
     ),
 
     # 2.2. Main Panel for Results
