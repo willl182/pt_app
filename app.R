@@ -30,8 +30,8 @@ ui <- fluidPage(
       width = 3,
       h4("1. Proporcionar Datos"),
       radioButtons("input_method", "Método de entrada:",
-                   choices = c("Subir Archivo" = "upload", "Ingreso Manual" = "manual"),
-                   selected = "manual", inline = TRUE),
+                   choices = c("Subir Archivo" = "upload", "Pegar Texto" = "paste"),
+                   selected = "upload", inline = TRUE),
 
       conditionalPanel(
         condition = "input.input_method == 'upload'",
@@ -41,12 +41,9 @@ ui <- fluidPage(
       ),
 
       conditionalPanel(
-        condition = "input.input_method == 'manual'",
-        p("Haga doble clic en una celda para editarla. Presione Enter para confirmar."),
-        DTOutput("manual_table"),
-        br(),
-        actionButton("add_row", "Agregar Fila", icon = icon("plus")),
-        actionButton("remove_row", "Eliminar Fila Seleccionada", icon = icon("minus")),
+        condition = "input.input_method == 'paste'",
+        p("Haga clic en la tabla de abajo y pegue sus datos (Ctrl+V). La tabla se expandirá automáticamente."),
+        DTOutput("pasted_table"),
         hr()
       ),
       hr(),
@@ -142,69 +139,61 @@ ui <- fluidPage(
 # ===================================================================
 server <- function(input, output, session) {
 
-  # --- Server Logic for Manual Data Input ---
+  # --- Server Logic for Pasted Data Table ---
 
-  # Reactive value to store the data from the manual input table
-  # Initialize with a sample structure to guide the user
-  manual_data <- reactiveVal({
+  # Reactive value to store the data from the pasted table.
+  # Initialize with a blank data frame to provide a paste-able area.
+  pasted_data_rv <- reactiveVal({
     data.frame(
-      level = c("level-1", "level-1", "level-2", "level-2"),
-      sample_1 = c(10.1, 10.2, 20.3, 20.4),
-      sample_2 = c(10.3, 10.4, 20.5, 20.6),
+      level = rep(NA_character_, 20), # Start with 20 empty rows
+      sample_1 = rep(NA_real_, 20),
+      sample_2 = rep(NA_real_, 20),
       stringsAsFactors = FALSE
     )
   })
 
-  # Render the editable data table for manual input
-  output$manual_table <- renderDT({
-    datatable(manual_data(),
-              selection = 'single',
-              editable = list(target = 'cell', disable = list(columns = c(0))), # Make cells editable
+  # Render the editable data table for pasting
+  output$pasted_table <- renderDT({
+    datatable(pasted_data_rv(),
+              editable = TRUE,
               options = list(
-                dom = 't', # Show table only, no search or other features
-                pageLength = 10,
-                autoWidth = TRUE
+                dom = 't', # Show table only, no search or other DT features
+                pageLength = 100, # Allow for many rows to be pasted at once
+                ordering = FALSE
               ),
-              rownames = TRUE
+              rownames = FALSE
     )
   })
 
-  # Event handler for adding a new row
-  observeEvent(input$add_row, {
-    current_data <- manual_data()
-    new_row <- data.frame(level = "new-level", sample_1 = NA, sample_2 = NA, stringsAsFactors = FALSE)
-    updated_data <- rbind(current_data, new_row)
-    manual_data(updated_data)
-  })
+  # Observer for cell edits (this is how pasting is handled by DT)
+  observeEvent(input$pasted_table_cell_edit, {
+    info <- input$pasted_table_cell_edit
+    df <- pasted_data_rv()
 
-  # Event handler for removing the selected row
-  observeEvent(input$remove_row, {
-    selected_row <- input$manual_table_rows_selected
-    if (!is.null(selected_row)) {
-      current_data <- manual_data()
-      updated_data <- current_data[-selected_row, ]
-      manual_data(updated_data)
-    }
-  })
-
-  # Event handler for cell edits
-  observeEvent(input$manual_table_cell_edit, {
-    info <- input$manual_table_cell_edit
-    df <- manual_data()
-
-    # Ensure row and column indices are integers
-    row_idx <- as.integer(info$row)
-    col_idx <- as.integer(info$col)
-
-    # Coerce the new value to the correct type based on the column
-    # The 'level' column is the first column (character)
-    if (col_idx == 1) {
-      df[row_idx, col_idx] <- as.character(info$value)
-    } else { # The sample columns are numeric
-      df[row_idx, col_idx] <- as.numeric(info$value)
+    # If the pasted data exceeds the current number of rows, expand the data frame
+    if (info$row > nrow(df)) {
+      rows_to_add <- info$row - nrow(df)
+      # Create a data frame of NAs to append
+      empty_rows <- data.frame(
+        level = rep(NA_character_, rows_to_add),
+        sample_1 = rep(NA_real_, rows_to_add),
+        sample_2 = rep(NA_real_, rows_to_add),
+        stringsAsFactors = FALSE
+      )
+      df <- rbind(df, empty_rows)
     }
 
-    manual_data(df)
+    # Update the value in the data frame.
+    # Note: DT's cell edit provides a character value, so it needs coercion.
+    # The 'level' column is the first column (character).
+    if (info$col == 1) {
+      df[info$row, info$col] <- as.character(info$value)
+    } else { # The sample columns should be numeric.
+      # Use suppressWarnings to handle cases where non-numeric data is pasted
+      df[info$row, info$col] <- suppressWarnings(as.numeric(info$value))
+    }
+
+    pasted_data_rv(df)
   })
 
   # R1: Initial Data Loading and Processing
@@ -218,15 +207,13 @@ server <- function(input, output, session) {
              txt = vroom::vroom(input$datafile$datapath, delim = ","), # Assuming txt is csv
              validate("Tipo de archivo no válido. Por favor, suba un archivo .csv o .tsv.")
       )
-    } else { # "manual"
-      req(manual_data())
-      # Convert data to numeric where appropriate, handling potential NAs
-      df <- manual_data()
-      # Ensure sample columns are numeric
-      for (col in grep("sample_", names(df))) {
-        df[[col]] <- as.numeric(df[[col]])
-      }
-      df
+    } else { # "paste"
+      # Use the data from the reactive DT table
+      df <- pasted_data_rv()
+      # Remove rows where all values are NA (often happens with pasting)
+      df_clean <- df[rowSums(is.na(df)) < ncol(df), ]
+      req(nrow(df_clean) > 0) # Ensure there's some data to process
+      df_clean
     }
   })
 
