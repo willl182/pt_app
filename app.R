@@ -30,22 +30,28 @@ ui <- fluidPage(
       width = 2,
       h4("1. Cargue de Datos (Provide Data)"),
       radioButtons("input_method", "Input method:",
-                   choices = c("Upload File" = "upload",
-                               "Editable Table" = "table"),
+                   choices = c("Cargar Archivo (Upload File)" = "upload",
+                               "Editar Tabla (Editable Table)" = "table"),
                    selected = "upload", inline = TRUE),
 
       conditionalPanel(
         condition = "input.input_method == 'upload'",
-        fileInput("datafile", NULL,
-                  accept = c(".csv", ".tsv", ".txt"),
-                  placeholder = "Select a CSV/TSV file")
+        tagList(
+          fileInput("datafile", "Homogeneity Data",
+                    accept = c(".csv", ".tsv", ".txt"),
+                    placeholder = "Select a CSV/TSV file"),
+          p("For stability analysis, provide the second dataset here:"),
+          fileInput("stability_datafile", "Stability Data",
+                    accept = c(".csv", ".tsv", ".txt"),
+                    placeholder = "Select a CSV/TSV file")
+        )
       ),
 
 
       conditionalPanel(
         condition = "input.input_method == 'table'",
-        numericInput("num_rows", "Number of Rows:", 10, min = 1),
-        numericInput("num_cols", "Number of Columns:", 3, min = 1)
+        numericInput("num_rows", "Número de Filas (Number of Rows):", 10, min = 1),
+        numericInput("num_cols", "Número de Columnas (Number of Columns):", 3, min = 1)
       ),
 
       hr(),
@@ -58,7 +64,7 @@ ui <- fluidPage(
 
       h4("3. Ejecutar Análisis (Run Analysis)"),
       # Button to run the analysis
-      actionButton("run_analysis", "Run Analysis",
+      actionButton("run_analysis", "Ejecutar (Run Analysis)",
                    class = "btn-primary btn-block"),
 
       hr(),
@@ -108,11 +114,8 @@ ui <- fluidPage(
                  hr(),
                  h4("Variance Components"),
                  p("Estimated standard deviations from the manual calculation."),
-                 tableOutput("variance_components")
-        ),
-
-        # Tab 3: Calculation Details
-        tabPanel("Calculation Details",
+                 tableOutput("variance_components"),
+                 hr(),
                  h4("Per-Item Calculations"),
                  p("This table shows calculations for each item (row) in the dataset for the selected level, including the average and range of measurements."),
                  tableOutput("details_per_item_table"),
@@ -120,6 +123,24 @@ ui <- fluidPage(
                  h4("Summary Statistics"),
                  p("This table shows the overall statistics used for the homogeneity assessment."),
                  tableOutput("details_summary_stats_table")
+        ),
+
+        # Tab 3: Stability Data Analysis
+        tabPanel("Stability Data Analysis",
+                 h4("Conclusion"),
+                 uiOutput("homog_conclusion_stability"),
+                 hr(),
+                 h4("Variance Components"),
+                 p("Estimated standard deviations from the manual calculation for the stability dataset."),
+                 tableOutput("variance_components_stability"),
+                 hr(),
+                 h4("Per-Item Calculations"),
+                 p("This table shows calculations for each item (row) in the stability dataset."),
+                 tableOutput("details_per_item_table_stability"),
+                 hr(),
+                 h4("Summary Statistics"),
+                 p("This table shows the overall statistics for the stability dataset."),
+                 tableOutput("details_summary_stats_table_stability")
         ),
 
         # Tab 4: Stability Assessment
@@ -152,7 +173,7 @@ server <- function(input, output, session) {
       ext <- tools::file_ext(input$datafile$name)
       switch(ext,
              csv = vroom::vroom(input$datafile$datapath, delim = ","),
-             tsv = vroom::vroom(input$datafile$datapath, delim = "\t"),
+             tsv = vroom::vroom(input$datafile$datapath, delim = "	"),
              txt = vroom::vroom(input$datafile$datapath, delim = ","), # Assuming txt is csv
              validate("Invalid file type. Please upload a .csv or .tsv file.")
       )
@@ -178,6 +199,18 @@ server <- function(input, output, session) {
     # Pre-fill column names for user convenience
     colnames(df) <- c("level", paste0("sample_", 1:(input$num_cols-1)))
     rhandsontable(df, stretchH = "all")
+  })
+
+  # R1.6: Load stability data
+  stability_data_raw <- reactive({
+    req(input$stability_datafile)
+    ext <- tools::file_ext(input$stability_datafile$name)
+    switch(ext,
+           csv = vroom::vroom(input$stability_datafile$datapath, delim = ","),
+           tsv = vroom::vroom(input$stability_datafile$datapath, delim = "	"),
+           txt = vroom::vroom(input$stability_datafile$datapath, delim = ","),
+           validate("Invalid file type for stability data. Please upload a .csv or .tsv file.")
+    )
   })
 
   # R2: Dynamic Generation of the Level Selector
@@ -260,7 +293,7 @@ server <- function(input, output, session) {
 
 # --- Manual ANOVA Calculation ---
     # Calculate mean, variance, and range (difference) for each item
-    item_stats <- hom_data %>%
+    hom_item_stats <- hom_data %>%
       group_by(Item) %>%
       summarise(
         mean = mean(Result, na.rm = TRUE),
@@ -269,149 +302,307 @@ server <- function(input, output, session) {
       )
 
     # Grand mean
-    x_t_bar <- mean(item_stats$mean, na.rm = TRUE)
+    hom_x_t_bar <- mean(hom_item_stats$mean, na.rm = TRUE)
 
     # Variance of item means
-    s_x_bar_sq <- var(item_stats$mean, na.rm = TRUE)
-    s_xt <- sqrt(s_x_bar_sq)
+    hom_s_x_bar_sq <- var(hom_item_stats$mean, na.rm = TRUE)
+    hom_s_xt <- sqrt(hom_s_x_bar_sq)
 
     # Mean of item variances (within-sample variance)
 
-    wt = abs(item_stats$diff)
-    sw <- sqrt(sum(wt^2) / (2 * length(wt)))
+    hom_wt = abs(hom_item_stats$diff)
+    hom_sw <- sqrt(sum(hom_wt^2) / (2 * length(hom_wt)))
 
     # Between-sample variance
     # User requested ABS; standard practice is max(0, ...)
-    ss_sq <- abs(s_xt^2 - ((sw^2) / 2))
-    ss <- sqrt(ss_sq)
+    hom_ss_sq <- abs(hom_s_xt^2 - ((hom_sw^2) / 2))
+    hom_ss <- sqrt(hom_ss_sq)
 
     # For display purposes, we can create a data frame that mimics the ANOVA table
-anova_summary_df <- data.frame(
-  "Df" = c(g - 1, g * (m - 1)),
-  "Sum Sq" = c(s_x_bar_sq * m * (g - 1), sw^2 * g * (m - 1)),
-  "Mean Sq" = c(s_x_bar_sq * m, sw^2),
-  check.names = FALSE
-)
+    hom_anova_summary_df <- data.frame(
+      "Df" = c(g - 1, g * (m - 1)),
+      "Sum Sq" = c(hom_s_x_bar_sq * m * (g - 1), hom_sw^2 * g * (m - 1)),
+      "Mean Sq" = c(hom_s_x_bar_sq * m, hom_sw^2),
+      check.names = FALSE
+    )
 
-    rownames(anova_summary_df) <- c("Item", "Residuals")
+    rownames(hom_anova_summary_df) <- c("Item", "Residuals")
 
     # For the list returned by the reactive
-    anova_summary <- anova_summary_df
+    hom_anova_summary <- hom_anova_summary_df
 
     # Assessment Criterion (for ANOVA method)
+    hom_sigma_pt <- mad_e
+    hom_c_criterion <- 0.3 * hom_sigma_pt
+    hom_sigma_allowed_sq <- hom_c_criterion^2
 
-    sigma_pt <- mad_e
-    hom_criterion_value <- 0.3 * sigma_pt
-    sigma_allowed_sq <- hom_criterion_value^2
+    # Expanded criterion
+    hom_c_criterion_expanded <- sqrt(hom_sigma_allowed_sq * 1.88 + (hom_sw^2) * 1.01)
 
-    # New criterion c
-    c_criterion <- sqrt(sigma_allowed_sq * 1.88 + (sw^2) * 1.01)
-
-    # First comparison: ss vs 0.3 * sigma_pt
-    if (ss <= hom_criterion_value) {
-      conclusion1 <- sprintf("ss (%.4f) <= 0.3 * sigma_pt (%.4f): CUMPLE", ss, hom_criterion_value)
-      conclusion_class <- "alert alert-success"
+    # First comparison: ss vs c_criterion (0.3 * sigma_pt)
+    if (hom_ss <= hom_c_criterion) {
+      hom_conclusion1 <- sprintf("ss (%.4f) <= c_criterion (%.4f): CUMPLE", hom_ss, hom_c_criterion)
+      hom_conclusion_class <- "alert alert-success"
     } else {
-      conclusion1 <- sprintf("ss (%.4f) > 0.3 * sigma_pt (%.4f): NO CUMPLE CRITERIO HOMOGENEIDAD", ss, hom_criterion_value)
-      conclusion_class <- "alert alert-warning"
+      hom_conclusion1 <- sprintf("ss (%.4f) > c_criterion (%.4f): NO CUMPLE CRITERIO HOMOGENEIDAD", hom_ss, hom_c_criterion)
+      hom_conclusion_class <- "alert alert-warning"
     }
 
-    # Second comparison: ss vs c
-    if (ss <= c_criterion) {
-      conclusion2 <- sprintf("ss (%.4f) <= c (%.4f): CUMPLE", ss, c_criterion)
+    # Second comparison: ss vs c_expanded
+    if (hom_ss <= hom_c_criterion_expanded) {
+      hom_conclusion2 <- sprintf("ss (%.4f) <= c_expanded (%.4f): CUMPLE", hom_ss, hom_c_criterion_expanded)
     } else {
-      conclusion2 <- sprintf("ss (%.4f) > c (%.4f): NO CUMPLE", ss, c_criterion)
+      hom_conclusion2 <- sprintf("ss (%.4f) > c_expanded (%.4f): NO CUMPLE", hom_ss, hom_c_criterion_expanded)
     }
 
     # Combine conclusions
-    conclusion <- paste(conclusion1, conclusion2, sep = "<br>")
+    hom_conclusion <- paste(hom_conclusion1, hom_conclusion2, sep = "<br>")
     list(
-      summary = anova_summary,
-      ss = ss,
-      sw = sw,
-      conclusion = conclusion,
-      conclusion_class = conclusion_class,
+      summary = hom_anova_summary,
+      ss = hom_ss,
+      sw = hom_sw,
+      conclusion = hom_conclusion,
+      conclusion_class = hom_conclusion_class,
       g = g,
       m = m,
-      sigma_allowed_sq = sigma_allowed_sq,
-      c_criterion = c_criterion,
-      sigma_pt = sigma_pt,
+      sigma_allowed_sq = hom_sigma_allowed_sq,
+      c_criterion = hom_c_criterion,
+      c_criterion_expanded = hom_c_criterion_expanded,
+      sigma_pt = hom_sigma_pt,
       median_val = median_val,
       median_abs_diff = median_abs_diff,
       u_xpt = u_xpt,
       n_robust = n_robust,
-      hom_criterion_value = hom_criterion_value,
-      item_means = item_stats$mean,
-      general_mean = x_t_bar,
-      sd_of_means = s_xt,
-      s_x_bar_sq = s_x_bar_sq,
-      s_w_sq = sw^2,
+      item_means = hom_item_stats$mean,
+      general_mean = hom_x_t_bar,
+      sd_of_means = hom_s_xt,
+      s_x_bar_sq = hom_s_x_bar_sq,
+      s_w_sq = hom_sw^2,
       intermediate_df = intermediate_df,
       error = NULL
     )
   })
-  # R4: Stability Execution (Triggered by button)
-  stability_run <- eventReactive(input$run_analysis, {
-    # Depend on homogeneity_run to get the calculated sigma_pt
-    req(homogeneity_run())
-    hom_results <- homogeneity_run()
-    data <- raw_data()
-    target_level <- input$target_level
-    sigma_pt <- hom_results$sigma_pt
 
-    stab_data_all <- data %>%
+  # R3.5: Stability Data Homogeneity Execution (Triggered by button)
+  homogeneity_run_stability <- eventReactive(input$run_analysis, {
+    req(stability_data_raw(), input$target_level)
+    data <- stability_data_raw()
+    target_level <- input$target_level
+
+    # Prepare data for analysis
+    level_data <- data %>%
       filter(level == target_level) %>%
       select(starts_with("sample_"))
 
-    n_runs <- nrow(stab_data_all)
-    if (n_runs < 2) {
-      return(list(
-          error = "Not enough replicate runs (at least 2 required) to perform a stability check.",
-          conclusion = "",
-          details = "",
-          ttest = ""
-          ))
+    g <- nrow(level_data)
+    m <- ncol(level_data)
+
+    if (m < 2) {
+        return(list(error = "Not enough replicate runs (at least 2 required) for stability data homogeneity assessment."))
+    }
+    if (g < 2) {
+        return(list(error = "Not enough items (at least 2 required) for stability data homogeneity assessment."))
     }
 
-    # Split data to simulate time points
-    split_point <- floor(n_runs / 2)
-    data_t1 <- stab_data_all %>%
-      slice(1:split_point) %>%
-      pivot_longer(everything(), values_to = "Result")
-    data_t2 <- stab_data_all %>%
-      slice((split_point + 1):n_runs) %>%
-      pivot_longer(everything(), values_to = "Result")
+    # Create the intermediate calculations table data
+    intermediate_df <- if (m == 2) {
+      s1 <- level_data[[1]]
+      s2 <- level_data[[2]]
+      level_data %>%
+        mutate(
+          Item = row_number(),
+          average = (s1 + s2) / 2,
+          range = abs(s1 - s2)
+        ) %>%
+        select(Item, everything())
+    } else {
+      level_data %>%
+        mutate(
+          Item = row_number(),
+          average = rowMeans(., na.rm = TRUE),
+          range = apply(., 1, function(x) max(x, na.rm=TRUE) - min(x, na.rm=TRUE))
+        ) %>%
+        select(Item, everything())
+    }
 
-    y1 <- mean(data_t1$Result, na.rm = TRUE)
-    y2 <- mean(data_t2$Result, na.rm = TRUE)
+    # Now create the long data format for calculations
+    stab_data <- level_data %>%
+      mutate(Item = factor(row_number())) %>%
+      pivot_longer(
+        cols = -Item,
+        names_to = "replicate",
+        values_to = "Result"
+      )
+
+    # Calculate sigma_pt as MADe from the first sample column ('sample_1')
+    if (!"sample_1" %in% names(level_data)) {
+        return(list(error = "Column 'sample_1' not found. It is required to calculate sigma_pt for stability data."))
+    }
+    first_sample_results <- level_data %>% pull(sample_1)
+    median_val <- median(first_sample_results, na.rm = TRUE)
+    abs_diff_from_median <- abs(first_sample_results - median_val)
+    median_abs_diff <- median(abs_diff_from_median, na.rm = TRUE)
+    mad_e <- 1.483 * median_abs_diff
+
+    # Robust statistics (for Alternative Method 2 and for display)
+    n_robust <- length(first_sample_results)
+    u_xpt <- 1.25 * mad_e / sqrt(n_robust)
+
+
+
+# --- Manual ANOVA Calculation (for Stability Data) ---
+    # Calculate mean, variance, and range (difference) for each item
+    stab_item_stats <- stab_data %>%
+      group_by(Item) %>%
+      summarise(
+        mean = mean(Result, na.rm = TRUE),
+        var = var(Result, na.rm = TRUE),
+        diff = max(Result, na.rm = TRUE) - min(Result, na.rm = TRUE)
+      )
+
+    # Grand mean
+    stab_x_t_bar <- mean(stab_item_stats$mean, na.rm = TRUE)
+
+    # Variance of item means
+    stab_s_x_bar_sq <- var(stab_item_stats$mean, na.rm = TRUE)
+    stab_s_xt <- sqrt(stab_s_x_bar_sq)
+
+    # Mean of item variances (within-sample variance)
+
+    stab_wt = abs(stab_item_stats$diff)
+    stab_sw <- sqrt(sum(stab_wt^2) / (2 * length(stab_wt)))
+
+    # Between-sample variance
+    # User requested ABS; standard practice is max(0, ...)
+    stab_ss_sq <- abs(stab_s_xt^2 - ((stab_sw^2) / 2))
+    stab_ss <- sqrt(stab_ss_sq)
+
+    # For display purposes, we can create a data frame that mimics the ANOVA table
+    stab_anova_summary_df <- data.frame(
+      "Df" = c(g - 1, g * (m - 1)),
+      "Sum Sq" = c(stab_s_x_bar_sq * m * (g - 1), stab_sw^2 * g * (m - 1)),
+      "Mean Sq" = c(stab_s_x_bar_sq * m, stab_sw^2),
+      check.names = FALSE
+    )
+
+    rownames(stab_anova_summary_df) <- c("Item", "Residuals")
+
+    # For the list returned by the reactive
+    stab_anova_summary <- stab_anova_summary_df
+
+    # Assessment Criterion (for ANOVA method)
+    stab_sigma_pt <- mad_e
+    stab_c_criterion <- 0.3 * stab_sigma_pt
+    stab_sigma_allowed_sq <- stab_c_criterion^2
+
+    # Expanded criterion
+    stab_c_criterion_expanded <- sqrt(stab_sigma_allowed_sq * 1.88 + (stab_sw^2) * 1.01)
+
+    # First comparison: ss vs c_criterion (0.3 * sigma_pt)
+    if (stab_ss <= stab_c_criterion) {
+      stab_conclusion1 <- sprintf("ss (%.4f) <= c_criterion (%.4f): CUMPLE", stab_ss, stab_c_criterion)
+      stab_conclusion_class <- "alert alert-success"
+    } else {
+      stab_conclusion1 <- sprintf("ss (%.4f) > c_criterion (%.4f): NO CUMPLE CRITERIO HOMOGENEIDAD", stab_ss, stab_c_criterion)
+      stab_conclusion_class <- "alert alert-warning"
+    }
+
+    # Second comparison: ss vs c_expanded
+    if (stab_ss <= stab_c_criterion_expanded) {
+      stab_conclusion2 <- sprintf("ss (%.4f) <= c_expanded (%.4f): CUMPLE", stab_ss, stab_c_criterion_expanded)
+    } else {
+      stab_conclusion2 <- sprintf("ss (%.4f) > c_expanded (%.4f): NO CUMPLE", stab_ss, stab_c_criterion_expanded)
+    }
+
+    # Combine conclusions
+    stab_conclusion <- paste(stab_conclusion1, stab_conclusion2, sep = "<br>")
+    list(
+      stab_summary = stab_anova_summary,
+      stab_ss = stab_ss,
+      stab_sw = stab_sw,
+      stab_conclusion = stab_conclusion,
+      stab_conclusion_class = stab_conclusion_class,
+      g = g,
+      m = m,
+      stab_sigma_allowed_sq = stab_sigma_allowed_sq,
+      stab_c_criterion = stab_c_criterion,
+      stab_c_criterion_expanded = stab_c_criterion_expanded,
+      stab_sigma_pt = stab_sigma_pt,
+      stab_median_val = median_val,
+      stab_median_abs_diff = median_abs_diff,
+      stab_u_xpt = u_xpt,
+      n_robust = n_robust,
+      stab_item_means = stab_item_stats$mean,
+      stab_general_mean = stab_x_t_bar,
+      stab_sd_of_means = stab_s_xt,
+      stab_s_x_bar_sq = stab_s_x_bar_sq,
+      stab_s_w_sq = stab_sw^2,
+      stab_intermediate_df = intermediate_df,
+      error = NULL
+    )
+  })
+
+  # R4: Stability Execution (Triggered by button)
+  stability_run <- eventReactive(input$run_analysis, {
+    # Depend on both homogeneity runs
+    req(homogeneity_run(), homogeneity_run_stability())
+    hom_results <- homogeneity_run()
+    stab_hom_results <- homogeneity_run_stability()
+
+    # Check for errors from the upstream reactives
+    if (!is.null(hom_results$error)) return(list(error = hom_results$error))
+    if (!is.null(stab_hom_results$error)) return(list(error = stab_hom_results$error))
+
+    # Get the means from the results of the two homogeneity runs
+    y1 <- hom_results$general_mean
+    y2 <- stab_hom_results$stab_general_mean
     diff_observed <- abs(y1 - y2)
 
-    # Primary Assessment Criterion
+    # Use sigma_pt from the primary homogeneity run
+    sigma_pt <- hom_results$sigma_pt
     stab_criterion_value <- 0.3 * sigma_pt
 
     # Dynamic format for decimal places
     fmt <- "%.9f"
 
     details_text <- sprintf(
-      paste("Mean 'Before' (y1):", fmt, "(using first %d runs)\nMean 'After' (y2):", fmt, "(using last %d runs)\nObserved Absolute Difference:", fmt, "\nStability Criterion (0.3 * sigma_pt):", fmt),
-      y1, split_point, y2, n_runs - split_point, diff_observed, stab_criterion_value
+      paste("Mean of Homogeneity Data (y1):", fmt, "
+Mean of Stability Data (y2):", fmt, "
+Observed Absolute Difference:", fmt, "
+Stability Criterion (0.3 * sigma_pt):", fmt),
+      y1, y2, diff_observed, stab_criterion_value
     )
 
     if (diff_observed <= stab_criterion_value) {
-      conclusion <- "Conclusion (Criterion B.5.1): PT Items are adequately stable."
+      conclusion <- "Conclusion: The item is adequately stable."
       conclusion_class <- "alert alert-success"
     } else {
-      conclusion <- "Conclusion (Criterion B.5.1): WARNING: PT Items may show unacceptable drift."
+      conclusion <- "Conclusion: WARNING: The item may be unstable."
       conclusion_class <- "alert alert-warning"
     }
 
+    # For the t-test, we need the raw results from both datasets for the selected level
+    target_level <- input$target_level
+    
+    data_t1_results <- raw_data() %>%
+      filter(level == target_level) %>%
+      select(starts_with("sample_")) %>%
+      pivot_longer(everything(), values_to = "Result") %>%
+      pull(Result)
+
+    data_t2_results <- stability_data_raw() %>%
+      filter(level == target_level) %>%
+      select(starts_with("sample_")) %>%
+      pivot_longer(everything(), values_to = "Result") %>%
+      pull(Result)
+
     # T-test
-    t_test_result <- t.test(data_t1$Result, data_t2$Result)
+    t_test_result <- t.test(data_t1_results, data_t2_results)
 
     if (t_test_result$p.value > 0.05) {
-      ttest_conclusion <- "T-test: No statistically significant difference detected (p > 0.05), supporting stability."
+      ttest_conclusion <- "T-test: No statistically significant difference detected between the two datasets (p > 0.05), supporting stability."
     } else {
-      ttest_conclusion <- "T-test: Statistically significant difference detected (p <= 0.05), indicating potential instability."
+      ttest_conclusion <- "T-test: Statistically significant difference detected between the two datasets (p <= 0.05), indicating potential instability."
     }
 
     list(
@@ -449,59 +640,74 @@ anova_summary_df <- data.frame(
   # Output: Validation Message
   output$validation_message <- renderPrint({
     data <- raw_data()
-    cat("Data loaded successfully.\n")
-    cat(paste("Dimensions:", paste(dim(data), collapse = " x "), "\n"))
+    cat("Data loaded successfully.
+")
+    cat(paste("Dimensions:", paste(dim(data), collapse = " x "), "
+"))
 
     required_cols <- c("level")
     has_samples <- any(str_detect(names(data), "sample_"))
 
     if(!all(required_cols %in% names(data))) {
-        cat(paste("ERROR: Missing required column(s):", paste(setdiff(required_cols, names(data)), collapse=", "), "\n"))
+        cat(paste("ERROR: Missing required column(s):", paste(setdiff(required_cols, names(data)), collapse=", "), "
+"))
     } else {
-        cat("Found 'level' column.\n")
+        cat("Found 'level' column.
+")
     }
 
     if(!has_samples) {
-        cat("ERROR: No columns with 'sample_' prefix found. These are needed for the analysis.\n")
+        cat("ERROR: No columns with 'sample_' prefix found. These are needed for the analysis.
+")
     } else {
-        cat("Found 'sample_*' columns.\n")
+        cat("Found 'sample_*' columns.
+")
     }
   })
 
   # Reactive expression for plotting data
   plot_data_long <- reactive({
-    req(raw_data(), input$target_level)
+    req(raw_data())
+    if (!"level" %in% names(raw_data())) return(NULL)
     raw_data() %>%
-      filter(level == input$target_level) %>%
-      select(starts_with("sample_")) %>%
-      pivot_longer(everything(), names_to = "sample", values_to = "result")
+      select(level, starts_with("sample_")) %>%
+      pivot_longer(-level, names_to = "sample", values_to = "result")
   })
 
   # Output: Histogram
   output$results_histogram <- renderPlot({
-    req(plot_data_long())
-    ggplot(plot_data_long(), aes(x = result)) +
+    plot_data <- plot_data_long()
+    req(plot_data)
+    ggplot(plot_data, aes(x = result)) +
       geom_histogram(aes(y = after_stat(density)), color = "black", fill = "skyblue", bins = 20) +
       geom_density(alpha = 0.4, fill = "lightblue") +
-      labs(title = paste("Distribution for Level:", input$target_level),
+      facet_wrap(~level, scales = "free") +
+      labs(title = "Distribution by Level",
            x = "Result", y = "Density") +
       theme_minimal()
   })
 
   # Output: Boxplot
   output$results_boxplot <- renderPlot({
-    req(plot_data_long())
-    ggplot(plot_data_long(), aes(x = result)) +
+    plot_data <- plot_data_long()
+    req(plot_data)
+    ggplot(plot_data, aes(x = "", y = result)) +
       geom_boxplot(fill = "lightgreen", outlier.colour = "red") +
-      labs(title = paste("Boxplot for Level:", input$target_level),
-           x = "Result") +
-      theme_minimal() +
-      theme(axis.text.y=element_blank(),
-            axis.ticks.y=element_blank(),
-            axis.title.y=element_blank())
+      facet_wrap(~level, scales = "free") +
+      labs(title = "Boxplot by Level",
+           x = NULL, y = "Result") +
+      theme_minimal()
   })
 
-
+  # Output: Homogeneity Conclusion
+  output$homog_conclusion <- renderUI({
+    res <- homogeneity_run()
+    if (!is.null(res$error)) {
+        div(class = "alert alert-danger", res$error)
+    } else {
+        div(class = res$conclusion_class, HTML(res$conclusion))
+    }
+  })
 
   # Output: Variance Components
   output$variance_components <- renderTable({
@@ -514,13 +720,12 @@ anova_summary_df <- data.frame(
                         "Between-Sample SD (ss)",
                         "Within-Sample SD (sw)",
                         "---",
-                        "0.3 * Sigma PT",
-                        "Sigma Allowed Sq",
-                        "Criterion c"),
+                        "Criterion c",
+                        "Criterion c (expanded)"),
           Value = c(
             format(c(res$median_val, res$sigma_pt, res$u_xpt, res$ss, res$sw), digits = 15, scientific = FALSE),
             "",
-            format(c(res$hom_criterion_value, res$sigma_allowed_sq, res$c_criterion), digits = 15, scientific = FALSE)
+            format(c(res$c_criterion, res$c_criterion_expanded), digits = 15, scientific = FALSE)
           )
         )
         df
@@ -549,7 +754,9 @@ anova_summary_df <- data.frame(
   output$stability_ttest <- renderPrint({
       res <- stability_run()
       if (is.null(res$error)) {
-          cat(res$ttest_conclusion, "\n\n")
+          cat(res$ttest_conclusion, "
+
+")
           print(res$ttest_summary, digits = 9)
       }
   })
@@ -580,14 +787,88 @@ anova_summary_df <- data.frame(
                       "Robust SD (MADe)",
                       "Uncertainty of Assigned Value (u_xpt)",
                       "---",
-                      "0.3 * sigma_pt",
-                      "Criterion c"),
+                      "Criterion c",
+                      "Criterion c (expanded)"),
         Value = c(
           format(c(res$general_mean, res$sd_of_means, res$s_x_bar_sq, res$sw, res$s_w_sq, res$ss), digits = 15, scientific = FALSE),
           "",
           format(c(res$median_val, res$median_abs_diff, res$n_robust, res$sigma_pt, res$u_xpt), digits = 15, scientific = FALSE),
           "",
-          format(c(res$hom_criterion_value, res$c_criterion), digits = 15, scientific = FALSE)
+          format(c(res$c_criterion, res$c_criterion_expanded), digits = 15, scientific = FALSE)
+        )
+      )
+    }
+  }, spacing = "l")
+
+  # --- Outputs for Stability Data Analysis Tab ---
+
+  # Output: Homogeneity Conclusion for Stability Data
+  output$homog_conclusion_stability <- renderUI({
+    res <- homogeneity_run_stability()
+    if (!is.null(res$error)) {
+        div(class = "alert alert-danger", res$error)
+    } else {
+        div(class = res$stab_conclusion_class, HTML(res$stab_conclusion))
+    }
+  })
+
+  # Output: Variance Components for Stability Data
+  output$variance_components_stability <- renderTable({
+    res <- homogeneity_run_stability()
+    if (is.null(res$error)) {
+        df <- data.frame(
+          Component = c("Assigned Value (xpt)",
+                        "Robust SD (sigma_pt)",
+                        "Uncertainty of Assigned Value (u_xpt)",
+                        "Between-Sample SD (ss)",
+                        "Within-Sample SD (sw)",
+                        "---",
+                        "Criterion c",
+                        "Criterion c (expanded)"),
+          Value = c(
+            format(c(res$stab_median_val, res$stab_sigma_pt, res$stab_u_xpt, res$stab_ss, res$stab_sw), digits = 15, scientific = FALSE),
+            "",
+            format(c(res$stab_c_criterion, res$stab_c_criterion_expanded), digits = 15, scientific = FALSE)
+          )
+        )
+        df
+    }
+  })
+
+  # Output: Details per item table for Stability Data
+  output$details_per_item_table_stability <- renderTable({
+    res <- homogeneity_run_stability()
+    if (is.null(res$error)) {
+      res$stab_intermediate_df
+    }
+  }, spacing = "l", digits = 15)
+
+  # Output: Details summary stats table for Stability Data
+  output$details_summary_stats_table_stability <- renderTable({
+    res <- homogeneity_run_stability()
+    if (is.null(res$error)) {
+      data.frame(
+        Parameter = c("General Mean",
+                      "SD of Means",
+                      "Variance of Means (s_x_bar_sq)",
+                      "sw",
+                      "Within-Sample Variance (s_w_sq)",
+                      "ss",
+                      "---",
+                      "Assigned Value (xpt)",
+                      "Median of Absolute Differences",
+                      "Number of Replicates (n_robust)",
+                      "Robust SD (MADe)",
+                      "Uncertainty of Assigned Value (u_xpt)",
+                      "---",
+                      "Criterion c",
+                      "Criterion c (expanded)"),
+        Value = c(
+          format(c(res$stab_general_mean, res$stab_sd_of_means, res$stab_s_x_bar_sq, res$stab_sw, res$stab_s_w_sq, res$stab_ss), digits = 15, scientific = FALSE),
+          "",
+          format(c(res$stab_median_val, res$stab_median_abs_diff, res$n_robust, res$stab_sigma_pt, res$stab_u_xpt), digits = 15, scientific = FALSE),
+          "",
+          format(c(res$stab_c_criterion, res$stab_c_criterion_expanded), digits = 15, scientific = FALSE)
         )
       )
     }
