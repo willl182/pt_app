@@ -40,7 +40,7 @@ ui <- fluidPage(
           fileInput("datafile", "Homogeneity Data",
                     accept = c(".csv", ".tsv", ".txt"),
                     placeholder = "Select a CSV/TSV file"),
-          p("For stability analysis, provide the second dataset here:"),
+          p("For stability assessment, provide the second dataset here:"),
           fileInput("stability_datafile", "Stability Data",
                     accept = c(".csv", ".tsv", ".txt"),
                     placeholder = "Select a CSV/TSV file")
@@ -50,8 +50,12 @@ ui <- fluidPage(
 
       conditionalPanel(
         condition = "input.input_method == 'table'",
-        numericInput("num_rows", "Número de Filas (Number of Rows):", 10, min = 1),
-        numericInput("num_cols", "Número de Columnas (Number of Columns):", 3, min = 1)
+        h5("Homogeneity Data"),
+        numericInput("num_rows_hom", "Rows:", 10, min = 1),
+        numericInput("num_cols_hom", "Cols:", 3, min = 1),
+        h5("Stability Data"),
+        numericInput("num_rows_stab", "Rows:", 2, min = 1),
+        numericInput("num_cols_stab", "Cols:", 3, min = 1)
       ),
 
       hr(),
@@ -64,7 +68,9 @@ ui <- fluidPage(
 
       h4("3. Ejecutar Análisis (Run Analysis)"),
       # Button to run the analysis
-      actionButton("run_analysis", "Ejecutar (Run Analysis)",
+      actionButton("run_analysis", "Run Homogeneity Analysis",
+                   class = "btn-primary btn-block"),
+      actionButton("run_stability_analysis", "Run Stability Analysis",
                    class = "btn-primary btn-block"),
 
       hr(),
@@ -88,8 +94,13 @@ ui <- fluidPage(
                  ),
                  conditionalPanel(
                    condition = "input.input_method == 'table'",
+                   h4("Homogeneity Data"),
                    p("Enter your data in the table below. The first column should be 'level' and subsequent columns should be named 'sample_1', 'sample_2', etc."),
-                   rHandsontableOutput("hot")
+                   rHandsontableOutput("hot_homogeneity"),
+                   hr(),
+                   h4("Stability Data"),
+                   p("Enter your data in the table below. The first column should be 'level' and subsequent columns should be named 'sample_1', 'sample_2', etc."),
+                   rHandsontableOutput("hot_stability")
                  ),
                  hr(),
                  h4("Data Distribution"),
@@ -112,6 +123,13 @@ ui <- fluidPage(
                  h4("Conclusion"),
                  uiOutput("homog_conclusion"),
                  hr(),
+                 h4("Homogeneity Data Preview (Level and First Sample)"),
+                 dataTableOutput("homogeneity_preview_table"),
+                 hr(),
+                 h4("Robust Statistics Calculations"),
+                 tableOutput("robust_stats_table"),
+                 verbatimTextOutput("robust_stats_summary"),
+                 hr(),
                  h4("Variance Components"),
                  p("Estimated standard deviations from the manual calculation."),
                  tableOutput("variance_components"),
@@ -125,8 +143,9 @@ ui <- fluidPage(
                  tableOutput("details_summary_stats_table")
         ),
 
-        # Tab 3: Stability Data Analysis
-        tabPanel("Stability Data Analysis",
+        # Tab 3: Stability Assessment
+        tabPanel("Stability Assessment",
+                 
                  h4("Conclusion"),
                  uiOutput("homog_conclusion_stability"),
                  hr(),
@@ -143,19 +162,7 @@ ui <- fluidPage(
                  tableOutput("details_summary_stats_table_stability")
         ),
 
-        # Tab 4: Stability Assessment
-        tabPanel("Stability Assessment",
-                 h4("Conclusion"),
-                 uiOutput("stability_conclusion"),
-                 hr(),
-                 h4("Stability Analysis Details"),
-                 p("Comparison of means between two measurement periods (simulated by splitting data)."),
-                 verbatimTextOutput("stability_details"),
-                 hr(),
-                 h4("T-test for Stability"),
-                 p("A two-sample t-test to check for statistically significant differences."),
-                 verbatimTextOutput("stability_ttest")
-        )
+
       )
     )
   )
@@ -177,47 +184,58 @@ server <- function(input, output, session) {
              txt = vroom::vroom(input$datafile$datapath, delim = ","), # Assuming txt is csv
              validate("Invalid file type. Please upload a .csv or .tsv file.")
       )
-    } else if (input$input_method == "paste") {
-      req(input$pasted_data)
-      vroom::vroom(I(input$pasted_data), delim = input$paste_delim)
     } else { # "table"
-      req(input$hot)
-      df <- hot_to_r(input$hot)
-      # Set column names as expected by the analysis logic
+      req(input$hot_homogeneity)
+      df <- hot_to_r(input$hot_homogeneity)
       colnames(df) <- c("level", paste0("sample_", 1:(ncol(df)-1)))
-      # Convert sample columns to numeric, coercing errors to NA
       df <- df %>%
         mutate(across(starts_with("sample_"), .fns = ~as.numeric(as.character(.))))
       df
     }
   })
 
-  # R1.5: Render the editable rhandsontable
-  output$hot <- renderRHandsontable({
-    req(input$num_rows, input$num_cols)
-    df <- data.frame(matrix("", nrow = input$num_rows, ncol = input$num_cols), stringsAsFactors = FALSE)
-    # Pre-fill column names for user convenience
-    colnames(df) <- c("level", paste0("sample_", 1:(input$num_cols-1)))
+  # R1.5: Render the editable rhandsontable for homogeneity
+  output$hot_homogeneity <- renderRHandsontable({
+    req(input$num_rows_hom, input$num_cols_hom)
+    df <- data.frame(matrix("", nrow = input$num_rows_hom, ncol = input$num_cols_hom), stringsAsFactors = FALSE)
+    colnames(df) <- c("level", paste0("sample_", 1:(input$num_cols_hom-1)))
+    rhandsontable(df, stretchH = "all")
+  })
+
+  # R1.5b: Render the editable rhandsontable for stability
+  output$hot_stability <- renderRHandsontable({
+    req(input$num_rows_stab, input$num_cols_stab)
+    df <- data.frame(matrix("", nrow = input$num_rows_stab, ncol = input$num_cols_stab), stringsAsFactors = FALSE)
+    colnames(df) <- c("level", paste0("sample_", 1:(input$num_cols_stab-1)))
     rhandsontable(df, stretchH = "all")
   })
 
   # R1.6: Load stability data
   stability_data_raw <- reactive({
-    req(input$stability_datafile)
-    ext <- tools::file_ext(input$stability_datafile$name)
-    switch(ext,
-           csv = vroom::vroom(input$stability_datafile$datapath, delim = ","),
-           tsv = vroom::vroom(input$stability_datafile$datapath, delim = "	"),
-           txt = vroom::vroom(input$stability_datafile$datapath, delim = ","),
-           validate("Invalid file type for stability data. Please upload a .csv or .tsv file.")
-    )
+    if (input$input_method == "upload") {
+      req(input$stability_datafile)
+      ext <- tools::file_ext(input$stability_datafile$name)
+      switch(ext,
+             csv = vroom::vroom(input$stability_datafile$datapath, delim = ","),
+             tsv = vroom::vroom(input$stability_datafile$datapath, delim = "	"),
+             txt = vroom::vroom(input$stability_datafile$datapath, delim = ","),
+             validate("Invalid file type for stability data. Please upload a .csv or .tsv file.")
+      )
+    } else { # "table"
+      req(input$hot_stability)
+      df <- hot_to_r(input$hot_stability)
+      colnames(df) <- c("level", paste0("sample_", 1:(ncol(df)-1)))
+      df <- df %>%
+        mutate(across(starts_with("sample_"), .fns = ~as.numeric(as.character(.))))
+      df
+    }
   })
 
   # R2: Dynamic Generation of the Level Selector
   output$level_selector <- renderUI({
-    data <- raw_data()
-    if ("level" %in% names(data)) {
-      levels <- unique(data$level)
+    homogeneity_data <- raw_data()
+    if ("level" %in% names(homogeneity_data)) {
+      levels <- unique(homogeneity_data$level)
       selectInput("target_level", "2. Select PT Level", choices = levels, selected = levels[1])
     } else {
       p("Column 'level' not found in the uploaded data.")
@@ -227,16 +245,16 @@ server <- function(input, output, session) {
   # R3: Homogeneity Execution (Triggered by button)
   homogeneity_run <- eventReactive(input$run_analysis, {
     req(raw_data(), input$target_level)
-    data <- raw_data()
+    homogeneity_data <- raw_data()
     target_level <- input$target_level
 
     # Prepare data for analysis
-    level_data <- data %>%
+    homogeneity_level_data <- homogeneity_data %>%
       filter(level == target_level) %>%
       select(starts_with("sample_"))
 
-    g <- nrow(level_data)
-    m <- ncol(level_data)
+    g <- nrow(homogeneity_level_data)
+    m <- ncol(homogeneity_level_data)
 
     if (m < 2) {
         return(list(error = "Not enough replicate runs (at least 2 required) for homogeneity assessment."))
@@ -247,9 +265,9 @@ server <- function(input, output, session) {
 
     # Create the intermediate calculations table data
     intermediate_df <- if (m == 2) {
-      s1 <- level_data[[1]]
-      s2 <- level_data[[2]]
-      level_data %>%
+      s1 <- homogeneity_level_data[[1]]
+      s2 <- homogeneity_level_data[[2]]
+      homogeneity_level_data %>%
         mutate(
           Item = row_number(),
           average = (s1 + s2) / 2,
@@ -257,7 +275,7 @@ server <- function(input, output, session) {
         ) %>%
         select(Item, everything())
     } else {
-      level_data %>%
+      homogeneity_level_data %>%
         mutate(
           Item = row_number(),
           average = rowMeans(., na.rm = TRUE),
@@ -267,7 +285,7 @@ server <- function(input, output, session) {
     }
 
     # Now create the long data format for calculations
-    hom_data <- level_data %>%
+    hom_data <- homogeneity_level_data %>%
       mutate(Item = factor(row_number())) %>%
       pivot_longer(
         cols = -Item,
@@ -276,10 +294,10 @@ server <- function(input, output, session) {
       )
 
     # Calculate sigma_pt as MADe from the first sample column ('sample_1')
-    if (!"sample_1" %in% names(level_data)) {
+    if (!"sample_1" %in% names(homogeneity_level_data)) {
         return(list(error = "Column 'sample_1' not found. It is required to calculate sigma_pt."))
     }
-    first_sample_results <- level_data %>% pull(sample_1)
+    first_sample_results <- homogeneity_level_data %>% pull(sample_1)
     median_val <- median(first_sample_results, na.rm = TRUE)
     abs_diff_from_median <- abs(first_sample_results - median_val)
     median_abs_diff <- median(abs_diff_from_median, na.rm = TRUE)
@@ -379,23 +397,26 @@ server <- function(input, output, session) {
       s_x_bar_sq = hom_s_x_bar_sq,
       s_w_sq = hom_sw^2,
       intermediate_df = intermediate_df,
+      first_sample_results = first_sample_results,
+      abs_diff_from_median = abs_diff_from_median,
       error = NULL
     )
   })
 
   # R3.5: Stability Data Homogeneity Execution (Triggered by button)
-  homogeneity_run_stability <- eventReactive(input$run_analysis, {
-    req(stability_data_raw(), input$target_level)
-    data <- stability_data_raw()
+  homogeneity_run_stability <- eventReactive(input$run_stability_analysis, {
+    req(stability_data_raw(), input$target_level, homogeneity_run())
+    stability_data <- stability_data_raw()
     target_level <- input$target_level
+    hom_results <- homogeneity_run()
 
     # Prepare data for analysis
-    level_data <- data %>%
+    stability_level_data <- stability_data %>%
       filter(level == target_level) %>%
       select(starts_with("sample_"))
 
-    g <- nrow(level_data)
-    m <- ncol(level_data)
+    g <- nrow(stability_level_data)
+    m <- ncol(stability_level_data)
 
     if (m < 2) {
         return(list(error = "Not enough replicate runs (at least 2 required) for stability data homogeneity assessment."))
@@ -406,9 +427,9 @@ server <- function(input, output, session) {
 
     # Create the intermediate calculations table data
     intermediate_df <- if (m == 2) {
-      s1 <- level_data[[1]]
-      s2 <- level_data[[2]]
-      level_data %>%
+      s1 <- stability_level_data[[1]]
+      s2 <- stability_level_data[[2]]
+      stability_level_data %>%
         mutate(
           Item = row_number(),
           average = (s1 + s2) / 2,
@@ -416,7 +437,7 @@ server <- function(input, output, session) {
         ) %>%
         select(Item, everything())
     } else {
-      level_data %>%
+      stability_level_data %>%
         mutate(
           Item = row_number(),
           average = rowMeans(., na.rm = TRUE),
@@ -426,29 +447,13 @@ server <- function(input, output, session) {
     }
 
     # Now create the long data format for calculations
-    stab_data <- level_data %>%
+    stab_data <- stability_level_data %>%
       mutate(Item = factor(row_number())) %>%
       pivot_longer(
         cols = -Item,
         names_to = "replicate",
         values_to = "Result"
       )
-
-    # Calculate sigma_pt as MADe from the first sample column ('sample_1')
-    if (!"sample_1" %in% names(level_data)) {
-        return(list(error = "Column 'sample_1' not found. It is required to calculate sigma_pt for stability data."))
-    }
-    first_sample_results <- level_data %>% pull(sample_1)
-    median_val <- median(first_sample_results, na.rm = TRUE)
-    abs_diff_from_median <- abs(first_sample_results - median_val)
-    median_abs_diff <- median(abs_diff_from_median, na.rm = TRUE)
-    mad_e <- 1.483 * median_abs_diff
-
-    # Robust statistics (for Alternative Method 2 and for display)
-    n_robust <- length(first_sample_results)
-    u_xpt <- 1.25 * mad_e / sqrt(n_robust)
-
-
 
 # --- Manual ANOVA Calculation (for Stability Data) ---
     # Calculate mean, variance, and range (difference) for each item
@@ -491,7 +496,7 @@ server <- function(input, output, session) {
     stab_anova_summary <- stab_anova_summary_df
 
     # Assessment Criterion (for ANOVA method)
-    stab_sigma_pt <- mad_e
+    stab_sigma_pt <- hom_results$sigma_pt
     stab_c_criterion <- 0.3 * stab_sigma_pt
     stab_sigma_allowed_sq <- stab_c_criterion^2
 
@@ -517,6 +522,8 @@ server <- function(input, output, session) {
     # Combine conclusions
     stab_conclusion <- paste(stab_conclusion1, stab_conclusion2, sep = "<br>")
     list(
+      stab_x_t_bar = stab_x_t_bar,
+      diff_stab_hom = abs(stab_x_t_bar - hom_results$general_mean),
       stab_summary = stab_anova_summary,
       stab_ss = stab_ss,
       stab_sw = stab_sw,
@@ -528,10 +535,10 @@ server <- function(input, output, session) {
       stab_c_criterion = stab_c_criterion,
       stab_c_criterion_expanded = stab_c_criterion_expanded,
       stab_sigma_pt = stab_sigma_pt,
-      stab_median_val = median_val,
-      stab_median_abs_diff = median_abs_diff,
-      stab_u_xpt = u_xpt,
-      n_robust = n_robust,
+      stab_median_val = hom_results$median_val,
+      stab_median_abs_diff = hom_results$median_abs_diff,
+      stab_u_xpt = hom_results$u_xpt,
+      n_robust = hom_results$n_robust,
       stab_item_means = stab_item_stats$mean,
       stab_general_mean = stab_x_t_bar,
       stab_sd_of_means = stab_s_xt,
@@ -542,78 +549,7 @@ server <- function(input, output, session) {
     )
   })
 
-  # R4: Stability Execution (Triggered by button)
-  stability_run <- eventReactive(input$run_analysis, {
-    # Depend on both homogeneity runs
-    req(homogeneity_run(), homogeneity_run_stability())
-    hom_results <- homogeneity_run()
-    stab_hom_results <- homogeneity_run_stability()
 
-    # Check for errors from the upstream reactives
-    if (!is.null(hom_results$error)) return(list(error = hom_results$error))
-    if (!is.null(stab_hom_results$error)) return(list(error = stab_hom_results$error))
-
-    # Get the means from the results of the two homogeneity runs
-    y1 <- hom_results$general_mean
-    y2 <- stab_hom_results$stab_general_mean
-    diff_observed <- abs(y1 - y2)
-
-    # Use sigma_pt from the primary homogeneity run
-    sigma_pt <- hom_results$sigma_pt
-    stab_criterion_value <- 0.3 * sigma_pt
-
-    # Dynamic format for decimal places
-    fmt <- "%.9f"
-
-    details_text <- sprintf(
-      paste("Mean of Homogeneity Data (y1):", fmt, "
-Mean of Stability Data (y2):", fmt, "
-Observed Absolute Difference:", fmt, "
-Stability Criterion (0.3 * sigma_pt):", fmt),
-      y1, y2, diff_observed, stab_criterion_value
-    )
-
-    if (diff_observed <= stab_criterion_value) {
-      conclusion <- "Conclusion: The item is adequately stable."
-      conclusion_class <- "alert alert-success"
-    } else {
-      conclusion <- "Conclusion: WARNING: The item may be unstable."
-      conclusion_class <- "alert alert-warning"
-    }
-
-    # For the t-test, we need the raw results from both datasets for the selected level
-    target_level <- input$target_level
-    
-    data_t1_results <- raw_data() %>%
-      filter(level == target_level) %>%
-      select(starts_with("sample_")) %>%
-      pivot_longer(everything(), values_to = "Result") %>%
-      pull(Result)
-
-    data_t2_results <- stability_data_raw() %>%
-      filter(level == target_level) %>%
-      select(starts_with("sample_")) %>%
-      pivot_longer(everything(), values_to = "Result") %>%
-      pull(Result)
-
-    # T-test
-    t_test_result <- t.test(data_t1_results, data_t2_results)
-
-    if (t_test_result$p.value > 0.05) {
-      ttest_conclusion <- "T-test: No statistically significant difference detected between the two datasets (p > 0.05), supporting stability."
-    } else {
-      ttest_conclusion <- "T-test: Statistically significant difference detected between the two datasets (p <= 0.05), indicating potential instability."
-    }
-
-    list(
-      conclusion = conclusion,
-      conclusion_class = conclusion_class,
-      details = details_text,
-      ttest_summary = t_test_result,
-      ttest_conclusion = ttest_conclusion,
-      error = NULL
-    )
-  })
 
   # --- Outputs ---
 
@@ -636,6 +572,7 @@ Stability Criterion (0.3 * sigma_pt):", fmt),
 
     datatable(df, options = list(scrollX = TRUE))
   })
+
 
   # Output: Validation Message
   output$validation_message <- renderPrint({
@@ -699,6 +636,38 @@ Stability Criterion (0.3 * sigma_pt):", fmt),
       theme_minimal()
   })
 
+  # Output: Homogeneity Data Preview
+  output$homogeneity_preview_table <- renderDataTable({
+    req(raw_data(), input$target_level)
+    homogeneity_data <- raw_data()
+    # Find the first column that starts with "sample_"
+    first_sample_col <- names(homogeneity_data)[grep("sample_", names(homogeneity_data))][1]
+    homogeneity_data %>%
+      filter(level == input$target_level) %>%
+      select(level, all_of(first_sample_col))
+  })
+
+  # Output: Robust Stats Table
+  output$robust_stats_table <- renderTable({
+    res <- homogeneity_run()
+    if (is.null(res$error)) {
+      data.frame(
+        `First.Sample.Results` = format(res$first_sample_results, digits = 15, scientific = FALSE),
+        `Abs.Diff.from.Median` = format(res$abs_diff_from_median, digits = 15, scientific = FALSE)
+      )
+    }
+  }, spacing = "l")
+
+  # Output: Robust Stats Summary
+  output$robust_stats_summary <- renderPrint({
+    res <- homogeneity_run()
+    if (is.null(res$error)) {
+      cat(paste("Median Value:", format(res$median_val, digits = 15, scientific = FALSE), "\n"))
+      cat(paste("Median Absolute Difference:", format(res$median_abs_diff, digits = 15, scientific = FALSE), "\n"))
+      cat(paste("MADe (sigma_pt):", format(res$sigma_pt, digits = 15, scientific = FALSE), "\n"))
+    }
+  })
+
   # Output: Homogeneity Conclusion
   output$homog_conclusion <- renderUI({
     res <- homogeneity_run()
@@ -717,13 +686,11 @@ Stability Criterion (0.3 * sigma_pt):", fmt),
           Component = c("Assigned Value (xpt)",
                         "Robust SD (sigma_pt)",
                         "Uncertainty of Assigned Value (u_xpt)",
-                        "Between-Sample SD (ss)",
-                        "Within-Sample SD (sw)",
                         "---",
                         "Criterion c",
                         "Criterion c (expanded)"),
           Value = c(
-            format(c(res$median_val, res$sigma_pt, res$u_xpt, res$ss, res$sw), digits = 15, scientific = FALSE),
+            format(c(res$median_val, res$sigma_pt, res$u_xpt,), digits = 15, scientific = FALSE),
             "",
             format(c(res$c_criterion, res$c_criterion_expanded), digits = 15, scientific = FALSE)
           )
@@ -800,7 +767,7 @@ Stability Criterion (0.3 * sigma_pt):", fmt),
     }
   }, spacing = "l")
 
-  # --- Outputs for Stability Data Analysis Tab ---
+  # --- Outputs for Stability Assessment Tab ---
 
   # Output: Homogeneity Conclusion for Stability Data
   output$homog_conclusion_stability <- renderUI({
@@ -820,13 +787,11 @@ Stability Criterion (0.3 * sigma_pt):", fmt),
           Component = c("Assigned Value (xpt)",
                         "Robust SD (sigma_pt)",
                         "Uncertainty of Assigned Value (u_xpt)",
-                        "Between-Sample SD (ss)",
-                        "Within-Sample SD (sw)",
                         "---",
                         "Criterion c",
                         "Criterion c (expanded)"),
           Value = c(
-            format(c(res$stab_median_val, res$stab_sigma_pt, res$stab_u_xpt, res$stab_ss, res$stab_sw), digits = 15, scientific = FALSE),
+            format(c(res$stab_median_val, res$stab_sigma_pt, res$stab_u_xpt), digits = 15, scientific = FALSE),
             "",
             format(c(res$stab_c_criterion, res$stab_c_criterion_expanded), digits = 15, scientific = FALSE)
           )

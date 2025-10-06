@@ -120,7 +120,7 @@ ui <- fluidPage(
                  h4("Conclusion"),
                  uiOutput("stability_conclusion"),
                  hr(),
-                 h4("Stability Analysis Details"),
+                 h4("Stability Assessment Details"),
                  p("Comparison of means between two measurement periods (simulated by splitting data)."),
                  verbatimTextOutput("stability_details"),
                  hr(),
