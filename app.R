@@ -20,141 +20,163 @@ library(rhandsontable)
 ui <- fluidPage(
 
   # 1. Application Title
-  titlePanel("Modulo Evaluación Estabilidad y Homogeneidad del Item de Ensayo"),
+  titlePanel("PT Data Analysis App"),
 
-  # 2. Main Layout: Sidebar
-  sidebarLayout(
+  # 2. Main Layout: Vertical Navigation
+  navlistPanel(
+    id = "main_nav",
+    "Analysis Modules",
 
-    # 2.1. Input Panel (Sidebar)
-    sidebarPanel(
-      width = 2,
-      h4("1. Cargue de Datos (Provide Data)"),
-      radioButtons("input_method", "Input method:",
-                   choices = c("Cargar Archivo (Upload File)" = "upload",
-                               "Editar Tabla (Editable Table)" = "table"),
-                   selected = "upload", inline = TRUE),
+    # Module 1: Homogeneity and Stability
+    tabPanel("Homogeneity & Stability Analysis",
+      sidebarLayout(
+        # 2.1. Input Panel (Sidebar)
+        sidebarPanel(
+          width = 3, # Adjusted width for the new layout
+          h4("1. Cargue de Datos (Provide Data)"),
+          radioButtons("input_method", "Input method:",
+                       choices = c("Cargar Archivo (Upload File)" = "upload",
+                                   "Editar Tabla (Editable Table)" = "table"),
+                       selected = "upload", inline = TRUE),
 
-      conditionalPanel(
-        condition = "input.input_method == 'upload'",
-        tagList(
-          fileInput("datafile", "Homogeneity Data",
-                    accept = c(".csv", ".tsv", ".txt"),
-                    placeholder = "Select a CSV/TSV file"),
-          p("For stability analysis, provide the second dataset here:"),
-          fileInput("stability_datafile", "Stability Data",
-                    accept = c(".csv", ".tsv", ".txt"),
-                    placeholder = "Select a CSV/TSV file")
+          conditionalPanel(
+            condition = "input.input_method == 'upload'",
+            tagList(
+              fileInput("datafile", "Homogeneity Data",
+                        accept = c(".csv", ".tsv", ".txt"),
+                        placeholder = "Select a CSV/TSV file"),
+              p("For stability analysis, provide the second dataset here:"),
+              fileInput("stability_datafile", "Stability Data",
+                        accept = c(".csv", ".tsv", ".txt"),
+                        placeholder = "Select a CSV/TSV file")
+            )
+          ),
+
+          conditionalPanel(
+            condition = "input.input_method == 'table'",
+            numericInput("num_rows", "Número de Filas (Number of Rows):", 10, min = 1),
+            numericInput("num_cols", "Número de Columnas (Number of Columns):", 3, min = 1)
+          ),
+
+          hr(),
+
+          h4("2. Seleccionar Parámetros (Select Parameters)"),
+          # Dynamic UI to select the level
+          uiOutput("level_selector"),
+
+          h4("3. Ejecutar Análisis (Run Analysis)"),
+          # Button to run the analysis
+          actionButton("run_analysis", "Ejecutar (Run Analysis)",
+                       class = "btn-primary btn-block"),
+
+          hr(),
+          p("Este aplicativo evalua la homogeneidad y estabilidad del item de ensayo de acuerdo a los princiios de la ISO 13528:2022.")
+        ),
+
+        # 2.2. Main Panel for Results
+        mainPanel(
+          width = 9, # Adjusted width for the new layout
+          # Outputs organized in tabs
+          tabsetPanel(
+            id = "analysis_tabs",
+
+            # Tab 1: Data Preview
+            tabPanel("Data Preview",
+                     h4("Data Input Preview"),
+                     conditionalPanel(
+                       condition = "input.input_method != 'table'",
+                       p("This table shows the first 10 rows of your loaded data."),
+                       dataTableOutput("raw_data_preview")
+                     ),
+                     conditionalPanel(
+                       condition = "input.input_method == 'table'",
+                       p("Enter your data in the table below. The first column should be 'level' and subsequent columns should be named 'sample_1', 'sample_2', etc."),
+                       rHandsontableOutput("hot")
+                     ),
+                     hr(),
+                     h4("Data Distribution"),
+                     p("The histogram and boxplot below show the distribution of all results from the 'sample_*' columns for the selected level."),
+                     fluidRow(
+                       column(width = 6,
+                              plotOutput("results_histogram")
+                       ),
+                       column(width = 6,
+                              plotOutput("results_boxplot")
+                       )
+                     ),
+                     hr(),
+                     h4("Data Validation"),
+                     verbatimTextOutput("validation_message")
+            ),
+
+            # Tab 2: Homogeneity Assessment
+            tabPanel("Homogeneity Assessment",
+                     h4("Conclusion"),
+                     uiOutput("homog_conclusion"),
+                     hr(),
+                     h4("Variance Components"),
+                     p("Estimated standard deviations from the manual calculation."),
+                     tableOutput("variance_components"),
+                     hr(),
+                     h4("Per-Item Calculations"),
+                     p("This table shows calculations for each item (row) in the dataset for the selected level, including the average and range of measurements."),
+                     tableOutput("details_per_item_table"),
+                     hr(),
+                     h4("Summary Statistics"),
+                     p("This table shows the overall statistics used for the homogeneity assessment."),
+                     tableOutput("details_summary_stats_table")
+            ),
+
+            # Tab 3: Stability Data Analysis
+            tabPanel("Stability Data Analysis",
+                     h4("Conclusion"),
+                     uiOutput("homog_conclusion_stability"),
+                     hr(),
+                     h4("Variance Components"),
+                     p("Estimated standard deviations from the manual calculation for the stability dataset."),
+                     tableOutput("variance_components_stability"),
+                     hr(),
+                     h4("Per-Item Calculations"),
+                     p("This table shows calculations for each item (row) in the stability dataset."),
+                     tableOutput("details_per_item_table_stability"),
+                     hr(),
+                     h4("Summary Statistics"),
+                     p("This table shows the overall statistics for the stability dataset."),
+                     tableOutput("details_summary_stats_table_stability")
+            ),
+
+            # Tab 4: Stability Assessment
+            tabPanel("Stability Assessment",
+                     h4("Conclusion"),
+                     uiOutput("stability_conclusion"),
+                     hr(),
+                     h4("Stability Analysis Details"),
+                     p("Comparison of means between two measurement periods (simulated by splitting data)."),
+                     verbatimTextOutput("stability_details"),
+                     hr(),
+                     h4("T-test for Stability"),
+                     p("A two-sample t-test to check for statistically significant differences."),
+                     verbatimTextOutput("stability_ttest")
+            )
+          )
         )
-      ),
-
-
-      conditionalPanel(
-        condition = "input.input_method == 'table'",
-        numericInput("num_rows", "Número de Filas (Number of Rows):", 10, min = 1),
-        numericInput("num_cols", "Número de Columnas (Number of Columns):", 3, min = 1)
-      ),
-
-      hr(),
-
-      h4("2. Seleccionar Parámetros (Select Parameters)"),
-      # Dynamic UI to select the level
-      uiOutput("level_selector"),
-
-
-
-      h4("3. Ejecutar Análisis (Run Analysis)"),
-      # Button to run the analysis
-      actionButton("run_analysis", "Ejecutar (Run Analysis)",
-                   class = "btn-primary btn-block"),
-
-      hr(),
-      p("Este aplicativo evalua la homogeneidad y estabilidad del item de ensayo de acuerdo a los princiios de la ISO 13528:2022.")
+      )
     ),
 
-    # 2.2. Main Panel for Results
-    mainPanel(
-      width = 9,
-      # Outputs organized in tabs
-      tabsetPanel(
-        id = "analysis_tabs",
-
-        # Tab 1: Data Preview
-        tabPanel("Data Preview",
-                 h4("Data Input Preview"),
-                 conditionalPanel(
-                   condition = "input.input_method != 'table'",
-                   p("This table shows the first 10 rows of your loaded data."),
-                   dataTableOutput("raw_data_preview")
-                 ),
-                 conditionalPanel(
-                   condition = "input.input_method == 'table'",
-                   p("Enter your data in the table below. The first column should be 'level' and subsequent columns should be named 'sample_1', 'sample_2', etc."),
-                   rHandsontableOutput("hot")
-                 ),
-                 hr(),
-                 h4("Data Distribution"),
-                 p("The histogram and boxplot below show the distribution of all results from the 'sample_*' columns for the selected level."),
-                 fluidRow(
-                   column(width = 6,
-                          plotOutput("results_histogram")
-                   ),
-                   column(width = 6,
-                          plotOutput("results_boxplot")
-                   )
-                 ),
-                 hr(),
-                 h4("Data Validation"),
-                 verbatimTextOutput("validation_message")
+    # Module 2: PT Preparation
+    tabPanel("PT Preparation",
+      sidebarLayout(
+        sidebarPanel(
+          h3("Proficiency Testing Preparation"),
+          selectInput("pollutant", "Select Pollutant:",
+                      choices = c("CO", "NO", "NO2", "O3", "SO2")),
+          # Dynamic UI for the input fields will be rendered here
+          uiOutput("pt_preparation_inputs")
         ),
-
-        # Tab 2: Homogeneity Assessment
-        tabPanel("Homogeneity Assessment",
-                 h4("Conclusion"),
-                 uiOutput("homog_conclusion"),
-                 hr(),
-                 h4("Variance Components"),
-                 p("Estimated standard deviations from the manual calculation."),
-                 tableOutput("variance_components"),
-                 hr(),
-                 h4("Per-Item Calculations"),
-                 p("This table shows calculations for each item (row) in the dataset for the selected level, including the average and range of measurements."),
-                 tableOutput("details_per_item_table"),
-                 hr(),
-                 h4("Summary Statistics"),
-                 p("This table shows the overall statistics used for the homogeneity assessment."),
-                 tableOutput("details_summary_stats_table")
-        ),
-
-        # Tab 3: Stability Data Analysis
-        tabPanel("Stability Data Analysis",
-                 h4("Conclusion"),
-                 uiOutput("homog_conclusion_stability"),
-                 hr(),
-                 h4("Variance Components"),
-                 p("Estimated standard deviations from the manual calculation for the stability dataset."),
-                 tableOutput("variance_components_stability"),
-                 hr(),
-                 h4("Per-Item Calculations"),
-                 p("This table shows calculations for each item (row) in the stability dataset."),
-                 tableOutput("details_per_item_table_stability"),
-                 hr(),
-                 h4("Summary Statistics"),
-                 p("This table shows the overall statistics for the stability dataset."),
-                 tableOutput("details_summary_stats_table_stability")
-        ),
-
-        # Tab 4: Stability Assessment
-        tabPanel("Stability Assessment",
-                 h4("Conclusion"),
-                 uiOutput("stability_conclusion"),
-                 hr(),
-                 h4("Stability Analysis Details"),
-                 p("Comparison of means between two measurement periods (simulated by splitting data)."),
-                 verbatimTextOutput("stability_details"),
-                 hr(),
-                 h4("T-test for Stability"),
-                 p("A two-sample t-test to check for statistically significant differences."),
-                 verbatimTextOutput("stability_ttest")
+        mainPanel(
+          # This area can be used for results or plots later
+          h4("Output Area"),
+          p("Results and calculations will be displayed here.")
         )
       )
     )
@@ -874,6 +896,25 @@ Stability Criterion (0.3 * sigma_pt):", fmt),
     }
   }, spacing = "l")
 
+  # R5: Dynamic UI for PT Preparation Module
+  output$pt_preparation_inputs <- renderUI({
+    req(input$pollutant) # Ensure a pollutant is selected
+    tagList(
+      h4(paste("Enter Data for", input$pollutant)),
+      # 3 empty cells for 3 averages
+      numericInput("avg1", "Average 1:", value = NA),
+      numericInput("avg2", "Average 2:", value = NA),
+      numericInput("avg3", "Average 3:", value = NA),
+      hr(),
+      # 3 empty cells for uncertainty
+      numericInput("unc1", "Uncertainty 1:", value = NA),
+      numericInput("unc2", "Uncertainty 2:", value = NA),
+      numericInput("unc3", "Uncertainty 3:", value = NA),
+      hr(),
+      # final cell for coverage factor
+      numericInput("k_factor", "Coverage Factor (k):", value = NA)
+    )
+  })
 }
 
 # ===================================================================
