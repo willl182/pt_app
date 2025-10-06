@@ -12,7 +12,6 @@ library(shiny)
 library(tidyverse)
 library(vroom)
 library(DT)
-library(rmarkdown) # Library for report generation
 
 # ===================================================================
 # I. User Interface (UI)
@@ -56,15 +55,12 @@ ui <- fluidPage(
       # Dynamic UI to select the level
       uiOutput("level_selector"),
 
+
+
       h4("3. Run Analysis"),
       # Button to run the analysis
       actionButton("run_analysis", "Run Analysis",
                    class = "btn-primary btn-block"),
-
-      hr(),
-      h4("4. Download Report"),
-      downloadButton("download_report", "Download HTML Report",
-                     class = "btn-success btn-block"),
 
       hr(),
       p("This app assesses homogeneity and stability of PT items according to ISO 13528:2022 principles.")
@@ -98,15 +94,18 @@ ui <- fluidPage(
                  verbatimTextOutput("validation_message")
         ),
 
-        # Tab 2: Homogeneity Assessment (Combined)
+        # Tab 2: Homogeneity Assessment
         tabPanel("Homogeneity Assessment",
-                 h4("Homogeneity Conclusion"),
+                 h4("Conclusion"),
                  uiOutput("homog_conclusion"),
                  hr(),
                  h4("Variance Components"),
                  p("Estimated standard deviations from the manual calculation."),
-                 tableOutput("variance_components"),
-                 hr(),
+                 tableOutput("variance_components")
+        ),
+
+        # Tab 3: Calculation Details
+        tabPanel("Calculation Details",
                  h4("Per-Item Calculations"),
                  p("This table shows calculations for each item (row) in the dataset for the selected level, including the average and range of measurements."),
                  tableOutput("details_per_item_table"),
@@ -116,7 +115,7 @@ ui <- fluidPage(
                  tableOutput("details_summary_stats_table")
         ),
 
-        # Tab 3: Stability Assessment
+        # Tab 4: Stability Assessment
         tabPanel("Stability Assessment",
                  h4("Conclusion"),
                  uiOutput("stability_conclusion"),
@@ -262,12 +261,12 @@ server <- function(input, output, session) {
     ss <- sqrt(ss_sq)
 
     # For display purposes, we can create a data frame that mimics the ANOVA table
-    anova_summary_df <- data.frame(
-      "Df" = c(g - 1, g * (m - 1)),
-      "Sum Sq" = c(s_x_bar_sq * m * (g - 1), sw^2 * g * (m - 1)),
-      "Mean Sq" = c(s_x_bar_sq * m, sw^2),
-      check.names = FALSE
-    )
+anova_summary_df <- data.frame(
+  "Df" = c(g - 1, g * (m - 1)),
+  "Sum Sq" = c(s_x_bar_sq * m * (g - 1), sw^2 * g * (m - 1)),
+  "Mean Sq" = c(s_x_bar_sq * m, sw^2),
+  check.names = FALSE
+)
 
     rownames(anova_summary_df) <- c("Item", "Residuals")
 
@@ -554,17 +553,7 @@ server <- function(input, output, session) {
                       "Median of Absolute Differences",
                       "Number of Replicates (n_robust)",
                       "Robust SD (MADe)",
-                      "Uncertainty of Assigned Value (u_xpt)",level,       sample_1,        sample_2
-40-nmol/mol, 40.827,        40.2069
-40-nmol/mol, 40.8568,        40.218
-40-nmol/mol, 40.8296,        40.236
-40-nmol/mol, 40.8426,        40.2574
-40-nmol/mol, 40.896, 40.1529
-40-nmol/mol, 40.8928,    40.2197
-40-nmol/mol, 40.8622,     40.2111
-40-nmol/mol, 40.9133,      40.1834
-40-nmol/mol, 40.8383,       40.1796
-40-nmol/mol, 40.8964,        40.2325
+                      "Uncertainty of Assigned Value (u_xpt)",
                       "---",
                       "0.3 * sigma_pt", 
                       "Criterion c"),
@@ -579,100 +568,9 @@ server <- function(input, output, session) {
     }
   }, spacing = "l")
 
-  # R5: Download Handler for the Report
-  output$download_report <- downloadHandler(
-    filename = function() {
-      paste0("pt_analysis_report-", Sys.Date(), ".html")
-    },
-    content = function(file) {
-      # Create a temporary Rmd file
-      temp_report <- file.path(tempdir(), "report.Rmd")
-      
-      # Create a template Rmd file for the report
-      writeLines(
-'---
-title: "PT Analysis Report"
-output: html_document
-params:
-  homogeneity_results: NA
-  stability_results: NA
-  target_level: NA
-  data_preview: NA
----
-
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE)
-library(knitr)
-```
-
-## Data Preview
-
-```{r}
-knitr::kable(params$data_preview, caption = "Preview of the first 10 rows of data.")
-```
-
-## Homogeneity Assessment
-
-**Target Level:** `r params$target_level`
-
-**Conclusion:** `r params$homogeneity_results$conclusion`
-
-### Variance Components
-
-```{r}
-# Custom table for variance components
-var_comp <- data.frame(
-  Component = c("Between-Sample SD (ss)", "Within-Sample SD (sw)", "Robust SD (sigma_pt)", "0.3 * sigma_pt"),
-  Value = c(params$homogeneity_results$ss, params$homogeneity_results$sw, params$homogeneity_results$sigma_pt, params$homogeneity_results$hom_criterion_value)
-)
-knitr::kable(var_comp, caption = "Key variance components.")
-```
-
-## Stability Assessment
-
-**Conclusion:** `r params$stability_results$conclusion`
-
-### Stability Details
-
-```
-`r params$stability_results$details`
-```
-
-### T-test Summary
-
-```
-`r capture.output(print(params$stability_results$ttest_summary))`
-```
-
-',
-        temp_report
-      )
-
-      # Get the results from the reactive expressions
-      hom_res <- homogeneity_run()
-      stab_res <- stability_run()
-
-      # Set up parameters to pass to the Rmd file
-      params <- list(
-        homogeneity_results = hom_res,
-        stability_results = stab_res,
-        target_level = input$target_level,
-        data_preview = head(raw_data(), 10)
-      )
-
-      # Render the Rmd file
-      rmarkdown::render(temp_report,
-                        output_file = file,
-                        params = params,
-                        envir = new.env(parent = globalenv()))
-    }
-  )
-
 }
 
 # ===================================================================
 # III. Run the Application
 # ===================================================================
 shinyApp(ui = ui, server = server)
-
-
