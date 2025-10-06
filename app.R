@@ -185,7 +185,7 @@ server <- function(input, output, session) {
   # R1.5: Render the editable rhandsontable
   output$hot <- renderRHandsontable({
     req(input$num_rows, input$num_cols)
-    df <- data.frame(matrix(NA, nrow = input$num_rows, ncol = input$num_cols))
+    df <- data.frame(matrix("", nrow = input$num_rows, ncol = input$num_cols), stringsAsFactors = FALSE)
     # Pre-fill column names for user convenience
     colnames(df) <- c("level", paste0("sample_", 1:(input$num_cols-1)))
     rhandsontable(df, stretchH = "all")
