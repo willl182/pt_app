@@ -13,6 +13,7 @@ library(tidyverse)
 library(vroom)
 library(DT)
 library(rhandsontable)
+library(shinythemes)
 
 # ===================================================================
 # I. User Interface (UI)
@@ -27,6 +28,8 @@ ui <- fluidPage(
   conditionalPanel(
     condition = "input.show_layout_options == true",
     wellPanel(
+      themeSelector(),
+      hr(),
       sliderInput("nav_width", "Navigation Panel Width:", min = 1, max = 5, value = 2, width = "250px"),
       sliderInput("analysis_sidebar_width", "Analysis Sidebar Width:", min = 2, max = 6, value = 3, width = "250px")
     )
@@ -41,6 +44,10 @@ ui <- fluidPage(
 # II. Server Logic
 # ===================================================================
 server <- function(input, output, session) {
+
+  # --- Data Loading and Processing ---
+  hom_data_full <- read.csv("homogeneity.csv")
+  stab_data_full <- read.csv("stability.csv")
 
   # R0: Dynamic Main Layout
   output$main_layout <- renderUI({
@@ -62,37 +69,10 @@ server <- function(input, output, session) {
           # 2.1. Input Panel (Sidebar)
           sidebarPanel(
             width = analysis_sidebar_w,
-            h4("1. Cargue de Datos (Provide Data)"),
-            radioButtons("input_method", "Input method:",
-                         choices = c("Cargar Archivo (Upload File)" = "upload",
-                                     "Editar Tabla (Editable Table)" = "table"),
-                         selected = "upload", inline = TRUE),
-
-            conditionalPanel(
-              condition = "input.input_method == 'upload'",
-              tagList(
-                fileInput("datafile", "Homogeneity Data",
-                          accept = c(".csv", ".tsv", ".txt"),
-                          placeholder = "Select a CSV/TSV file"),
-                p("For stability analysis, provide the second dataset here:"),
-                fileInput("stability_datafile", "Stability Data",
-                          accept = c(".csv", ".tsv", ".txt"),
-                          placeholder = "Select a CSV/TSV file")
-              )
-            ),
-
-            conditionalPanel(
-              condition = "input.input_method == 'table'",
-              h5("Homogeneity Data"),
-              numericInput("num_rows_hom", "Rows:", 10, min = 1),
-              numericInput("num_cols_hom", "Cols:", 3, min = 1),
-              h5("Stability Data"),
-              numericInput("num_rows_stab", "Rows:", 2, min = 1),
-              numericInput("num_cols_stab", "Cols:", 3, min = 1)
-            ),
-
+            h4("1. Seleccionar Datos (Select Data)"),
+            selectInput("pollutant_analysis", "Select Pollutant:",
+                        choices = c("co", "no", "no2", "o3", "so2")),
             hr(),
-
             h4("2. Seleccionar Parámetros (Select Parameters)"),
             # Dynamic UI to select the level
             uiOutput("level_selector"),
@@ -116,21 +96,12 @@ server <- function(input, output, session) {
               # Tab 1: Data Preview
               tabPanel("Data Preview",
                        h4("Data Input Preview"),
-                       conditionalPanel(
-                         condition = "input.input_method != 'table'",
-                         p("This table shows the first 10 rows of your loaded data."),
-                         dataTableOutput("raw_data_preview")
-                       ),
-                       conditionalPanel(
-                         condition = "input.input_method == 'table'",
-                         h4("Homogeneity Data"),
-                         p("Enter your data in the table below. The first column should be 'level' and subsequent columns should be named 'sample_1', 'sample_2', etc."),
-                         rHandsontableOutput("hot_homogeneity"),
-                         hr(),
-                         h4("Stability Data"),
-                         p("Enter your data in the table below. The first column should be 'level' and subsequent columns should be named 'sample_1', 'sample_2', etc."),
-                         rHandsontableOutput("hot_stability")
-                       ),
+                       p("This table shows the data for the selected pollutant."),
+                       h5("Homogeneity Data"),
+                       dataTableOutput("raw_data_preview"),
+                       hr(),
+                       h5("Stability Data"),
+                       dataTableOutput("stability_data_preview"),
                        hr(),
                        h4("Data Distribution"),
                        p("The histogram and boxplot below show the distribution of all results from the 'sample_*' columns for the selected level."),
@@ -188,7 +159,7 @@ server <- function(input, output, session) {
                        h4("Summary Statistics"),
                        p("This table shows the overall statistics for the stability dataset."),
                        tableOutput("details_summary_stats_table_stability")
-              ),
+              )
             )
           )
         )
@@ -200,7 +171,7 @@ server <- function(input, output, session) {
           sidebarPanel(
             h3("Proficiency Testing Preparation"),
             selectInput("pollutant", "Select Pollutant:",
-                        choices = c("CO", "NO", "NO2", "O3", "SO2")),
+                        choices = c("co", "no", "no2", "o3", "so2")),
             # Dynamic UI for the input fields will be rendered here
             uiOutput("pt_preparation_inputs")
           ),
@@ -214,62 +185,22 @@ server <- function(input, output, session) {
     )
   })
 
-  # R1: Initial Data Loading and Processing
+  # R1: Reactive for Homogeneity Data
   raw_data <- reactive({
-    if (input$input_method == "upload") {
-      req(input$datafile)
-      ext <- tools::file_ext(input$datafile$name)
-      switch(ext,
-             csv = vroom::vroom(input$datafile$datapath, delim = ","),
-             tsv = vroom::vroom(input$datafile$datapath, delim = "	"),
-             txt = vroom::vroom(input$datafile$datapath, delim = ","), # Assuming txt is csv
-             validate("Invalid file type. Please upload a .csv or .tsv file.")
-      )
-    } else { # "table"
-      req(input$hot_homogeneity)
-      df <- hot_to_r(input$hot_homogeneity)
-      colnames(df) <- c("level", paste0("sample_", 1:(ncol(df)-1)))
-      df <- df %>%
-        mutate(across(starts_with("sample_"), .fns = ~as.numeric(as.character(.))))
-      df
-    }
+    req(input$pollutant_analysis)
+    hom_data_full %>%
+      filter(pollutant == input$pollutant_analysis) %>%
+      select(-pollutant) %>%
+      pivot_wider(names_from = replicate, values_from = value, names_prefix = "sample_")
   })
 
-  # R1.5: Render the editable rhandsontable for homogeneity
-  output$hot_homogeneity <- renderRHandsontable({
-    req(input$num_rows_hom, input$num_cols_hom)
-    df <- data.frame(matrix("", nrow = input$num_rows_hom, ncol = input$num_cols_hom), stringsAsFactors = FALSE)
-    colnames(df) <- c("level", paste0("sample_", 1:(input$num_cols_hom-1)))
-    rhandsontable(df, stretchH = "all")
-  })
-
-  # R1.5b: Render the editable rhandsontable for stability
-  output$hot_stability <- renderRHandsontable({
-    req(input$num_rows_stab, input$num_cols_stab)
-    df <- data.frame(matrix("", nrow = input$num_rows_stab, ncol = input$num_cols_stab), stringsAsFactors = FALSE)
-    colnames(df) <- c("level", paste0("sample_", 1:(input$num_cols_stab-1)))
-    rhandsontable(df, stretchH = "all")
-  })
-
-  # R1.6: Load stability data
+  # R1.6: Reactive for Stability Data
   stability_data_raw <- reactive({
-    if (input$input_method == "upload") {
-      req(input$stability_datafile)
-      ext <- tools::file_ext(input$stability_datafile$name)
-      switch(ext,
-             csv = vroom::vroom(input$stability_datafile$datapath, delim = ","),
-             tsv = vroom::vroom(input$stability_datafile$datapath, delim = "	"),
-             txt = vroom::vroom(input$stability_datafile$datapath, delim = ","),
-             validate("Invalid file type for stability data. Please upload a .csv or .tsv file.")
-      )
-    } else { # "table"
-      req(input$hot_stability)
-      df <- hot_to_r(input$hot_stability)
-      colnames(df) <- c("level", paste0("sample_", 1:(ncol(df)-1)))
-      df <- df %>%
-        mutate(across(starts_with("sample_"), .fns = ~as.numeric(as.character(.))))
-      df
-    }
+    req(input$pollutant_analysis)
+    stab_data_full %>%
+      filter(pollutant == input$pollutant_analysis) %>%
+      select(-pollutant) %>%
+      pivot_wider(names_from = replicate, values_from = value, names_prefix = "sample_")
   })
 
   # R2: Dynamic Generation of the Level Selector
@@ -279,7 +210,7 @@ server <- function(input, output, session) {
       levels <- unique(data$level)
       selectInput("target_level", "2. Select PT Level", choices = levels, selected = levels[1])
     } else {
-      p("Column 'level' not found in the uploaded data.")
+      p("Column 'level' not found in the loaded data.")
     }
   })
 
@@ -689,21 +620,22 @@ Stability Criterion (0.3 * sigma_pt):", fmt),
 
   # Output: Data Preview
   output$raw_data_preview <- renderDataTable({
-    # Ensure we have data and the decimal place input before rendering
     req(raw_data())
-
     df <- head(raw_data(), 10)
-
-    # Identify numeric columns to format
     numeric_cols <- names(df)[sapply(df, is.numeric)]
-
-    # Create the format string based on user input
     fmt <- "%.9f"
-
-    # Apply formatting to all numeric columns
     df <- df %>%
       mutate(across(all_of(numeric_cols), ~ sprintf(fmt, .x)))
-
+    datatable(df, options = list(scrollX = TRUE))
+  })
+  
+  output$stability_data_preview <- renderDataTable({
+    req(stability_data_raw())
+    df <- head(stability_data_raw(), 10)
+    numeric_cols <- names(df)[sapply(df, is.numeric)]
+    fmt <- "%.9f"
+    df <- df %>%
+      mutate(across(all_of(numeric_cols), ~ sprintf(fmt, .x)))
     datatable(df, options = list(scrollX = TRUE))
   })
 
