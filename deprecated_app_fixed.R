@@ -22,197 +22,145 @@ ui <- fluidPage(
   # 1. Application Title
   titlePanel("PT Data Analysis App"),
 
-  # Collapsible panel for layout options
-  checkboxInput("show_layout_options", "Show Layout Options", value = FALSE),
-  conditionalPanel(
-    condition = "input.show_layout_options == true",
-    wellPanel(
-      sliderInput("nav_width", "Navigation Panel Width:", min = 1, max = 5, value = 2, width = "250px"),
-      sliderInput("analysis_sidebar_width", "Analysis Sidebar Width:", min = 2, max = 6, value = 3, width = "250px")
-    )
-  ),
-  hr(),
+  # 2. Main Layout: Vertical Navigation
+  navlistPanel(
+    id = "main_nav",
+    "Analysis Modules",
 
-  # Dynamic UI for the main layout
-  uiOutput("main_layout")
+    # Module 1: Homogeneity and Stability
+    tabPanel("Homogeneity & Stability Analysis",
+      sidebarLayout(
+        # 2.1. Input Panel (Sidebar)
+        sidebarPanel(
+          width = 2, # Adjusted width for the new layout
+          h4("1. Cargue de Datos (Provide Data)"),
+          radioButtons("input_method", "Input method:",
+                       choices = c("Cargar Archivo (Upload File)" = "upload",
+                                   "Editar Tabla (Editable Table)" = "table"),
+                       selected = "upload", inline = TRUE),
+
+          conditionalPanel(
+            condition = "input.input_method == 'upload'",
+            tagList(
+              fileInput("datafile", "Homogeneity Data",
+                        accept = c(".csv", ".tsv", ".txt"),
+                        placeholder = "Select a CSV/TSV file"),
+            )
+          ),
+
+          conditionalPanel(
+            condition = "input.input_method == 'table'",
+            h5("Homogeneity Data"),
+            numericInput("num_rows_hom", "Rows:", 10, min = 1),
+            numericInput("num_cols_hom", "Cols:", 3, min = 1),
+          ),
+
+          hr(),
+
+          h4("2. Seleccionar Parámetros (Select Parameters)"),
+          # Dynamic UI to select the level
+          uiOutput("level_selector"),
+
+          h4("3. Ejecutar Análisis (Run Analysis)"),
+          # Button to run the analysis
+          actionButton("run_analysis", "Ejecutar (Run Analysis)",
+                       class = "btn-primary btn-block"),
+
+          hr(),
+          p("Este aplicativo evalua la homogeneidad y estabilidad del item de ensayo de acuerdo a los princiios de la ISO 13528:2022.")
+        ),
+
+        # 2.2. Main Panel for Results
+        mainPanel(
+          width = 10, # Adjusted width for the new layout
+          # Outputs organized in tabs
+          tabsetPanel(
+            id = "analysis_tabs",
+
+            # Tab 1: Data Preview
+            tabPanel("Data Preview",
+                     h4("Data Input Preview"),
+                     conditionalPanel(
+                       condition = "input.input_method != 'table'",
+                       p("This table shows the first 10 rows of your loaded data."),
+                       dataTableOutput("raw_data_preview")
+                     ),
+                     conditionalPanel(
+                       condition = "input.input_method == 'table'",
+                       h4("Homogeneity Data"),
+                       p("Enter your data in the table below. The first column should be 'level' and subsequent columns should be named 'sample_1', 'sample_2', etc."),
+                       rHandsontableOutput("hot_homogeneity"),
+                     ),
+                     hr(),
+                     h4("Data Distribution"),
+                     p("The histogram and boxplot below show the distribution of all results from the 'sample_*' columns for the selected level."),
+                     fluidRow(
+                       column(width = 6,
+                              plotOutput("results_histogram")
+                       ),
+                       column(width = 6,
+                              plotOutput("results_boxplot")
+                       )
+                     ),
+                     hr(),
+                     h4("Data Validation"),
+                     verbatimTextOutput("validation_message")
+            ),
+
+            # Tab 2: Homogeneity Assessment
+            tabPanel("Homogeneity Assessment",
+                     h4("Conclusion"),
+                     uiOutput("homog_conclusion"),
+                     hr(),
+                     h4("Homogeneity Data Preview (Level and First Sample)"),
+                     dataTableOutput("homogeneity_preview_table"),
+                     hr(),
+                     h4("Robust Statistics Calculations"),
+                     tableOutput("robust_stats_table"),
+                     verbatimTextOutput("robust_stats_summary"),
+                     hr(),
+                     h4("Variance Components"),
+                     p("Estimated standard deviations from the manual calculation."),
+                     tableOutput("variance_components"),
+                     hr(),
+                     h4("Per-Item Calculations"),
+                     p("This table shows calculations for each item (row) in the dataset for the selected level, including the average and range of measurements."),
+                     tableOutput("details_per_item_table"),
+                     hr(),
+                     h4("Summary Statistics"),
+                     p("This table shows the overall statistics for the homogeneity assessment."),
+                     tableOutput("details_summary_stats_table")
+            ),
+
+          )
+        )
+      )
+    ),
+
+    # Module 2: PT Preparation
+    tabPanel("PT Preparation",
+      sidebarLayout(
+        sidebarPanel(
+          h3("Proficiency Testing Preparation"),
+          selectInput("pollutant", "Select Pollutant:",
+                      choices = c("CO", "NO", "NO2", "O3", "SO2")),
+          # Dynamic UI for the input fields will be rendered here
+          uiOutput("pt_preparation_inputs")
+        ),
+        mainPanel(
+          # This area can be used for results or plots later
+          h4("Output Area"),
+          p("Results and calculations will be displayed here.")
+        )
+      )
+    )
+  )
 )
 
 # ===================================================================
 # II. Server Logic
 # ===================================================================
 server <- function(input, output, session) {
-
-  # R0: Dynamic Main Layout
-  output$main_layout <- renderUI({
-    req(input$nav_width, input$analysis_sidebar_width)
-    nav_width <- input$nav_width
-    content_width <- 12 - nav_width
-
-    analysis_sidebar_w <- input$analysis_sidebar_width
-    analysis_main_w <- 12 - analysis_sidebar_w
-
-    navlistPanel(
-      id = "main_nav",
-      widths = c(nav_width, content_width),
-      "Analysis Modules",
-
-      # Module 1: Homogeneity and Stability
-      tabPanel("Homogeneity & Stability Analysis",
-        sidebarLayout(
-          # 2.1. Input Panel (Sidebar)
-          sidebarPanel(
-            width = analysis_sidebar_w,
-            h4("1. Cargue de Datos (Provide Data)"),
-            radioButtons("input_method", "Input method:",
-                         choices = c("Cargar Archivo (Upload File)" = "upload",
-                                     "Editar Tabla (Editable Table)" = "table"),
-                         selected = "upload", inline = TRUE),
-
-            conditionalPanel(
-              condition = "input.input_method == 'upload'",
-              tagList(
-                fileInput("datafile", "Homogeneity Data",
-                          accept = c(".csv", ".tsv", ".txt"),
-                          placeholder = "Select a CSV/TSV file"),
-                p("For stability analysis, provide the second dataset here:"),
-                fileInput("stability_datafile", "Stability Data",
-                          accept = c(".csv", ".tsv", ".txt"),
-                          placeholder = "Select a CSV/TSV file")
-              )
-            ),
-
-            conditionalPanel(
-              condition = "input.input_method == 'table'",
-              h5("Homogeneity Data"),
-              numericInput("num_rows_hom", "Rows:", 10, min = 1),
-              numericInput("num_cols_hom", "Cols:", 3, min = 1),
-              h5("Stability Data"),
-              numericInput("num_rows_stab", "Rows:", 2, min = 1),
-              numericInput("num_cols_stab", "Cols:", 3, min = 1)
-            ),
-
-            hr(),
-
-            h4("2. Seleccionar Parámetros (Select Parameters)"),
-            # Dynamic UI to select the level
-            uiOutput("level_selector"),
-
-            h4("3. Ejecutar Análisis (Run Analysis)"),
-            # Button to run the analysis
-            actionButton("run_analysis", "Ejecutar (Run Analysis)",
-                         class = "btn-primary btn-block"),
-
-            hr(),
-            p("Este aplicativo evalua la homogeneidad y estabilidad del item de ensayo de acuerdo a los princiios de la ISO 13528:2022.")
-          ),
-
-          # 2.2. Main Panel for Results
-          mainPanel(
-            width = analysis_main_w,
-            # Outputs organized in tabs
-            tabsetPanel(
-              id = "analysis_tabs",
-
-              # Tab 1: Data Preview
-              tabPanel("Data Preview",
-                       h4("Data Input Preview"),
-                       conditionalPanel(
-                         condition = "input.input_method != 'table'",
-                         p("This table shows the first 10 rows of your loaded data."),
-                         dataTableOutput("raw_data_preview")
-                       ),
-                       conditionalPanel(
-                         condition = "input.input_method == 'table'",
-                         h4("Homogeneity Data"),
-                         p("Enter your data in the table below. The first column should be 'level' and subsequent columns should be named 'sample_1', 'sample_2', etc."),
-                         rHandsontableOutput("hot_homogeneity"),
-                         hr(),
-                         h4("Stability Data"),
-                         p("Enter your data in the table below. The first column should be 'level' and subsequent columns should be named 'sample_1', 'sample_2', etc."),
-                         rHandsontableOutput("hot_stability")
-                       ),
-                       hr(),
-                       h4("Data Distribution"),
-                       p("The histogram and boxplot below show the distribution of all results from the 'sample_*' columns for the selected level."),
-                       fluidRow(
-                         column(width = 6,
-                                plotOutput("results_histogram")
-                         ),
-                         column(width = 6,
-                                plotOutput("results_boxplot")
-                         )
-                       ),
-                       hr(),
-                       h4("Data Validation"),
-                       verbatimTextOutput("validation_message")
-              ),
-
-              # Tab 2: Homogeneity Assessment
-              tabPanel("Homogeneity Assessment",
-                       h4("Conclusion"),
-                       uiOutput("homog_conclusion"),
-                       hr(),
-                       h4("Homogeneity Data Preview (Level and First Sample)"),
-                       dataTableOutput("homogeneity_preview_table"),
-                       hr(),
-                       h4("Robust Statistics Calculations"),
-                       tableOutput("robust_stats_table"),
-                       verbatimTextOutput("robust_stats_summary"),
-                       hr(),
-                       h4("Variance Components"),
-                       p("Estimated standard deviations from the manual calculation."),
-                       tableOutput("variance_components"),
-                       hr(),
-                       h4("Per-Item Calculations"),
-                       p("This table shows calculations for each item (row) in the dataset for the selected level, including the average and range of measurements."),
-                       tableOutput("details_per_item_table"),
-                       hr(),
-                       h4("Summary Statistics"),
-                       p("This table shows the overall statistics for the homogeneity assessment."),
-                       tableOutput("details_summary_stats_table")
-              ),
-
-              # Tab 3: Stability Assessment
-              tabPanel("Stability Asessment",
-                       h4("Conclusion"),
-                       uiOutput("homog_conclusion_stability"),
-                       hr(),
-                       h4("Variance Components"),
-                       p("Estimated standard deviations from the manual calculation for the stability dataset."),
-                       tableOutput("variance_components_stability"),
-                       hr(),
-                       h4("Per-Item Calculations"),
-                       p("This table shows calculations for each item (row) in the stability dataset."),
-                       tableOutput("details_per_item_table_stability"),
-                       hr(),
-                       h4("Summary Statistics"),
-                       p("This table shows the overall statistics for the stability dataset."),
-                       tableOutput("details_summary_stats_table_stability")
-              ),
-            )
-          )
-        )
-      ),
-
-      # Module 2: PT Preparation
-      tabPanel("PT Preparation",
-        sidebarLayout(
-          sidebarPanel(
-            h3("Proficiency Testing Preparation"),
-            selectInput("pollutant", "Select Pollutant:",
-                        choices = c("CO", "NO", "NO2", "O3", "SO2")),
-            # Dynamic UI for the input fields will be rendered here
-            uiOutput("pt_preparation_inputs")
-          ),
-          mainPanel(
-            # This area can be used for results or plots later
-            h4("Output Area"),
-            p("Results and calculations will be displayed here.")
-          )
-        )
-      )
-    )
-  })
 
   # R1: Initial Data Loading and Processing
   raw_data <- reactive({
@@ -251,26 +199,6 @@ server <- function(input, output, session) {
     rhandsontable(df, stretchH = "all")
   })
 
-  # R1.6: Load stability data
-  stability_data_raw <- reactive({
-    if (input$input_method == "upload") {
-      req(input$stability_datafile)
-      ext <- tools::file_ext(input$stability_datafile$name)
-      switch(ext,
-             csv = vroom::vroom(input$stability_datafile$datapath, delim = ","),
-             tsv = vroom::vroom(input$stability_datafile$datapath, delim = "	"),
-             txt = vroom::vroom(input$stability_datafile$datapath, delim = ","),
-             validate("Invalid file type for stability data. Please upload a .csv or .tsv file.")
-      )
-    } else { # "table"
-      req(input$hot_stability)
-      df <- hot_to_r(input$hot_stability)
-      colnames(df) <- c("level", paste0("sample_", 1:(ncol(df)-1)))
-      df <- df %>%
-        mutate(across(starts_with("sample_"), .fns = ~as.numeric(as.character(.))))
-      df
-    }
-  })
 
   # R2: Dynamic Generation of the Level Selector
   output$level_selector <- renderUI({
@@ -446,11 +374,7 @@ server <- function(input, output, session) {
 
   # R3.5: Stability Data Homogeneity Execution (Triggered by button)
   homogeneity_run_stability <- eventReactive(input$run_analysis, {
-    # Add dependency on homogeneity_run() to get its results
-    req(stability_data_raw(), input$target_level, homogeneity_run())
-    hom_results <- homogeneity_run()
-    hom_x_t_bar <- hom_results$general_mean
-
+    req(stability_data_raw(), input$target_level)
     data <- stability_data_raw()
     target_level <- input$target_level
 
@@ -528,10 +452,6 @@ server <- function(input, output, session) {
     # Grand mean
     stab_x_t_bar <- mean(stab_item_stats$mean, na.rm = TRUE)
 
-    # Absolute difference between the two general means
-    diff_hom_stab <- abs(stab_x_t_bar - hom_x_t_bar)
-    
-
     # Variance of item means
     stab_s_x_bar_sq <- var(stab_item_stats$mean, na.rm = TRUE)
     stab_s_xt <- sqrt(stab_s_x_bar_sq)
@@ -561,26 +481,26 @@ server <- function(input, output, session) {
 
     # Assessment Criterion (for ANOVA method)
     stab_sigma_pt <- mad_e
-    stab_c_criterion <- 0.3 * hom_results$sigma_pt
+    stab_c_criterion <- 0.3 * stab_sigma_pt
     stab_sigma_allowed_sq <- stab_c_criterion^2
 
     # Expanded criterion
     stab_c_criterion_expanded <- sqrt(stab_sigma_allowed_sq * 1.88 + (stab_sw^2) * 1.01)
 
     # First comparison: ss vs c_criterion (0.3 * sigma_pt)
-    if (diff_hom_stab <= stab_c_criterion) {
-      stab_conclusion1 <- sprintf("ss (%.4f) <= c_criterion (%.4f): CUMPLE", diff_hom_stab, stab_c_criterion)
+    if (stab_ss <= stab_c_criterion) {
+      stab_conclusion1 <- sprintf("ss (%.4f) <= c_criterion (%.4f): CUMPLE", stab_ss, stab_c_criterion)
       stab_conclusion_class <- "alert alert-success"
     } else {
-      stab_conclusion1 <- sprintf("ss (%.4f) > c_criterion (%.4f): NO CUMPLE CRITERIO HOMOGENEIDAD", diff_hom_stab, stab_c_criterion)
+      stab_conclusion1 <- sprintf("ss (%.4f) > c_criterion (%.4f): NO CUMPLE CRITERIO HOMOGENEIDAD", stab_ss, stab_c_criterion)
       stab_conclusion_class <- "alert alert-warning"
     }
 
     # Second comparison: ss vs c_expanded
-    if (diff_hom_stab <= stab_c_criterion_expanded) {
-      stab_conclusion2 <- sprintf("ss (%.4f) <= c_expanded (%.4f): CUMPLE", diff_hom_stab, stab_c_criterion_expanded)
+    if (stab_ss <= stab_c_criterion_expanded) {
+      stab_conclusion2 <- sprintf("ss (%.4f) <= c_expanded (%.4f): CUMPLE", stab_ss, stab_c_criterion_expanded)
     } else {
-      stab_conclusion2 <- sprintf("ss (%.4f) > c_expanded (%.4f): NO CUMPLE", diff_hom_stab, stab_c_criterion_expanded)
+      stab_conclusion2 <- sprintf("ss (%.4f) > c_expanded (%.4f): NO CUMPLE", stab_ss, stab_c_criterion_expanded)
     }
 
     # Combine conclusions
@@ -593,7 +513,6 @@ server <- function(input, output, session) {
       stab_conclusion_class = stab_conclusion_class,
       g = g,
       m = m,
-      diff_hom_stab = diff_hom_stab,
       stab_sigma_allowed_sq = stab_sigma_allowed_sq,
       stab_c_criterion = stab_c_criterion,
       stab_c_criterion_expanded = stab_c_criterion_expanded,
@@ -889,8 +808,7 @@ Stability Criterion (0.3 * sigma_pt):", fmt),
                       "---",
                       "Assigned Value (xpt)",
                       "Median of Absolute Differences",
-                      "Number of Items (g)",
-                      "Number of Replicates (m)",
+                      "Number of Replicates (n_robust)",
                       "Robust SD (MADe)",
                       "Uncertainty of Assigned Value (u_xpt)",
                       "---",
@@ -899,7 +817,7 @@ Stability Criterion (0.3 * sigma_pt):", fmt),
         Value = c(
           format(c(res$general_mean, res$sd_of_means, res$s_x_bar_sq, res$sw, res$s_w_sq, res$ss), digits = 15, scientific = FALSE),
           "",
-          format(c(res$median_val, res$median_abs_diff, res$g, res$m, res$sigma_pt, res$u_xpt), digits = 15, scientific = FALSE),
+          format(c(res$median_val, res$median_abs_diff, res$n_robust, res$sigma_pt, res$u_xpt), digits = 15, scientific = FALSE),
           "",
           format(c(res$c_criterion, res$c_criterion_expanded), digits = 15, scientific = FALSE)
         )
@@ -926,9 +844,16 @@ Stability Criterion (0.3 * sigma_pt):", fmt),
         df <- data.frame(
           Component = c("Assigned Value (xpt)",
                         "Robust SD (sigma_pt)",
-                        "Uncertainty of Assigned Value (u_xpt)"),
+                        "Uncertainty of Assigned Value (u_xpt)",
+                        "Between-Sample SD (ss)",
+                        "Within-Sample SD (sw)",
+                        "---",
+                        "Criterion c",
+                        "Criterion c (expanded)"),
           Value = c(
-            format(c(res$stab_median_val, res$stab_sigma_pt, res$stab_u_xpt), digits = 15, scientific = FALSE)
+            format(c(res$stab_median_val, res$stab_sigma_pt, res$stab_u_xpt, res$stab_ss, res$stab_sw), digits = 15, scientific = FALSE),
+            "",
+            format(c(res$stab_c_criterion, res$stab_c_criterion_expanded), digits = 15, scientific = FALSE)
           )
         )
         df
@@ -949,7 +874,6 @@ Stability Criterion (0.3 * sigma_pt):", fmt),
     if (is.null(res$error)) {
       data.frame(
         Parameter = c("General Mean",
-                      "Absolute Difference from General Mean",
                       "SD of Means",
                       "Variance of Means (s_x_bar_sq)",
                       "sw",
@@ -958,17 +882,16 @@ Stability Criterion (0.3 * sigma_pt):", fmt),
                       "---",
                       "Assigned Value (xpt)",
                       "Median of Absolute Differences",
-                      "Number of Items (g)",
-                      "Number of Replicates (m)",
+                      "Number of Replicates (n_robust)",
                       "Robust SD (MADe)",
                       "Uncertainty of Assigned Value (u_xpt)",
                       "---",
                       "Criterion c",
                       "Criterion c (expanded)"),
         Value = c(
-          format(c(res$stab_general_mean, res$diff_hom_stab, res$stab_sd_of_means, res$stab_s_x_bar_sq, res$stab_sw, res$stab_s_w_sq, res$stab_ss), digits = 15, scientific = FALSE),
+          format(c(res$stab_general_mean, res$stab_sd_of_means, res$stab_s_x_bar_sq, res$stab_sw, res$stab_s_w_sq, res$stab_ss), digits = 15, scientific = FALSE),
           "",
-          format(c(res$stab_median_val, res$stab_median_abs_diff, res$g, res$m, res$stab_sigma_pt, res$stab_u_xpt), digits = 15, scientific = FALSE),
+          format(c(res$stab_median_val, res$stab_median_abs_diff, res$n_robust, res$stab_sigma_pt, res$stab_u_xpt), digits = 15, scientific = FALSE),
           "",
           format(c(res$stab_c_criterion, res$stab_c_criterion_expanded), digits = 15, scientific = FALSE)
         )
