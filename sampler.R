@@ -120,7 +120,7 @@ write.csv(stability_samples_df, "stability.csv", row.names = FALSE)
 n_values <- c(4, 7, 10, 13)
 
 # Number of samples per replicate
-num_samples <- 10
+num_samples <- 30
 
 # Loop over each n value
 for (n in n_values) {
