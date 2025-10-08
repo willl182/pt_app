@@ -22,7 +22,8 @@ library(outliers)
 ui <- fluidPage(
 
   # 1. Application Title
-  titlePanel("PT Data Analysis App"),
+  titlePanel("PT Data Analysis Application"),
+  h4("Laboratorio Calaire"),
 
   # Collapsible panel for layout options
   checkboxInput("show_layout_options", "Show Layout Options", value = FALSE),
@@ -38,7 +39,10 @@ ui <- fluidPage(
   hr(),
 
   # Dynamic UI for the main layout
-  uiOutput("main_layout")
+  uiOutput("main_layout"),
+
+  hr(),
+  p(em("Este aplicativo fue desarrollado en el marco del proyecto «Implementación de Ensayos de Aptitud en la Matriz Aire. Caso Gases Contaminantes Criterio», ejecutado por el Laboratorio CALAIRE de la Universidad Nacional de Colombia en alianza con el Instituto Nacional de Metrología (INM)."), style="text-align:center; font-size:small;")
 )
 
 # ===================================================================
@@ -196,6 +200,50 @@ server <- function(input, output, session) {
         h3("Proficiency Testing Scheme Analysis"),
         p("Analysis of participant results from different PT schemes, based on summary data files."),
         uiOutput("pt_pollutant_tabs")
+      ),
+
+      # Module 3: PT Scores
+      tabPanel("PT Scores",
+        sidebarLayout(
+          sidebarPanel(
+            width = 4,
+            h4("1. Select Data"),
+            uiOutput("scores_pollutant_selector"),
+            uiOutput("scores_n_selector"),
+            uiOutput("scores_level_selector"),
+            hr(),
+            h4("2. Set Parameters"),
+            p("Parameters based on ISO 13528. Adjust as needed."),
+            numericInput("scores_sigma_pt", "Std. Dev. for PT (sigma_pt):", value = 5, step = 0.1),
+            numericInput("scores_u_xpt", "Std. Uncertainty of Assigned Value (u_xpt):", value = 0.5, step = 0.01),
+            numericInput("scores_k", "Coverage Factor (k) for En-Score:", value = 2, min = 1, step = 1)
+          ),
+          mainPanel(
+            width = 8,
+            tabsetPanel(
+              id = "scores_tabs",
+              tabPanel("Scores Table",
+                       h4("Calculated Proficiency Scores"),
+                       dataTableOutput("scores_table"),
+                       hr(),
+                       h4("Summary of Inputs"),
+                       verbatimTextOutput("scores_inputs_summary")
+              ),
+              tabPanel("Z-Score Plot",
+                       plotOutput("z_score_plot")
+              ),
+              tabPanel("Z'-Score Plot",
+                       plotOutput("z_prime_score_plot")
+              ),
+              tabPanel("Zeta-Score Plot",
+                       plotOutput("zeta_score_plot")
+              ),
+              tabPanel("En-Score Plot",
+                       plotOutput("en_score_plot")
+              )
+            )
+          )
+        )
       )
     )
   })
@@ -917,6 +965,258 @@ Stability Criterion (0.3 * sigma_pt):", fmt),
       )
     }
   }, spacing = "l")
+
+  # --- PT Scores Module ---
+
+  # Dynamic UI for PT Scores selectors
+  output$scores_pollutant_selector <- renderUI({
+    req(pt_prep_data())
+    choices <- unique(pt_prep_data()$pollutant)
+    selectInput("scores_pollutant", "Select Pollutant:", choices = choices)
+  })
+
+  output$scores_n_selector <- renderUI({
+    req(pt_prep_data(), input$scores_pollutant)
+    choices <- pt_prep_data() %>%
+      filter(pollutant == input$scores_pollutant) %>%
+      pull(n_lab) %>%
+      unique() %>%
+      sort()
+    selectInput("scores_n_lab", "Select PT Scheme (by n):", choices = choices)
+  })
+
+  output$scores_level_selector <- renderUI({
+    req(pt_prep_data(), input$scores_pollutant, input$scores_n_lab)
+    choices <- pt_prep_data() %>%
+      filter(pollutant == input$scores_pollutant, n_lab == input$scores_n_lab) %>%
+      pull(level) %>%
+      unique()
+    selectInput("scores_level", "Select Level:", choices = choices)
+  })
+
+      # Reactive for score calculation
+      scores_run <- reactive({
+        req(pt_prep_data(), input$scores_pollutant, input$scores_n_lab, input$scores_level,
+            input$scores_sigma_pt, input$scores_u_xpt, input$scores_k)  
+      data <- pt_prep_data() %>%
+        filter(
+          pollutant == input$scores_pollutant,
+          n_lab == input$scores_n_lab,
+          level == input$scores_level
+        )
+  
+      if (nrow(data) == 0) {
+        return(list(error = "No data found for the selected criteria."))
+      }
+  
+      ref_data <- data %>% filter(participant_id == "ref")
+      participant_data <- data %>% filter(participant_id != "ref")
+  
+      if (nrow(ref_data) == 0) {
+        return(list(error = "No reference data ('ref' participant) found for this level."))
+      }
+      if (nrow(participant_data) == 0) {
+        return(list(error = "No participant data found for this level."))
+      }
+  
+      # Use the mean of reference values as x_pt
+      x_pt <- mean(ref_data$mean_value, na.rm = TRUE)
+  
+      # Rename for clarity inside this reactive, matching scores.md
+      participant_data <- participant_data %>%
+        rename(result = mean_value, uncertainty_std = sd_value)
+  
+      sigma_pt_adjusted <- input$scores_sigma_pt
+      u_xpt <- input$scores_u_xpt
+      k <- input$scores_k
+  
+      final_scores <- participant_data %>%
+        mutate(
+          # z-Score
+          z_score = (result - x_pt) / sigma_pt_adjusted,
+          # z'-Score
+          z_prime_score = (result - x_pt) / sqrt(sigma_pt_adjusted^2 + u_xpt^2),
+          # Zeta Score
+          zeta_score = (result - x_pt) / sqrt(uncertainty_std^2 + u_xpt^2),
+          # En-Score
+          U_xi = k * uncertainty_std,
+          U_xpt = k * u_xpt,
+          En_score = (result - x_pt) / sqrt(U_xi^2 + U_xpt^2)
+        ) %>%
+        mutate(
+          z_score_eval = case_when(
+            abs(z_score) <= 2 ~ "Satisfactory",
+            abs(z_score) > 2 & abs(z_score) < 3 ~ "Questionable",
+            abs(z_score) >= 3 ~ "Unsatisfactory",
+            TRUE ~ "N/A"
+          ),
+          z_prime_score_eval = case_when(
+            abs(z_prime_score) <= 2 ~ "Satisfactory",
+            abs(z_prime_score) > 2 & abs(z_prime_score) < 3 ~ "Questionable",
+            abs(z_prime_score) >= 3 ~ "Unsatisfactory",
+            TRUE ~ "N/A"
+          ),
+          zeta_score_eval = case_when(
+            abs(zeta_score) <= 2 ~ "Satisfactory",
+            abs(zeta_score) > 2 & abs(zeta_score) < 3 ~ "Questionable",
+            abs(zeta_score) >= 3 ~ "Unsatisfactory",
+            TRUE ~ "N/A"
+          ),
+          En_score_eval = case_when(
+            abs(En_score) <= 1 ~ "Satisfactory",
+            abs(En_score) > 1 ~ "Unsatisfactory",
+            TRUE ~ "N/A"
+          )
+        )
+  
+      list(
+        scores = final_scores,
+        x_pt = x_pt,
+        sigma_pt = sigma_pt_adjusted,
+        u_xpt = u_xpt,
+        k = k,
+        error = NULL
+      )
+    })
+  
+    # Output: Scores Table
+    output$scores_table <- renderDataTable({
+      res <- scores_run()
+      if (!is.null(res$error)) {
+        return(datatable(data.frame(Error = res$error)))
+      }
+  
+      display_df <- res$scores %>%
+        select(
+          `Participant` = participant_id,
+          `Result` = result,
+          `u(xi)` = uncertainty_std,
+          `z-score` = z_score,
+          `z-score Eval` = z_score_eval,
+          `z'-score` = z_prime_score,
+          `z'-score Eval` = z_prime_score_eval,
+          `zeta-score` = zeta_score,
+          `zeta-score Eval` = zeta_score_eval,
+          `En-score` = En_score,
+          `En-score Eval` = En_score_eval
+        )
+  
+      datatable(display_df, options = list(scrollX = TRUE, pageLength = 10), rownames = FALSE) %>%
+        formatRound(columns = c('Result', 'u(xi)', 'z-score', 'z\'-score', 'zeta-score', 'En-score'), digits = 3) %>%
+        formatStyle(
+          'z-score Eval',
+          backgroundColor = styleEqual(c("Satisfactory", "Questionable", "Unsatisfactory"), c("#d4edda", "#fff3cd", "#f8d7da"))
+        ) %>%
+        formatStyle(
+          'z\'-score Eval',
+          backgroundColor = styleEqual(c("Satisfactory", "Questionable", "Unsatisfactory"), c("#d4edda", "#fff3cd", "#f8d7da"))
+        ) %>%
+        formatStyle(
+          'zeta-score Eval',
+          backgroundColor = styleEqual(c("Satisfactory", "Questionable", "Unsatisfactory"), c("#d4edda", "#fff3cd", "#f8d7da"))
+        ) %>%
+        formatStyle(
+          'En-score Eval',
+          backgroundColor = styleEqual(c("Satisfactory", "Unsatisfactory"), c("#d4edda", "#f8d7da"))
+        )
+    })
+  # Output: Inputs Summary
+  output$scores_inputs_summary <- renderPrint({
+    res <- scores_run()
+    req(res)
+    if (!is.null(res$error)) {
+      cat(res$error)
+    } else {
+      cat(sprintf("Assigned Value (x_pt): %.4f
+", res$x_pt))
+      cat(sprintf("Standard Deviation for PT (sigma_pt): %.4f
+", res$sigma_pt))
+      cat(sprintf("Standard Uncertainty of Assigned Value (u_xpt): %.4f
+", res$u_xpt))
+      cat(sprintf("Coverage Factor (k) for En-score: %d
+", res$k))
+    }
+  })
+
+  # Output: Z-Score Plot
+  output$z_score_plot <- renderPlot({
+    res <- scores_run()
+    req(res, is.null(res$error))
+
+    ggplot(res$scores, aes(x = reorder(participant_id, z_score), y = z_score)) +
+      geom_hline(yintercept = c(-3, -2, 2, 3), linetype = "dashed", color = c("red", "orange", "orange", "red")) +
+      geom_hline(yintercept = 0, linetype = "solid", color = "grey") +
+      geom_point(size = 3, color = "blue") +
+      geom_segment(aes(xend = reorder(participant_id, z_score), yend = 0), color = "blue") +
+      labs(
+        title = "Z-Scores by Participant",
+        subtitle = "Warning limits at |z|=2 (orange), Action limits at |z|=3 (red)",
+        x = "Participant",
+        y = "Z-Score"
+      ) +
+      theme_minimal() +
+      theme(axis.text.x = element_text(angle = 45, hjust = 1))
+  })
+
+  # Output: Z'-Score Plot
+  output$z_prime_score_plot <- renderPlot({
+    res <- scores_run()
+    req(res, is.null(res$error))
+
+    ggplot(res$scores, aes(x = reorder(participant_id, z_prime_score), y = z_prime_score)) +
+      geom_hline(yintercept = c(-3, -2, 2, 3), linetype = "dashed", color = c("red", "orange", "orange", "red")) +
+      geom_hline(yintercept = 0, linetype = "solid", color = "grey") +
+      geom_point(size = 3, color = "cyan4") +
+      geom_segment(aes(xend = reorder(participant_id, z_prime_score), yend = 0), color = "cyan4") +
+      labs(
+        title = "Z'-Scores by Participant",
+        subtitle = "Warning limits at |z'|=2 (orange), Action limits at |z'|=3 (red)",
+        x = "Participant",
+        y = "Z'-Score"
+      ) +
+      theme_minimal() +
+      theme(axis.text.x = element_text(angle = 45, hjust = 1))
+  })
+
+  # Output: Zeta-Score Plot
+  output$zeta_score_plot <- renderPlot({
+    res <- scores_run()
+    req(res, is.null(res$error))
+
+    ggplot(res$scores, aes(x = reorder(participant_id, zeta_score), y = zeta_score)) +
+      geom_hline(yintercept = c(-3, -2, 2, 3), linetype = "dashed", color = c("red", "orange", "orange", "red")) +
+      geom_hline(yintercept = 0, linetype = "solid", color = "grey") +
+      geom_point(size = 3, color = "darkgreen") +
+      geom_segment(aes(xend = reorder(participant_id, zeta_score), yend = 0), color = "darkgreen") +
+      labs(
+        title = "Zeta-Scores by Participant",
+        subtitle = "Warning limits at |ζ|=2 (orange), Action limits at |ζ|=3 (red)",
+        x = "Participant",
+        y = "Zeta-Score (ζ)"
+      ) +
+      theme_minimal() +
+      theme(axis.text.x = element_text(angle = 45, hjust = 1))
+  })
+
+  # Output: En-Score Plot
+  output$en_score_plot <- renderPlot({
+    res <- scores_run()
+    req(res, is.null(res$error))
+
+    ggplot(res$scores, aes(x = reorder(participant_id, En_score), y = En_score)) +
+      geom_hline(yintercept = c(-1, 1), linetype = "dashed", color = "red") +
+      geom_hline(yintercept = 0, linetype = "solid", color = "grey") +
+      geom_point(size = 3, color = "purple") +
+      geom_segment(aes(xend = reorder(participant_id, En_score), yend = 0), color = "purple") +
+      labs(
+        title = "En-Scores by Participant",
+        subtitle = "Action limits at |En|=1 (red)",
+        x = "Participant",
+        y = "En-Score"
+      ) +
+      theme_minimal() +
+      theme(axis.text.x = element_text(angle = 45, hjust = 1))
+  })
 
   # --- PT Preparation Module ---
 
