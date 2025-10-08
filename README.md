@@ -6,12 +6,8 @@ This repository contains a Shiny web application for performing statistical anal
 
 The application implements the following statistical procedures:
 
-*   **Data Input**: Supports multiple methods for data entry, including:
-    *   Uploading CSV/TSV files.
-    *   Pasting data directly into the application.
-    *   Using an interactive, editable table (powered by `rhandsontable`).
-*   **Homogeneity Assessment**: Performs homogeneity tests based on one-way ANOVA to calculate the between-sample standard deviation (ss) and checks against the criterion `ss <= 0.3 * sigma_pt`.
-*   **Stability Assessment**: Conducts stability analysis by comparing datasets from two different time points using t-tests and other metrics.
+*   **Homogeneity Assessment**: Performs homogeneity tests based on the methods described in ISO 13528:2022, Annex B, to calculate the between-sample standard deviation (`ss`) and check it against the required criteria.
+*   **Stability Assessment**: Conducts stability analysis by comparing datasets from two different time points, checking the difference between their means against the criterion `0.3 * sigma_pt`.
 *   **Data Visualization**: Generates histograms and boxplots to help users visualize the distribution of their data.
 *   **Detailed Reporting**: Provides detailed tables for variance components, per-item calculations, and summary statistics.
 
@@ -24,7 +20,7 @@ To run this application, you need to have R and RStudio installed.
 2.  **Install the required R packages.** Open R or RStudio and run the following command to install all necessary dependencies:
 
     ```R
-    install.packages(c("shiny", "tidyverse", "vroom", "DT", "rhandsontable"))
+    install.packages(c("shiny", "tidyverse", "vroom", "DT", "rhandsontable", "shinythemes"))
     ```
 
 3.  **Run the Shiny app.** Open the `app.R` file in RStudio and click the "Run App" button in the top-right corner of the script editor. Alternatively, you can run the following command in the R console, making sure your working directory is set to the project root:
@@ -33,14 +29,38 @@ To run this application, you need to have R and RStudio installed.
     shiny::runApp("app.R")
     ```
 
-## File Structure
+## Data Input Format
 
-*   `app.R`: The main file containing the complete source code for the Shiny application (both UI and server logic).
+The application requires data to be provided in two CSV files located in the root directory:
+
+1.  `homogeneity.csv`: Contains the data for the initial homogeneity assessment.
+2.  `stability.csv`: Contains the data from a later time point for the stability assessment.
+
+Both files **must** adhere to the following structure (long format):
+
+| pollutant | level | replicate | value     |
+| :-------- | :---- | :-------- | :-------- |
+| co        | 1     | 1         | 50.1      |
+| co        | 1     | 2         | 50.3      |
+| co        | 2     | 1         | 101.2     |
+| ...       | ...   | ...       | ...       |
+
+**Column Descriptions:**
+
+*   `pollutant` (character): The name of the substance or analyte being measured (e.g., "co", "no2", "so2"). The application uses this to filter the data.
+*   `level` (character or numeric): A unique identifier for the concentration level or batch of the PT item.
+*   `replicate` (numeric): An identifier for the replicate measurement for a given item (e.g., 1, 2, 3...).
+*   `value` (numeric): The measured result.
+
+## File and Code Structure
+
+*   `app.R`: The main file containing the complete source code for the Shiny application. It is organized into three parts:
+    *   **I. User Interface (UI)**: Defines the layout and appearance of the application, including all input controls (e.g., dropdowns, buttons) and output placeholders (e.g., plots, tables). It is built using a responsive `fluidPage` layout.
+    *   **II. Server Logic**: Contains the computational engine. It uses reactive programming to link user inputs to data processing and analysis. Key calculations are triggered by an `actionButton` and performed within an `eventReactive` expression to ensure the analysis runs only when requested. The server logic is heavily commented, with reactive components labeled for clarity (e.g., `R1`, `R2`).
+    *   **III. Application Execution**: A single command that launches the Shiny app.
 *   `sop.md`: The Standard Operating Procedure document that details the statistical methods implemented in the app, in alignment with ISO 13528:2022.
 *   `base_proposal.md`: The original project proposal outlining the project's objectives and technical specifications.
-*   `*.csv`: Sample data files used for testing and demonstrating the application's features. For example:
-    *   `CO.csv`: Homogeneity data for Carbon Monoxide.
-    *   `bsw_co.csv`: Stability data for Carbon Monoxide.
+*   `homogeneity.csv` / `stability.csv`: Sample data files used for testing and demonstrating the application's features. These files contain data for multiple pollutants and levels and serve as an example of the required data format.
 
 ## Statistical Methods
 
