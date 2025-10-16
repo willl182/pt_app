@@ -1,4 +1,4 @@
-# **Step-by-Step Guide: Implementing ISO 13528's Algorithm A in R**
+# **Implementing ISO 13528's Algorithm A in R**
 
 ## **Introduction: Taming Outliers with Robust Statistics**
 
