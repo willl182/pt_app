@@ -7,6 +7,7 @@
 suppressPackageStartupMessages({
   library(shiny)
   library(shinythemes)
+  library(shinyBS)
   library(tidyverse)
   library(readr)
   library(DT)

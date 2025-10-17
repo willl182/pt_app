@@ -138,22 +138,34 @@ mod_stability_server <- function(id, stability_data, hom_shared, log_action) {
     })
 
     output$stability_conclusion <- renderUI({
+      if (is.null(hom_shared$analysis())) {
+        return(div(class = "alert alert-info", "Run Homogeneity Analysis to see stability results."))
+      }
       req(analysis())
       res <- analysis()
       div(class = res$conclusion_class, res$conclusion_text)
     })
 
     output$variance_components_stability <- renderTable({
+      if (is.null(hom_shared$analysis())) {
+        return(tibble::tibble(Message = "Run Homogeneity Analysis to see variance components."))
+      }
       req(analysis())
       analysis()$variance_table
     })
 
     output$details_per_item_table_stability <- renderTable({
+      if (is.null(hom_shared$analysis())) {
+        return(tibble::tibble(Message = "Run Homogeneity Analysis to see per-item calculations."))
+      }
       req(analysis())
       analysis()$intermediate_table
     }, striped = TRUE, bordered = TRUE, spacing = "s")
 
     output$details_summary_stats_table_stability <- renderTable({
+      if (is.null(hom_shared$analysis())) {
+        return(tibble::tibble(Message = "Run Homogeneity Analysis to see summary statistics."))
+      }
       req(analysis())
       analysis()$summary_table
     })
