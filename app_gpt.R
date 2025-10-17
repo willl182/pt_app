@@ -19,25 +19,11 @@ suppressPackageStartupMessages({
 # Manual nIQR calculation per doc_med_made_niqr.md (Section 2.2)
 calc_niqr <- function(x) {
   x <- x[!is.na(x)]
-  n <- length(x)
-  if (n < 2) {
+  if (length(x) < 2) {
     return(NA_real_)
   }
-  x_sorted <- sort(x)
-  q_pos <- function(p) {
-    pos <- p * (n - 1) + 1
-    lower <- floor(pos)
-    upper <- ceiling(pos)
-    frac <- pos - lower
-    if (lower == upper) {
-      x_sorted[lower]
-    } else {
-      (1 - frac) * x_sorted[lower] + frac * x_sorted[upper]
-    }
-  }
-  q1 <- q_pos(0.25)
-  q3 <- q_pos(0.75)
-  0.7413 * (q3 - q1)
+  qs <- stats::quantile(x, probs = c(0.25, 0.75), na.rm = TRUE, type = 7)
+  0.7413 * (qs[[2]] - qs[[1]])
 }
 
 # Algorithm A implementation based on doc_algorithm_a.md
