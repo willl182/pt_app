@@ -183,16 +183,50 @@ mod_homogeneity_server <- function(id, hom_data, stability_data, log_action) {
       validate(need(m >= 2, "At least two replicates are required."))
       validate(need(g >= 2, "At least two PT items are required."))
 
-      matrix_values <- as.matrix(wide_df[, replicate_cols])
-      item_means <- rowMeans(matrix_values, na.rm = TRUE)
-      grand_mean <- mean(matrix_values, na.rm = TRUE)
+      homogeneity_level_data <- wide_df %>%
+        select(all_of(replicate_cols))
 
-      ss_between <- m * sum((item_means - grand_mean)^2, na.rm = TRUE)
-      # Within item sum of squares
-      ss_within <- sum(apply(matrix_values, 1, function(row) {
-        mean_row <- mean(row, na.rm = TRUE)
-        sum((row - mean_row)^2, na.rm = TRUE)
-      }), na.rm = TRUE)
+      intermediate_df <- if (m == 2) {
+        s1 <- homogeneity_level_data[[1]]
+        s2 <- homogeneity_level_data[[2]]
+        homogeneity_level_data %>%
+          mutate(
+            Item = dplyr::row_number(),
+            average = (s1 + s2) / 2,
+            range = abs(s1 - s2)
+          ) %>%
+          relocate(Item)
+      } else {
+        homogeneity_level_data %>%
+          mutate(Item = dplyr::row_number()) %>%
+          mutate(
+            average = rowMeans(select(., -Item), na.rm = TRUE),
+            range = apply(select(., -Item), 1, function(x) max(x, na.rm = TRUE) - min(x, na.rm = TRUE))
+          ) %>%
+          relocate(Item)
+      }
+
+      hom_data_long <- homogeneity_level_data %>%
+        mutate(Item = factor(dplyr::row_number())) %>%
+        pivot_longer(
+          cols = -Item,
+          names_to = "replicate",
+          values_to = "Result"
+        )
+
+      item_stats <- hom_data_long %>%
+        group_by(Item) %>%
+        summarise(mean = mean(Result, na.rm = TRUE), .groups = "drop")
+
+      grand_mean <- mean(item_stats$mean, na.rm = TRUE)
+
+      ss_between <- m * sum((item_stats$mean - grand_mean)^2, na.rm = TRUE)
+
+      ss_within <- hom_data_long %>%
+        group_by(Item) %>%
+        summarise(ss = sum((Result - mean(Result, na.rm = TRUE))^2, na.rm = TRUE), .groups = "drop") %>%
+        summarise(total = sum(ss, na.rm = TRUE)) %>%
+        pull(total)
 
       df_between <- g - 1
       df_within <- g * (m - 1)
@@ -200,20 +234,19 @@ mod_homogeneity_server <- function(id, hom_data, stability_data, log_action) {
       ms_within <- if (df_within > 0) ss_within / df_within else NA_real_
 
       sw <- sqrt(ms_within)
-      ss <- if (is.na(ms_between) || ms_between <= ms_within) {
+      ss <- if (is.na(ms_between) || is.na(ms_within) || ms_between <= ms_within) {
         0
       } else {
         sqrt((ms_between - ms_within) / m)
       }
 
-      first_sample <- wide_df[[replicate_cols[1]]]
+      first_sample <- homogeneity_level_data[[1]]
       robust_median <- median(first_sample, na.rm = TRUE)
       robust_made <- mad(first_sample, constant = 1.4826, na.rm = TRUE)
       robust_niqr <- calc_niqr(first_sample)
       alg_a <- algorithm_A(first_sample)
-      sigma_pt <- ifelse(is.na(alg_a$robust_sd) || alg_a$robust_sd == 0, robust_made, alg_a$robust_sd)
-      sigma_pt <- ifelse(is.na(sigma_pt) || sigma_pt == 0, robust_made, sigma_pt)
 
+      sigma_pt <- robust_made
       criterion <- 0.3 * sigma_pt
       sigma2_allow <- criterion^2
 
@@ -233,10 +266,10 @@ mod_homogeneity_server <- function(id, hom_data, stability_data, log_action) {
       }
 
       intermediate_table <- wide_df %>%
+        mutate(Item = dplyr::row_number()) %>%
         mutate(
-          Item = .data$sample_id,
-          average = rowMeans(across(all_of(replicate_cols)), na.rm = TRUE),
-          range = apply(across(all_of(replicate_cols)), 1, function(x) max(x, na.rm = TRUE) - min(x, na.rm = TRUE))
+          average = rowMeans(select(., all_of(replicate_cols)), na.rm = TRUE),
+          range = apply(select(., all_of(replicate_cols)), 1, function(x) max(x, na.rm = TRUE) - min(x, na.rm = TRUE))
         ) %>%
         select(Item, all_of(replicate_cols), average, range)
 
@@ -260,17 +293,21 @@ mod_homogeneity_server <- function(id, hom_data, stability_data, log_action) {
         m = m,
         sigma_pt = sigma_pt,
         criterion = criterion,
+        c_criterion = criterion,
         conclusion_class = conclusion_class,
         conclusion_text = conclusion_text,
         variance_table = variance_table,
         intermediate_table = intermediate_table,
+        intermediate_df = intermediate_df,
         summary_table = summary_table,
         robust_table = robust_table,
         ms_between = ms_between,
         ms_within = ms_within,
         c_threshold = c_threshold,
         grand_mean = grand_mean,
-        item_means = item_means
+        general_mean = grand_mean,
+        item_means = item_stats$mean,
+        first_sample_results = first_sample
       )
     })
 
