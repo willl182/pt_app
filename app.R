@@ -244,6 +244,42 @@ server <- function(input, output, session) {
             )
           )
         )
+      ),
+
+      tabPanel("Algoritmo A",
+        sidebarLayout(
+          sidebarPanel(
+            width = analysis_sidebar_w,
+            h4("1. Seleccionar Datos"),
+            uiOutput("algoA_pollutant_selector"),
+            uiOutput("algoA_n_selector"),
+            uiOutput("algoA_level_selector"),
+            hr(),
+            h4("2. Parámetros del Algoritmo"),
+            numericInput("algoA_max_iter", "Iteraciones máximas:", value = 50, min = 5, max = 500, step = 5),
+            numericInput("algoA_tol", "Criterio de convergencia (tolerancia):", value = 1e-06, min = 1e-09, max = 1e-02, step = 1e-06),
+            hr(),
+            h4("3. Ejecutar"),
+            actionButton("algoA_run", "Calcular Algoritmo A", class = "btn-primary btn-block")
+          ),
+          mainPanel(
+            width = analysis_main_w,
+            h4("Resultados del Algoritmo A"),
+            uiOutput("algoA_result_summary"),
+            hr(),
+            h4("Datos de Entrada"),
+            dataTableOutput("algoA_input_table"),
+            hr(),
+            h4("Histograma de Resultados"),
+            plotOutput("algoA_histogram"),
+            hr(),
+            h4("Iteraciones"),
+            dataTableOutput("algoA_iterations_table"),
+            hr(),
+            h4("Pesos Finales por Participante"),
+            dataTableOutput("algoA_weights_table")
+          )
+        )
       )
     )
   })
@@ -1216,6 +1252,262 @@ Stability Criterion (0.3 * sigma_pt):", fmt),
       ) +
       theme_minimal() +
       theme(axis.text.x = element_text(angle = 45, hjust = 1))
+  })
+
+  # --- Algoritmo A Module ---
+
+  output$algoA_pollutant_selector <- renderUI({
+    req(pt_prep_data())
+    if (nrow(pt_prep_data()) == 0) {
+      return(p("No se encontraron datos para ejecutar el Algoritmo A."))
+    }
+    choices <- sort(unique(pt_prep_data()$pollutant))
+    selectInput("algoA_pollutant", "Seleccionar analito:", choices = choices)
+  })
+
+  output$algoA_n_selector <- renderUI({
+    req(pt_prep_data(), input$algoA_pollutant)
+    choices <- pt_prep_data() %>%
+      filter(pollutant == input$algoA_pollutant) %>%
+      pull(n_lab) %>%
+      unique() %>%
+      sort()
+    selectInput("algoA_n_lab", "Seleccionar esquema PT (n):", choices = choices)
+  })
+
+  output$algoA_level_selector <- renderUI({
+    req(pt_prep_data(), input$algoA_pollutant, input$algoA_n_lab)
+    choices <- pt_prep_data() %>%
+      filter(pollutant == input$algoA_pollutant, n_lab == input$algoA_n_lab) %>%
+      pull(level) %>%
+      unique()
+    selectInput("algoA_level", "Seleccionar nivel:", choices = choices)
+  })
+
+  run_algorithm_a <- function(values, ids, max_iter = 50, tol = 1e-06) {
+    mask <- is.finite(values)
+    values <- values[mask]
+    ids <- ids[mask]
+
+    n <- length(values)
+    if (n < 3) {
+      return(list(error = "El Algoritmo A requiere al menos 3 resultados válidos."))
+    }
+
+    x_star <- median(values, na.rm = TRUE)
+    s_star <- 1.483 * median(abs(values - x_star), na.rm = TRUE)
+
+    if (!is.finite(s_star) || s_star < .Machine$double.eps) {
+      s_star <- sd(values, na.rm = TRUE)
+    }
+
+    if (!is.finite(s_star) || s_star < .Machine$double.eps) {
+      return(list(error = "La dispersión de los datos es insuficiente para ejecutar el Algoritmo A."))
+    }
+
+    iteration_records <- list()
+    converged <- FALSE
+
+    for (iter in seq_len(max_iter)) {
+      u_values <- (values - x_star) / (1.5 * s_star)
+      weights <- ifelse(abs(u_values) <= 1, 1, 1 / (u_values^2))
+
+      weight_sum <- sum(weights)
+      if (!is.finite(weight_sum) || weight_sum <= 0) {
+        return(list(error = "Los pesos calculados no son válidos para el Algoritmo A."))
+      }
+
+      x_new <- sum(weights * values) / weight_sum
+      s_new <- sqrt(sum(weights * (values - x_new)^2) / weight_sum)
+
+      if (!is.finite(s_new) || s_new < .Machine$double.eps) {
+        return(list(error = "El Algoritmo A colapsó debido a una desviación estándar nula."))
+      }
+
+      delta <- max(abs(x_new - x_star), abs(s_new - s_star))
+      iteration_records[[iter]] <- data.frame(
+        Iteración = iter,
+        `Valor asignado (x*)` = x_new,
+        `Desviación robusta (s*)` = s_new,
+        Cambio = delta
+      )
+
+      x_star <- x_new
+      s_star <- s_new
+
+      if (delta < tol) {
+        converged <- TRUE
+        break
+      }
+    }
+
+    iteration_df <- if (length(iteration_records) > 0) {
+      bind_rows(iteration_records)
+    } else {
+      tibble()
+    }
+
+    u_final <- (values - x_star) / (1.5 * s_star)
+    weights_final <- ifelse(abs(u_final) <= 1, 1, 1 / (u_final^2))
+
+    weights_df <- tibble(
+      Participante = ids,
+      Resultado = values,
+      Peso = weights_final,
+      `Residuo estandarizado` = u_final
+    )
+
+    list(
+      assigned_value = x_star,
+      robust_sd = s_star,
+      iterations = iteration_df,
+      weights = weights_df,
+      converged = converged,
+      effective_weight = sum(weights_final),
+      error = NULL
+    )
+  }
+
+  algorithm_a_results <- eventReactive(input$algoA_run, {
+    req(pt_prep_data(), input$algoA_pollutant, input$algoA_n_lab, input$algoA_level,
+        input$algoA_max_iter, input$algoA_tol)
+
+    data <- pt_prep_data() %>%
+      filter(
+        pollutant == input$algoA_pollutant,
+        n_lab == input$algoA_n_lab,
+        level == input$algoA_level,
+        participant_id != "ref"
+      )
+
+    if (nrow(data) == 0) {
+      return(list(error = "No se encontraron datos de participantes para los criterios seleccionados."))
+    }
+
+    aggregated <- data %>%
+      group_by(participant_id) %>%
+      summarise(Resultado = mean(mean_value, na.rm = TRUE), .groups = "drop")
+
+    if (nrow(aggregated) < 3) {
+      return(list(error = "Se requieren al menos tres participantes para ejecutar el Algoritmo A."))
+    }
+
+    algo_res <- run_algorithm_a(
+      values = aggregated$Resultado,
+      ids = aggregated$participant_id,
+      max_iter = input$algoA_max_iter,
+      tol = input$algoA_tol
+    )
+
+    algo_res$input_data <- aggregated
+    algo_res$selected <- list(
+      pollutant = input$algoA_pollutant,
+      n_lab = input$algoA_n_lab,
+      level = input$algoA_level
+    )
+
+    algo_res
+  }, ignoreNULL = TRUE)
+
+  output$algoA_result_summary <- renderUI({
+    res <- algorithm_a_results()
+    req(res)
+
+    if (!is.null(res$error)) {
+      return(div(class = "alert alert-danger", res$error))
+    }
+
+    convergence_message <- if (isTRUE(res$converged)) {
+      "El algoritmo convergió dentro del umbral especificado."
+    } else {
+      "El algoritmo alcanzó el número máximo de iteraciones sin cumplir el criterio de convergencia."
+    }
+
+    assigned_value_fmt <- format(res$assigned_value, digits = 9, scientific = FALSE)
+    robust_sd_fmt <- format(res$robust_sd, digits = 9, scientific = FALSE)
+    effective_fmt <- format(res$effective_weight, digits = 9, scientific = FALSE)
+
+    div(
+      class = "alert alert-info",
+      HTML(paste0(
+        "<strong>Analito:</strong> ", toupper(res$selected$pollutant), "<br>",
+        "<strong>Esquema (n):</strong> ", res$selected$n_lab, "<br>",
+        "<strong>Nivel:</strong> ", res$selected$level, "<br>",
+        "<strong>Valor asignado (x*):</strong> ", assigned_value_fmt, "<br>",
+        "<strong>Desviación robusta (s*):</strong> ", robust_sd_fmt, "<br>",
+        "<strong>Suma de pesos efectivos:</strong> ", effective_fmt, "<br>",
+        "<em>", convergence_message, "</em>"
+      ))
+    )
+  })
+
+  output$algoA_input_table <- renderDataTable({
+    res <- algorithm_a_results()
+    req(res)
+    if (!is.null(res$error)) {
+      return(datatable(data.frame(Mensaje = res$error)))
+    }
+
+    datatable(
+      res$input_data %>% rename(Participante = participant_id),
+      options = list(pageLength = 10, scrollX = TRUE),
+      rownames = FALSE
+    ) %>%
+      formatRound(columns = "Resultado", digits = 6)
+  })
+
+  output$algoA_histogram <- renderPlot({
+    res <- algorithm_a_results()
+    req(res)
+    if (!is.null(res$error)) {
+      return(NULL)
+    }
+
+    ggplot(res$input_data, aes(x = Resultado)) +
+      geom_histogram(aes(y = after_stat(density)), bins = 15, fill = "#5DADE2", color = "white", alpha = 0.8) +
+      geom_density(color = "#1A5276", size = 1) +
+      geom_vline(xintercept = res$assigned_value, color = "red", linetype = "dashed", size = 1) +
+      labs(
+        title = "Distribución de resultados por participante",
+        subtitle = "La línea punteada indica el valor asignado robusto (x*)",
+        x = "Resultado (media de cada participante)",
+        y = "Densidad"
+      ) +
+      theme_minimal()
+  })
+
+  output$algoA_iterations_table <- renderDataTable({
+    res <- algorithm_a_results()
+    req(res)
+    if (!is.null(res$error)) {
+      return(datatable(data.frame(Mensaje = res$error)))
+    }
+
+    if (nrow(res$iterations) == 0) {
+      return(datatable(data.frame(Mensaje = "No se registraron iteraciones.")))
+    }
+
+    datatable(
+      res$iterations,
+      options = list(pageLength = 10, scrollX = TRUE),
+      rownames = FALSE
+    ) %>%
+      formatRound(columns = c("Valor asignado (x*)", "Desviación robusta (s*)", "Cambio"), digits = 9)
+  })
+
+  output$algoA_weights_table <- renderDataTable({
+    res <- algorithm_a_results()
+    req(res)
+    if (!is.null(res$error)) {
+      return(datatable(data.frame(Mensaje = res$error)))
+    }
+
+    datatable(
+      res$weights,
+      options = list(pageLength = 10, scrollX = TRUE),
+      rownames = FALSE
+    ) %>%
+      formatRound(columns = c("Resultado", "Peso", "Residuo estandarizado"), digits = 6)
   })
 
   # --- PT Preparation Module ---
