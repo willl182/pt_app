@@ -14,6 +14,7 @@ library(vroom)
 library(DT)
 library(rhandsontable)
 library(shinythemes)
+library(outliers)
 
 # ===================================================================
 # I. User Interface (UI)
@@ -21,23 +22,27 @@ library(shinythemes)
 ui <- fluidPage(
 
   # 1. Application Title
-  titlePanel("Aplicativo de Análisis de Datos de Ensayos de Aptitud"),
+  titlePanel("PT Data Analysis Application"),
+  h4("Laboratorio Calaire"),
 
   # Collapsible panel for layout options
-  checkboxInput("show_layout_options", "Mostrar Opciones de Diseño", value = FALSE),
+  checkboxInput("show_layout_options", "Show Layout Options", value = FALSE),
   conditionalPanel(
     condition = "input.show_layout_options == true",
     wellPanel(
       themeSelector(),
       hr(),
-      sliderInput("nav_width", "Ancho del Panel de Navegación:", min = 1, max = 5, value = 2, width = "250px"),
-      sliderInput("analysis_sidebar_width", "Ancho de la Barra Lateral de Análisis:", min = 2, max = 6, value = 3, width = "250px")
+      sliderInput("nav_width", "Navigation Panel Width:", min = 1, max = 5, value = 2, width = "250px"),
+      sliderInput("analysis_sidebar_width", "Analysis Sidebar Width:", min = 2, max = 6, value = 3, width = "250px")
     )
   ),
   hr(),
 
   # Dynamic UI for the main layout
-  uiOutput("main_layout")
+  uiOutput("main_layout"),
+
+  hr(),
+  p(em("Este aplicativo fue desarrollado en el marco del proyecto «Implementación de Ensayos de Aptitud en la Matriz Aire. Caso Gases Contaminantes Criterio», ejecutado por el Laboratorio CALAIRE de la Universidad Nacional de Colombia en alianza con el Instituto Nacional de Metrología (INM)."), style="text-align:center; font-size:small;")
 )
 
 # ===================================================================
@@ -86,23 +91,23 @@ server <- function(input, output, session) {
     navlistPanel(
       id = "main_nav",
       widths = c(nav_width, content_width),
-      "Módulos de Análisis",
+      "Analysis Modules",
 
       # Module 1: Homogeneity and Stability
-      tabPanel("Análisis de Homogeneidad y Estabilidad",
+      tabPanel("Homogeneity & Stability Analysis",
         sidebarLayout(
           # 2.1. Input Panel (Sidebar)
           sidebarPanel(
             width = analysis_sidebar_w,
-            h4("1. Seleccionar Datos"),
-            selectInput("pollutant_analysis", "Seleccionar Contaminante:",
+            h4("1. Seleccionar Datos (Select Data)"),
+            selectInput("pollutant_analysis", "Select Pollutant:",
                         choices = c("co", "no", "no2", "o3", "so2")),
             hr(),
-            h4("2. Seleccionar Parámetros"),
+            h4("2. Seleccionar Parámetros (Select Parameters)"),
             # Dynamic UI to select the level
             uiOutput("level_selector"),
 
-            h4("3. Ejecutar Análisis"),
+            h4("3. Ejecutar Análisis (Run Analysis)"),
             # Button to run the analysis
             actionButton("run_analysis", "Ejecutar (Run Analysis)",
                          class = "btn-primary btn-block"),
@@ -119,17 +124,17 @@ server <- function(input, output, session) {
               id = "analysis_tabs",
 
               # Tab 1: Data Preview
-              tabPanel("Vista Previa de Datos",
-                       h4("Vista Previa de Datos de Entrada"),
-                       p("Esta tabla muestra los datos para el contaminante seleccionado."),
-                       h5("Datos de Homogeneidad"),
+              tabPanel("Data Preview",
+                       h4("Data Input Preview"),
+                       p("This table shows the data for the selected pollutant."),
+                       h5("Homogeneity Data"),
                        dataTableOutput("raw_data_preview"),
                        hr(),
-                       h5("Datos de Estabilidad"),
+                       h5("Stability Data"),
                        dataTableOutput("stability_data_preview"),
                        hr(),
-                       h4("Distribución de Datos"),
-                       p("El histograma y el diagrama de caja a continuación muestran la distribución de todos los resultados de las columnas 'sample_*' para el nivel seleccionado."),
+                       h4("Data Distribution"),
+                       p("The histogram and boxplot below show the distribution of all results from the 'sample_*' columns for the selected level."),
                        fluidRow(
                          column(width = 6,
                                 plotOutput("results_histogram")
@@ -139,50 +144,50 @@ server <- function(input, output, session) {
                          )
                        ),
                        hr(),
-                       h4("Validación de Datos"),
+                       h4("Data Validation"),
                        verbatimTextOutput("validation_message")
               ),
 
               # Tab 2: Homogeneity Assessment
-              tabPanel("Evaluación de Homogeneidad",
-                       h4("Conclusión"),
+              tabPanel("Homogeneity Assessment",
+                       h4("Conclusion"),
                        uiOutput("homog_conclusion"),
                        hr(),
-                       h4("Vista Previa de Datos de Homogeneidad (Nivel y Primera Muestra)"),
+                       h4("Homogeneity Data Preview (Level and First Sample)"),
                        dataTableOutput("homogeneity_preview_table"),
                        hr(),
-                       h4("Cálculos de Estadísticas Robustas"),
+                       h4("Robust Statistics Calculations"),
                        tableOutput("robust_stats_table"),
                        verbatimTextOutput("robust_stats_summary"),
                        hr(),
-                       h4("Componentes de Varianza"),
-                       p("Desviaciones estándar estimadas a partir del cálculo manual."),
+                       h4("Variance Components"),
+                       p("Estimated standard deviations from the manual calculation."),
                        tableOutput("variance_components"),
                        hr(),
-                       h4("Cálculos por Ítem"),
-                       p("Esta tabla muestra los cálculos para cada ítem (fila) en el conjunto de datos para el nivel seleccionado, incluyendo el promedio y el rango de las mediciones."),
+                       h4("Per-Item Calculations"),
+                       p("This table shows calculations for each item (row) in the dataset for the selected level, including the average and range of measurements."),
                        tableOutput("details_per_item_table"),
                        hr(),
-                       h4("Estadísticas de Resumen"),
-                       p("Esta tabla muestra las estadísticas generales para la evaluación de la homogeneidad."),
+                       h4("Summary Statistics"),
+                       p("This table shows the overall statistics for the homogeneity assessment."),
                        tableOutput("details_summary_stats_table")
               ),
 
               # Tab 3: Stability Assessment
-              tabPanel("Evaluación de Estabilidad",
-                       h4("Conclusión"),
+              tabPanel("Stability Asessment",
+                       h4("Conclusion"),
                        uiOutput("homog_conclusion_stability"),
                        hr(),
-                       h4("Componentes de Varianza"),
-                       p("Desviaciones estándar estimadas a partir del cálculo manual para el conjunto de datos de estabilidad."),
+                       h4("Variance Components"),
+                       p("Estimated standard deviations from the manual calculation for the stability dataset."),
                        tableOutput("variance_components_stability"),
                        hr(),
-                       h4("Cálculos por Ítem"),
-                       p("Esta tabla muestra los cálculos para cada ítem (fila) en el conjunto de datos de estabilidad."),
+                       h4("Per-Item Calculations"),
+                       p("This table shows calculations for each item (row) in the stability dataset."),
                        tableOutput("details_per_item_table_stability"),
                        hr(),
-                       h4("Estadísticas de Resumen"),
-                       p("Esta tabla muestra las estadísticas generales para el conjunto de datos de estabilidad."),
+                       h4("Summary Statistics"),
+                       p("This table shows the overall statistics for the stability dataset."),
                        tableOutput("details_summary_stats_table_stability")
               )
             )
@@ -191,10 +196,54 @@ server <- function(input, output, session) {
       ),
 
       # Module 2: PT Preparation
-      tabPanel("Preparación de EA",
-        h3("Análisis de Esquemas de Ensayos de Aptitud"),
-        p("Análisis de los resultados de los participantes de diferentes esquemas de EA, basado en los archivos de resumen."),
+      tabPanel("PT Preparation",
+        h3("Proficiency Testing Scheme Analysis"),
+        p("Analysis of participant results from different PT schemes, based on summary data files."),
         uiOutput("pt_pollutant_tabs")
+      ),
+
+      # Module 3: PT Scores
+      tabPanel("PT Scores",
+        sidebarLayout(
+          sidebarPanel(
+            width = 4,
+            h4("1. Select Data"),
+            uiOutput("scores_pollutant_selector"),
+            uiOutput("scores_n_selector"),
+            uiOutput("scores_level_selector"),
+            hr(),
+            h4("2. Set Parameters"),
+            p("Parameters based on ISO 13528. Adjust as needed."),
+            numericInput("scores_sigma_pt", "Std. Dev. for PT (sigma_pt):", value = 5, step = 0.1),
+            numericInput("scores_u_xpt", "Std. Uncertainty of Assigned Value (u_xpt):", value = 0.5, step = 0.01),
+            numericInput("scores_k", "Coverage Factor (k) for En-Score:", value = 2, min = 1, step = 1)
+          ),
+          mainPanel(
+            width = 8,
+            tabsetPanel(
+              id = "scores_tabs",
+              tabPanel("Scores Table",
+                       h4("Calculated Proficiency Scores"),
+                       dataTableOutput("scores_table"),
+                       hr(),
+                       h4("Summary of Inputs"),
+                       verbatimTextOutput("scores_inputs_summary")
+              ),
+              tabPanel("Z-Score Plot",
+                       plotOutput("z_score_plot")
+              ),
+              tabPanel("Z'-Score Plot",
+                       plotOutput("z_prime_score_plot")
+              ),
+              tabPanel("Zeta-Score Plot",
+                       plotOutput("zeta_score_plot")
+              ),
+              tabPanel("En-Score Plot",
+                       plotOutput("en_score_plot")
+              )
+            )
+          )
+        )
       )
     )
   })
@@ -222,7 +271,7 @@ server <- function(input, output, session) {
     data <- raw_data()
     if ("level" %in% names(data)) {
       levels <- unique(data$level)
-      selectInput("target_level", "2. Seleccionar Nivel de EA", choices = levels, selected = levels[1])
+      selectInput("target_level", "2. Select PT Level", choices = levels, selected = levels[1])
     } else {
       p("Column 'level' not found in the loaded data.")
     }
@@ -319,7 +368,7 @@ server <- function(input, output, session) {
 
     # Between-sample variance
     # User requested ABS; standard practice is max(0, ...)
-    hom_ss_sq <- abs(hom_s_x_bar_sq - ((hom_sw^2) / 2))
+    hom_ss_sq <- abs(hom_s_xt^2 - ((hom_sw^2) / 2))
     hom_ss <- sqrt(hom_ss_sq)
 
     # For display purposes, we can create a data frame that mimics the ANOVA table
@@ -345,7 +394,7 @@ server <- function(input, output, session) {
 
     # First comparison: ss vs c_criterion (0.3 * sigma_pt)
     if (hom_ss <= hom_c_criterion) {
-      hom_conclusion1 <- sprintf("ss (%.4f) <= c_criterion (%.4f): CUMPLE", hom_ss, hom_c_criterion)
+      hom_conclusion1 <- sprintf("ss (%.4f) <= c_criterion (%.4f): CUMPLE CRITERIO HOMOGENEIDAD", hom_ss, hom_c_criterion)
       hom_conclusion_class <- "alert alert-success"
     } else {
       hom_conclusion1 <- sprintf("ss (%.4f) > c_criterion (%.4f): NO CUMPLE CRITERIO HOMOGENEIDAD", hom_ss, hom_c_criterion)
@@ -354,9 +403,9 @@ server <- function(input, output, session) {
 
     # Second comparison: ss vs c_expanded
     if (hom_ss <= hom_c_criterion_expanded) {
-      hom_conclusion2 <- sprintf("ss (%.4f) <= c_expanded (%.4f): CUMPLE", hom_ss, hom_c_criterion_expanded)
+      hom_conclusion2 <- sprintf("ss (%.4f) <= c_expanded (%.4f): CUMPLE CRITERIO EXP HOMOGENEIDAD", hom_ss, hom_c_criterion_expanded)
     } else {
-      hom_conclusion2 <- sprintf("ss (%.4f) > c_expanded (%.4f): NO CUMPLE", hom_ss, hom_c_criterion_expanded)
+      hom_conclusion2 <- sprintf("ss (%.4f) > c_expanded (%.4f): NO CUMPLE CRITERIO EXP HOMOGENEIDAD", hom_ss, hom_c_criterion_expanded)
     }
 
     # Combine conclusions
@@ -488,7 +537,7 @@ server <- function(input, output, session) {
 
     # Between-sample variance
     # User requested ABS; standard practice is max(0, ...)
-    stab_ss_sq <- abs(stab_s_x_bar_sq - ((stab_sw^2) / 2))
+    stab_ss_sq <- abs(stab_s_xt^2 - ((stab_sw^2) / 2))
     stab_ss <- sqrt(stab_ss_sq)
 
     # For display purposes, we can create a data frame that mimics the ANOVA table
@@ -514,22 +563,17 @@ server <- function(input, output, session) {
 
     # First comparison: ss vs c_criterion (0.3 * sigma_pt)
     if (diff_hom_stab <= stab_c_criterion) {
-      stab_conclusion1 <- sprintf("ss (%.4f) <= c_criterion (%.4f): CUMPLE", diff_hom_stab, stab_c_criterion)
+      stab_conclusion1 <- sprintf("ss (%.4f) <= c_criterion (%.4f): CUMPLE CRITERIO ESTABILIDAD", diff_hom_stab, stab_c_criterion)
       stab_conclusion_class <- "alert alert-success"
     } else {
-      stab_conclusion1 <- sprintf("ss (%.4f) > c_criterion (%.4f): NO CUMPLE CRITERIO HOMOGENEIDAD", diff_hom_stab, stab_c_criterion)
+      stab_conclusion1 <- sprintf("ss (%.4f) > c_criterion (%.4f): NO CUMPLE CRITERIO ESTABILIDAD", diff_hom_stab, stab_c_criterion)
       stab_conclusion_class <- "alert alert-warning"
     }
 
-    # Second comparison: ss vs c_expanded
-    if (diff_hom_stab <= stab_c_criterion_expanded) {
-      stab_conclusion2 <- sprintf("ss (%.4f) <= c_expanded (%.4f): CUMPLE", diff_hom_stab, stab_c_criterion_expanded)
-    } else {
-      stab_conclusion2 <- sprintf("ss (%.4f) > c_expanded (%.4f): NO CUMPLE", diff_hom_stab, stab_c_criterion_expanded)
-    }
+
 
     # Combine conclusions
-    stab_conclusion <- paste(stab_conclusion1, stab_conclusion2, sep = "<br>")
+    stab_conclusion <- paste(stab_conclusion1)
     list(
       stab_summary = stab_anova_summary,
       stab_ss = stab_ss,
@@ -581,15 +625,18 @@ server <- function(input, output, session) {
     fmt <- "%.9f"
 
     details_text <- sprintf(
-      paste("Media de Datos de Homogeneidad (y1):", fmt, "\nMedia de Datos de Estabilidad (y2):", fmt, "\nDiferencia Absoluta Observada:", fmt, "\nCriterio de Estabilidad (0.3 * sigma_pt):", fmt),
+      paste("Mean of Homogeneity Data (y1):", fmt, "
+Mean of Stability Data (y2):", fmt, "
+Observed Absolute Difference:", fmt, "
+Stability Criterion (0.3 * sigma_pt):", fmt),
       y1, y2, diff_observed, stab_criterion_value
     )
 
     if (diff_observed <= stab_criterion_value) {
-      conclusion <- "Conclusión: El ítem es adecuadamente estable."
+      conclusion <- "Conclusion: The item is adequately stable."
       conclusion_class <- "alert alert-success"
     } else {
-      conclusion <- "Conclusión: ADVERTENCIA: El ítem puede ser inestable."
+      conclusion <- "Conclusion: WARNING: The item may be unstable."
       conclusion_class <- "alert alert-warning"
     }
 
@@ -612,9 +659,9 @@ server <- function(input, output, session) {
     t_test_result <- t.test(data_t1_results, data_t2_results)
 
     if (t_test_result$p.value > 0.05) {
-      ttest_conclusion <- "Prueba T: No se detectó diferencia estadísticamente significativa entre los dos conjuntos de datos (p > 0.05), lo que apoya la estabilidad."
+      ttest_conclusion <- "T-test: No statistically significant difference detected between the two datasets (p > 0.05), supporting stability."
     } else {
-      ttest_conclusion <- "Prueba T: Se detectó una diferencia estadísticamente significativa entre los dos conjuntos de datos (p <= 0.05), lo que indica una posible inestabilidad."
+      ttest_conclusion <- "T-test: Statistically significant difference detected between the two datasets (p <= 0.05), indicating potential instability."
     }
 
     list(
@@ -654,22 +701,28 @@ server <- function(input, output, session) {
   # Output: Validation Message
   output$validation_message <- renderPrint({
     data <- raw_data()
-    cat("Data loaded successfully.\n")
-    cat(paste("Dimensions:", paste(dim(data), collapse = " x "), "\n"))
+    cat("Data loaded successfully.
+")
+    cat(paste("Dimensions:", paste(dim(data), collapse = " x "), "
+"))
 
     required_cols <- c("level")
     has_samples <- any(str_detect(names(data), "sample_"))
 
     if(!all(required_cols %in% names(data))) {
-        cat(paste("ERROR: Missing required column(s):", paste(setdiff(required_cols, names(data)), collapse=", "), "\n"))
+        cat(paste("ERROR: Missing required column(s):", paste(setdiff(required_cols, names(data)), collapse=", "), "
+"))
     } else {
-        cat("Found 'level' column.\n")
+        cat("Found 'level' column.
+")
     }
 
     if(!has_samples) {
-        cat("ERROR: No columns with 'sample_' prefix found. These are needed for the analysis.\n")
+        cat("ERROR: No columns with 'sample_' prefix found. These are needed for the analysis.
+")
     } else {
-        cat("Found 'sample_*' columns.\n")
+        cat("Found 'sample_*' columns.
+")
     }
   })
 
@@ -686,11 +739,11 @@ server <- function(input, output, session) {
   output$results_histogram <- renderPlot({
     plot_data <- plot_data_long()
     req(plot_data)
-    ggplot(plot_data, aes(x = result)) + 
+    ggplot(plot_data, aes(x = result)) +
       geom_histogram(aes(y = after_stat(density)), color = "black", fill = "skyblue", bins = 20) +
       geom_density(alpha = 0.4, fill = "lightblue") +
       facet_wrap(~level, scales = "free") +
-      labs(title = "Distribución por Nivel",
+      labs(title = "Distribution by Level",
            x = "Result", y = "Density") +
       theme_minimal()
   })
@@ -699,10 +752,10 @@ server <- function(input, output, session) {
   output$results_boxplot <- renderPlot({
     plot_data <- plot_data_long()
     req(plot_data)
-    ggplot(plot_data, aes(x = "", y = result)) + 
+    ggplot(plot_data, aes(x = "", y = result)) +
       geom_boxplot(fill = "lightgreen", outlier.colour = "red") +
       facet_wrap(~level, scales = "free") +
-      labs(title = "Diagrama de Caja por Nivel",
+      labs(title = "Boxplot by Level",
            x = NULL, y = "Result") +
       theme_minimal()
   })
@@ -723,8 +776,8 @@ server <- function(input, output, session) {
     res <- homogeneity_run()
     if (is.null(res$error)) {
       data.frame(
-        `Resultados.Primera.Muestra` = format(res$first_sample_results, digits = 15, scientific = FALSE),
-        `Dif.Abs.de.Mediana` = format(res$abs_diff_from_median, digits = 15, scientific = FALSE)
+        `First.Sample.Results` = format(res$first_sample_results, digits = 15, scientific = FALSE),
+        `Abs.Diff.from.Median` = format(res$abs_diff_from_median, digits = 15, scientific = FALSE)
       )
     }
   }, spacing = "l")
@@ -733,9 +786,12 @@ server <- function(input, output, session) {
   output$robust_stats_summary <- renderPrint({
     res <- homogeneity_run()
     if (is.null(res$error)) {
-      cat(paste("Valor de la Mediana:", format(res$median_val, digits = 15, scientific = FALSE), "\n"))
-      cat(paste("Mediana de la Diferencia Absoluta:", format(res$median_abs_diff, digits = 15, scientific = FALSE), "\n"))
-      cat(paste("MADe (sigma_pt):", format(res$sigma_pt, digits = 15, scientific = FALSE), "\n"))
+      cat(paste("Median Value:", format(res$median_val, digits = 15, scientific = FALSE), "
+"))
+      cat(paste("Median Absolute Difference:", format(res$median_abs_diff, digits = 15, scientific = FALSE), "
+"))
+      cat(paste("MADe (sigma_pt):", format(res$sigma_pt, digits = 15, scientific = FALSE), "
+"))
     }
   })
 
@@ -754,15 +810,15 @@ server <- function(input, output, session) {
     res <- homogeneity_run()
     if (is.null(res$error)) {
         df <- data.frame(
-          Componente = c("Valor Asignado (xpt)",
-                        "DE Robusta (sigma_pt)",
-                        "Incertidumbre del Valor Asignado (u_xpt)",
-                        "DE entre Muestras (ss)",
-                        "DE intra Muestra (sw)",
+          Component = c("Assigned Value (xpt)",
+                        "Robust SD (sigma_pt)",
+                        "Uncertainty of Assigned Value (u_xpt)",
+                        "Between-Sample SD (ss)",
+                        "Within-Sample SD (sw)",
                         "---",
-                        "Criterio c",
-                        "Criterio c (expandido)"),
-          Valor = c(
+                        "Criterion c",
+                        "Criterion c (expanded)"),
+          Value = c(
             format(c(res$median_val, res$sigma_pt, res$u_xpt, res$ss, res$sw), digits = 15, scientific = FALSE),
             "",
             format(c(res$c_criterion, res$c_criterion_expanded), digits = 15, scientific = FALSE)
@@ -794,7 +850,9 @@ server <- function(input, output, session) {
   output$stability_ttest <- renderPrint({
       res <- stability_run()
       if (is.null(res$error)) {
-          cat(res$ttest_conclusion, "\n\n")
+          cat(res$ttest_conclusion, "
+
+")
           print(res$ttest_summary, digits = 9)
       }
   })
@@ -812,23 +870,23 @@ server <- function(input, output, session) {
     res <- homogeneity_run()
     if (is.null(res$error)) {
       data.frame(
-        Parámetro = c("Media General",
-                      "DE de Medias",
-                      "Varianza de Medias (s_x_bar_sq)",
+        Parameter = c("General Mean",
+                      "SD of Means",
+                      "Variance of Means (s_x_bar_sq)",
                       "sw",
-                      "Varianza intra Muestra (s_w_sq)",
+                      "Within-Sample Variance (s_w_sq)",
                       "ss",
                       "---",
-                      "Valor Asignado (xpt)",
-                      "Mediana de la Diferencia Absoluta",
-                      "Número de Ítems (g)",
-                      "Número de Réplicas (m)",
-                      "DE Robusta (MADe)",
-                      "Incertidumbre del Valor Asignado (u_xpt)",
+                      "Assigned Value (xpt)",
+                      "Median of Absolute Differences",
+                      "Number of Items (g)",
+                      "Number of Replicates (m)",
+                      "Robust SD (MADe)",
+                      "Uncertainty of Assigned Value (u_xpt)",
                       "---",
-                      "Criterio c",
-                      "Criterio c (expandido)"),
-        Valor = c(
+                      "Criterion c",
+                      "Criterion c (expanded)"),
+        Value = c(
           format(c(res$general_mean, res$sd_of_means, res$s_x_bar_sq, res$sw, res$s_w_sq, res$ss), digits = 15, scientific = FALSE),
           "",
           format(c(res$median_val, res$median_abs_diff, res$g, res$m, res$sigma_pt, res$u_xpt), digits = 15, scientific = FALSE),
@@ -856,10 +914,10 @@ server <- function(input, output, session) {
     res <- homogeneity_run_stability()
     if (is.null(res$error)) {
         df <- data.frame(
-          Componente = c("Valor Asignado (xpt)",
-                        "DE Robusta (sigma_pt)",
-                        "Incertidumbre del Valor Asignado (u_xpt)"),
-          Valor = c(
+          Component = c("Assigned Value (xpt)",
+                        "Robust SD (sigma_pt)",
+                        "Uncertainty of Assigned Value (u_xpt)"),
+          Value = c(
             format(c(res$stab_median_val, res$stab_sigma_pt, res$stab_u_xpt), digits = 15, scientific = FALSE)
           )
         )
@@ -880,24 +938,24 @@ server <- function(input, output, session) {
     res <- homogeneity_run_stability()
     if (is.null(res$error)) {
       data.frame(
-        Parámetro = c("Media General",
-                      "Diferencia Absoluta con la Media General",
-                      "DE de Medias",
-                      "Varianza de Medias (s_x_bar_sq)",
+        Parameter = c("General Mean",
+                      "Absolute Difference from General Mean",
+                      "SD of Means",
+                      "Variance of Means (s_x_bar_sq)",
                       "sw",
-                      "Varianza intra Muestra (s_w_sq)",
+                      "Within-Sample Variance (s_w_sq)",
                       "ss",
                       "---",
-                      "Valor Asignado (xpt)",
-                      "Mediana de la Diferencia Absoluta",
-                      "Número de Ítems (g)",
-                      "Número de Réplicas (m)",
-                      "DE Robusta (MADe)",
-                      "Incertidumbre del Valor Asignado (u_xpt)",
+                      "Assigned Value (xpt)",
+                      "Median of Absolute Differences",
+                      "Number of Items (g)",
+                      "Number of Replicates (m)",
+                      "Robust SD (MADe)",
+                      "Uncertainty of Assigned Value (u_xpt)",
                       "---",
-                      "Criterio c",
-                      "Criterio c (expandido)"),
-        Valor = c(
+                      "Criterion c",
+                      "Criterion c (expanded)"),
+        Value = c(
           format(c(res$stab_general_mean, res$diff_hom_stab, res$stab_sd_of_means, res$stab_s_x_bar_sq, res$stab_sw, res$stab_s_w_sq, res$stab_ss), digits = 15, scientific = FALSE),
           "",
           format(c(res$stab_median_val, res$stab_median_abs_diff, res$g, res$m, res$stab_sigma_pt, res$stab_u_xpt), digits = 15, scientific = FALSE),
@@ -907,6 +965,258 @@ server <- function(input, output, session) {
       )
     }
   }, spacing = "l")
+
+  # --- PT Scores Module ---
+
+  # Dynamic UI for PT Scores selectors
+  output$scores_pollutant_selector <- renderUI({
+    req(pt_prep_data())
+    choices <- unique(pt_prep_data()$pollutant)
+    selectInput("scores_pollutant", "Select Pollutant:", choices = choices)
+  })
+
+  output$scores_n_selector <- renderUI({
+    req(pt_prep_data(), input$scores_pollutant)
+    choices <- pt_prep_data() %>%
+      filter(pollutant == input$scores_pollutant) %>%
+      pull(n_lab) %>%
+      unique() %>%
+      sort()
+    selectInput("scores_n_lab", "Select PT Scheme (by n):", choices = choices)
+  })
+
+  output$scores_level_selector <- renderUI({
+    req(pt_prep_data(), input$scores_pollutant, input$scores_n_lab)
+    choices <- pt_prep_data() %>%
+      filter(pollutant == input$scores_pollutant, n_lab == input$scores_n_lab) %>%
+      pull(level) %>%
+      unique()
+    selectInput("scores_level", "Select Level:", choices = choices)
+  })
+
+      # Reactive for score calculation
+      scores_run <- reactive({
+        req(pt_prep_data(), input$scores_pollutant, input$scores_n_lab, input$scores_level,
+            input$scores_sigma_pt, input$scores_u_xpt, input$scores_k)  
+      data <- pt_prep_data() %>%
+        filter(
+          pollutant == input$scores_pollutant,
+          n_lab == input$scores_n_lab,
+          level == input$scores_level
+        )
+  
+      if (nrow(data) == 0) {
+        return(list(error = "No data found for the selected criteria."))
+      }
+  
+      ref_data <- data %>% filter(participant_id == "ref")
+      participant_data <- data %>% filter(participant_id != "ref")
+  
+      if (nrow(ref_data) == 0) {
+        return(list(error = "No reference data ('ref' participant) found for this level."))
+      }
+      if (nrow(participant_data) == 0) {
+        return(list(error = "No participant data found for this level."))
+      }
+  
+      # Use the mean of reference values as x_pt
+      x_pt <- mean(ref_data$mean_value, na.rm = TRUE)
+  
+      # Rename for clarity inside this reactive, matching scores.md
+      participant_data <- participant_data %>%
+        rename(result = mean_value, uncertainty_std = sd_value)
+  
+      sigma_pt_adjusted <- input$scores_sigma_pt
+      u_xpt <- input$scores_u_xpt
+      k <- input$scores_k
+  
+      final_scores <- participant_data %>%
+        mutate(
+          # z-Score
+          z_score = (result - x_pt) / sigma_pt_adjusted,
+          # z'-Score
+          z_prime_score = (result - x_pt) / sqrt(sigma_pt_adjusted^2 + u_xpt^2),
+          # Zeta Score
+          zeta_score = (result - x_pt) / sqrt(uncertainty_std^2 + u_xpt^2),
+          # En-Score
+          U_xi = k * uncertainty_std,
+          U_xpt = k * u_xpt,
+          En_score = (result - x_pt) / sqrt(U_xi^2 + U_xpt^2)
+        ) %>%
+        mutate(
+          z_score_eval = case_when(
+            abs(z_score) <= 2 ~ "Satisfactory",
+            abs(z_score) > 2 & abs(z_score) < 3 ~ "Questionable",
+            abs(z_score) >= 3 ~ "Unsatisfactory",
+            TRUE ~ "N/A"
+          ),
+          z_prime_score_eval = case_when(
+            abs(z_prime_score) <= 2 ~ "Satisfactory",
+            abs(z_prime_score) > 2 & abs(z_prime_score) < 3 ~ "Questionable",
+            abs(z_prime_score) >= 3 ~ "Unsatisfactory",
+            TRUE ~ "N/A"
+          ),
+          zeta_score_eval = case_when(
+            abs(zeta_score) <= 2 ~ "Satisfactory",
+            abs(zeta_score) > 2 & abs(zeta_score) < 3 ~ "Questionable",
+            abs(zeta_score) >= 3 ~ "Unsatisfactory",
+            TRUE ~ "N/A"
+          ),
+          En_score_eval = case_when(
+            abs(En_score) <= 1 ~ "Satisfactory",
+            abs(En_score) > 1 ~ "Unsatisfactory",
+            TRUE ~ "N/A"
+          )
+        )
+  
+      list(
+        scores = final_scores,
+        x_pt = x_pt,
+        sigma_pt = sigma_pt_adjusted,
+        u_xpt = u_xpt,
+        k = k,
+        error = NULL
+      )
+    })
+  
+    # Output: Scores Table
+    output$scores_table <- renderDataTable({
+      res <- scores_run()
+      if (!is.null(res$error)) {
+        return(datatable(data.frame(Error = res$error)))
+      }
+  
+      display_df <- res$scores %>%
+        select(
+          `Participant` = participant_id,
+          `Result` = result,
+          `u(xi)` = uncertainty_std,
+          `z-score` = z_score,
+          `z-score Eval` = z_score_eval,
+          `z'-score` = z_prime_score,
+          `z'-score Eval` = z_prime_score_eval,
+          `zeta-score` = zeta_score,
+          `zeta-score Eval` = zeta_score_eval,
+          `En-score` = En_score,
+          `En-score Eval` = En_score_eval
+        )
+  
+      datatable(display_df, options = list(scrollX = TRUE, pageLength = 10), rownames = FALSE) %>%
+        formatRound(columns = c('Result', 'u(xi)', 'z-score', 'z\'-score', 'zeta-score', 'En-score'), digits = 3) %>%
+        formatStyle(
+          'z-score Eval',
+          backgroundColor = styleEqual(c("Satisfactory", "Questionable", "Unsatisfactory"), c("#d4edda", "#fff3cd", "#f8d7da"))
+        ) %>%
+        formatStyle(
+          'z\'-score Eval',
+          backgroundColor = styleEqual(c("Satisfactory", "Questionable", "Unsatisfactory"), c("#d4edda", "#fff3cd", "#f8d7da"))
+        ) %>%
+        formatStyle(
+          'zeta-score Eval',
+          backgroundColor = styleEqual(c("Satisfactory", "Questionable", "Unsatisfactory"), c("#d4edda", "#fff3cd", "#f8d7da"))
+        ) %>%
+        formatStyle(
+          'En-score Eval',
+          backgroundColor = styleEqual(c("Satisfactory", "Unsatisfactory"), c("#d4edda", "#f8d7da"))
+        )
+    })
+  # Output: Inputs Summary
+  output$scores_inputs_summary <- renderPrint({
+    res <- scores_run()
+    req(res)
+    if (!is.null(res$error)) {
+      cat(res$error)
+    } else {
+      cat(sprintf("Assigned Value (x_pt): %.4f
+", res$x_pt))
+      cat(sprintf("Standard Deviation for PT (sigma_pt): %.4f
+", res$sigma_pt))
+      cat(sprintf("Standard Uncertainty of Assigned Value (u_xpt): %.4f
+", res$u_xpt))
+      cat(sprintf("Coverage Factor (k) for En-score: %d
+", res$k))
+    }
+  })
+
+  # Output: Z-Score Plot
+  output$z_score_plot <- renderPlot({
+    res <- scores_run()
+    req(res, is.null(res$error))
+
+    ggplot(res$scores, aes(x = reorder(participant_id, z_score), y = z_score)) +
+      geom_hline(yintercept = c(-3, -2, 2, 3), linetype = "dashed", color = c("red", "orange", "orange", "red")) +
+      geom_hline(yintercept = 0, linetype = "solid", color = "grey") +
+      geom_point(size = 3, color = "blue") +
+      geom_segment(aes(xend = reorder(participant_id, z_score), yend = 0), color = "blue") +
+      labs(
+        title = "Z-Scores by Participant",
+        subtitle = "Warning limits at |z|=2 (orange), Action limits at |z|=3 (red)",
+        x = "Participant",
+        y = "Z-Score"
+      ) +
+      theme_minimal() +
+      theme(axis.text.x = element_text(angle = 45, hjust = 1))
+  })
+
+  # Output: Z'-Score Plot
+  output$z_prime_score_plot <- renderPlot({
+    res <- scores_run()
+    req(res, is.null(res$error))
+
+    ggplot(res$scores, aes(x = reorder(participant_id, z_prime_score), y = z_prime_score)) +
+      geom_hline(yintercept = c(-3, -2, 2, 3), linetype = "dashed", color = c("red", "orange", "orange", "red")) +
+      geom_hline(yintercept = 0, linetype = "solid", color = "grey") +
+      geom_point(size = 3, color = "cyan4") +
+      geom_segment(aes(xend = reorder(participant_id, z_prime_score), yend = 0), color = "cyan4") +
+      labs(
+        title = "Z'-Scores by Participant",
+        subtitle = "Warning limits at |z'|=2 (orange), Action limits at |z'|=3 (red)",
+        x = "Participant",
+        y = "Z'-Score"
+      ) +
+      theme_minimal() +
+      theme(axis.text.x = element_text(angle = 45, hjust = 1))
+  })
+
+  # Output: Zeta-Score Plot
+  output$zeta_score_plot <- renderPlot({
+    res <- scores_run()
+    req(res, is.null(res$error))
+
+    ggplot(res$scores, aes(x = reorder(participant_id, zeta_score), y = zeta_score)) +
+      geom_hline(yintercept = c(-3, -2, 2, 3), linetype = "dashed", color = c("red", "orange", "orange", "red")) +
+      geom_hline(yintercept = 0, linetype = "solid", color = "grey") +
+      geom_point(size = 3, color = "darkgreen") +
+      geom_segment(aes(xend = reorder(participant_id, zeta_score), yend = 0), color = "darkgreen") +
+      labs(
+        title = "Zeta-Scores by Participant",
+        subtitle = "Warning limits at |ζ|=2 (orange), Action limits at |ζ|=3 (red)",
+        x = "Participant",
+        y = "Zeta-Score (ζ)"
+      ) +
+      theme_minimal() +
+      theme(axis.text.x = element_text(angle = 45, hjust = 1))
+  })
+
+  # Output: En-Score Plot
+  output$en_score_plot <- renderPlot({
+    res <- scores_run()
+    req(res, is.null(res$error))
+
+    ggplot(res$scores, aes(x = reorder(participant_id, En_score), y = En_score)) +
+      geom_hline(yintercept = c(-1, 1), linetype = "dashed", color = "red") +
+      geom_hline(yintercept = 0, linetype = "solid", color = "grey") +
+      geom_point(size = 3, color = "purple") +
+      geom_segment(aes(xend = reorder(participant_id, En_score), yend = 0), color = "purple") +
+      labs(
+        title = "En-Scores by Participant",
+        subtitle = "Action limits at |En|=1 (red)",
+        x = "Participant",
+        y = "En-Score"
+      ) +
+      theme_minimal() +
+      theme(axis.text.x = element_text(angle = 45, hjust = 1))
+  })
 
   # --- PT Preparation Module ---
 
@@ -919,33 +1229,39 @@ server <- function(input, output, session) {
     pollutants <- unique(pt_prep_data()$pollutant)
     
     tabs <- lapply(pollutants, function(p) {
-      tabPanel(toupper(p), 
+      tabPanel(toupper(p),
         sidebarLayout(
           sidebarPanel(
             width = 4,
-            h4(paste("Opciones para", toupper(p))),
+            h4(paste("Options for", toupper(p))),
             uiOutput(paste0("pt_n_selector_", p)),
             uiOutput(paste0("pt_level_selector_", p)),
             hr(),
-            h4("Información de Resumen"),
+            h4("Summary Information"),
             verbatimTextOutput(paste0("pt_summary_", p))
           ),
           mainPanel(
             width = 8,
-            h4("Gráfico de Resultados de Participantes"),
+            h4("Participant Results Plot"),
             plotOutput(paste0("pt_plot_", p)),
             hr(),
-            h4("Tabla de Datos"),
+            h4("Data Table"),
             dataTableOutput(paste0("pt_table_", p)),
             hr(),
-            h4("Distribución de Resultados"),
+            h4("Results Distribution"),
             fluidRow(
               column(width = 6, plotOutput(paste0("pt_histogram_", p))),
               column(width = 6, plotOutput(paste0("pt_boxplot_", p)))
             ),
             fluidRow(
               column(width = 12, plotOutput(paste0("pt_density_", p)))
-            )
+            ),
+            hr(),
+            h4("Grubbs' Test for Outliers"),
+            verbatimTextOutput(paste0("pt_grubbs_", p)),
+            hr(),
+            h4("Run Chart"),
+            plotOutput(paste0("pt_runchart_", p))
           )
         )
       )
@@ -968,7 +1284,7 @@ server <- function(input, output, session) {
         # N (scheme) selector
         output[[paste0("pt_n_selector_", pollutant_name)]] <- renderUI({
           choices <- unique(pt_prep_data()[pt_prep_data()$pollutant == pollutant_name, "n_lab"])
-          selectInput(paste0("n_lab_", pollutant_name), "Seleccionar Esquema de EA (por n):", choices = sort(choices))
+          selectInput(paste0("n_lab_", pollutant_name), "Select PT Scheme (by n):", choices = sort(choices))
         })
         
         # Level selector
@@ -978,7 +1294,7 @@ server <- function(input, output, session) {
             filter(pollutant == pollutant_name, n_lab == input[[paste0("n_lab_", pollutant_name)]]) %>%
             pull(level) %>%
             unique()
-          selectInput(paste0("level_", pollutant_name), "Seleccionar Nivel:", choices = choices)
+          selectInput(paste0("level_", pollutant_name), "Select Level:", choices = choices)
         })
         
         # Filtered data reactive
@@ -1000,11 +1316,11 @@ server <- function(input, output, session) {
           n_participants <- n_distinct(data$participant_id[data$participant_id != "ref"])
           participants <- unique(data$participant_id[data$participant_id != "ref"])
           
-          cat("Contaminante:", pollutant_name, "\n")
-          cat("Esquema de EA (n_lab):", unique(data$n_lab), "\n")
-          cat("Nivel:", unique(data$level), "\n")
-          cat("Número de Participantes:", n_participants, "\n")
-          cat("Participantes:", paste(participants, collapse = ", "))
+          cat("Pollutant:", pollutant_name, "\n")
+          cat("PT Scheme (n_lab):", unique(data$n_lab), "\n")
+          cat("Level:", unique(data$level), "\n")
+          cat("Number of Participants:", n_participants, "\n")
+          cat("Participants:", paste(participants, collapse = ", "))
         })
         
         # Plot
@@ -1012,10 +1328,10 @@ server <- function(input, output, session) {
           data <- filtered_data()
           req(nrow(data) > 0)
           
-          ggplot(data, aes(x = participant_id, y = mean_value, fill = sample_group)) + 
-            geom_bar(stat = "identity", position = "dodge") + 
+          ggplot(data, aes(x = participant_id, y = mean_value, fill = sample_group)) +
+            geom_bar(stat = "identity", position = "dodge") +
             geom_errorbar(aes(ymin = mean_value - sd_value, ymax = mean_value + sd_value), width = 0.2, position = position_dodge(0.9)) +
-            labs(title = "Valores Medios de Participantes con DE", x = "Participante", y = "Valor Medio") +
+            labs(title = "Participant Mean Values with SD", x = "Participant", y = "Mean Value") +
             theme_minimal() +
             theme(axis.text.x = element_text(angle = 45, hjust = 1))
         })
@@ -1038,11 +1354,11 @@ server <- function(input, output, session) {
             summarise(mean_ref = mean(mean_value, na.rm = TRUE)) %>%
             pull(mean_ref)
             
-          ggplot(participants_data, aes(x = mean_value)) + 
+          ggplot(participants_data, aes(x = mean_value)) +
             geom_histogram(aes(y = after_stat(density)), color = "black", fill = "skyblue", bins = 15, boundary = 0) +
             geom_density(alpha = 0.2, fill = "#FF6666") +
             geom_vline(xintercept = ref_value, color = "red", linetype = "dashed", size = 1) +
-            labs(title = "Histograma de Resultados de Participantes", subtitle = "vs. Valor de Referencia (línea discontinua)", x = "Valor Medio", y = "Densidad") +
+            labs(title = "Histogram of Participant Results", subtitle = "vs. Reference Value (dashed line)", x = "Mean Value", y = "Density") +
             theme_minimal()
         })
         
@@ -1057,10 +1373,10 @@ server <- function(input, output, session) {
             summarise(mean_ref = mean(mean_value, na.rm = TRUE)) %>%
             pull(mean_ref)
             
-          ggplot(participants_data, aes(x = "", y = mean_value)) + 
+          ggplot(participants_data, aes(x = "", y = mean_value)) +
             geom_boxplot(fill = "lightgreen") +
             geom_hline(yintercept = ref_value, color = "red", linetype = "dashed", size = 1) +
-            labs(title = "Diagrama de Caja de Resultados de Participantes", subtitle = "vs. Valor de Referencia (línea discontinua)", x = "", y = "Valor Medio") +
+            labs(title = "Boxplot of Participant Results", subtitle = "vs. Reference Value (dashed line)", x = "", y = "Mean Value") +
             theme_minimal()
         })
         
@@ -1075,11 +1391,47 @@ server <- function(input, output, session) {
             summarise(mean_ref = mean(mean_value, na.rm = TRUE)) %>%
             pull(mean_ref)
             
-          ggplot(participants_data, aes(x = mean_value)) + 
+          ggplot(participants_data, aes(x = mean_value)) +
             geom_density(fill = "lightblue", alpha = 0.7) +
             geom_vline(xintercept = ref_value, color = "red", linetype = "dashed", size = 1) +
-            labs(title = "Densidad Kernel de Resultados de Participantes", subtitle = "vs. Valor de Referencia (línea discontinua)", x = "Valor Medio", y = "Densidad") +
+            labs(title = "Kernel Density of Participant Results", subtitle = "vs. Reference Value (dashed line)", x = "Mean Value", y = "Density") +
             theme_minimal()
+        })
+        
+        # Grubbs' Test for Outliers
+        output[[paste0("pt_grubbs_", pollutant_name)]] <- renderPrint({
+          data <- filtered_data()
+          req(nrow(data) > 0)
+          
+          participants_data <- data %>% filter(participant_id != "ref")
+          
+          if (length(participants_data$mean_value) < 3) {
+            "Grubbs' test requires at least 3 data points."
+          } else {
+            grubbs.test(participants_data$mean_value)
+          }
+        })
+
+        # Run Chart
+        output[[paste0("pt_runchart_", pollutant_name)]] <- renderPlot({
+          data <- filtered_data()
+          req(nrow(data) > 0)
+
+          participants_data <- data %>% 
+            filter(participant_id != "ref")
+            
+          center_line <- median(participants_data$mean_value, na.rm = TRUE)
+            
+          ggplot(participants_data, aes(x = sample_group, y = mean_value, group = 1)) +
+            geom_point() +
+            geom_line() +
+            geom_hline(yintercept = center_line, color = "red", linetype = "dashed") +
+            facet_wrap(~ participant_id) +
+            labs(title = "Run Chart of Mean Values by Participant",
+                 x = "Sample Group",
+                 y = "Mean Value") +
+            theme_minimal() +
+            theme(axis.text.x = element_text(angle = 45, hjust = 1))
         })
       }) # end local
     }) # end lapply
