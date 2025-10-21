@@ -13,7 +13,6 @@ suppressPackageStartupMessages({
   library(tidyverse)
   library(readr)
   library(DT)
-  library(shinyBS)
 })
 
 `%||%` <- function(a, b) if (!is.null(a)) a else b
@@ -317,7 +316,7 @@ server <- function(input, output, session) {
     )
   })
 
-  hom_shared <- mod_homogeneity_server("homog", hom_data, stability_data, log_action, get_f_factors)
+  hom_shared <- mod_homogeneity_server("homog", hom_data, stability_data, log_action)
   mod_stability_server("stab", stability_data, hom_shared, log_action)
   mod_ptprep_server("ptprep", pt_data, log_action)
   mod_scores_server("scores", pt_data, log_action)

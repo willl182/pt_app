@@ -7,6 +7,66 @@
 #'   (data frame with columns pollutant, level, replicate, sample_id, value).
 #' @param stability_data Reactive expression that returns the stability data.
 #' @param log_action Logging callback defined in the main app.
+
+if (!exists("calc_niqr", mode = "function")) {
+  calc_niqr <- function(x) {
+    x <- x[!is.na(x)]
+    if (length(x) < 2) {
+      return(NA_real_)
+    }
+    qs <- stats::quantile(x, probs = c(0.25, 0.75), na.rm = TRUE, type = 7)
+    0.7413 * (qs[[2]] - qs[[1]])
+  }
+}
+
+if (!exists("algorithm_A", mode = "function")) {
+  algorithm_A <- function(x, max_iter = 100) {
+    x <- x[!is.na(x)]
+    if (length(x) == 0) {
+      return(list(robust_mean = NA_real_, robust_sd = NA_real_, iterations = 0))
+    }
+    x_star <- median(x)
+    s_star <- stats::mad(x, constant = 1.4826)
+    prev_mean <- Inf
+    prev_sd <- Inf
+    tolerance <- 1e-9
+    for (iter in seq_len(max_iter)) {
+      if (signif(x_star, 3) == signif(prev_mean, 3) && signif(s_star, 3) == signif(prev_sd, 3)) {
+        return(list(robust_mean = x_star, robust_sd = s_star, iterations = iter - 1))
+      }
+      prev_mean <- x_star
+      prev_sd <- s_star
+      if (s_star < tolerance) {
+        return(list(robust_mean = x_star, robust_sd = 0, iterations = iter))
+      }
+      delta <- 1.5 * s_star
+      x_prime <- pmin(pmax(x, x_star - delta), x_star + delta)
+      x_star <- mean(x_prime)
+      s_star <- 1.134 * stats::sd(x_prime)
+    }
+    warning("Algorithm A did not converge within max_iter iterations.")
+    list(robust_mean = x_star, robust_sd = s_star, iterations = max_iter)
+  }
+}
+
+if (!exists("f_factor_table", inherits = FALSE)) {
+  f_factor_table <- tibble::tibble(
+    g = 7:20,
+    F1 = c(2.10, 2.01, 1.94, 1.88, 1.83, 1.79, 1.75, 1.72, 1.69, 1.67, 1.64, 1.62, 1.60, 1.59),
+    F2 = c(1.43, 1.25, 1.11, 1.01, 0.93, 0.86, 0.80, 0.75, 0.71, 0.68, 0.64, 0.62, 0.59, 0.57)
+  )
+}
+
+if (!exists("get_f_factors", mode = "function")) {
+  get_f_factors <- function(g) {
+    res <- f_factor_table[f_factor_table$g == g, , drop = FALSE]
+    if (nrow(res) == 0) {
+      return(NULL)
+    }
+    res
+  }
+}
+
 mod_homogeneity_ui <- function(id) {
   ns <- NS(id)
   tagList(
@@ -71,7 +131,7 @@ mod_homogeneity_ui <- function(id) {
   )
 }
 
-mod_homogeneity_server <- function(id, hom_data, stability_data, log_action) {
+mod_homogeneity_server <- function(id, hom_data, stability_data, log_action, get_f_factors) {
   moduleServer(id, function(input, output, session) {
     ns <- session$ns
 
@@ -104,7 +164,8 @@ mod_homogeneity_server <- function(id, hom_data, stability_data, log_action) {
     hom_filtered_level <- reactive({
       req(input$level)
       hom_filtered() %>%
-        filter(.data$level == input$level)
+        filter(.data$level == input$level) %>%
+        mutate(value = as.numeric(value))
     })
 
     stability_filtered_level <- reactive({
@@ -169,14 +230,27 @@ mod_homogeneity_server <- function(id, hom_data, stability_data, log_action) {
       if (m < 2) cat("\nWarning: fewer than two replicates (ISO 13528 Annex B requires m >= 2)")
     })
 
-    # Compute homogeneity metrics once the user requests analysis
-    analysis <- eventReactive(input$run_analysis, {
+    # Reactive value to track if analysis has been run at least once
+    has_run_analysis <- reactiveVal(FALSE)
+
+    # Observe the run_analysis button click to set the flag
+    observeEvent(input$run_analysis, {
+      has_run_analysis(TRUE)
       log_action(sprintf("Homogeneity analysis requested for %s - %s", input$pollutant, input$level))
+    })
+
+    # Compute homogeneity metrics when pollutant/level changes, but only after the first run_analysis click
+    analysis <- reactive({
+      req(has_run_analysis())
+      req(input$pollutant, input$level)
+
       df <- hom_filtered_level()
       validate(need(nrow(df) > 0, "Homogeneity dataset is empty for the selected level."))
 
       wide_df <- prepare_wide_table(df)
       replicate_cols <- grep("^sample_", names(wide_df), value = TRUE)
+      wide_df <- wide_df %>%
+        mutate(across(all_of(replicate_cols), ~ readr::parse_number(as.character(.))))
       g <- nrow(wide_df)
       m <- length(replicate_cols)
 
@@ -189,7 +263,7 @@ mod_homogeneity_server <- function(id, hom_data, stability_data, log_action) {
       intermediate_df <- if (m == 2) {
         s1 <- homogeneity_level_data[[1]]
         s2 <- homogeneity_level_data[[2]]
-        homogeneity_level_data %>%
+        wide_df %>%
           mutate(
             Item = dplyr::row_number(),
             average = (s1 + s2) / 2,
@@ -197,11 +271,11 @@ mod_homogeneity_server <- function(id, hom_data, stability_data, log_action) {
           ) %>%
           relocate(Item)
       } else {
-        homogeneity_level_data %>%
+        wide_df %>%
           mutate(Item = dplyr::row_number()) %>%
           mutate(
-            average = rowMeans(select(., -Item), na.rm = TRUE),
-            range = apply(select(., -Item), 1, function(x) max(x, na.rm = TRUE) - min(x, na.rm = TRUE))
+            average = rowMeans(select(., all_of(replicate_cols)), na.rm = TRUE),
+            range = apply(select(., all_of(replicate_cols)), 1, function(x) max(x, na.rm = TRUE) - min(x, na.rm = TRUE))
           ) %>%
           relocate(Item)
       }
@@ -273,10 +347,19 @@ mod_homogeneity_server <- function(id, hom_data, stability_data, log_action) {
         ) %>%
         select(Item, all_of(replicate_cols), average, range)
 
-      summary_table <- tibble::tibble(
-        Metric = c("Items (g)", "Replicates (m)", "Grand mean", "MS_between", "MS_within", "s_w", "s_s", "sigma_pt", "Criterion"),
-        Value = c(g, m, grand_mean, ms_between, ms_within, sw, ss, sigma_pt, criterion)
+      summary_data <- list(
+        "Items (g)" = g,
+        "Replicates (m)" = m,
+        "Grand mean" = grand_mean,
+        "MS_between" = ms_between,
+        "MS_within" = ms_within,
+        "s_w" = sw,
+        "s_s" = ss,
+        "sigma_pt" = sigma_pt,
+        "Criterion" = criterion
       )
+
+      summary_table <- tibble::enframe(summary_data, name = "Metric", value = "Value")
 
       robust_table <- tibble::tibble(
         Statistic = c("Median (x*)", "MADe (s*)", "nIQR", "Algorithm A mean", "Algorithm A sd", "Iterations"),
@@ -312,17 +395,26 @@ mod_homogeneity_server <- function(id, hom_data, stability_data, log_action) {
     })
 
     output$homog_conclusion <- renderUI({
+      if (!has_run_analysis()) {
+        return(div(class = "alert alert-info", "Click 'Run Homogeneity Analysis' to see results."))
+      }
       req(analysis())
       res <- analysis()
       div(class = res$conclusion_class, res$conclusion_text)
     })
 
     output$robust_stats_table <- renderTable({
+      if (!has_run_analysis()) {
+        return(tibble::tibble(Message = "Click 'Run Homogeneity Analysis' to see robust statistics."))
+      }
       req(analysis())
       analysis()$robust_table
     })
 
     output$robust_stats_summary <- renderPrint({
+      if (!has_run_analysis()) {
+        return(cat("Click 'Run Homogeneity Analysis' to see robust statistics summary."))
+      }
       req(analysis())
       res <- analysis()
       cat("Robust estimators (ISO 13528 Annex C):\n")
@@ -333,16 +425,25 @@ mod_homogeneity_server <- function(id, hom_data, stability_data, log_action) {
     })
 
     output$variance_components <- renderTable({
+      if (!has_run_analysis()) {
+        return(tibble::tibble(Message = "Click 'Run Homogeneity Analysis' to see variance components."))
+      }
       req(analysis())
       analysis()$variance_table
     })
 
     output$details_per_item_table <- renderTable({
+      if (!has_run_analysis()) {
+        return(tibble::tibble(Message = "Click 'Run Homogeneity Analysis' to see per-item calculations."))
+      }
       req(analysis())
       analysis()$intermediate_table
     }, striped = TRUE, bordered = TRUE, spacing = "s")
 
     output$details_summary_stats_table <- renderTable({
+      if (!has_run_analysis()) {
+        return(tibble::tibble(Message = "Click 'Run Homogeneity Analysis' to see summary statistics."))
+      }
       req(analysis())
       analysis()$summary_table
     })
