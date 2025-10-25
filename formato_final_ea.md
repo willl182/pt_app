@@ -278,24 +278,63 @@ A continuación, se presenta un resumen del desempeño para cada contaminante. L
 
 ### **Anexo A: Valores Asignados ($X\_{pt}$) y sus Incertidumbres ($u(X\_{pt})$)**
 
-*Tabla detallada con* $X\_{pt}$*,* $u(X\_{pt})$*,* $U(X\_{pt})$*,* $\\sigma\_{pt}$ *y selección z/z' para cada contaminante y nivel. Similar a Tabla 9 de Barbiere.*
+*Nota: Los valores precisos se calculan en el script `tools/generate_report_assets.R`.*
 
 ### **Anexo B: Resultados de las Pruebas de Homogeneidad y Estabilidad**
 
-*Tabla(s) y/o gráficos resumiendo los datos y conclusiones de las pruebas de homogeneidad y estabilidad realizadas. Similar a Tabla 10 de Barbiere.*
+A continuación se presentan los resultados de las pruebas de homogeneidad y estabilidad para cada contaminante y nivel.
+
+*Nota: Las tablas y gráficos completos se generan ejecutando el script `tools/generate_report_assets.R` y se encuentran en la carpeta `reports/assets`.*
+
+**Ejemplo para un contaminante y nivel:**
+
+**Tabla de Homogeneidad (Detalles por Item)**
+*Referencia: `reports/assets/tables/homogeneity_details_[pollutant]_[level].csv`*
+
+**Conclusión de Homogeneidad:**
+*(Extraído de los cálculos en el script)*
+
+**Gráfico: Distribución de Homogeneidad**
+![Distribución de Homogeneidad](reports/assets/charts/homogeneity_hist_[pollutant]_[level].png)
+
+**Tabla de Estabilidad (Detalles por Item)**
+*Referencia: `reports/assets/tables/stability_details_[pollutant]_[level].csv`*
+
+**Conclusión de Estabilidad:**
+*(Extraído de los cálculos en el script)*
+
+---
+*(Este bloque se repetiría para cada contaminante y nivel)*
+---
 
 ### **Anexo C: Resultados Reportados por los Participantes y Puntuaciones de Desempeño**
 
-*Tablas detalladas por participante, mostrando los valores reportados (e.g., promedio, steps 1,2,3), incertidumbre reportada (Ulab), y las puntuaciones calculadas (*$z/z'$*, En). Similar a Tablas 11-20 de Barbiere.*
+A continuación se presentan las tablas con los resultados reportados por los participantes y sus puntuaciones de desempeño.
+
+*Nota: Las tablas completas se generan ejecutando el script `tools/generate_report_assets.R` y se encuentran en la carpeta `reports/assets/tables`.*
+
+**Ejemplo para un contaminante y nivel:**
+
+**Tabla de Puntuaciones (Scores)**
+*Referencia: `reports/assets/tables/scores_table_[pollutant]_[level].csv`*
 
 ### **Anexo D: Gráficos de Desempeño**
 
-* **Gráficos por Participante:** Gráficos individuales mostrando Valor vs Ref, $z/z'$-score, En-score para todos los contaminantes. (Similar a Figuras 17-26 de Barbiere).  
-* **Gráficos Colectivos:**  
-  * Matrices de Puntuaciones $z/z'$ y $E\_n$ por contaminante. (Similar a Figuras 1, 2, 3, 4, 5, 6, 8, 10, 12, 14 de Barbiere).  
-  * Gráficos de Sesgo ($x\_i \- X\_{pt}$) vs $X\_{pt}$ con barras de incertidumbre ($U\_{lab}$) por contaminante. (Similar a Figuras 7, 9, 11, 13, 15 de Barbiere).  
-  * Gráfico Resumen de $z/z'$-scores para todos los participantes y contaminantes. (Similar a Figura 16 de Barbiere).  
-  * \[Otros gráficos relevantes: Boxplots, Youden plots si aplica, etc., según ISO 13528, Cláusula 10\].
+A continuación se presentan los gráficos de desempeño para cada contaminante y nivel.
+
+*Nota: Los gráficos completos se generan ejecutando el script `tools/generate_report_assets.R` y se encuentran en la carpeta `reports/assets/charts`.*
+
+**Ejemplo para un contaminante y nivel:**
+
+**Gráfico: Z-Scores**
+![Z-Scores](reports/assets/charts/z_scores_[pollutant]_[level].png)
+
+**Gráfico: Zeta-Scores**
+![Zeta-Scores](reports/assets/charts/zeta_scores_[pollutant]_[level].png)
+
+---
+*(Este bloque se repetiría para cada contaminante y nivel)*
+---
 
 ### **Anexo E: Análisis de Reproducibilidad (Opcional)**
 
