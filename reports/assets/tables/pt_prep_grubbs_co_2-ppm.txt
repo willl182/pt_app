@@ -1,0 +1,7 @@
+
+	Grubbs test for one outlier
+
+data:  participants_data$mean_value
+G = 1.82775, U = 0.79193, p-value = 0.5138
+alternative hypothesis: lowest value 2.01102639157533 is an outlier
+

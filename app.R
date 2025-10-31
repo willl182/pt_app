@@ -15,6 +15,7 @@ library(DT)
 library(rhandsontable)
 library(shinythemes)
 library(outliers)
+library(patchwork)
 
 # -------------------------------------------------------------------
 # Helper Functions
@@ -61,38 +62,126 @@ ui <- fluidPage(
 server <- function(input, output, session) {
 
   # --- Data Loading and Processing ---
-  hom_data_full <- read.csv("homogeneity.csv")
-  stab_data_full <- read.csv("stability.csv")
+  # This section handles the initial loading of data from user-uploaded files.
+  # These reactives are the foundation for all subsequent analyses.
+
+  hom_data_full <- reactive({
+    req(input$hom_file)
+    vroom::vroom(input$hom_file$datapath, show_col_types = FALSE)
+  })
+
+  stab_data_full <- reactive({
+    req(input$stab_file)
+    vroom::vroom(input$stab_file$datapath, show_col_types = FALSE)
+  })
 
   # PT Prep data
   pt_prep_data <- reactive({
-    files <- c("summary_n4.csv", "summary_n7.csv", "summary_n10.csv", "summary_n13.csv")
-    
-    data_list <- lapply(files, function(f) {
-      if (file.exists(f)) {
-        df <- read.csv(f)
-        # Extract n from filename
-        n <- as.integer(stringr::str_extract(f, "\\d+"))
-        df$n_lab <- n
-        return(df)
-      }
-      return(NULL)
+    req(input$summary_files)
+
+    data_list <- lapply(seq_len(nrow(input$summary_files)), function(i) {
+      df <- vroom::vroom(input$summary_files$datapath[i], show_col_types = FALSE)
+      n <- as.integer(stringr::str_extract(input$summary_files$name[i], "\\d+"))
+      df$n_lab <- n
+      return(df)
     })
-    
-    # Filter out NULLs if some files don't exist
-    data_list <- data_list[!sapply(data_list, is.null)]
-    
-    if (length(data_list) == 0) {
+
+    if (length(data_list) == 0) return(NULL)
+
+    raw_data <- do.call(rbind, data_list)
+    if (is.null(raw_data) || nrow(raw_data) == 0) {
       return(NULL)
     }
-    
-    do.call(rbind, data_list)
+
+    # Store raw data in a reactive value for use in sigma_pt_1 calculation
+    rv$raw_summary_data <- raw_data
+
+    # Also store the list of files for consensus calculations
+    data_list <- lapply(seq_len(nrow(input$summary_files)), function(i) {
+      vroom::vroom(input$summary_files$datapath[i], show_col_types = FALSE)
+    })
+    rv$raw_summary_data_list <- data_list
+
+    # Aggregate the raw data to get a single mean value per participant/level
+    raw_data %>%
+      group_by(participant_id, pollutant, level, n_lab) %>%
+      summarise(
+        mean_value = mean(mean_value, na.rm = TRUE),
+        sd_value = mean(sd_value, na.rm = TRUE),
+        .groups = 'drop'
+      )
   })
+
+  # Reactive values to store raw data for specific calculations
+  rv <- reactiveValues(raw_summary_data = NULL, raw_summary_data_list = NULL)
+
+  format_num <- function(x) {
+    ifelse(is.na(x), NA_character_, sprintf("%.5f", x))
+  }
+
+  # Track when the analysis has been explicitly executed
+  analysis_trigger <- reactiveVal(NULL)
+  algoA_results_cache <- reactiveVal(NULL)
+  algoA_trigger <- reactiveVal(NULL)
+  robust_trigger <- reactiveVal(NULL)
+  consensus_results_cache <- reactiveVal(NULL)
+  consensus_trigger <- reactiveVal(NULL)
+  scores_results_cache <- reactiveVal(NULL)
+  scores_trigger <- reactiveVal(NULL)
+
+  get_scores_result <- function(pollutant, n_lab, level) {
+    if (is.null(scores_trigger())) {
+      return(list(error = "Calcule los puntajes para habilitar esta sección."))
+    }
+    cache <- scores_results_cache()
+    if (is.null(cache) || length(cache) == 0) {
+      return(list(error = "No se generaron resultados. Ejecute 'Calcular puntajes'."))
+    }
+    key <- paste(pollutant, as.character(n_lab), level, sep = "||")
+    res <- cache[[key]]
+    if (is.null(res)) {
+      return(list(error = "No se encontraron resultados para la combinación seleccionada. Ejecute nuevamente el cálculo."))
+    }
+    res
+  }
+
+  combine_scores_result <- function(res) {
+    if (!is.null(res$error)) {
+      return(list(error = res$error, data = tibble()))
+    }
+    combos <- res$combos
+    combined <- purrr::map_dfr(names(combos), function(key) {
+      combo <- combos[[key]]
+      if (is.null(combo) || !is.null(combo$error)) {
+        return(tibble())
+      }
+      combo$data
+    })
+    list(error = NULL, data = combined)
+  }
+
+  observeEvent(input$run_analysis, {
+    analysis_trigger(Sys.time())
+  })
+
+  observeEvent(list(input$hom_file, input$stab_file, input$summary_files), {
+    analysis_trigger(NULL)
+  }, ignoreNULL = FALSE)
+
+  observeEvent(input$summary_files, {
+    algoA_results_cache(NULL)
+    algoA_trigger(NULL)
+    robust_trigger(NULL)
+    consensus_results_cache(NULL)
+    consensus_trigger(NULL)
+    scores_results_cache(NULL)
+    scores_trigger(NULL)
+  }, ignoreNULL = FALSE)
 
   # --- Shared computation helpers ---
   get_wide_data <- function(df, target_pollutant) {
     filtered <- df %>% filter(pollutant == target_pollutant)
-    if (nrow(filtered) == 0) {
+    if (is.null(filtered) || nrow(filtered) == 0) {
       return(NULL)
     }
     filtered %>%
@@ -101,7 +190,8 @@ server <- function(input, output, session) {
   }
 
   compute_homogeneity_metrics <- function(target_pollutant, target_level) {
-    wide_df <- get_wide_data(hom_data_full, target_pollutant)
+    req(hom_data_full())
+    wide_df <- get_wide_data(hom_data_full(), target_pollutant)
     if (is.null(wide_df)) {
       return(list(error = sprintf("No homogeneity data found for pollutant '%s'.", target_pollutant)))
     }
@@ -249,7 +339,8 @@ server <- function(input, output, session) {
   }
 
   compute_stability_metrics <- function(target_pollutant, target_level, hom_results) {
-    wide_df <- get_wide_data(stab_data_full, target_pollutant)
+    req(stab_data_full())
+    wide_df <- get_wide_data(stab_data_full(), target_pollutant)
     if (is.null(wide_df)) {
       return(list(error = sprintf("No stability data found for pollutant '%s'.", target_pollutant)))
     }
@@ -409,22 +500,21 @@ server <- function(input, output, session) {
     }
 
     ref_data <- data %>% filter(participant_id == "ref")
-    participant_data <- data %>% filter(participant_id != "ref")
 
     if (nrow(ref_data) == 0) {
       return(list(error = "No reference data ('ref' participant) found for this level."))
     }
-    if (nrow(participant_data) == 0) {
-      return(list(error = "No participant data found for this level."))
-    }
 
     x_pt <- mean(ref_data$mean_value, na.rm = TRUE)
+    participant_data <- data
 
     participant_data <- participant_data %>%
       rename(result = mean_value, uncertainty_std = sd_value)
 
     final_scores <- participant_data %>%
       mutate(
+        x_pt = x_pt,
+        sigma_pt = sigma_pt,
         z_score = (result - x_pt) / sigma_pt,
         z_prime_score = (result - x_pt) / sqrt(sigma_pt^2 + u_xpt^2),
         zeta_score = (result - x_pt) / sqrt(uncertainty_std^2 + u_xpt^2),
@@ -471,6 +561,150 @@ server <- function(input, output, session) {
     )
   }
 
+  run_algorithm_a <- function(values, ids, max_iter = 50) {
+    mask <- is.finite(values)
+    values <- values[mask]
+    ids <- ids[mask]
+
+    n <- length(values)
+    if (n < 3) {
+      return(list(error = "El Algoritmo A requiere al menos 3 resultados válidos."))
+    }
+
+    x_star <- median(values, na.rm = TRUE)
+    s_star <- 1.483 * median(abs(values - x_star), na.rm = TRUE)
+
+    if (!is.finite(s_star) || s_star < .Machine$double.eps) {
+      s_star <- sd(values, na.rm = TRUE)
+    }
+
+    if (!is.finite(s_star) || s_star < .Machine$double.eps) {
+      return(list(error = "La dispersión de los datos es insuficiente para ejecutar el Algoritmo A."))
+    }
+
+    iteration_records <- list()
+    converged <- FALSE
+
+    for (iter in seq_len(max_iter)) {
+      u_values <- (values - x_star) / (1.5 * s_star)
+      weights <- ifelse(abs(u_values) <= 1, 1, 1 / (u_values^2))
+
+      weight_sum <- sum(weights)
+      if (!is.finite(weight_sum) || weight_sum <= 0) {
+        return(list(error = "Los pesos calculados no son válidos para el Algoritmo A."))
+      }
+
+      x_new <- sum(weights * values) / weight_sum
+      s_new <- sqrt(sum(weights * (values - x_new)^2) / weight_sum)
+
+      if (!is.finite(s_new) || s_new < .Machine$double.eps) {
+        return(list(error = "El Algoritmo A colapsó debido a una desviación estándar nula."))
+      }
+
+      delta_x <- abs(x_new - x_star)
+      delta_s <- abs(s_new - s_star)
+      delta <- max(delta_x, delta_s)
+      iteration_records[[iter]] <- data.frame(
+        Iteración = iter,
+        `Valor asignado (x*)` = x_new,
+        `Desviación robusta (s*)` = s_new,
+        Cambio = delta,
+        check.names = FALSE
+      )
+
+      x_star <- x_new
+      s_star <- s_new
+
+      if (delta_x < 1e-03 && delta_s < 1e-03) {
+        converged <- TRUE
+        break
+      }
+    }
+
+    iteration_df <- if (length(iteration_records) > 0) { bind_rows(iteration_records) } else { tibble() }
+    u_final <- (values - x_star) / (1.5 * s_star)
+    weights_final <- ifelse(abs(u_final) <= 1, 1, 1 / (u_final^2))
+    weights_df <- tibble( Participante = ids, Resultado = values, Peso = weights_final, `Residuo estandarizado` = u_final )
+
+    list( assigned_value = x_star, robust_sd = s_star, iterations = iteration_df, weights = weights_df,
+          converged = converged, effective_weight = sum(weights_final), error = NULL )
+  }
+
+  observeEvent(input$algoA_run, {
+    req(pt_prep_data())
+    data <- isolate(pt_prep_data())
+
+    combos <- data %>%
+      distinct(pollutant, n_lab, level)
+
+    if (nrow(combos) == 0) {
+      algoA_results_cache(NULL)
+      algoA_trigger(Sys.time())
+      return()
+    }
+
+    max_iter <- isolate(input$algoA_max_iter)
+    results <- list()
+
+    for (i in seq_len(nrow(combos))) {
+      pollutant_val <- combos$pollutant[i]
+      n_lab_val <- combos$n_lab[i]
+      level_val <- combos$level[i]
+      key <- algo_key(pollutant_val, n_lab_val, level_val)
+
+      subset_data <- data %>%
+        filter(
+          pollutant == pollutant_val,
+          n_lab == n_lab_val,
+          level == level_val
+        )
+
+      participants <- subset_data %>%
+        filter(participant_id != "ref")
+
+      aggregated <- participants %>%
+        group_by(participant_id) %>%
+        summarise(Resultado = mean(mean_value, na.rm = TRUE), .groups = "drop")
+
+      if (nrow(aggregated) < 3) {
+        algo_res <- list(
+          error = "Se requieren al menos tres participantes para ejecutar el Algoritmo A.",
+          input_data = aggregated,
+          iterations = tibble(),
+          weights = tibble(),
+          converged = FALSE,
+          effective_weight = NA_real_
+        )
+      } else {
+        algo_res <- run_algorithm_a(
+          values = aggregated$Resultado,
+          ids = aggregated$participant_id,
+          max_iter = max_iter
+        )
+
+        if (!is.null(algo_res$error)) {
+          if (is.null(algo_res$iterations)) algo_res$iterations <- tibble()
+          if (is.null(algo_res$weights)) algo_res$weights <- tibble()
+          if (is.null(algo_res$converged)) algo_res$converged <- FALSE
+          if (is.null(algo_res$effective_weight)) algo_res$effective_weight <- NA_real_
+        }
+
+        algo_res$input_data <- aggregated
+      }
+
+      algo_res$selected <- list(
+        pollutant = pollutant_val,
+        n_lab = n_lab_val,
+        level = level_val
+      )
+
+      results[[key]] <- algo_res
+    }
+
+    algoA_results_cache(results)
+    algoA_trigger(Sys.time())
+  })
+
   # R0: Dynamic Main Layout
   output$main_layout <- renderUI({
     req(input$nav_width, input$analysis_sidebar_width)
@@ -484,38 +718,53 @@ server <- function(input, output, session) {
       id = "main_nav",
       widths = c(nav_width, content_width),
       "Analysis Modules",
-
-      # Module 1: Homogeneity and Stability
+      tabPanel("Data Loading",
+        h3("Carga Manual de Archivos de Datos"),
+        p("Por favor, cargue los archivos CSV necesarios para el análisis. Asegúrese de que los archivos tengan el formato correcto."),
+        fluidRow(
+          column(width = 4,
+            wellPanel(
+              h4("1. Datos de Homogeneidad"),
+              fileInput("hom_file", "Cargar homogeneity.csv", accept = ".csv")
+            )
+          ),
+          column(width = 4,
+            wellPanel(
+              h4("2. Datos de Estabilidad"),
+              fileInput("stab_file", "Cargar stability.csv", accept = ".csv")
+            )
+          ),
+          column(width = 4,
+            wellPanel(
+              h4("3. Datos Resumen de Participantes"),
+              fileInput("summary_files", "Cargar summary_n*.csv", accept = ".csv", multiple = TRUE)
+            )
+          )
+        ),
+        hr(),
+        h4("Estado de los Datos Cargados"),
+        verbatimTextOutput("data_upload_status")
+      ),
       tabPanel("Homogeneity & Stability Analysis",
         sidebarLayout(
-          # 2.1. Input Panel (Sidebar)
           sidebarPanel(
             width = analysis_sidebar_w,
-            h4("1. Seleccionar Datos (Select Data)"),
-            selectInput("pollutant_analysis", "Select Pollutant:",
-                        choices = c("co", "no", "no2", "o3", "so2")),
-            hr(),
-            h4("2. Seleccionar Parámetros (Select Parameters)"),
-            # Dynamic UI to select the level
-            uiOutput("level_selector"),
-
-            h4("3. Ejecutar Análisis (Run Analysis)"),
-            # Button to run the analysis
+            h4("1. Ejecutar Análisis (Run Analysis)"),
             actionButton("run_analysis", "Ejecutar (Run Analysis)",
                          class = "btn-primary btn-block"),
-
+            hr(),
+            h4("2. Seleccionar Analito (Select Pollutant)"),
+            uiOutput("pollutant_selector_analysis"),
+            hr(),
+            h4("3. Seleccionar Nivel (Select Level)"),
+            uiOutput("level_selector"),
             hr(),
             p("Este aplicativo evalua la homogeneidad y estabilidad del item de ensayo de acuerdo a los princiios de la ISO 13528:2022.")
           ),
-
-          # 2.2. Main Panel for Results
           mainPanel(
             width = analysis_main_w,
-            # Outputs organized in tabs
             tabsetPanel(
               id = "analysis_tabs",
-
-              # Tab 1: Data Preview
               tabPanel("Data Preview",
                        h4("Data Input Preview"),
                        p("This table shows the data for the selected pollutant."),
@@ -528,19 +777,13 @@ server <- function(input, output, session) {
                        h4("Data Distribution"),
                        p("The histogram and boxplot below show the distribution of all results from the 'sample_*' columns for the selected level."),
                        fluidRow(
-                         column(width = 6,
-                                plotOutput("results_histogram")
-                         ),
-                         column(width = 6,
-                                plotOutput("results_boxplot")
-                         )
+                         column(width = 6, plotOutput("results_histogram")),
+                         column(width = 6, plotOutput("results_boxplot"))
                        ),
                        hr(),
                        h4("Data Validation"),
                        verbatimTextOutput("validation_message")
               ),
-
-              # Tab 2: Homogeneity Assessment
               tabPanel("Homogeneity Assessment",
                        h4("Conclusion"),
                        uiOutput("homog_conclusion"),
@@ -564,8 +807,6 @@ server <- function(input, output, session) {
                        p("This table shows the overall statistics for the homogeneity assessment."),
                        tableOutput("details_summary_stats_table")
               ),
-
-              # Tab 3: Stability Assessment
               tabPanel("Stability Asessment",
                        h4("Conclusion"),
                        uiOutput("homog_conclusion_stability"),
@@ -586,72 +827,24 @@ server <- function(input, output, session) {
           )
         )
       ),
-
-      # Module 2: PT Preparation
-      tabPanel("PT Preparation",
-        h3("Proficiency Testing Scheme Analysis"),
-        p("Analysis of participant results from different PT schemes, based on summary data files."),
-        uiOutput("pt_pollutant_tabs")
-      ),
-
-      # Module 3: PT Scores
-      tabPanel("PT Scores",
-        sidebarLayout(
-          sidebarPanel(
-            width = 4,
-            h4("1. Select Data"),
-            uiOutput("scores_pollutant_selector"),
-            uiOutput("scores_n_selector"),
-            uiOutput("scores_level_selector"),
-            hr(),
-            h4("2. Set Parameters"),
-            p("Parameters based on ISO 13528. Adjust as needed."),
-            numericInput("scores_sigma_pt", "Std. Dev. for PT (sigma_pt):", value = 5, step = 0.1),
-            numericInput("scores_u_xpt", "Std. Uncertainty of Assigned Value (u_xpt):", value = 0.5, step = 0.01),
-            numericInput("scores_k", "Coverage Factor (k) for En-Score:", value = 2, min = 1, step = 1)
-          ),
-          mainPanel(
-            width = 8,
-            tabsetPanel(
-              id = "scores_tabs",
-              tabPanel("Scores Table",
-                       h4("Calculated Proficiency Scores"),
-                       dataTableOutput("scores_table"),
-                       hr(),
-                       h4("Summary of Inputs"),
-                       verbatimTextOutput("scores_inputs_summary")
-              ),
-              tabPanel("Z-Score Plot",
-                       plotOutput("z_score_plot")
-              ),
-              tabPanel("Z'-Score Plot",
-                       plotOutput("z_prime_score_plot")
-              ),
-              tabPanel("Zeta-Score Plot",
-                       plotOutput("zeta_score_plot")
-              ),
-              tabPanel("En-Score Plot",
-                       plotOutput("en_score_plot")
-              )
-            )
-          )
-        )
-      ),
-
       tabPanel("Algoritmo A",
         sidebarLayout(
           sidebarPanel(
             width = analysis_sidebar_w,
-            h4("1. Seleccionar Datos"),
+            h4("1. Ejecutar Análisis"),
+            actionButton("algoA_run", "Calcular Algoritmo A", class = "btn-primary btn-block"),
+            hr(),
+            h4("2. Seleccionar Analito"),
             uiOutput("algoA_pollutant_selector"),
+            hr(),
+            h4("3. Seleccionar Esquema PT (n)"),
             uiOutput("algoA_n_selector"),
+            hr(),
+            h4("4. Seleccionar Nivel"),
             uiOutput("algoA_level_selector"),
             hr(),
-            h4("2. Parámetros del Algoritmo"),
-            numericInput("algoA_max_iter", "Iteraciones máximas:", value = 50, min = 5, max = 500, step = 5),
-            hr(),
-            h4("3. Ejecutar"),
-            actionButton("algoA_run", "Calcular Algoritmo A", class = "btn-primary btn-block")
+            h4("5. Parámetros del Algoritmo"),
+            numericInput("algoA_max_iter", "Iteraciones máximas:", value = 50, min = 5, max = 500, step = 5)
           ),
           mainPanel(
             width = analysis_main_w,
@@ -672,7 +865,102 @@ server <- function(input, output, session) {
           )
         )
       ),
-
+      tabPanel("Consensus Value",
+        sidebarLayout(
+          sidebarPanel(
+            width = analysis_sidebar_w,
+            h4("1. Ejecutar Cálculo"),
+            actionButton("consensus_run", "Calcular valores consenso", class = "btn-primary btn-block"),
+            hr(),
+            h4("2. Seleccionar Datos"),
+            uiOutput("consensus_pollutant_selector"),
+            uiOutput("consensus_n_selector"),
+            uiOutput("consensus_level_selector"),
+            hr(),
+            p("Calcula el valor consenso x_pt(2) y las desviaciones robustas sigma_pt_2a (MADe) y sigma_pt_2b (nIQR) para cada combinación disponible.")
+          ),
+          mainPanel(
+            width = analysis_main_w,
+            h4("Resumen del Valor Consenso"),
+            tableOutput("consensus_summary_table"),
+            hr(),
+            h4("Datos de Participantes"),
+            dataTableOutput("consensus_input_table")
+          )
+        )
+      ),
+      tabPanel("Reference Value",
+        sidebarLayout(
+          sidebarPanel(
+            width = analysis_sidebar_w,
+            h4("Seleccionar Datos de Referencia"),
+            uiOutput("reference_pollutant_selector"),
+            uiOutput("reference_n_selector"),
+            uiOutput("reference_level_selector"),
+            hr(),
+            p("Visualiza los resultados declarados como referencia en los archivos summary_n*.csv.")
+          ),
+          mainPanel(
+            width = analysis_main_w,
+            h4("Resultados de Referencia"),
+            dataTableOutput("reference_table")
+          )
+        )
+      ),
+      tabPanel("PT Preparation",
+        h3("Proficiency Testing Scheme Analysis"),
+        p("Analysis of participant results from different PT schemes, based on summary data files."),
+        uiOutput("pt_pollutant_tabs")
+      ),
+      tabPanel("PT Scores",
+        sidebarLayout(
+          sidebarPanel(
+            width = 4,
+            h4("1. Ejecutar Cálculo"),
+            actionButton("scores_run", "Calcular puntajes", class = "btn-primary btn-block"),
+            hr(),
+            h4("2. Seleccionar Datos"),
+            uiOutput("scores_pollutant_selector"),
+            uiOutput("scores_n_selector"),
+            uiOutput("scores_level_selector")
+          ),
+          mainPanel(
+            width = 8,
+            tabsetPanel(
+              id = "scores_tabs",
+              tabPanel("Scores Results",
+                       h4("Resumen de parámetros"),
+                       tableOutput("scores_parameter_table"),
+                       hr(),
+                       h4("Resumen de puntajes por participante"),
+                       dataTableOutput("scores_overview_table"),
+                       hr(),
+                       h4("Resumen de evaluación de puntajes"),
+                       tableOutput("scores_evaluation_summary")
+              ),
+              tabPanel("Z-Scores", uiOutput("z_scores_panel")),
+              tabPanel("Z'-Scores", uiOutput("zprime_scores_panel")),
+              tabPanel("Zeta-Scores", uiOutput("zeta_scores_panel")),
+              tabPanel("En-Scores", uiOutput("en_scores_panel"))
+            )
+          )
+        )
+      ),
+      tabPanel("Participants",
+        sidebarLayout(
+          sidebarPanel(
+            width = analysis_sidebar_w,
+            h4("Seleccionar datos"),
+            uiOutput("participants_pollutant_selector"),
+            uiOutput("participants_level_selector")
+          ),
+          mainPanel(
+            width = analysis_main_w,
+            h3("Resumen detallado por participante"),
+            uiOutput("scores_participant_tabs")
+          )
+        )
+      ),
       tabPanel("Report Generation",
         sidebarLayout(
           sidebarPanel(
@@ -704,16 +992,20 @@ server <- function(input, output, session) {
     )
   })
 
+  # ===================================================================
+  # III. Homogeneity & Stability Module
+  # ===================================================================
+
   # R1: Reactive for Homogeneity Data
   raw_data <- reactive({
-    req(input$pollutant_analysis)
-    get_wide_data(hom_data_full, input$pollutant_analysis)
+    req(hom_data_full(), input$pollutant_analysis)
+    get_wide_data(hom_data_full(), input$pollutant_analysis)
   })
 
   # R1.6: Reactive for Stability Data
   stability_data_raw <- reactive({
-    req(input$pollutant_analysis)
-    get_wide_data(stab_data_full, input$pollutant_analysis)
+    req(stab_data_full(), input$pollutant_analysis)
+    get_wide_data(stab_data_full(), input$pollutant_analysis)
   })
 
   # R2: Dynamic Generation of the Level Selector
@@ -727,23 +1019,30 @@ server <- function(input, output, session) {
     }
   })
 
-  # R3: Homogeneity Execution (Triggered by button)
-  homogeneity_run <- eventReactive(input$run_analysis, {
+  output$pollutant_selector_analysis <- renderUI({
+    req(hom_data_full())
+    choices <- sort(unique(hom_data_full()$pollutant))
+    selectInput("pollutant_analysis", "Select Pollutant:", choices = choices)
+  })
+
+  # R3: Homogeneity Execution (Enabled after run button is used)
+  homogeneity_run <- reactive({
+    req(analysis_trigger())
     req(input$pollutant_analysis, input$target_level)
     compute_homogeneity_metrics(input$pollutant_analysis, input$target_level)
   })
 
-  # R3.5: Stability Data Homogeneity Execution (Triggered by button)
-  homogeneity_run_stability <- eventReactive(input$run_analysis, {
+  # R3.5: Stability Data Homogeneity Execution (Enabled after run button is used)
+  homogeneity_run_stability <- reactive({
+    req(analysis_trigger())
     req(input$pollutant_analysis, input$target_level)
-    hom_results <- compute_homogeneity_metrics(input$pollutant_analysis, input$target_level)
+    hom_results <- homogeneity_run()
     compute_stability_metrics(input$pollutant_analysis, input$target_level, hom_results)
   })
 
-  # R4: Stability Execution (Triggered by button)
-  stability_run <- eventReactive(input$run_analysis, {
-    # Depend on both homogeneity runs
-    req(homogeneity_run(), homogeneity_run_stability())
+  # R4: Stability Execution (Enabled after run button is used)
+  stability_run <- reactive({
+    req(analysis_trigger())
     hom_results <- homogeneity_run()
     stab_hom_results <- homogeneity_run_stability()
 
@@ -761,7 +1060,7 @@ server <- function(input, output, session) {
     stab_criterion_value <- 0.3 * sigma_pt
 
     # Dynamic format for decimal places
-    fmt <- "%.9f"
+    fmt <- "%.5f"
 
     details_text <- sprintf(
       paste("Mean of Homogeneity Data (y1):", fmt, "
@@ -822,7 +1121,7 @@ Stability Criterion (0.3 * sigma_pt):", fmt),
     numeric_cols <- names(df)[sapply(df, is.numeric)]
     fmt <- "%.9f"
     df <- df %>%
-      mutate(across(all_of(numeric_cols), ~ sprintf(fmt, .x)))
+      mutate(across(all_of(numeric_cols), ~ sprintf("%.5f", .x)))
     datatable(df, options = list(scrollX = TRUE))
   })
   
@@ -832,7 +1131,7 @@ Stability Criterion (0.3 * sigma_pt):", fmt),
     numeric_cols <- names(df)[sapply(df, is.numeric)]
     fmt <- "%.9f"
     df <- df %>%
-      mutate(across(all_of(numeric_cols), ~ sprintf(fmt, .x)))
+      mutate(across(all_of(numeric_cols), ~ sprintf("%.5f", .x)))
     datatable(df, options = list(scrollX = TRUE))
   })
 
@@ -907,6 +1206,7 @@ Stability Criterion (0.3 * sigma_pt):", fmt),
     first_sample_col <- names(homogeneity_data)[grep("sample_", names(homogeneity_data))][1]
     homogeneity_data %>%
       filter(level == input$target_level) %>%
+      mutate(across(where(is.numeric), ~ round(.x, 5))) %>%
       select(level, all_of(first_sample_col))
   })
 
@@ -916,12 +1216,7 @@ Stability Criterion (0.3 * sigma_pt):", fmt),
     if (is.null(res$error)) {
       data.frame(
         Statistic = c("Median (x_pt)", "Median Absolute Difference", "MADe (sigma_pt)", "nIQR"),
-        Value = c(
-          format(res$median_val, digits = 15, scientific = FALSE),
-          format(res$median_abs_diff, digits = 15, scientific = FALSE),
-          format(res$sigma_pt, digits = 15, scientific = FALSE),
-          format(res$n_iqr, digits = 15, scientific = FALSE)
-        )
+        Value = sprintf("%.5f", c(res$median_val, res$median_abs_diff, res$sigma_pt, res$n_iqr))
       )
     }
   }, spacing = "l")
@@ -930,14 +1225,10 @@ Stability Criterion (0.3 * sigma_pt):", fmt),
   output$robust_stats_summary <- renderPrint({
     res <- homogeneity_run()
     if (is.null(res$error)) {
-      cat(paste("Median Value:", format(res$median_val, digits = 15, scientific = FALSE), "
-"))
-      cat(paste("Median Absolute Difference:", format(res$median_abs_diff, digits = 15, scientific = FALSE), "
-"))
-      cat(paste("MADe (sigma_pt):", format(res$sigma_pt, digits = 15, scientific = FALSE), "
-"))
-      cat(paste("nIQR:", format(res$n_iqr, digits = 15, scientific = FALSE), "
-"))
+      cat(sprintf("Median Value: %.5f\n", res$median_val))
+      cat(sprintf("Median Absolute Difference: %.5f\n", res$median_abs_diff))
+      cat(sprintf("MADe (sigma_pt): %.5f\n", res$sigma_pt))
+      cat(sprintf("nIQR: %.5f\n", res$n_iqr))
     }
   })
 
@@ -965,9 +1256,9 @@ Stability Criterion (0.3 * sigma_pt):", fmt),
                         "Criterion c",
                         "Criterion c (expanded)"),
           Value = c(
-            format(c(res$median_val, res$sigma_pt, res$u_xpt, res$ss, res$sw), digits = 15, scientific = FALSE),
-            "",
-            format(c(res$c_criterion, res$c_criterion_expanded), digits = 15, scientific = FALSE)
+          format_num(c(res$median_val, res$sigma_pt, res$u_xpt, res$ss, res$sw)),
+          "",
+          format_num(c(res$c_criterion, res$c_criterion_expanded))
           )
         )
         df
@@ -1007,9 +1298,9 @@ Stability Criterion (0.3 * sigma_pt):", fmt),
   output$details_per_item_table <- renderTable({
     res <- homogeneity_run()
     if (is.null(res$error)) {
-      res$intermediate_df
+      res$intermediate_df %>% mutate(across(where(is.numeric), ~ round(.x, 5)))
     }
-  }, spacing = "l", digits = 15)
+  }, spacing = "l", digits = 5)
 
   # Output: Details summary stats table
   output$details_summary_stats_table <- renderTable({
@@ -1034,11 +1325,11 @@ Stability Criterion (0.3 * sigma_pt):", fmt),
                       "Criterion c",
                       "Criterion c (expanded)"),
         Value = c(
-          format(c(res$general_mean, res$sd_of_means, res$s_x_bar_sq, res$sw, res$s_w_sq, res$ss), digits = 15, scientific = FALSE),
+          c(format_num(res$general_mean), format_num(res$sd_of_means), format_num(res$s_x_bar_sq), format_num(res$sw), format_num(res$s_w_sq), format_num(res$ss)),
           "",
-          format(c(res$median_val, res$median_abs_diff, res$g, res$m, res$sigma_pt, res$n_iqr, res$u_xpt), digits = 15, scientific = FALSE),
+          c(format_num(res$median_val), format_num(res$median_abs_diff), res$g, res$m, format_num(res$sigma_pt), format_num(res$n_iqr), format_num(res$u_xpt)),
           "",
-          format(c(res$c_criterion, res$c_criterion_expanded), digits = 15, scientific = FALSE)
+          c(format_num(res$c_criterion), format_num(res$c_criterion_expanded))
         )
       )
     }
@@ -1065,7 +1356,9 @@ Stability Criterion (0.3 * sigma_pt):", fmt),
                         "Robust SD (sigma_pt)",
                         "Uncertainty of Assigned Value (u_xpt)"),
           Value = c(
-            format(c(res$stab_median_val, res$stab_sigma_pt, res$stab_u_xpt), digits = 15, scientific = FALSE)
+            sprintf("%.5f", res$stab_median_val),
+            sprintf("%.5f", res$stab_sigma_pt),
+            sprintf("%.5f", res$stab_u_xpt)
           )
         )
         df
@@ -1076,9 +1369,9 @@ Stability Criterion (0.3 * sigma_pt):", fmt),
   output$details_per_item_table_stability <- renderTable({
     res <- homogeneity_run_stability()
     if (is.null(res$error)) {
-      res$stab_intermediate_df
+      res$stab_intermediate_df %>% mutate(across(where(is.numeric), ~ round(.x, 5)))
     }
-  }, spacing = "l", digits = 15)
+  }, spacing = "l", digits = 5)
 
   # Output: Details summary stats table for Stability Data
   output$details_summary_stats_table_stability <- renderTable({
@@ -1104,11 +1397,11 @@ Stability Criterion (0.3 * sigma_pt):", fmt),
                       "Criterion c",
                       "Criterion c (expanded)"),
         Value = c(
-          format(c(res$stab_general_mean, res$diff_hom_stab, res$stab_sd_of_means, res$stab_s_x_bar_sq, res$stab_sw, res$stab_s_w_sq, res$stab_ss), digits = 15, scientific = FALSE),
+          c(format_num(res$stab_general_mean), format_num(res$diff_hom_stab), format_num(res$stab_sd_of_means), format_num(res$stab_s_x_bar_sq), format_num(res$stab_sw), format_num(res$stab_s_w_sq), format_num(res$stab_ss)),
           "",
-          format(c(res$stab_median_val, res$stab_median_abs_diff, res$g, res$m, res$stab_sigma_pt, res$stab_n_iqr, res$stab_u_xpt), digits = 15, scientific = FALSE),
+          c(format_num(res$stab_median_val), format_num(res$stab_median_abs_diff), res$g, res$m, format_num(res$stab_sigma_pt), format_num(res$stab_n_iqr), format_num(res$stab_u_xpt)),
           "",
-          format(c(res$stab_c_criterion, res$stab_c_criterion_expanded), digits = 15, scientific = FALSE)
+          c(format_num(res$stab_c_criterion), format_num(res$stab_c_criterion_expanded))
         )
       )
     }
@@ -1142,164 +1435,767 @@ Stability Criterion (0.3 * sigma_pt):", fmt),
     selectInput("scores_level", "Select Level:", choices = choices)
   })
 
-  # Reactive for score calculation
-  scores_run <- reactive({
-    req(pt_prep_data(), input$scores_pollutant, input$scores_n_lab, input$scores_level,
-        input$scores_sigma_pt, input$scores_u_xpt, input$scores_k)
-    compute_scores_metrics(
-      summary_df = pt_prep_data(),
-      target_pollutant = input$scores_pollutant,
-      target_n_lab = input$scores_n_lab,
-      target_level = input$scores_level,
-      sigma_pt = input$scores_sigma_pt,
-      u_xpt = input$scores_u_xpt,
-      k = input$scores_k
+  score_combo_info <- list(
+    ref = list(title = "Referencia (1)", label = "1"),
+    consensus_ma = list(title = "Consenso MADe (2a)", label = "2a"),
+    consensus_niqr = list(title = "Consenso nIQR (2b)", label = "2b"),
+    algo = list(title = "Algoritmo A (3)", label = "3")
+  )
+
+  score_eval_z <- function(z) {
+    case_when(
+      !is.finite(z) ~ "N/A",
+      abs(z) <= 2 ~ "Satisfactory",
+      abs(z) > 2 & abs(z) < 3 ~ "Questionable",
+      abs(z) >= 3 ~ "Unsatisfactory"
     )
-  })
-  
-    # Output: Scores Table
-    output$scores_table <- renderDataTable({
-      res <- scores_run()
-      if (!is.null(res$error)) {
-        return(datatable(data.frame(Error = res$error)))
-      }
-  
-      display_df <- res$scores %>%
-        select(
-          `Participant` = participant_id,
-          `Result` = result,
-          `u(xi)` = uncertainty_std,
-          `z-score` = z_score,
-          `z-score Eval` = z_score_eval,
-          `z'-score` = z_prime_score,
-          `z'-score Eval` = z_prime_score_eval,
-          `zeta-score` = zeta_score,
-          `zeta-score Eval` = zeta_score_eval,
-          `En-score` = En_score,
-          `En-score Eval` = En_score_eval
-        )
-  
-      datatable(display_df, options = list(scrollX = TRUE, pageLength = 10), rownames = FALSE) %>%
-        formatRound(columns = c('Result', 'u(xi)', 'z-score', 'z\'-score', 'zeta-score', 'En-score'), digits = 3) %>%
-        formatStyle(
-          'z-score Eval',
-          backgroundColor = styleEqual(c("Satisfactory", "Questionable", "Unsatisfactory"), c("#d4edda", "#fff3cd", "#f8d7da"))
-        ) %>%
-        formatStyle(
-          'z\'-score Eval',
-          backgroundColor = styleEqual(c("Satisfactory", "Questionable", "Unsatisfactory"), c("#d4edda", "#fff3cd", "#f8d7da"))
-        ) %>%
-        formatStyle(
-          'zeta-score Eval',
-          backgroundColor = styleEqual(c("Satisfactory", "Questionable", "Unsatisfactory"), c("#d4edda", "#fff3cd", "#f8d7da"))
-        ) %>%
-        formatStyle(
-          'En-score Eval',
-          backgroundColor = styleEqual(c("Satisfactory", "Unsatisfactory"), c("#d4edda", "#f8d7da"))
-        )
-    })
-  # Output: Inputs Summary
-  output$scores_inputs_summary <- renderPrint({
-    res <- scores_run()
-    req(res)
-    if (!is.null(res$error)) {
-      cat(res$error)
-    } else {
-      cat(sprintf("Assigned Value (x_pt): %.4f
-", res$x_pt))
-      cat(sprintf("Standard Deviation for PT (sigma_pt): %.4f
-", res$sigma_pt))
-      cat(sprintf("Standard Uncertainty of Assigned Value (u_xpt): %.4f
-", res$u_xpt))
-      cat(sprintf("Coverage Factor (k) for En-score: %d
-", res$k))
+  }
+
+  compute_combo_scores <- function(participants_df, x_pt, sigma_pt, u_xpt, combo_meta, k = 2) {
+    if (!is.finite(x_pt)) {
+      return(list(
+        error = sprintf("Valor asignado no disponible para %s.", combo_meta$title)
+      ))
     }
-  })
+    if (!is.finite(sigma_pt) || sigma_pt <= 0) {
+      return(list(
+        error = sprintf("sigma_pt no válido para %s.", combo_meta$title)
+      ))
+    }
+    if (!is.finite(u_xpt) || u_xpt < 0) {
+      u_xpt <- 0
+    }
+    participants_df <- participants_df %>%
+      mutate(
+        uncertainty_std = replace_na(uncertainty_std, 0)
+      )
 
-  # Output: Z-Score Plot
-  output$z_score_plot <- renderPlot({
-    res <- scores_run()
-    req(res, is.null(res$error))
+    z_values <- (participants_df$result - x_pt) / sigma_pt
+    zprime_den <- sqrt(sigma_pt^2 + u_xpt^2)
+    z_prime_values <- if (zprime_den > 0) {
+      (participants_df$result - x_pt) / zprime_den
+    } else {
+      NA_real_
+    }
+    zeta_den <- sqrt(participants_df$uncertainty_std^2 + u_xpt^2)
+    zeta_values <- ifelse(zeta_den > 0, (participants_df$result - x_pt) / zeta_den, NA_real_)
+    U_xi <- k * participants_df$uncertainty_std
+    U_xpt <- k * u_xpt
+    en_den <- sqrt(U_xi^2 + U_xpt^2)
+    en_values <- ifelse(en_den > 0, (participants_df$result - x_pt) / en_den, NA_real_)
 
-    ggplot(res$scores, aes(x = reorder(participant_id, z_score), y = z_score)) +
-      geom_hline(yintercept = c(-3, -2, 2, 3), linetype = "dashed", color = c("red", "orange", "orange", "red")) +
-      geom_hline(yintercept = 0, linetype = "solid", color = "grey") +
-      geom_point(size = 3, color = "blue") +
-      geom_segment(aes(xend = reorder(participant_id, z_score), yend = 0), color = "blue") +
-      labs(
-        title = "Z-Scores by Participant",
-        subtitle = "Warning limits at |z|=2 (orange), Action limits at |z|=3 (red)",
-        x = "Participant",
-        y = "Z-Score"
-      ) +
+    data <- participants_df %>%
+      mutate(
+        combination = combo_meta$title,
+        combination_label = combo_meta$label,
+        x_pt = x_pt,
+        sigma_pt = sigma_pt,
+        u_xpt = u_xpt,
+        k_factor = k,
+        z_score = z_values,
+        z_score_eval = score_eval_z(z_score),
+        z_prime_score = z_prime_values,
+        z_prime_score_eval = score_eval_z(z_prime_score),
+        zeta_score = zeta_values,
+        zeta_score_eval = score_eval_z(zeta_score),
+        En_score = en_values,
+        En_score_eval = case_when(
+          !is.finite(En_score) ~ "N/A",
+          abs(En_score) <= 1 ~ "Satisfactory",
+          abs(En_score) > 1 ~ "Unsatisfactory"
+        )
+      )
+
+    list(
+      error = NULL,
+      title = combo_meta$title,
+      label = combo_meta$label,
+      x_pt = x_pt,
+      sigma_pt = sigma_pt,
+      u_xpt = u_xpt,
+      data = data
+    )
+  }
+
+  plot_scores <- function(df, score_col, title, subtitle, ylab, warn_limits = NULL, action_limits = NULL) {
+    score_values <- df[[score_col]]
+    if (all(!is.finite(score_values))) {
+      return(
+        ggplot() +
+          theme_void() +
+          labs(title = title, subtitle = paste(subtitle, "- sin datos válidos"), y = ylab)
+      )
+    }
+    participant_levels <- sort(unique(df$participant_id))
+    gg <- ggplot(df, aes(x = factor(participant_id, levels = participant_levels), y = score_values)) +
+      geom_hline(yintercept = 0, linetype = "solid", color = "grey50") +
+      geom_point(size = 3, color = "#2C3E50") +
+      geom_segment(aes(xend = factor(participant_id, levels = participant_levels), yend = 0), color = "#2C3E50") +
+      labs(title = title, subtitle = subtitle, x = "Participant", y = ylab) +
       theme_minimal() +
       theme(axis.text.x = element_text(angle = 45, hjust = 1))
+    if (!is.null(warn_limits)) {
+      gg <- gg +
+        geom_hline(yintercept = warn_limits, linetype = "dashed", color = "#E67E22")
+    }
+    if (!is.null(action_limits)) {
+      gg <- gg +
+        geom_hline(yintercept = action_limits, linetype = "dashed", color = "#C0392B")
+    }
+      gg
+  }
+
+  compute_scores_for_selection <- function(target_pollutant, target_n_lab, target_level, summary_data, max_iter = 50, k_factor = 2) {
+    subset_data <- summary_data %>%
+      filter(
+        pollutant == .env$target_pollutant,
+        n_lab == .env$target_n_lab,
+        level == .env$target_level
+      )
+
+    if (nrow(subset_data) == 0) {
+      return(list(error = "No se encontraron datos para la combinación seleccionada."))
+    }
+
+    participant_data <- subset_data %>%
+      filter(participant_id != "ref") %>%
+      group_by(participant_id) %>%
+      summarise(
+        result = mean(mean_value, na.rm = TRUE),
+        uncertainty_std = mean(sd_value, na.rm = TRUE),
+        .groups = "drop"
+      ) %>%
+      mutate(
+        pollutant = target_pollutant,
+        n_lab = target_n_lab,
+        level = target_level
+      )
+
+    if (nrow(participant_data) == 0) {
+      return(list(error = "No se encontraron participantes (distintos al valor de referencia) para la combinación seleccionada."))
+    }
+
+    ref_data <- subset_data %>% filter(participant_id == "ref")
+    if (nrow(ref_data) == 0) {
+      return(list(error = "No se encontró información del participante de referencia para esta combinación."))
+    }
+    x_pt1 <- mean(ref_data$mean_value, na.rm = TRUE)
+
+    hom_res <- tryCatch(
+      compute_homogeneity_metrics(target_pollutant, target_level),
+      error = function(e) list(error = conditionMessage(e))
+    )
+    if (!is.null(hom_res$error)) {
+      return(list(error = paste("Error obteniendo parámetros de homogeneidad:", hom_res$error)))
+    }
+    sigma_pt1 <- hom_res$sigma_pt
+    u_xpt1 <- hom_res$u_xpt
+
+    values <- participant_data$result
+    n_part <- length(values)
+
+    median_val <- median(values, na.rm = TRUE)
+    mad_val <- median(abs(values - median_val), na.rm = TRUE)
+    sigma_pt_2a <- 1.483 * mad_val
+    sigma_pt_2b <- calculate_niqr(values)
+    u_xpt2a <- if (is.finite(sigma_pt_2a)) 1.25 * sigma_pt_2a / sqrt(n_part) else NA_real_
+    u_xpt2b <- if (is.finite(sigma_pt_2b)) 1.25 * sigma_pt_2b / sqrt(n_part) else NA_real_
+
+    algo_res <- if (n_part >= 3) {
+      run_algorithm_a(values = values, ids = participant_data$participant_id, max_iter = max_iter)
+    } else {
+      list(error = "Se requieren al menos tres participantes para calcular el Algoritmo A.")
+    }
+
+    combos <- list()
+    combos$ref <- compute_combo_scores(participant_data, x_pt1, sigma_pt1, u_xpt1, score_combo_info$ref, k = k_factor)
+    combos$consensus_ma <- compute_combo_scores(participant_data, median_val, sigma_pt_2a, u_xpt2a, score_combo_info$consensus_ma, k = k_factor)
+    combos$consensus_niqr <- compute_combo_scores(participant_data, median_val, sigma_pt_2b, u_xpt2b, score_combo_info$consensus_niqr, k = k_factor)
+
+    if (is.null(algo_res$error)) {
+      u_xpt3 <- 1.25 * algo_res$robust_sd / sqrt(n_part)
+      combos$algo <- compute_combo_scores(participant_data, algo_res$assigned_value, algo_res$robust_sd, u_xpt3, score_combo_info$algo, k = k_factor)
+    } else {
+      combos$algo <- list(error = algo_res$error, title = score_combo_info$algo$title, label = score_combo_info$algo$label)
+    }
+
+    summary_table <- map_dfr(names(score_combo_info), function(key) {
+      meta <- score_combo_info[[key]]
+      combo <- combos[[key]]
+      if (is.null(combo)) return(NULL)
+      if (!is.null(combo$error)) {
+        tibble(
+          Combinación = meta$title,
+          Etiqueta = meta$label,
+          `x_pt` = NA_real_,
+          `sigma_pt` = NA_real_,
+          `u(x_pt)` = NA_real_,
+          Nota = combo$error
+        )
+      } else {
+        tibble(
+          Combinación = combo$title,
+          Etiqueta = combo$label,
+          `x_pt` = combo$x_pt,
+          `sigma_pt` = combo$sigma_pt,
+          `u(x_pt)` = combo$u_xpt,
+          Nota = ""
+        )
+      }
+    })
+
+    overview_table <- map_dfr(names(score_combo_info), function(key) {
+      meta <- score_combo_info[[key]]
+      combo <- combos[[key]]
+      if (is.null(combo)) return(NULL)
+      if (!is.null(combo$error)) {
+        tibble(
+          Combinación = meta$title,
+          Participant = NA_character_,
+          Result = NA_real_,
+          `u(xi)` = NA_real_,
+          `z-score` = NA_real_,
+          `z-score Eval` = combo$error,
+          `z'-score` = NA_real_,
+          `z'-score Eval` = "",
+          `zeta-score` = NA_real_,
+          `zeta-score Eval` = "",
+          `En-score` = NA_real_,
+          `En-score Eval` = ""
+        )
+      } else {
+        combo$data %>%
+          transmute(
+            Combinación = combo$title,
+            Participant = participant_id,
+            Result = result,
+            `u(xi)` = uncertainty_std,
+            `z-score` = z_score,
+            `z-score Eval` = z_score_eval,
+            `z'-score` = z_prime_score,
+            `z'-score Eval` = z_prime_score_eval,
+            `zeta-score` = zeta_score,
+            `zeta-score Eval` = zeta_score_eval,
+            `En-score` = En_score,
+            `En-score Eval` = En_score_eval
+          )
+      }
+    })
+
+    list(
+      error = NULL,
+      combos = combos,
+      summary = summary_table,
+      overview = overview_table,
+      k = k_factor
+    )
+  }
+
+  observeEvent(input$scores_run, {
+    req(pt_prep_data())
+    summary_data <- isolate(pt_prep_data())
+
+    combos_df <- summary_data %>%
+      distinct(pollutant, n_lab, level)
+
+    if (nrow(combos_df) == 0) {
+      scores_results_cache(NULL)
+      scores_trigger(Sys.time())
+      return()
+    }
+
+    max_iter_algo <- if (!is.null(input$algoA_max_iter) && is.finite(input$algoA_max_iter)) input$algoA_max_iter else 50
+    results <- list()
+
+    for (i in seq_len(nrow(combos_df))) {
+      pollutant_val <- combos_df$pollutant[i]
+      n_lab_val <- combos_df$n_lab[i]
+      level_val <- combos_df$level[i]
+      key <- paste(pollutant_val, as.character(n_lab_val), level_val, sep = "||")
+
+      res <- compute_scores_for_selection(
+        target_pollutant = pollutant_val,
+        target_n_lab = n_lab_val,
+        target_level = level_val,
+        summary_data = summary_data,
+        max_iter = max_iter_algo,
+        k_factor = 2
+      )
+
+      results[[key]] <- res
+    }
+
+    scores_results_cache(results)
+    scores_trigger(Sys.time())
   })
 
-  # Output: Z'-Score Plot
-  output$z_prime_score_plot <- renderPlot({
-    res <- scores_run()
-    req(res, is.null(res$error))
-
-    ggplot(res$scores, aes(x = reorder(participant_id, z_prime_score), y = z_prime_score)) +
-      geom_hline(yintercept = c(-3, -2, 2, 3), linetype = "dashed", color = c("red", "orange", "orange", "red")) +
-      geom_hline(yintercept = 0, linetype = "solid", color = "grey") +
-      geom_point(size = 3, color = "cyan4") +
-      geom_segment(aes(xend = reorder(participant_id, z_prime_score), yend = 0), color = "cyan4") +
-      labs(
-        title = "Z'-Scores by Participant",
-        subtitle = "Warning limits at |z'|=2 (orange), Action limits at |z'|=3 (red)",
-        x = "Participant",
-        y = "Z'-Score"
-      ) +
-      theme_minimal() +
-      theme(axis.text.x = element_text(angle = 45, hjust = 1))
+  scores_results_selected <- reactive({
+    req(input$scores_pollutant, input$scores_n_lab, input$scores_level)
+    get_scores_result(input$scores_pollutant, input$scores_n_lab, input$scores_level)
   })
 
-  # Output: Zeta-Score Plot
-  output$zeta_score_plot <- renderPlot({
-    res <- scores_run()
-    req(res, is.null(res$error))
-
-    ggplot(res$scores, aes(x = reorder(participant_id, zeta_score), y = zeta_score)) +
-      geom_hline(yintercept = c(-3, -2, 2, 3), linetype = "dashed", color = c("red", "orange", "orange", "red")) +
-      geom_hline(yintercept = 0, linetype = "solid", color = "grey") +
-      geom_point(size = 3, color = "darkgreen") +
-      geom_segment(aes(xend = reorder(participant_id, zeta_score), yend = 0), color = "darkgreen") +
-      labs(
-        title = "Zeta-Scores by Participant",
-        subtitle = "Warning limits at |ζ|=2 (orange), Action limits at |ζ|=3 (red)",
-        x = "Participant",
-        y = "Zeta-Score (ζ)"
-      ) +
-      theme_minimal() +
-      theme(axis.text.x = element_text(angle = 45, hjust = 1))
+  scores_combined_data <- reactive({
+    combine_scores_result(scores_results_selected())
   })
 
-  # Output: En-Score Plot
-  output$en_score_plot <- renderPlot({
-    res <- scores_run()
-    req(res, is.null(res$error))
+  participants_available <- reactive({
+    if (is.null(scores_trigger())) {
+      return(tibble())
+    }
+    cache <- scores_results_cache()
+    if (is.null(cache) || length(cache) == 0) {
+      return(tibble())
+    }
+    purrr::imap_dfr(cache, function(res, key) {
+      parts <- strsplit(key, "\\|\\|")[[1]]
+      has_valid_data <- FALSE
+      if (is.null(res$error) && !is.null(res$combos)) {
+        has_valid_data <- any(purrr::map_lgl(res$combos, function(combo) {
+          is.null(combo$error) && !is.null(combo$data) && nrow(combo$data) > 0
+        }))
+      }
+      tibble(
+        pollutant = parts[1],
+        n_lab = parts[2],
+        level = parts[3],
+        has_data = has_valid_data
+      )
+    }) %>%
+      filter(has_data)
+  })
 
-    ggplot(res$scores, aes(x = reorder(participant_id, En_score), y = En_score)) +
-      geom_hline(yintercept = c(-1, 1), linetype = "dashed", color = "red") +
-      geom_hline(yintercept = 0, linetype = "solid", color = "grey") +
-      geom_point(size = 3, color = "purple") +
-      geom_segment(aes(xend = reorder(participant_id, En_score), yend = 0), color = "purple") +
-      labs(
-        title = "En-Scores by Participant",
-        subtitle = "Action limits at |En|=1 (red)",
-        x = "Participant",
-        y = "En-Score"
-      ) +
-      theme_minimal() +
-      theme(axis.text.x = element_text(angle = 45, hjust = 1))
+  output$participants_pollutant_selector <- renderUI({
+    avail <- participants_available()
+    if (nrow(avail) == 0) {
+      return(helpText("Calcule los puntajes para habilitar esta sección."))
+    }
+    choices <- sort(unique(avail$pollutant))
+    selected <- if (!is.null(input$participants_pollutant) && input$participants_pollutant %in% choices) {
+      input$participants_pollutant
+    } else {
+      choices[1]
+    }
+    selectInput("participants_pollutant", "Seleccionar analito:", choices = choices, selected = selected)
+  })
+
+  output$participants_level_selector <- renderUI({
+    avail <- participants_available()
+    if (nrow(avail) == 0) {
+      return(NULL)
+    }
+    req(input$participants_pollutant)
+    combos <- avail %>% filter(pollutant == input$participants_pollutant)
+    if (nrow(combos) == 0) {
+      return(helpText("No hay niveles disponibles para este analito."))
+    }
+    combos <- combos %>%
+      mutate(
+        key = paste(pollutant, n_lab, level, sep = "||"),
+        label = ifelse(is.na(n_lab) | n_lab == "", paste("Nivel", level), paste0("Nivel ", level, " (n=", n_lab, ")"))
+      )
+    selected <- if (!is.null(input$participants_level) && input$participants_level %in% combos$key) {
+      input$participants_level
+    } else {
+      combos$key[1]
+    }
+    selectInput("participants_level", "Seleccionar nivel:", choices = stats::setNames(combos$key, combos$label), selected = selected)
+  })
+
+  participants_scores_selected <- reactive({
+    avail <- participants_available()
+    if (nrow(avail) == 0) {
+      return(list(error = "Calcule los puntajes para habilitar esta sección."))
+    }
+    key <- input$participants_level
+    if (is.null(key) || key == "") {
+      return(list(error = "Seleccione un analito y nivel."))
+    }
+    parts <- strsplit(key, "\\|\\|")[[1]]
+    if (length(parts) < 3) {
+      return(list(error = "Selección inválida."))
+    }
+    get_scores_result(parts[1], parts[2], parts[3])
+  })
+
+  participants_combined_data <- reactive({
+    combine_scores_result(participants_scores_selected())
+  })
+
+  scores_evaluation_summary <- reactive({
+    info <- scores_combined_data()
+    if (!is.null(info$error)) {
+      return(list(error = info$error, table = tibble()))
+    }
+    combined <- info$data
+    if (nrow(combined) == 0) {
+      return(list(error = "No hay datos de puntajes calculados para esta selección.", table = tibble()))
+    }
+    scores_long <- combined %>%
+      select(combination, z_score_eval, zeta_score_eval, En_score_eval) %>%
+      pivot_longer(
+        cols = c(z_score_eval, zeta_score_eval, En_score_eval),
+        names_to = "score_type",
+        values_to = "evaluation"
+      ) %>%
+      mutate(
+        score_type = sub("_eval$", "", score_type),
+        evaluation = factor(evaluation, levels = c("Satisfactory", "Questionable", "Unsatisfactory", "N/A"))
+      )
+
+    evaluation_summary <- scores_long %>%
+      count(combination, score_type, evaluation, .drop = FALSE, name = "Count") %>%
+      group_by(combination, score_type) %>%
+      mutate(Percentage = ifelse(sum(Count) > 0, (Count / sum(Count)) * 100, 0)) %>%
+      ungroup() %>%
+      mutate(Criteria = paste(score_type, evaluation)) %>%
+      select(Combination = combination, Criteria, Count, Percentage)
+
+    list(error = NULL, table = evaluation_summary)
+  })
+
+  output$scores_parameter_table <- renderTable({
+    res <- scores_results_selected()
+    if (!is.null(res$error)) {
+      return(data.frame(Mensaje = res$error))
+    }
+    res$summary
+  }, digits = 6, striped = TRUE, spacing = "l", rownames = FALSE)
+
+  output$scores_overview_table <- renderDataTable({
+    res <- scores_results_selected()
+    if (!is.null(res$error)) {
+      return(datatable(data.frame(Mensaje = res$error)))
+    }
+    datatable(res$overview, options = list(scrollX = TRUE, pageLength = 12), rownames = FALSE) %>%
+      formatRound(columns = c("Result", "u(xi)", "z-score", "z'-score", "zeta-score", "En-score"), digits = 3)
+  })
+
+  output$scores_evaluation_summary <- renderTable({
+    eval_res <- scores_evaluation_summary()
+    if (!is.null(eval_res$error)) {
+      return(data.frame(Mensaje = eval_res$error))
+    }
+    eval_res$table
+  }, digits = 2, striped = TRUE, spacing = "l", rownames = FALSE)
+
+  output$z_scores_panel <- renderUI({
+    res <- scores_results_selected()
+    if (!is.null(res$error)) {
+      return(div(class = "alert alert-danger", res$error))
+    }
+    tagList(lapply(names(score_combo_info), function(key) {
+      combo <- res$combos[[key]]
+      meta <- score_combo_info[[key]]
+      if (is.null(combo)) return(NULL)
+      tagList(
+        h4(meta$title),
+        if (!is.null(combo$error)) {
+          div(class = "alert alert-warning", combo$error)
+        } else {
+          tagList(
+            dataTableOutput(paste0("z_table_", key)),
+            plotOutput(paste0("z_plot_", key), height = "300px")
+          )
+        },
+        hr()
+      )
+    }))
+  })
+
+  output$zprime_scores_panel <- renderUI({
+    res <- scores_results_selected()
+    if (!is.null(res$error)) {
+      return(div(class = "alert alert-danger", res$error))
+    }
+    tagList(lapply(names(score_combo_info), function(key) {
+      combo <- res$combos[[key]]
+      meta <- score_combo_info[[key]]
+      if (is.null(combo)) return(NULL)
+      tagList(
+        h4(meta$title),
+        if (!is.null(combo$error)) {
+          div(class = "alert alert-warning", combo$error)
+        } else {
+          tagList(
+            dataTableOutput(paste0("zprime_table_", key)),
+            plotOutput(paste0("zprime_plot_", key), height = "300px")
+          )
+        },
+        hr()
+      )
+    }))
+  })
+
+  output$zeta_scores_panel <- renderUI({
+    res <- scores_results_selected()
+    if (!is.null(res$error)) {
+      return(div(class = "alert alert-danger", res$error))
+    }
+    tagList(lapply(names(score_combo_info), function(key) {
+      combo <- res$combos[[key]]
+      meta <- score_combo_info[[key]]
+      if (is.null(combo)) return(NULL)
+      tagList(
+        h4(meta$title),
+        if (!is.null(combo$error)) {
+          div(class = "alert alert-warning", combo$error)
+        } else {
+          tagList(
+            dataTableOutput(paste0("zeta_table_", key)),
+            plotOutput(paste0("zeta_plot_", key), height = "300px")
+          )
+        },
+        hr()
+      )
+    }))
+  })
+
+  output$en_scores_panel <- renderUI({
+    res <- scores_results_selected()
+    if (!is.null(res$error)) {
+      return(div(class = "alert alert-danger", res$error))
+    }
+    tagList(lapply(names(score_combo_info), function(key) {
+      combo <- res$combos[[key]]
+      meta <- score_combo_info[[key]]
+      if (is.null(combo)) return(NULL)
+      tagList(
+        h4(meta$title),
+        if (!is.null(combo$error)) {
+          div(class = "alert alert-warning", combo$error)
+        } else {
+          tagList(
+            dataTableOutput(paste0("en_table_", key)),
+            plotOutput(paste0("en_plot_", key), height = "300px")
+          )
+        },
+        hr()
+      )
+    }))
+  })
+
+  for (key in names(score_combo_info)) {
+    local({
+      combo_key <- key
+      output[[paste0("z_table_", combo_key)]] <- renderDataTable({
+        res <- scores_results_selected()
+        combo <- res$combos[[combo_key]]
+        if (is.null(combo)) return(datatable(data.frame(Mensaje = "Combinación no disponible.")))
+        if (!is.null(combo$error)) {
+          return(datatable(data.frame(Mensaje = combo$error)))
+        }
+        datatable(
+          combo$data %>%
+            select(Participant = participant_id, Result = result, `u(xi)` = uncertainty_std, `z-score` = z_score, `z-score Eval` = z_score_eval),
+          options = list(scrollX = TRUE, pageLength = 10),
+          rownames = FALSE
+        ) %>%
+          formatRound(columns = c("Result", "u(xi)", "z-score"), digits = 3)
+      })
+
+      output[[paste0("z_plot_", combo_key)]] <- renderPlot({
+        res <- scores_results_selected()
+        combo <- res$combos[[combo_key]]
+        if (is.null(combo) || !is.null(combo$error)) return(NULL)
+        plot_scores(combo$data, "z_score", combo$title, "Límites de advertencia |z|=2, acción |z|=3", "Z-Score", warn_limits = c(-2, 2), action_limits = c(-3, 3))
+      })
+
+      output[[paste0("zprime_table_", combo_key)]] <- renderDataTable({
+        res <- scores_results_selected()
+        combo <- res$combos[[combo_key]]
+        if (is.null(combo)) return(datatable(data.frame(Mensaje = "Combinación no disponible.")))
+        if (!is.null(combo$error)) {
+          return(datatable(data.frame(Mensaje = combo$error)))
+        }
+        datatable(
+          combo$data %>%
+            select(Participant = participant_id, Result = result, `u(xi)` = uncertainty_std, `z'-score` = z_prime_score, `z'-score Eval` = z_prime_score_eval),
+          options = list(scrollX = TRUE, pageLength = 10),
+          rownames = FALSE
+        ) %>%
+          formatRound(columns = c("Result", "u(xi)", "z'-score"), digits = 3)
+      })
+
+      output[[paste0("zprime_plot_", combo_key)]] <- renderPlot({
+        res <- scores_results_selected()
+        combo <- res$combos[[combo_key]]
+        if (is.null(combo) || !is.null(combo$error)) return(NULL)
+        plot_scores(combo$data, "z_prime_score", combo$title, "Límites de advertencia |z'|=2, acción |z'|=3", "Z'-Score", warn_limits = c(-2, 2), action_limits = c(-3, 3))
+      })
+
+      output[[paste0("zeta_table_", combo_key)]] <- renderDataTable({
+        res <- scores_results_selected()
+        combo <- res$combos[[combo_key]]
+        if (is.null(combo)) return(datatable(data.frame(Mensaje = "Combinación no disponible.")))
+        if (!is.null(combo$error)) {
+          return(datatable(data.frame(Mensaje = combo$error)))
+        }
+        datatable(
+          combo$data %>%
+            select(Participant = participant_id, Result = result, `u(xi)` = uncertainty_std, `zeta-score` = zeta_score, `zeta-score Eval` = zeta_score_eval),
+          options = list(scrollX = TRUE, pageLength = 10),
+          rownames = FALSE
+        ) %>%
+          formatRound(columns = c("Result", "u(xi)", "zeta-score"), digits = 3)
+      })
+
+      output[[paste0("zeta_plot_", combo_key)]] <- renderPlot({
+        res <- scores_results_selected()
+        combo <- res$combos[[combo_key]]
+        if (is.null(combo) || !is.null(combo$error)) return(NULL)
+        plot_scores(combo$data, "zeta_score", combo$title, "Límites de advertencia |ζ|=2, acción |ζ|=3", "Zeta-Score", warn_limits = c(-2, 2), action_limits = c(-3, 3))
+      })
+
+      output[[paste0("en_table_", combo_key)]] <- renderDataTable({
+        res <- scores_results_selected()
+        combo <- res$combos[[combo_key]]
+        if (is.null(combo)) return(datatable(data.frame(Mensaje = "Combinación no disponible.")))
+        if (!is.null(combo$error)) {
+          return(datatable(data.frame(Mensaje = combo$error)))
+        }
+        datatable(
+          combo$data %>%
+            select(Participant = participant_id, Result = result, `u(xi)` = uncertainty_std, `En-score` = En_score, `En-score Eval` = En_score_eval),
+          options = list(scrollX = TRUE, pageLength = 10),
+          rownames = FALSE
+        ) %>%
+          formatRound(columns = c("Result", "u(xi)", "En-score"), digits = 3)
+      })
+
+      output[[paste0("en_plot_", combo_key)]] <- renderPlot({
+        res <- scores_results_selected()
+        combo <- res$combos[[combo_key]]
+        if (is.null(combo) || !is.null(combo$error)) return(NULL)
+        plot_scores(combo$data, "En_score", combo$title, "Límite de acción |En|=1", "En-Score", action_limits = c(-1, 1))
+      })
+    })
+  }
+
+  output$scores_participant_tabs <- renderUI({
+    info <- participants_combined_data()
+    if (!is.null(info$error)) {
+      return(helpText(info$error))
+    }
+    combined <- info$data %>% filter(participant_id != "ref")
+    if (nrow(combined) == 0) {
+      return(helpText("No hay participantes disponibles para esta selección."))
+    }
+
+    participants <- sort(unique(combined$participant_id))
+
+    tab_panels <- lapply(participants, function(pid) {
+      safe_id <- gsub("[^A-Za-z0-9]", "_", pid)
+      table_id <- paste0("participant_table_", safe_id)
+      plot_id <- paste0("participant_plot_", safe_id)
+
+      output[[table_id]] <- renderDataTable({
+        info <- participants_combined_data()
+        if (!is.null(info$error)) {
+          return(datatable(data.frame(Mensaje = info$error)))
+        }
+        participant_df <- info$data %>%
+          filter(participant_id == pid)
+        if (nrow(participant_df) == 0) {
+          return(datatable(data.frame(Mensaje = "Sin datos para este participante.")))
+        }
+        table_df <- participant_df %>%
+          arrange(combination_label, level) %>%
+          transmute(
+            Combination = combination,
+            Pollutant = pollutant,
+            `PT Scheme (n)` = n_lab,
+            Level = level,
+            Result = result,
+            `x_pt` = x_pt,
+            `sigma_pt` = sigma_pt,
+            `u(x_pt)` = u_xpt,
+            `z-score` = z_score,
+            `z-score Eval` = z_score_eval,
+            `z'-score` = z_prime_score,
+            `z'-score Eval` = z_prime_score_eval,
+            `zeta-score` = zeta_score,
+            `zeta-score Eval` = zeta_score_eval,
+            `En-score` = En_score,
+            `En-score Eval` = En_score_eval
+          )
+        datatable(table_df, options = list(scrollX = TRUE, pageLength = 10), rownames = FALSE) %>%
+          formatRound(columns = c("Result", "x_pt", "sigma_pt", "u(x_pt)", "z-score", "z'-score", "zeta-score", "En-score"), digits = 3)
+      })
+
+      output[[plot_id]] <- renderPlot({
+        info <- participants_combined_data()
+        if (!is.null(info$error)) return(NULL)
+        participant_df <- info$data %>%
+          filter(participant_id == pid)
+        if (nrow(participant_df) == 0) return(NULL)
+
+        plot_df <- participant_df %>%
+          filter(combination_label == "1" | combination_label == min(combination_label)) %>%
+          head(n = n_distinct(.$level))
+
+        level_factor <- factor(participant_df$level, levels = sort(unique(participant_df$level)))
+
+        p_values <- ggplot(plot_df, aes(x = factor(level, levels = sort(unique(level))))) +
+          geom_point(aes(y = result, color = "Participante"), size = 3) +
+          geom_line(aes(y = result, group = 1, color = "Participante")) +
+          geom_point(aes(y = x_pt, color = "Referencia"), size = 3) +
+          geom_line(aes(y = x_pt, group = 1, color = "Referencia"), linetype = "dashed") +
+          scale_color_manual(values = c("Participante" = "#1F78B4", "Referencia" = "#E31A1C")) +
+          labs(title = paste("Valores (Referencia) -", pid), x = "Nivel", y = "Valor", color = NULL) +
+          theme_minimal() +
+          theme(axis.text.x = element_text(angle = 45, hjust = 1), legend.position = "bottom")
+
+        p_z <- ggplot(participant_df, aes(x = level_factor, y = z_score, group = combination, color = combination)) +
+          geom_hline(yintercept = c(-3, 3), linetype = "dashed", color = "#C0392B") +
+          geom_hline(yintercept = c(-2, 2), linetype = "dashed", color = "#E67E22") +
+          geom_hline(yintercept = 0, color = "grey50") +
+          geom_line(position = position_dodge(width = 0.3)) +
+          geom_point(size = 3, position = position_dodge(width = 0.3)) +
+          labs(title = "Z-Score", x = "Nivel", y = "Z", color = "Combinación") +
+          theme_minimal() +
+          theme(axis.text.x = element_text(angle = 45, hjust = 1), legend.position = "bottom")
+
+        p_zeta <- ggplot(participant_df, aes(x = level_factor, y = zeta_score, group = combination, color = combination)) +
+          geom_hline(yintercept = c(-3, 3), linetype = "dashed", color = "#C0392B") +
+          geom_hline(yintercept = c(-2, 2), linetype = "dashed", color = "#E67E22") +
+          geom_hline(yintercept = 0, color = "grey50") +
+          geom_line(position = position_dodge(width = 0.3)) +
+          geom_point(size = 3, position = position_dodge(width = 0.3)) +
+          labs(title = "Zeta-Score", x = "Nivel", y = "Zeta", color = "Combinación") +
+          theme_minimal() +
+          theme(axis.text.x = element_text(angle = 45, hjust = 1), legend.position = "bottom")
+
+        p_en <- ggplot(participant_df, aes(x = level_factor, y = En_score, group = combination, color = combination)) +
+          geom_hline(yintercept = c(-1, 1), linetype = "dashed", color = "#C0392B") +
+          geom_hline(yintercept = 0, color = "grey50") +
+          geom_line(position = position_dodge(width = 0.3)) +
+          geom_point(size = 3, position = position_dodge(width = 0.3)) +
+          labs(title = "En-Score", x = "Nivel", y = "En", color = "Combinación") +
+          theme_minimal() +
+          theme(axis.text.x = element_text(angle = 45, hjust = 1), legend.position = "bottom")
+
+        # Combine plots with a shared legend
+        (p_values | p_z + theme(legend.position = "none")) /
+          (p_zeta + theme(legend.position = "none") | p_en + theme(legend.position = "none")) +
+          plot_layout(guides = "collect") & theme(legend.position = 'bottom')
+      })
+
+      tabPanel(pid,
+        h4("Resumen"),
+        dataTableOutput(table_id),
+        hr(),
+        h4("Gráficos"),
+        plotOutput(plot_id, height = "600px")
+      )
+    })
+
+    do.call(tabsetPanel, c(list(id = "scores_participants_tabs"), tab_panels))
   })
 
   # --- Report Generation Module ---
 
   output$report_pollutant_selector <- renderUI({
-    choices <- sort(unique(hom_data_full$pollutant))
+    choices <- sort(unique(hom_data_full()$pollutant))
     selectInput("report_pollutant", "Select Pollutant:", choices = choices)
   })
 
@@ -1322,11 +2218,11 @@ Stability Criterion (0.3 * sigma_pt):", fmt),
       filter(pollutant == input$report_pollutant, n_lab == input$report_n_lab) %>%
       pull(level) %>%
       unique()
-    hom_levels <- hom_data_full %>%
+    hom_levels <- hom_data_full() %>%
       filter(pollutant == input$report_pollutant) %>%
       pull(level) %>%
       unique()
-    stab_levels <- stab_data_full %>%
+    stab_levels <- stab_data_full() %>%
       filter(pollutant == input$report_pollutant) %>%
       pull(level) %>%
       unique()
@@ -1474,6 +2370,29 @@ Stability Criterion (0.3 * sigma_pt):", fmt),
     }
   )
 
+  # --- Data Loading Status ---
+  output$data_upload_status <- renderPrint({
+    cat("Estado de los archivos:\n")
+    
+    if (!is.null(input$hom_file)) {
+      cat(sprintf("- Homogeneity: '%s' cargado (%d filas).\n", input$hom_file$name, nrow(hom_data_full())))
+    } else {
+      cat("- Homogeneity: No cargado.\n")
+    }
+    
+    if (!is.null(input$stab_file)) {
+      cat(sprintf("- Stability: '%s' cargado (%d filas).\n", input$stab_file$name, nrow(stab_data_full())))
+    } else {
+      cat("- Stability: No cargado.\n")
+    }
+
+    if (!is.null(input$summary_files)) {
+      cat(sprintf("- Summary: %d archivo(s) cargado(s) (%d filas en total).\n", nrow(input$summary_files), nrow(pt_prep_data())))
+    } else {
+      cat("- Summary: No cargado.\n")
+    }
+  })
+
   # --- Algoritmo A Module ---
 
   output$algoA_pollutant_selector <- renderUI({
@@ -1503,6 +2422,8 @@ Stability Criterion (0.3 * sigma_pt):", fmt),
       unique()
     selectInput("algoA_level", "Seleccionar nivel:", choices = choices)
   })
+
+  algo_key <- function(pollutant, n_lab, level) paste(pollutant, n_lab, level, sep = "||")
 
   run_algorithm_a <- function(values, ids, max_iter = 50) {
     mask <- is.finite(values)
@@ -1591,48 +2512,50 @@ Stability Criterion (0.3 * sigma_pt):", fmt),
     )
   }
 
-  algorithm_a_results <- eventReactive(input$algoA_run, {
-    req(pt_prep_data(), input$algoA_pollutant, input$algoA_n_lab, input$algoA_level,
-        input$algoA_max_iter)
-
-    data <- pt_prep_data() %>%
-      filter(
-        pollutant == input$algoA_pollutant,
-        n_lab == input$algoA_n_lab,
-        level == input$algoA_level,
-        participant_id != "ref"
-      )
-
-    if (nrow(data) == 0) {
-      return(list(error = "No se encontraron datos de participantes para los criterios seleccionados."))
+  algorithm_a_selected <- reactive({
+    req(algoA_trigger())
+    req(input$algoA_pollutant, input$algoA_n_lab, input$algoA_level)
+    cache <- algoA_results_cache()
+    if (is.null(cache)) {
+      return(list(
+        error = "No se generaron resultados. Verifique que existan datos cargados y ejecute nuevamente el Algoritmo A.",
+        selected = list(
+          pollutant = input$algoA_pollutant,
+          n_lab = input$algoA_n_lab,
+          level = input$algoA_level
+        ),
+        input_data = tibble(),
+        iterations = tibble(),
+        weights = tibble(),
+        converged = FALSE,
+        effective_weight = NA_real_
+      ))
     }
 
-    aggregated <- data %>%
-      group_by(participant_id) %>%
-      summarise(Resultado = mean(mean_value, na.rm = TRUE), .groups = "drop")
+    key <- algo_key(input$algoA_pollutant, input$algoA_n_lab, input$algoA_level)
+    res <- cache[[key]]
 
-    if (nrow(aggregated) < 3) {
-      return(list(error = "Se requieren al menos tres participantes para ejecutar el Algoritmo A."))
+    if (is.null(res)) {
+      return(list(
+        error = "No se encontraron resultados para la combinación seleccionada. Ejecute nuevamente el Algoritmo A.",
+        selected = list(
+          pollutant = input$algoA_pollutant,
+          n_lab = input$algoA_n_lab,
+          level = input$algoA_level
+        ),
+        input_data = tibble(),
+        iterations = tibble(),
+        weights = tibble(),
+        converged = FALSE,
+        effective_weight = NA_real_
+      ))
     }
 
-    algo_res <- run_algorithm_a(
-      values = aggregated$Resultado,
-      ids = aggregated$participant_id,
-      max_iter = input$algoA_max_iter
-    )
-
-    algo_res$input_data <- aggregated
-    algo_res$selected <- list(
-      pollutant = input$algoA_pollutant,
-      n_lab = input$algoA_n_lab,
-      level = input$algoA_level
-    )
-
-    algo_res
-  }, ignoreNULL = TRUE)
+    res
+  })
 
   output$algoA_result_summary <- renderUI({
-    res <- algorithm_a_results()
+    res <- algorithm_a_selected()
     req(res)
 
     if (!is.null(res$error)) {
@@ -1664,7 +2587,7 @@ Stability Criterion (0.3 * sigma_pt):", fmt),
   })
 
   output$algoA_input_table <- renderDataTable({
-    res <- algorithm_a_results()
+    res <- algorithm_a_selected()
     req(res)
     if (!is.null(res$error)) {
       return(datatable(data.frame(Mensaje = res$error)))
@@ -1679,7 +2602,7 @@ Stability Criterion (0.3 * sigma_pt):", fmt),
   })
 
   output$algoA_histogram <- renderPlot({
-    res <- algorithm_a_results()
+    res <- algorithm_a_selected()
     req(res)
     if (!is.null(res$error)) {
       return(NULL)
@@ -1699,7 +2622,7 @@ Stability Criterion (0.3 * sigma_pt):", fmt),
   })
 
   output$algoA_iterations_table <- renderDataTable({
-    res <- algorithm_a_results()
+    res <- algorithm_a_selected()
     req(res)
     if (!is.null(res$error)) {
       return(datatable(data.frame(Mensaje = res$error)))
@@ -1718,7 +2641,7 @@ Stability Criterion (0.3 * sigma_pt):", fmt),
   })
 
   output$algoA_weights_table <- renderDataTable({
-    res <- algorithm_a_results()
+    res <- algorithm_a_selected()
     req(res)
     if (!is.null(res$error)) {
       return(datatable(data.frame(Mensaje = res$error)))
@@ -1730,6 +2653,253 @@ Stability Criterion (0.3 * sigma_pt):", fmt),
       rownames = FALSE
     ) %>%
       formatRound(columns = c("Resultado", "Peso", "Residuo estandarizado"), digits = 6)
+  })
+
+  # --- Consensus Value Module ---
+
+  output$consensus_pollutant_selector <- renderUI({
+    req(pt_prep_data())
+    participant_data <- pt_prep_data() %>% filter(participant_id != "ref")
+    if (nrow(participant_data) == 0) {
+      return(helpText("No se encontraron datos de participantes para calcular valores consenso."))
+    }
+    choices <- sort(unique(participant_data$pollutant))
+    selectInput("consensus_pollutant", "Seleccionar analito:", choices = choices)
+  })
+
+  output$consensus_n_selector <- renderUI({
+    req(pt_prep_data(), input$consensus_pollutant)
+    participant_data <- pt_prep_data() %>%
+      filter(participant_id != "ref", pollutant == input$consensus_pollutant)
+    if (nrow(participant_data) == 0) {
+      return(helpText("No se encontraron esquemas PT para este analito."))
+    }
+    choices <- participant_data %>%
+      pull(n_lab) %>%
+      unique() %>%
+      sort()
+    selectInput("consensus_n_lab", "Seleccionar esquema PT (n):", choices = choices)
+  })
+
+  output$consensus_level_selector <- renderUI({
+    req(pt_prep_data(), input$consensus_pollutant, input$consensus_n_lab)
+    participant_data <- pt_prep_data() %>%
+      filter(
+        participant_id != "ref",
+        pollutant == input$consensus_pollutant,
+        n_lab == input$consensus_n_lab
+      )
+    if (nrow(participant_data) == 0) {
+      return(helpText("No se encontraron niveles para esta combinación."))
+    }
+    choices <- participant_data %>%
+      pull(level) %>%
+      unique() %>%
+      sort()
+    selectInput("consensus_level", "Seleccionar nivel:", choices = choices)
+  })
+
+  observeEvent(input$consensus_run, {
+    req(pt_prep_data())
+    data <- isolate(pt_prep_data()) %>% filter(participant_id != "ref")
+
+    combos <- data %>%
+      distinct(pollutant, n_lab, level)
+
+    if (nrow(combos) == 0) {
+      consensus_results_cache(NULL)
+      consensus_trigger(Sys.time())
+      return()
+    }
+
+    results <- list()
+
+    for (i in seq_len(nrow(combos))) {
+      pollutant_val <- combos$pollutant[i]
+      n_lab_val <- combos$n_lab[i]
+      level_val <- combos$level[i]
+      key <- algo_key(pollutant_val, n_lab_val, level_val)
+
+      subset_data <- data %>%
+        filter(
+          pollutant == pollutant_val,
+          n_lab == n_lab_val,
+          level == level_val
+        )
+
+      aggregated <- subset_data %>%
+        group_by(participant_id) %>%
+        summarise(Resultado = mean(mean_value, na.rm = TRUE), .groups = "drop")
+
+      if (nrow(aggregated) == 0) {
+        results[[key]] <- list(
+          error = "No se encontraron resultados de participantes para esta combinación.",
+          summary = data.frame(),
+          input_data = aggregated,
+          selected = list(
+            pollutant = pollutant_val,
+            n_lab = n_lab_val,
+            level = level_val
+          )
+        )
+        next
+      }
+
+      values <- aggregated$Resultado
+      x_pt2 <- median(values, na.rm = TRUE)
+      mad_val <- median(abs(values - x_pt2), na.rm = TRUE)
+      sigma_pt_2a <- 1.483 * mad_val
+      sigma_pt_2b <- calculate_niqr(values)
+      participants <- length(values)
+
+      summary_df <- tibble::tibble(
+        Statistic = c("x_pt(2) - Median", "MADe", "sigma_pt_2a (MADe)", "sigma_pt_2b (nIQR)", "Participantes"),
+        Value = c(x_pt2, mad_val, sigma_pt_2a, sigma_pt_2b, participants)
+      )
+
+      results[[key]] <- list(
+        error = NULL,
+        summary = summary_df,
+        input_data = aggregated,
+        selected = list(
+          pollutant = pollutant_val,
+          n_lab = n_lab_val,
+          level = level_val
+        )
+      )
+    }
+
+    consensus_results_cache(results)
+    consensus_trigger(Sys.time())
+  })
+
+  consensus_selected <- reactive({
+    if (is.null(consensus_trigger())) {
+      return(list(
+        error = "Ejecute el cálculo de valores consenso para ver resultados.",
+        summary = data.frame(),
+        input_data = tibble::tibble()
+      ))
+    }
+
+    req(input$consensus_pollutant, input$consensus_n_lab, input$consensus_level)
+    cache <- consensus_results_cache()
+    if (is.null(cache)) {
+      return(list(
+        error = "No se generaron resultados. Verifique los datos cargados y ejecute nuevamente el cálculo de valores consenso.",
+        summary = data.frame(),
+        input_data = tibble::tibble()
+      ))
+    }
+
+    key <- algo_key(input$consensus_pollutant, input$consensus_n_lab, input$consensus_level)
+    res <- cache[[key]]
+
+    if (is.null(res)) {
+      return(list(
+        error = "No se encontraron resultados para la selección actual. Ejecute nuevamente el cálculo de valores consenso.",
+        summary = data.frame(),
+        input_data = tibble::tibble()
+      ))
+    }
+
+    res
+  })
+
+  output$consensus_summary_table <- renderTable({
+    res <- consensus_selected()
+    if (!is.null(res$error)) {
+      return(data.frame(Mensaje = res$error))
+    }
+    res$summary
+  }, digits = 6, striped = TRUE, spacing = "l", rownames = FALSE)
+
+  output$consensus_input_table <- renderDataTable({
+    res <- consensus_selected()
+    if (!is.null(res$error)) {
+      return(datatable(data.frame(Mensaje = res$error)))
+    }
+
+    datatable(
+      res$input_data %>% rename(Participante = participant_id),
+      options = list(pageLength = 10, scrollX = TRUE),
+      rownames = FALSE
+    ) %>%
+      formatRound(columns = "Resultado", digits = 6)
+  })
+
+  # --- Reference Value Module ---
+
+  output$reference_pollutant_selector <- renderUI({
+    req(pt_prep_data())
+    ref_data <- pt_prep_data() %>% filter(participant_id == "ref")
+    if (nrow(ref_data) == 0) {
+      return(helpText("No se encontraron datos de referencia en los archivos summary_n*.csv."))
+    }
+    choices <- sort(unique(ref_data$pollutant))
+    selectInput("reference_pollutant", "Seleccionar analito:", choices = choices)
+  })
+
+  output$reference_n_selector <- renderUI({
+    req(pt_prep_data(), input$reference_pollutant)
+    ref_data <- pt_prep_data() %>%
+      filter(participant_id == "ref", pollutant == input$reference_pollutant)
+    if (nrow(ref_data) == 0) {
+      return(helpText("No hay esquemas PT disponibles para este analito."))
+    }
+    choices <- ref_data %>%
+      pull(n_lab) %>%
+      unique() %>%
+      sort()
+    selectInput("reference_n_lab", "Seleccionar esquema PT (n):", choices = choices)
+  })
+
+  output$reference_level_selector <- renderUI({
+    req(pt_prep_data(), input$reference_pollutant, input$reference_n_lab)
+    ref_data <- pt_prep_data() %>%
+      filter(
+        participant_id == "ref",
+        pollutant == input$reference_pollutant,
+        n_lab == input$reference_n_lab
+      )
+    if (nrow(ref_data) == 0) {
+      return(helpText("No hay niveles disponibles para esta combinación."))
+    }
+    choices <- ref_data %>%
+      pull(level) %>%
+      unique() %>%
+      sort()
+    selectInput("reference_level", "Seleccionar nivel:", choices = choices)
+  })
+
+  reference_table_data <- reactive({
+    req(pt_prep_data(), input$reference_pollutant, input$reference_n_lab, input$reference_level)
+    pt_prep_data() %>%
+      filter(
+        participant_id == "ref",
+        pollutant == input$reference_pollutant,
+        n_lab == input$reference_n_lab,
+        level == input$reference_level
+      )
+  })
+
+  output$reference_table <- renderDataTable({
+    data <- reference_table_data()
+    if (nrow(data) == 0) {
+      return(datatable(data.frame(Mensaje = "No hay datos de referencia para la selección indicada.")))
+    }
+
+    display <- data %>%
+      transmute(
+        Analito = toupper(pollutant),
+        `Esquema (n)` = n_lab,
+        Nivel = level,
+        `Valor medio` = mean_value,
+        `Desviación estándar declarada` = sd_value
+      )
+
+    datatable(display, options = list(pageLength = 10, scrollX = TRUE), rownames = FALSE) %>%
+      formatRound(columns = c("Valor medio", "Desviación estándar declarada"), digits = 6)
   })
 
   # --- PT Preparation Module ---

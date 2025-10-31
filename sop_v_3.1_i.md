@@ -1,4 +1,4 @@
-# SOP_V3.1 — Integrated and Comprehensive Standard Operating Procedure for PT Data Analysis in R/Shiny
+# SOP_V4.0 — Integrated and Comprehensive Standard Operating Procedure for PT Data Analysis in R/Shiny
 
 ## 1. Purpose and Scope
 
@@ -57,7 +57,7 @@ The workflow is structured in four major steps designed to ensure full analytica
 | Method | Formula | Description |
 |---------|----------|-------------|
 | **Median (xₚₜ₁)** | median(x) | Robust measure of location |
-| **MADe (σₚₜ₂)** | 1.4826 × median(|xᵢ−median(x)|) | Scaled MAD per ISO 13528 §6.5.2 |
+| **MADe (σₚₜ₂)** | 1.4826 × median(|xᵢ−median(x)|) | Scaled MAD per ISO 13528 §C.1 |
 | **nIQR (σₚₜ₃)** | 0.7413 × (Q₃−Q₁) | Normalized interquartile range (Annex C) |
 | **Algorithm A (xₚₜ₄, σₚₜ₄)** | Iterative winsorization | ISO 13528 §7.4 algorithm for robust mean/SD |
 
@@ -87,6 +87,19 @@ algorithm_A <- function(x, max_iter=100){
   list(robust_mean=x_star, robust_sd=s_star)
 }
 ```
+
+### 4.3 Calculation of Standard Uncertainty of the Assigned Value, u(xₚₜ)
+
+When the assigned value (xₚₜ) is determined by consensus from participant results, its standard uncertainty, u(xₚₜ), must be calculated. This value is critical for calculating z', ζ, and Eₙ scores. According to ISO 13528:2022, the formula is:
+$$ u(x_{pt}) = \frac{1.25 \times s^*}{\sqrt{p}} $$
+Where:
+- s* is the robust standard deviation of the participant results (e.g., σₚₜ₂, σₚₜ₃, or σₚₜ₄).
+- p is the number of participants included in the consensus calculation.
+
+This calculation will be performed for each robust standard deviation variant (MADe, nIQR, and Algorithm A) to produce three corresponding uncertainty estimates for the assigned value.
+
+Note: This calculation is distinct from the uncertainty derived from homogeneity studies, which is used when the assigned value comes from a reference material certificate.
+
 
 ---
 
@@ -184,4 +197,3 @@ Select the **operational xₚₜ** and **σₚₜ** based on:
 ---
 
 **End of SOP_V3.1 — Integrated Comprehensive Version**
-
