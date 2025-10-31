@@ -5,6 +5,7 @@
 # 1. Load libraries
 suppressPackageStartupMessages({
   library(tidyverse)
+  library(patchwork)
   library(vroom)
   library(DT)
   library(outliers)
@@ -20,6 +21,12 @@ calculate_niqr <- function(x) {
   0.7413 * (quartiles[2] - quartiles[1])
 }
 
+combined_scores_df <- if (length(all_scores_list) > 0) {
+  dplyr::bind_rows(all_scores_list)
+} else {
+  tibble()
+}
+
 get_wide_data <- function(df, target_pollutant) {
     filtered <- df %>% filter(pollutant == target_pollutant)
     if (nrow(filtered) == 0) {
@@ -31,15 +38,26 @@ get_wide_data <- function(df, target_pollutant) {
 }
 
 # 2. Load data
-hom_data_full <- read.csv("../homogeneity.csv")
-stab_data_full <- read.csv("../stability.csv")
-summary_data <- read.csv("../summary_n7.csv")
-summary_data$n_lab <- 7 # Add n_lab column for consistency
+hom_data_full <- read.csv("homogeneity.csv")
+stab_data_full <- read.csv("stability.csv")
+raw_summary_data <- read.csv("summary_n7.csv")
+
+# --- Data Aggregation Step ---
+# The raw summary data has one row per replicate (sample_group).
+# We need to average these replicates for each participant at each level.
+summary_data <- raw_summary_data %>%
+  group_by(participant_id, pollutant, level) %>%
+  summarise(
+    mean_value = mean(mean_value, na.rm = TRUE),
+    sd_value = mean(sd_value, na.rm = TRUE), # Taking the mean of SDs as a representative value
+    .groups = 'drop'
+  )
+summary_data$n_lab <- 7 # Add n_lab column for consistency with app logic
 
 # Create output directories
-dir.create("../reports/assets", showWarnings = FALSE)
-dir.create("../reports/assets/charts", showWarnings = FALSE)
-dir.create("../reports/assets/tables", showWarnings = FALSE)
+dir.create("reports/assets", showWarnings = FALSE)
+dir.create("reports/assets/charts", showWarnings = FALSE)
+dir.create("reports/assets/tables", showWarnings = FALSE)
 
 
 # 3. Homogeneity and Stability Analysis
@@ -357,155 +375,519 @@ compute_pt_prep_metrics <- function(summary_df, target_pollutant, target_level) 
     )
 }
 
-# 5. PT Scores Analysis
-compute_scores_metrics <- function(summary_df, target_pollutant, target_n_lab, target_level, sigma_pt, u_xpt, k) {
-    if (is.null(summary_df) || nrow(summary_df) == 0) {
-      return(list(error = "No summary data available for PT scores."))
+# 5. PT Scores Analysis (extended to match app calculations)
+
+score_combo_info <- list(
+  ref = list(title = "Referencia (1)", label = "1"),
+  consensus_ma = list(title = "Consenso MADe (2a)", label = "2a"),
+  consensus_niqr = list(title = "Consenso nIQR (2b)", label = "2b"),
+  algo = list(title = "Algoritmo A (3)", label = "3")
+)
+
+score_eval_z <- function(z) {
+  case_when(
+    !is.finite(z) ~ "N/A",
+    abs(z) <= 2 ~ "Satisfactory",
+    abs(z) > 2 & abs(z) < 3 ~ "Questionable",
+    abs(z) >= 3 ~ "Unsatisfactory"
+  )
+}
+
+run_algorithm_a <- function(values, ids, max_iter = 50) {
+  mask <- is.finite(values)
+  values <- values[mask]
+  ids <- ids[mask]
+
+  n <- length(values)
+  if (n < 3) {
+    return(list(error = "El Algoritmo A requiere al menos 3 resultados válidos."))
+  }
+
+  x_star <- median(values, na.rm = TRUE)
+  s_star <- 1.483 * median(abs(values - x_star), na.rm = TRUE)
+
+  if (!is.finite(s_star) || s_star < .Machine$double.eps) {
+    s_star <- sd(values, na.rm = TRUE)
+  }
+
+  if (!is.finite(s_star) || s_star < .Machine$double.eps) {
+    return(list(error = "La dispersión de los datos es insuficiente para ejecutar el Algoritmo A."))
+  }
+
+  iteration_records <- list()
+  converged <- FALSE
+
+  for (iter in seq_len(max_iter)) {
+    u_values <- (values - x_star) / (1.5 * s_star)
+    weights <- ifelse(abs(u_values) <= 1, 1, 1 / (u_values^2))
+
+    weight_sum <- sum(weights)
+    if (!is.finite(weight_sum) || weight_sum <= 0) {
+      return(list(error = "Los pesos calculados no son válidos para el Algoritmo A."))
     }
 
-    data <- summary_df %>%
-      filter(
-        pollutant == target_pollutant,
-        n_lab == target_n_lab,
-        level == target_level
-      )
+    x_new <- sum(weights * values) / weight_sum
+    s_new <- sqrt(sum(weights * (values - x_new)^2) / weight_sum)
 
-    if (nrow(data) == 0) {
-      return(list(error = "No data found for the selected criteria."))
+    if (!is.finite(s_new) || s_new < .Machine$double.eps) {
+      return(list(error = "El Algoritmo A colapsó debido a una desviación estándar nula."))
     }
 
-    ref_data <- data %>% filter(participant_id == "ref")
-    participant_data <- data %>% filter(participant_id != "ref")
+    delta_x <- abs(x_new - x_star)
+    delta_s <- abs(s_new - s_star)
+    delta <- max(delta_x, delta_s)
+    iteration_records[[iter]] <- data.frame(
+      Iteración = iter,
+      `Valor asignado (x*)` = x_new,
+      `Desviación robusta (s*)` = s_new,
+      Cambio = delta,
+      check.names = FALSE
+    )
 
-    if (nrow(ref_data) == 0) {
-      return(list(error = "No reference data ('ref' participant) found for this level."))
+    x_star <- x_new
+    s_star <- s_new
+
+    if (delta_x < 1e-03 && delta_s < 1e-03) {
+      converged <- TRUE
+      break
     }
-    if (nrow(participant_data) == 0) {
-      return(list(error = "No participant data found for this level."))
-    }
+  }
 
-    x_pt <- mean(ref_data$mean_value, na.rm = TRUE)
+  iteration_df <- if (length(iteration_records) > 0) dplyr::bind_rows(iteration_records) else tibble()
+  u_final <- (values - x_star) / (1.5 * s_star)
+  weights_final <- ifelse(abs(u_final) <= 1, 1, 1 / (u_final^2))
+  weights_df <- tibble(
+    Participante = ids,
+    Resultado = values,
+    Peso = weights_final,
+    `Residuo estandarizado` = u_final
+  )
 
-    participant_data <- participant_data %>%
-      rename(result = mean_value, uncertainty_std = sd_value)
+  list(
+    assigned_value = x_star,
+    robust_sd = s_star,
+    iterations = iteration_df,
+    weights = weights_df,
+    converged = converged,
+    effective_weight = sum(weights_final),
+    error = NULL
+  )
+}
 
-    final_scores <- participant_data %>%
-      mutate(
-        z_score = (result - x_pt) / sigma_pt,
-        z_prime_score = (result - x_pt) / sqrt(sigma_pt^2 + u_xpt^2),
-        zeta_score = (result - x_pt) / sqrt(uncertainty_std^2 + u_xpt^2),
-        U_xi = k * uncertainty_std,
-        U_xpt = k * u_xpt,
-        En_score = (result - x_pt) / sqrt(U_xi^2 + U_xpt^2)
-      ) %>%
-      mutate(
-        z_score_eval = case_when(
-          abs(z_score) <= 2 ~ "Satisfactory",
-          abs(z_score) > 2 & abs(z_score) < 3 ~ "Questionable",
-          abs(z_score) >= 3 ~ "Unsatisfactory",
-          TRUE ~ "N/A"
-        ),
-        z_prime_score_eval = case_when(
-          abs(z_prime_score) <= 2 ~ "Satisfactory",
-          abs(z_prime_score) > 2 & abs(z_prime_score) < 3 ~ "Questionable",
-          abs(z_prime_score) >= 3 ~ "Unsatisfactory",
-          TRUE ~ "N/A"
-        ),
-        zeta_score_eval = case_when(
-          abs(zeta_score) <= 2 ~ "Satisfactory",
-          abs(zeta_score) > 2 & abs(zeta_score) < 3 ~ "Questionable",
-          abs(zeta_score) >= 3 ~ "Unsatisfactory",
-          TRUE ~ "N/A"
-        ),
-        En_score_eval = case_when(
-          abs(En_score) <= 1 ~ "Satisfactory",
-          abs(En_score) > 1 ~ "Unsatisfactory",
-          TRUE ~ "N/A"
-        )
-      )
+compute_combo_scores <- function(participants_df, x_pt, sigma_pt, u_xpt, combo_meta, k = 2) {
+  if (!is.finite(x_pt)) {
+    return(list(error = sprintf("Valor asignado no disponible para %s.", combo_meta$title)))
+  }
+  if (!is.finite(sigma_pt) || sigma_pt <= 0) {
+    return(list(error = sprintf("sigma_pt no válido para %s.", combo_meta$title)))
+  }
+  if (!is.finite(u_xpt) || u_xpt < 0) {
+    u_xpt <- 0
+  }
 
-    list(
-      error = NULL,
-      scores = final_scores,
+  participants_df <- participants_df %>%
+    mutate(uncertainty_std = replace_na(uncertainty_std, 0))
+
+  z_values <- (participants_df$result - x_pt) / sigma_pt
+  zprime_den <- sqrt(sigma_pt^2 + u_xpt^2)
+  z_prime_values <- if (zprime_den > 0) (participants_df$result - x_pt) / zprime_den else NA_real_
+  zeta_den <- sqrt(participants_df$uncertainty_std^2 + u_xpt^2)
+  zeta_values <- ifelse(zeta_den > 0, (participants_df$result - x_pt) / zeta_den, NA_real_)
+  U_xi <- k * participants_df$uncertainty_std
+  U_xpt <- k * u_xpt
+  en_den <- sqrt(U_xi^2 + U_xpt^2)
+  en_values <- ifelse(en_den > 0, (participants_df$result - x_pt) / en_den, NA_real_)
+
+  data <- participants_df %>%
+    mutate(
+      combination = combo_meta$title,
+      combination_label = combo_meta$label,
       x_pt = x_pt,
       sigma_pt = sigma_pt,
       u_xpt = u_xpt,
-      k = k,
+      k_factor = k,
+      z_score = z_values,
+      z_score_eval = score_eval_z(z_score),
+      z_prime_score = z_prime_values,
+      z_prime_score_eval = score_eval_z(z_prime_score),
+      zeta_score = zeta_values,
+      zeta_score_eval = score_eval_z(zeta_score),
+      En_score = en_values,
+      En_score_eval = case_when(
+        !is.finite(En_score) ~ "N/A",
+        abs(En_score) <= 1 ~ "Satisfactory",
+        abs(En_score) > 1 ~ "Unsatisfactory"
+      )
+    )
+
+  list(
+    error = NULL,
+    title = combo_meta$title,
+    label = combo_meta$label,
+    x_pt = x_pt,
+    sigma_pt = sigma_pt,
+    u_xpt = u_xpt,
+    data = data
+  )
+}
+
+compute_scores_for_selection <- function(summary_data, target_pollutant, target_n_lab, target_level, max_iter = 50, k_factor = 2) {
+  subset_data <- summary_data %>%
+    filter(
+      pollutant == target_pollutant,
+      n_lab == target_n_lab,
+      level == target_level
+    )
+
+  if (nrow(subset_data) == 0) {
+    return(list(error = "No se encontraron datos para la combinación seleccionada."))
+  }
+
+  participant_data <- subset_data %>%
+    filter(participant_id != "ref") %>%
+    group_by(participant_id) %>%
+    summarise(
+      result = mean(mean_value, na.rm = TRUE),
+      uncertainty_std = mean(sd_value, na.rm = TRUE),
+      .groups = 'drop'
+    ) %>%
+    mutate(
       pollutant = target_pollutant,
       n_lab = target_n_lab,
       level = target_level
     )
+
+  if (nrow(participant_data) == 0) {
+    return(list(error = "No se encontraron participantes (distintos al valor de referencia) para la combinación seleccionada."))
   }
 
+  ref_data <- subset_data %>% filter(participant_id == "ref")
+  if (nrow(ref_data) == 0) {
+    return(list(error = "No se encontró información del participante de referencia para esta combinación."))
+  }
+  x_pt1 <- mean(ref_data$mean_value, na.rm = TRUE)
+
+  hom_res <- tryCatch(
+    compute_homogeneity_metrics(target_pollutant, target_level),
+    error = function(e) list(error = conditionMessage(e))
+  )
+  if (!is.null(hom_res$error)) {
+    return(list(error = paste("Error obteniendo parámetros de homogeneidad:", hom_res$error)))
+  }
+  sigma_pt1 <- hom_res$sigma_pt
+  u_xpt1 <- hom_res$u_xpt
+
+  values <- participant_data$result
+  n_part <- length(values)
+
+  median_val <- median(values, na.rm = TRUE)
+  mad_val <- median(abs(values - median_val), na.rm = TRUE)
+  sigma_pt_2a <- 1.483 * mad_val
+  sigma_pt_2b <- calculate_niqr(values)
+  u_xpt2a <- if (is.finite(sigma_pt_2a)) 1.25 * sigma_pt_2a / sqrt(n_part) else NA_real_
+  u_xpt2b <- if (is.finite(sigma_pt_2b)) 1.25 * sigma_pt_2b / sqrt(n_part) else NA_real_
+
+  algo_res <- if (n_part >= 3) {
+    run_algorithm_a(values = values, ids = participant_data$participant_id, max_iter = max_iter)
+  } else {
+    list(error = "Se requieren al menos tres participantes para calcular el Algoritmo A.")
+  }
+
+  combos <- list()
+  combos$ref <- compute_combo_scores(participant_data, x_pt1, sigma_pt1, u_xpt1, score_combo_info$ref, k = k_factor)
+  combos$consensus_ma <- compute_combo_scores(participant_data, median_val, sigma_pt_2a, u_xpt2a, score_combo_info$consensus_ma, k = k_factor)
+  combos$consensus_niqr <- compute_combo_scores(participant_data, median_val, sigma_pt_2b, u_xpt2b, score_combo_info$consensus_niqr, k = k_factor)
+
+  if (is.null(algo_res$error)) {
+    u_xpt3 <- 1.25 * algo_res$robust_sd / sqrt(n_part)
+    combos$algo <- compute_combo_scores(participant_data, algo_res$assigned_value, algo_res$robust_sd, u_xpt3, score_combo_info$algo, k = k_factor)
+  } else {
+    combos$algo <- list(error = algo_res$error, title = score_combo_info$algo$title, label = score_combo_info$algo$label)
+  }
+
+  summary_table <- purrr::map_dfr(names(score_combo_info), function(key) {
+    meta <- score_combo_info[[key]]
+    combo <- combos[[key]]
+    if (is.null(combo)) return(NULL)
+    if (!is.null(combo$error)) {
+      tibble(
+        Combinación = meta$title,
+        Etiqueta = meta$label,
+        `x_pt` = NA_real_,
+        `sigma_pt` = NA_real_,
+        `u(x_pt)` = NA_real_,
+        Nota = combo$error
+      )
+    } else {
+      tibble(
+        Combinación = combo$title,
+        Etiqueta = combo$label,
+        `x_pt` = combo$x_pt,
+        `sigma_pt` = combo$sigma_pt,
+        `u(x_pt)` = combo$u_xpt,
+        Nota = ""
+      )
+    }
+  })
+
+  overview_table <- purrr::map_dfr(names(score_combo_info), function(key) {
+    combo <- combos[[key]]
+    if (is.null(combo)) return(NULL)
+    if (!is.null(combo$error)) {
+      tibble(
+        Combinación = score_combo_info[[key]]$title,
+        Participant = NA_character_,
+        Result = NA_real_,
+        `u(xi)` = NA_real_,
+        `z-score` = NA_real_,
+        `z-score Eval` = combo$error,
+        `z'-score` = NA_real_,
+        `z'-score Eval` = "",
+        `zeta-score` = NA_real_,
+        `zeta-score Eval` = "",
+        `En-score` = NA_real_,
+        `En-score Eval` = ""
+      )
+    } else {
+      combo$data %>%
+        transmute(
+          Combinación = combination,
+          Participant = participant_id,
+          Result = result,
+          `u(xi)` = uncertainty_std,
+          `z-score` = z_score,
+          `z-score Eval` = z_score_eval,
+          `z'-score` = z_prime_score,
+          `z'-score Eval` = z_prime_score_eval,
+          `zeta-score` = zeta_score,
+          `zeta-score Eval` = zeta_score_eval,
+          `En-score` = En_score,
+          `En-score Eval` = En_score_eval
+        )
+    }
+  })
+
+  list(
+    error = NULL,
+    combos = combos,
+    summary = summary_table,
+    overview = overview_table,
+    pollutant = target_pollutant,
+    n_lab = target_n_lab,
+    level = target_level
+  )
+}
+
 # 6. Generate outputs
-pollutants <- unique(summary_data$pollutant)
-levels <- unique(summary_data$level)
+pollutants <- sort(unique(summary_data$pollutant))
+all_scores_list <- list()
+scores_results_map <- list()
 
 for (p in pollutants) {
-    for (l in levels) {
-        print(paste("Processing:", p, "-", l))
+  pollutant_data <- summary_data %>% filter(pollutant == p)
+  n_values <- sort(unique(pollutant_data$n_lab))
 
-        # --- Homogeneity and Stability ---
-        hom_results <- compute_homogeneity_metrics(p, l)
-        if (!is.null(hom_results$error)) {
-            print(paste("  - Homogeneity Error:", hom_results$error))
-        } else {
-            stab_results <- compute_stability_metrics(p, l, hom_results)
-            if (!is.null(stab_results$error)) {
-                print(paste("  - Stability Error:", stab_results$error))
-            } else {
-                # Save tables
-                write.csv(hom_results$intermediate_df, paste0("../reports/assets/tables/homogeneity_details_", p, "_", l, ".csv"))
-                write.csv(stab_results$stab_intermediate_df, paste0("../reports/assets/tables/stability_details_", p, "_", l, ".csv"))
+  for (n_val in n_values) {
+    n_subset <- pollutant_data %>% filter(n_lab == n_val)
+    pollutant_levels <- sort(unique(n_subset$level))
 
-                # Create and save plots
-                hom_plot_data <- hom_data_full %>% filter(pollutant == p, level == l) %>% pivot_longer(starts_with("sample_"), names_to = "sample", values_to = "result")
+    for (l in pollutant_levels) {
+      print(paste("--- Processing:", p, "(n=", n_val, ") -", l, "---"))
 
-                p_hom_hist <- ggplot(hom_plot_data, aes(x = result)) + geom_histogram(bins=20) + ggtitle(paste("Homogeneity Distribution:", p, "-", l))
-                ggsave(paste0("../reports/assets/charts/homogeneity_hist_", p, "_", l, ".png"), p_hom_hist)
-
-                p_hom_box <- ggplot(hom_plot_data, aes(y = result)) + geom_boxplot() + ggtitle(paste("Homogeneity Boxplot:", p, "-", l))
-                ggsave(paste0("../reports/assets/charts/homogeneity_box_", p, "_", l, ".png"), p_hom_box)
-            }
+      hom_results <- compute_homogeneity_metrics(p, l)
+      if (!is.null(hom_results$error)) {
+        print(paste("  - Homogeneity Error:", hom_results$error))
+      } else {
+        stab_results <- compute_stability_metrics(p, l, hom_results)
+        if (!is.null(stab_results$error)) {
+          print(paste("  - Stability Error:", stab_results$error))
         }
+      }
 
-        # --- PT Preparation ---
-        pt_prep_results <- compute_pt_prep_metrics(summary_data, p, l)
-        if (!is.null(pt_prep_results$error)) {
-            print(paste("  - PT Prep Error:", pt_prep_results$error))
-        } else {
-            # Save tables
-            write.csv(pt_prep_results$data, paste0("../reports/assets/tables/pt_prep_data_", p, "_", l, ".csv"))
-            writeLines(pt_prep_results$grubbs, paste0("../reports/assets/tables/pt_prep_grubbs_", p, "_", l, ".txt"))
+      pt_prep_results <- compute_pt_prep_metrics(summary_data, p, l)
+      if (!is.null(pt_prep_results$error)) {
+        print(paste("  - PT Prep Error:", pt_prep_results$error))
+      }
 
-            # Create and save plots
-            p_pt_prep_hist <- ggplot(pt_prep_results$data, aes(x=mean_value)) + geom_histogram(bins=15) + ggtitle(paste("PT Prep Distribution:", p, "-", l))
-            ggsave(paste0("../reports/assets/charts/pt_prep_hist_", p, "_", l, ".png"), p_pt_prep_hist)
+      score_res <- compute_scores_for_selection(summary_data, p, n_val, l, max_iter = 50, k_factor = 2)
+      key <- paste(p, as.character(n_val), l, sep = "||")
+      scores_results_map[[key]] <- score_res
 
-            p_pt_prep_box <- ggplot(pt_prep_results$data, aes(y=mean_value)) + geom_boxplot() + ggtitle(paste("PT Prep Boxplot:", p, "-", l))
-            ggsave(paste0("../reports/assets/charts/pt_prep_box_", p, "_", l, ".png"), p_pt_prep_box)
-        }
+      if (!is.null(score_res$error)) {
+        print(paste("  - Scores Error:", score_res$error))
+      } else {
+        write.csv(score_res$summary, paste0("reports/assets/tables/scores_parameters_", p, "_n", n_val, "_", l, ".csv"), row.names = FALSE)
+        write.csv(score_res$overview, paste0("reports/assets/tables/scores_overview_", p, "_n", n_val, "_", l, ".csv"), row.names = FALSE)
 
-        # --- PT Scores ---
-        # Using hom_results$sigma_pt and hom_results$u_xpt as default values
-        if (!is.null(hom_results) && is.null(hom_results$error)) {
-            scores_results <- compute_scores_metrics(summary_data, p, 7, l, hom_results$sigma_pt, hom_results$u_xpt, 2)
-            if (!is.null(scores_results$error)) {
-                print(paste("  - Scores Error:", scores_results$error))
-            } else {
-                # Save table
-                write.csv(scores_results$scores, paste0("../reports/assets/tables/scores_table_", p, "_", l, ".csv"))
-
-                # Create and save plots
-                p_z <- ggplot(scores_results$scores, aes(x=reorder(participant_id, z_score), y=z_score)) + geom_point() + geom_hline(yintercept=c(-2,2), linetype="dashed") + geom_hline(yintercept=c(-3,3), linetype="dotted") + theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) + ggtitle(paste("Z-Scores:", p, "-", l))
-                ggsave(paste0("../reports/assets/charts/z_scores_", p, "_", l, ".png"), p_z)
-
-                p_zeta <- ggplot(scores_results$scores, aes(x=reorder(participant_id, zeta_score), y=zeta_score)) + geom_point() + geom_hline(yintercept=c(-2,2), linetype="dashed") + geom_hline(yintercept=c(-3,3), linetype="dotted") + theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) + ggtitle(paste("Zeta-Scores:", p, "-", l))
-                ggsave(paste0("../reports/assets/charts/zeta_scores_", p, "_", l, ".png"), p_zeta)
-
-            }
-        }
+        purrr::walk(score_res$combos, function(combo) {
+          if (is.null(combo$error)) {
+            all_scores_list[[length(all_scores_list) + 1]] <<- combo$data
+          }
+        })
+      }
     }
+  }
+}
+
+# --- Combined Participant Summary Plots ---
+print("Generating combined participant summary plots...")
+
+
+if (length(all_scores_list) > 0) {
+    # Combine all scores from all pollutants and levels into one dataframe
+  all_scores_df <- do.call(rbind, all_scores_list) %>%
+    filter(participant_id != "ref")
+
+  all_participants <- unique(all_scores_df$participant_id)
+
+  for (participant in all_participants) {
+    print(paste("  - Creating summary plot for participant:", participant))
+    participant_full_data <- all_scores_df %>% filter(participant_id == participant)
+    
+    plot_list <- list()
+    pollutants_for_participant <- unique(participant_full_data$pollutant)
+
+    for (p_local in pollutants_for_participant) {
+      plot_data <- participant_full_data %>% filter(pollutant == p_local)
+
+      # 1. Value Plot
+      p_values <- ggplot(plot_data, aes(x = level)) +
+        geom_point(aes(y = result, color = "Participant"), size = 2) +
+        geom_line(aes(y = result, group = 1, color = "Participant")) +
+        geom_point(aes(y = x_pt, color = "Reference"), size = 2) +
+        geom_line(aes(y = x_pt, group = 1, color = "Reference"), linetype = "dashed") +
+        scale_color_manual(name = "Value", values = c("Participant" = "blue", "Reference" = "red")) +
+        labs(title = paste(toupper(p_local), "- Values"), x = NULL, y = "Value") +
+        theme_minimal() + theme(legend.position = "none", axis.text.x = element_text(angle = 45, hjust = 1))
+
+      # 2. Z-Score Plot
+      p_z_score <- ggplot(plot_data, aes(x = level, y = z_score, group = 1)) +
+        geom_hline(yintercept = c(-3, 3), linetype = "dashed", color = "red") +
+        geom_hline(yintercept = c(-2, 2), linetype = "dashed", color = "orange") +
+        geom_hline(yintercept = 0, color = "grey") +
+        geom_line(color = "blue") + geom_point(color = "blue", size = 2) +
+        labs(title = paste(toupper(p_local), "- Z-Score"), x = NULL, y = "Z-Score") +
+        theme_minimal() + theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+      # 3. Zeta-Score Plot
+      p_zeta_score <- ggplot(plot_data, aes(x = level, y = zeta_score, group = 1)) +
+        geom_hline(yintercept = c(-3, 3), linetype = "dashed", color = "red") +
+        geom_hline(yintercept = c(-2, 2), linetype = "dashed", color = "orange") +
+        geom_hline(yintercept = 0, color = "grey") +
+        geom_line(color = "darkgreen") + geom_point(color = "darkgreen", size = 2) +
+        labs(title = paste(toupper(p_local), "- Zeta-Score"), x = NULL, y = "Zeta-Score") +
+        theme_minimal() + theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+      # 4. En-Score Plot
+      p_en_score <- ggplot(plot_data, aes(x = level, y = En_score, group = 1)) +
+        geom_hline(yintercept = c(-1, 1), linetype = "dashed", color = "red") +
+        geom_hline(yintercept = 0, color = "grey") +
+        geom_line(color = "purple") + geom_point(color = "purple", size = 2) +
+        labs(title = paste(toupper(p_local), "- En-Score"), x = NULL, y = "En-Score") +
+        theme_minimal() + theme(axis.text.x = element_text(angle = 45, hjust = 1))
+        
+      plot_list <- c(plot_list, list(p_values, p_z_score, p_zeta_score, p_en_score))
+    }
+
+    # Combine plots into a matrix
+    combined_plot <- wrap_plots(plot_list, ncol = 4, guides = "collect") +
+      plot_annotation(title = paste("Performance Summary for Participant:", participant),
+                      theme = theme(plot.title = element_text(size = 16, face = "bold", hjust = 0.5)))
+
+    ggsave(paste0("reports/assets/charts/summary_matrix_", participant, ".png"), combined_plot, width = 10, height = 16)
+  }
+}
+
+# --- Generate Detailed Participant Summary CSVs ---
+print("Generating detailed summary CSV for each participant...")
+if (length(all_scores_list) > 0) {
+  # 1. Reshape the raw data to get individual replicate values in columns
+  raw_replicates_wide <- raw_summary_data %>%
+    group_by(participant_id, pollutant, level) %>%
+    mutate(replicate_num = row_number()) %>%
+    ungroup() %>%
+    pivot_wider(
+      id_cols = c(participant_id, pollutant, level),
+      names_from = replicate_num,
+      values_from = mean_value,
+      names_prefix = "value_"
+    )
+
+  # 2. Get the final scores data, which is already aggregated
+  all_scores_df <- do.call(rbind, all_scores_list)
+
+  # 3. Loop through each participant to create and save their summary file
+  participants_to_export <- unique(all_scores_df$participant_id)
+
+  for (participant in participants_to_export) {
+    print(paste("  - Creating CSV for participant:", participant))
+
+    # Join the scores with the wide-format raw values
+    participant_summary_df <- all_scores_df %>%
+      filter(participant_id == !!participant) %>%
+      left_join(raw_replicates_wide, by = c("participant_id", "pollutant", "level")) %>%
+      mutate(
+        participant_sd = apply(select(., starts_with("value_")), 1, sd, na.rm = TRUE)
+      ) %>%
+      select(
+        pollutant,
+        n_lab,
+        level,
+        combination,
+        combination_label,
+        participant_mean = result,
+        value_1, value_2, value_3,
+        participant_sd,
+        sigma_pt,
+        `u(x_pt)` = u_xpt,
+        ref_value = x_pt,
+        z_score, z_score_eval,
+        `z_prime` = z_prime_score,
+        `z_prime Eval` = z_prime_score_eval,
+        zeta_score, zeta_score_eval,
+        En_score, En_score_eval
+      )
+
+    # Export to CSV
+    write.csv(participant_summary_df, paste0("reports/assets/tables/participant_summary_", participant, ".csv"), row.names = FALSE)
+  }
+}
+
+# --- Generate Overall Score Evaluation Summary ---
+print("Generating overall score evaluation summary...")
+if (nrow(combined_scores_df) > 0) {
+  scores_long <- combined_scores_df %>%
+    filter(participant_id != "ref") %>%
+    select(pollutant, n_lab, level, combination, combination_label,
+           z_score_eval, zeta_score_eval, En_score_eval) %>%
+    pivot_longer(
+      cols = c(z_score_eval, zeta_score_eval, En_score_eval),
+      names_to = "score_type",
+      values_to = "evaluation"
+    ) %>%
+    mutate(
+      score_type = sub("_eval$", "", score_type),
+      evaluation = factor(evaluation, levels = c("Satisfactory", "Questionable", "Unsatisfactory", "N/A"))
+    )
+
+  evaluation_summary <- scores_long %>%
+    count(pollutant, n_lab, level, combination, combination_label, score_type, evaluation, .drop = FALSE, name = "Count") %>%
+    group_by(pollutant, n_lab, level, combination, combination_label, score_type) %>%
+    mutate(Percentage = ifelse(sum(Count) > 0, (Count / sum(Count)) * 100, 0)) %>%
+    ungroup() %>%
+    mutate(Criteria = paste(score_type, evaluation)) %>%
+    select(
+      Pollutant = pollutant,
+      `PT Scheme (n)` = n_lab,
+      Level = level,
+      Combination = combination,
+      `Combination Label` = combination_label,
+      Criteria,
+      Count,
+      Percentage
+    )
+
+  write.csv(evaluation_summary, "reports/assets/tables/score_evaluation_summary.csv", row.names = FALSE)
 }
 
 print("Script finished. All assets generated.")

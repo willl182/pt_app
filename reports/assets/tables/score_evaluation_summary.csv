@@ -1,0 +1,13 @@
+"criteria","co","no","no2","o3","so2","Total","Percentage"
+"En_score N/A",0,0,0,0,0,0,0
+"En_score Questionable",0,0,0,0,0,0,0
+"En_score Satisfactory",30,54,30,30,42,186,100
+"En_score Unsatisfactory",0,0,0,0,0,0,0
+"z_score N/A",0,0,0,0,0,0,0
+"z_score Questionable",0,0,0,1,1,2,1.0752688172043
+"z_score Satisfactory",30,54,30,25,41,180,96.7741935483871
+"z_score Unsatisfactory",0,0,0,4,0,4,2.1505376344086
+"zeta_score N/A",0,0,0,0,0,0,0
+"zeta_score Questionable",0,0,0,0,0,0,0
+"zeta_score Satisfactory",30,54,30,30,42,186,100
+"zeta_score Unsatisfactory",0,0,0,0,0,0,0
