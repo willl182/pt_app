@@ -740,66 +740,135 @@ if (length(all_scores_list) > 0) {
   all_participants <- unique(all_scores_df$participant_id)
 
   for (participant in all_participants) {
-    print(paste("  - Creating summary plot for participant:", participant))
+    print(paste("  - Creating summary plots for participant:", participant))
     participant_full_data <- all_scores_df %>% filter(participant_id == participant)
-    
-    plot_list <- list()
+
+    combo_info <- participant_full_data %>%
+      mutate(
+        combo_id = ifelse(!is.na(combination_label) & combination_label != "", combination_label, "ref"),
+        combo_display = ifelse(
+          !is.na(combination_label) & combination_label != "",
+          paste0(combination, " (", combination_label, ")"),
+          combination
+        )
+      ) %>%
+      distinct(combo_id, combo_display, combination, combination_label)
+
     pollutants_for_participant <- unique(participant_full_data$pollutant)
 
-    for (p_local in pollutants_for_participant) {
-      plot_data <- participant_full_data %>% filter(pollutant == p_local)
+    for (idx in seq_len(nrow(combo_info))) {
+      combo_row <- combo_info[idx, ]
+      plot_list <- list()
 
-      # 1. Value Plot
-      p_values <- ggplot(plot_data, aes(x = level)) +
-        geom_point(aes(y = result, color = "Participant"), size = 2) +
-        geom_line(aes(y = result, group = 1, color = "Participant")) +
-        geom_point(aes(y = x_pt, color = "Reference"), size = 2) +
-        geom_line(aes(y = x_pt, group = 1, color = "Reference"), linetype = "dashed") +
-        scale_color_manual(name = "Value", values = c("Participant" = "blue", "Reference" = "red")) +
-        labs(title = paste(toupper(p_local), "- Values"), x = NULL, y = "Value") +
-        theme_minimal() + theme(legend.position = "none", axis.text.x = element_text(angle = 45, hjust = 1))
+      for (p_local in pollutants_for_participant) {
+        plot_data <- participant_full_data %>% filter(pollutant == p_local)
 
-      # 2. Z-Score Plot
-      p_z_score <- ggplot(plot_data, aes(x = level, y = z_score, group = 1)) +
-        geom_hline(yintercept = c(-3, 3), linetype = "dashed", color = "red") +
-        geom_hline(yintercept = c(-2, 2), linetype = "dashed", color = "orange") +
-        geom_hline(yintercept = 0, color = "grey") +
-        geom_line(color = "blue") + geom_point(color = "blue", size = 2) +
-        labs(title = paste(toupper(p_local), "- Z-Score"), x = NULL, y = "Z-Score") +
-        theme_minimal() + theme(axis.text.x = element_text(angle = 45, hjust = 1))
+        combo_data <- if (is.na(combo_row$combination_label) || combo_row$combination_label == "") {
+          plot_data %>%
+            filter(
+              combination == combo_row$combination,
+              is.na(combination_label) | combination_label == ""
+            )
+        } else {
+          plot_data %>%
+            filter(
+              combination == combo_row$combination,
+              combination_label == combo_row$combination_label
+            )
+        }
 
-      # 3. Zeta-Score Plot
-      p_zeta_score <- ggplot(plot_data, aes(x = level, y = zeta_score, group = 1)) +
-        geom_hline(yintercept = c(-3, 3), linetype = "dashed", color = "red") +
-        geom_hline(yintercept = c(-2, 2), linetype = "dashed", color = "orange") +
-        geom_hline(yintercept = 0, color = "grey") +
-        geom_line(color = "darkgreen") + geom_point(color = "darkgreen", size = 2) +
-        labs(title = paste(toupper(p_local), "- Zeta-Score"), x = NULL, y = "Zeta-Score") +
-        theme_minimal() + theme(axis.text.x = element_text(angle = 45, hjust = 1))
+        if (nrow(combo_data) == 0) next
 
-      # 4. En-Score Plot
-      p_en_score <- ggplot(plot_data, aes(x = level, y = En_score, group = 1)) +
-        geom_hline(yintercept = c(-1, 1), linetype = "dashed", color = "red") +
-        geom_hline(yintercept = 0, color = "grey") +
-        geom_line(color = "purple") + geom_point(color = "purple", size = 2) +
-        labs(title = paste(toupper(p_local), "- En-Score"), x = NULL, y = "En-Score") +
-        theme_minimal() + theme(axis.text.x = element_text(angle = 45, hjust = 1))
-        
-      plot_list <- c(plot_list, list(p_values, p_z_score, p_zeta_score, p_en_score))
+        p_values <- ggplot(combo_data, aes(x = level)) +
+          geom_point(aes(y = result, color = "Participant"), size = 2) +
+          geom_line(aes(y = result, group = 1, color = "Participant")) +
+          geom_point(aes(y = x_pt, color = "Reference"), size = 2) +
+          geom_line(aes(y = x_pt, group = 1, color = "Reference"), linetype = "dashed") +
+          scale_color_manual(
+            name = "Value",
+            values = c("Participant" = "blue", "Reference" = "red")
+          ) +
+          labs(
+            title = paste(toupper(p_local), "- Values"),
+            subtitle = combo_row$combo_display,
+            x = NULL,
+            y = "Value"
+          ) +
+          theme_minimal() +
+          theme(legend.position = "none", axis.text.x = element_text(angle = 45, hjust = 1))
+
+        p_z_score <- ggplot(combo_data, aes(x = level, y = z_score, group = 1)) +
+          geom_hline(yintercept = c(-3, 3), linetype = "dashed", color = "red") +
+          geom_hline(yintercept = c(-2, 2), linetype = "dashed", color = "orange") +
+          geom_hline(yintercept = 0, color = "grey") +
+          geom_line(color = "blue") + geom_point(color = "blue", size = 2) +
+          coord_cartesian(ylim = c(-4, 4)) +
+          labs(
+            title = paste(toupper(p_local), "- Z-Score"),
+            subtitle = combo_row$combo_display,
+            x = NULL,
+            y = "Z-Score"
+          ) +
+          theme_minimal() + theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+        p_zeta_score <- ggplot(combo_data, aes(x = level, y = zeta_score, group = 1)) +
+          geom_hline(yintercept = c(-3, 3), linetype = "dashed", color = "red") +
+          geom_hline(yintercept = c(-2, 2), linetype = "dashed", color = "orange") +
+          geom_hline(yintercept = 0, color = "grey") +
+          geom_line(color = "darkgreen") + geom_point(color = "darkgreen", size = 2) +
+          labs(
+            title = paste(toupper(p_local), "- Zeta-Score"),
+            subtitle = combo_row$combo_display,
+            x = NULL,
+            y = "Zeta-Score"
+          ) +
+          theme_minimal() + theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+        p_en_score <- ggplot(combo_data, aes(x = level, y = En_score, group = 1)) +
+          geom_hline(yintercept = c(-1, 1), linetype = "dashed", color = "red") +
+          geom_hline(yintercept = 0, color = "grey") +
+          geom_line(color = "purple") + geom_point(color = "purple", size = 2) +
+          labs(
+            title = paste(toupper(p_local), "- En-Score"),
+            subtitle = combo_row$combo_display,
+            x = NULL,
+            y = "En-Score"
+          ) +
+          theme_minimal() + theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+        plot_list <- c(plot_list, list(p_values, p_z_score, p_zeta_score, p_en_score))
+      }
+
+      if (length(plot_list) == 0) next
+
+      combined_plot <- wrap_plots(plot_list, ncol = 4, guides = "collect") +
+        plot_annotation(
+          title = paste(
+            "Performance Summary for Participant:", participant,
+            "| Combination", combo_row$combo_id
+          ),
+          theme = theme(
+            plot.title = element_text(size = 16, face = "bold", hjust = 0.5)
+          )
+        )
+
+      sanitized_combo <- gsub("_+$", "", gsub("^_+", "", gsub("[^A-Za-z0-9]+", "_", combo_row$combo_id)))
+      output_filename <- paste0(
+        "reports/assets/charts/summary_matrix_",
+        participant,
+        "_combo_",
+        sanitized_combo,
+        ".png"
+      )
+
+      ggsave(
+        filename = output_filename,
+        plot = combined_plot,
+        width = 10,
+        height = 12,
+        units = "in"
+      )
     }
-
-    # Combine plots into a matrix
-    combined_plot <- wrap_plots(plot_list, ncol = 4, guides = "collect") +
-      plot_annotation(title = paste("Performance Summary for Participant:", participant),
-                      theme = theme(plot.title = element_text(size = 16, face = "bold", hjust = 0.5)))
-
-    ggsave(
-      filename = paste0("reports/assets/charts/summary_matrix_", participant, ".png"),
-      plot = combined_plot,
-      width = 10,
-      height = 12,
-      units = "in"
-    )
   }
 
   # --- Score Heatmap ---
