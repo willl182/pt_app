@@ -1,13 +1,1489 @@
-"criteria","co","no","no2","o3","so2","Total","Percentage"
-"En_score N/A",0,0,0,0,0,0,0
-"En_score Questionable",0,0,0,0,0,0,0
-"En_score Satisfactory",30,54,30,30,42,186,100
-"En_score Unsatisfactory",0,0,0,0,0,0,0
-"z_score N/A",0,0,0,0,0,0,0
-"z_score Questionable",0,0,0,1,1,2,1.0752688172043
-"z_score Satisfactory",30,54,30,25,41,180,96.7741935483871
-"z_score Unsatisfactory",0,0,0,4,0,4,2.1505376344086
-"zeta_score N/A",0,0,0,0,0,0,0
-"zeta_score Questionable",0,0,0,0,0,0,0
-"zeta_score Satisfactory",30,54,30,30,42,186,100
-"zeta_score Unsatisfactory",0,0,0,0,0,0,0
+"Pollutant","PT Scheme (n)","Level","Combination","Combination Label","Criteria","Count","Percentage"
+"co",7,"0-ppm","Algoritmo A (3)","3","En_score Satisfactory",6,100
+"co",7,"0-ppm","Algoritmo A (3)","3","En_score Questionable",0,100
+"co",7,"0-ppm","Algoritmo A (3)","3","En_score Unsatisfactory",0,100
+"co",7,"0-ppm","Algoritmo A (3)","3","En_score N/A",0,100
+"co",7,"0-ppm","Algoritmo A (3)","3","z_score Satisfactory",6,100
+"co",7,"0-ppm","Algoritmo A (3)","3","z_score Questionable",0,100
+"co",7,"0-ppm","Algoritmo A (3)","3","z_score Unsatisfactory",0,100
+"co",7,"0-ppm","Algoritmo A (3)","3","z_score N/A",0,100
+"co",7,"0-ppm","Algoritmo A (3)","3","zeta_score Satisfactory",6,100
+"co",7,"0-ppm","Algoritmo A (3)","3","zeta_score Questionable",0,100
+"co",7,"0-ppm","Algoritmo A (3)","3","zeta_score Unsatisfactory",0,100
+"co",7,"0-ppm","Algoritmo A (3)","3","zeta_score N/A",0,100
+"co",7,"0-ppm","Consenso MADe (2a)","2a","En_score Satisfactory",6,100
+"co",7,"0-ppm","Consenso MADe (2a)","2a","En_score Questionable",0,100
+"co",7,"0-ppm","Consenso MADe (2a)","2a","En_score Unsatisfactory",0,100
+"co",7,"0-ppm","Consenso MADe (2a)","2a","En_score N/A",0,100
+"co",7,"0-ppm","Consenso MADe (2a)","2a","z_score Satisfactory",6,100
+"co",7,"0-ppm","Consenso MADe (2a)","2a","z_score Questionable",0,100
+"co",7,"0-ppm","Consenso MADe (2a)","2a","z_score Unsatisfactory",0,100
+"co",7,"0-ppm","Consenso MADe (2a)","2a","z_score N/A",0,100
+"co",7,"0-ppm","Consenso MADe (2a)","2a","zeta_score Satisfactory",6,100
+"co",7,"0-ppm","Consenso MADe (2a)","2a","zeta_score Questionable",0,100
+"co",7,"0-ppm","Consenso MADe (2a)","2a","zeta_score Unsatisfactory",0,100
+"co",7,"0-ppm","Consenso MADe (2a)","2a","zeta_score N/A",0,100
+"co",7,"0-ppm","Consenso nIQR (2b)","2b","En_score Satisfactory",6,100
+"co",7,"0-ppm","Consenso nIQR (2b)","2b","En_score Questionable",0,100
+"co",7,"0-ppm","Consenso nIQR (2b)","2b","En_score Unsatisfactory",0,100
+"co",7,"0-ppm","Consenso nIQR (2b)","2b","En_score N/A",0,100
+"co",7,"0-ppm","Consenso nIQR (2b)","2b","z_score Satisfactory",6,100
+"co",7,"0-ppm","Consenso nIQR (2b)","2b","z_score Questionable",0,100
+"co",7,"0-ppm","Consenso nIQR (2b)","2b","z_score Unsatisfactory",0,100
+"co",7,"0-ppm","Consenso nIQR (2b)","2b","z_score N/A",0,100
+"co",7,"0-ppm","Consenso nIQR (2b)","2b","zeta_score Satisfactory",6,100
+"co",7,"0-ppm","Consenso nIQR (2b)","2b","zeta_score Questionable",0,100
+"co",7,"0-ppm","Consenso nIQR (2b)","2b","zeta_score Unsatisfactory",0,100
+"co",7,"0-ppm","Consenso nIQR (2b)","2b","zeta_score N/A",0,100
+"co",7,"0-ppm","Referencia (1)","1","En_score Satisfactory",6,100
+"co",7,"0-ppm","Referencia (1)","1","En_score Questionable",0,100
+"co",7,"0-ppm","Referencia (1)","1","En_score Unsatisfactory",0,100
+"co",7,"0-ppm","Referencia (1)","1","En_score N/A",0,100
+"co",7,"0-ppm","Referencia (1)","1","z_score Satisfactory",6,100
+"co",7,"0-ppm","Referencia (1)","1","z_score Questionable",0,100
+"co",7,"0-ppm","Referencia (1)","1","z_score Unsatisfactory",0,100
+"co",7,"0-ppm","Referencia (1)","1","z_score N/A",0,100
+"co",7,"0-ppm","Referencia (1)","1","zeta_score Satisfactory",6,100
+"co",7,"0-ppm","Referencia (1)","1","zeta_score Questionable",0,100
+"co",7,"0-ppm","Referencia (1)","1","zeta_score Unsatisfactory",0,100
+"co",7,"0-ppm","Referencia (1)","1","zeta_score N/A",0,100
+"co",7,"2-ppm","Algoritmo A (3)","3","En_score Satisfactory",6,100
+"co",7,"2-ppm","Algoritmo A (3)","3","En_score Questionable",0,100
+"co",7,"2-ppm","Algoritmo A (3)","3","En_score Unsatisfactory",0,100
+"co",7,"2-ppm","Algoritmo A (3)","3","En_score N/A",0,100
+"co",7,"2-ppm","Algoritmo A (3)","3","z_score Satisfactory",6,100
+"co",7,"2-ppm","Algoritmo A (3)","3","z_score Questionable",0,100
+"co",7,"2-ppm","Algoritmo A (3)","3","z_score Unsatisfactory",0,100
+"co",7,"2-ppm","Algoritmo A (3)","3","z_score N/A",0,100
+"co",7,"2-ppm","Algoritmo A (3)","3","zeta_score Satisfactory",6,100
+"co",7,"2-ppm","Algoritmo A (3)","3","zeta_score Questionable",0,100
+"co",7,"2-ppm","Algoritmo A (3)","3","zeta_score Unsatisfactory",0,100
+"co",7,"2-ppm","Algoritmo A (3)","3","zeta_score N/A",0,100
+"co",7,"2-ppm","Consenso MADe (2a)","2a","En_score Satisfactory",6,100
+"co",7,"2-ppm","Consenso MADe (2a)","2a","En_score Questionable",0,100
+"co",7,"2-ppm","Consenso MADe (2a)","2a","En_score Unsatisfactory",0,100
+"co",7,"2-ppm","Consenso MADe (2a)","2a","En_score N/A",0,100
+"co",7,"2-ppm","Consenso MADe (2a)","2a","z_score Satisfactory",6,100
+"co",7,"2-ppm","Consenso MADe (2a)","2a","z_score Questionable",0,100
+"co",7,"2-ppm","Consenso MADe (2a)","2a","z_score Unsatisfactory",0,100
+"co",7,"2-ppm","Consenso MADe (2a)","2a","z_score N/A",0,100
+"co",7,"2-ppm","Consenso MADe (2a)","2a","zeta_score Satisfactory",6,100
+"co",7,"2-ppm","Consenso MADe (2a)","2a","zeta_score Questionable",0,100
+"co",7,"2-ppm","Consenso MADe (2a)","2a","zeta_score Unsatisfactory",0,100
+"co",7,"2-ppm","Consenso MADe (2a)","2a","zeta_score N/A",0,100
+"co",7,"2-ppm","Consenso nIQR (2b)","2b","En_score Satisfactory",6,100
+"co",7,"2-ppm","Consenso nIQR (2b)","2b","En_score Questionable",0,100
+"co",7,"2-ppm","Consenso nIQR (2b)","2b","En_score Unsatisfactory",0,100
+"co",7,"2-ppm","Consenso nIQR (2b)","2b","En_score N/A",0,100
+"co",7,"2-ppm","Consenso nIQR (2b)","2b","z_score Satisfactory",6,100
+"co",7,"2-ppm","Consenso nIQR (2b)","2b","z_score Questionable",0,100
+"co",7,"2-ppm","Consenso nIQR (2b)","2b","z_score Unsatisfactory",0,100
+"co",7,"2-ppm","Consenso nIQR (2b)","2b","z_score N/A",0,100
+"co",7,"2-ppm","Consenso nIQR (2b)","2b","zeta_score Satisfactory",6,100
+"co",7,"2-ppm","Consenso nIQR (2b)","2b","zeta_score Questionable",0,100
+"co",7,"2-ppm","Consenso nIQR (2b)","2b","zeta_score Unsatisfactory",0,100
+"co",7,"2-ppm","Consenso nIQR (2b)","2b","zeta_score N/A",0,100
+"co",7,"2-ppm","Referencia (1)","1","En_score Satisfactory",6,100
+"co",7,"2-ppm","Referencia (1)","1","En_score Questionable",0,100
+"co",7,"2-ppm","Referencia (1)","1","En_score Unsatisfactory",0,100
+"co",7,"2-ppm","Referencia (1)","1","En_score N/A",0,100
+"co",7,"2-ppm","Referencia (1)","1","z_score Satisfactory",6,100
+"co",7,"2-ppm","Referencia (1)","1","z_score Questionable",0,100
+"co",7,"2-ppm","Referencia (1)","1","z_score Unsatisfactory",0,100
+"co",7,"2-ppm","Referencia (1)","1","z_score N/A",0,100
+"co",7,"2-ppm","Referencia (1)","1","zeta_score Satisfactory",6,100
+"co",7,"2-ppm","Referencia (1)","1","zeta_score Questionable",0,100
+"co",7,"2-ppm","Referencia (1)","1","zeta_score Unsatisfactory",0,100
+"co",7,"2-ppm","Referencia (1)","1","zeta_score N/A",0,100
+"co",7,"4-ppm","Algoritmo A (3)","3","En_score Satisfactory",6,100
+"co",7,"4-ppm","Algoritmo A (3)","3","En_score Questionable",0,100
+"co",7,"4-ppm","Algoritmo A (3)","3","En_score Unsatisfactory",0,100
+"co",7,"4-ppm","Algoritmo A (3)","3","En_score N/A",0,100
+"co",7,"4-ppm","Algoritmo A (3)","3","z_score Satisfactory",6,100
+"co",7,"4-ppm","Algoritmo A (3)","3","z_score Questionable",0,100
+"co",7,"4-ppm","Algoritmo A (3)","3","z_score Unsatisfactory",0,100
+"co",7,"4-ppm","Algoritmo A (3)","3","z_score N/A",0,100
+"co",7,"4-ppm","Algoritmo A (3)","3","zeta_score Satisfactory",6,100
+"co",7,"4-ppm","Algoritmo A (3)","3","zeta_score Questionable",0,100
+"co",7,"4-ppm","Algoritmo A (3)","3","zeta_score Unsatisfactory",0,100
+"co",7,"4-ppm","Algoritmo A (3)","3","zeta_score N/A",0,100
+"co",7,"4-ppm","Consenso MADe (2a)","2a","En_score Satisfactory",6,100
+"co",7,"4-ppm","Consenso MADe (2a)","2a","En_score Questionable",0,100
+"co",7,"4-ppm","Consenso MADe (2a)","2a","En_score Unsatisfactory",0,100
+"co",7,"4-ppm","Consenso MADe (2a)","2a","En_score N/A",0,100
+"co",7,"4-ppm","Consenso MADe (2a)","2a","z_score Satisfactory",6,100
+"co",7,"4-ppm","Consenso MADe (2a)","2a","z_score Questionable",0,100
+"co",7,"4-ppm","Consenso MADe (2a)","2a","z_score Unsatisfactory",0,100
+"co",7,"4-ppm","Consenso MADe (2a)","2a","z_score N/A",0,100
+"co",7,"4-ppm","Consenso MADe (2a)","2a","zeta_score Satisfactory",6,100
+"co",7,"4-ppm","Consenso MADe (2a)","2a","zeta_score Questionable",0,100
+"co",7,"4-ppm","Consenso MADe (2a)","2a","zeta_score Unsatisfactory",0,100
+"co",7,"4-ppm","Consenso MADe (2a)","2a","zeta_score N/A",0,100
+"co",7,"4-ppm","Consenso nIQR (2b)","2b","En_score Satisfactory",6,100
+"co",7,"4-ppm","Consenso nIQR (2b)","2b","En_score Questionable",0,100
+"co",7,"4-ppm","Consenso nIQR (2b)","2b","En_score Unsatisfactory",0,100
+"co",7,"4-ppm","Consenso nIQR (2b)","2b","En_score N/A",0,100
+"co",7,"4-ppm","Consenso nIQR (2b)","2b","z_score Satisfactory",6,100
+"co",7,"4-ppm","Consenso nIQR (2b)","2b","z_score Questionable",0,100
+"co",7,"4-ppm","Consenso nIQR (2b)","2b","z_score Unsatisfactory",0,100
+"co",7,"4-ppm","Consenso nIQR (2b)","2b","z_score N/A",0,100
+"co",7,"4-ppm","Consenso nIQR (2b)","2b","zeta_score Satisfactory",6,100
+"co",7,"4-ppm","Consenso nIQR (2b)","2b","zeta_score Questionable",0,100
+"co",7,"4-ppm","Consenso nIQR (2b)","2b","zeta_score Unsatisfactory",0,100
+"co",7,"4-ppm","Consenso nIQR (2b)","2b","zeta_score N/A",0,100
+"co",7,"4-ppm","Referencia (1)","1","En_score Satisfactory",6,100
+"co",7,"4-ppm","Referencia (1)","1","En_score Questionable",0,100
+"co",7,"4-ppm","Referencia (1)","1","En_score Unsatisfactory",0,100
+"co",7,"4-ppm","Referencia (1)","1","En_score N/A",0,100
+"co",7,"4-ppm","Referencia (1)","1","z_score Satisfactory",6,100
+"co",7,"4-ppm","Referencia (1)","1","z_score Questionable",0,100
+"co",7,"4-ppm","Referencia (1)","1","z_score Unsatisfactory",0,100
+"co",7,"4-ppm","Referencia (1)","1","z_score N/A",0,100
+"co",7,"4-ppm","Referencia (1)","1","zeta_score Satisfactory",6,100
+"co",7,"4-ppm","Referencia (1)","1","zeta_score Questionable",0,100
+"co",7,"4-ppm","Referencia (1)","1","zeta_score Unsatisfactory",0,100
+"co",7,"4-ppm","Referencia (1)","1","zeta_score N/A",0,100
+"co",7,"6-ppm","Algoritmo A (3)","3","En_score Satisfactory",6,100
+"co",7,"6-ppm","Algoritmo A (3)","3","En_score Questionable",0,100
+"co",7,"6-ppm","Algoritmo A (3)","3","En_score Unsatisfactory",0,100
+"co",7,"6-ppm","Algoritmo A (3)","3","En_score N/A",0,100
+"co",7,"6-ppm","Algoritmo A (3)","3","z_score Satisfactory",4,66.6666666666667
+"co",7,"6-ppm","Algoritmo A (3)","3","z_score Questionable",2,66.6666666666667
+"co",7,"6-ppm","Algoritmo A (3)","3","z_score Unsatisfactory",0,66.6666666666667
+"co",7,"6-ppm","Algoritmo A (3)","3","z_score N/A",0,66.6666666666667
+"co",7,"6-ppm","Algoritmo A (3)","3","zeta_score Satisfactory",6,100
+"co",7,"6-ppm","Algoritmo A (3)","3","zeta_score Questionable",0,100
+"co",7,"6-ppm","Algoritmo A (3)","3","zeta_score Unsatisfactory",0,100
+"co",7,"6-ppm","Algoritmo A (3)","3","zeta_score N/A",0,100
+"co",7,"6-ppm","Consenso MADe (2a)","2a","En_score Satisfactory",6,100
+"co",7,"6-ppm","Consenso MADe (2a)","2a","En_score Questionable",0,100
+"co",7,"6-ppm","Consenso MADe (2a)","2a","En_score Unsatisfactory",0,100
+"co",7,"6-ppm","Consenso MADe (2a)","2a","En_score N/A",0,100
+"co",7,"6-ppm","Consenso MADe (2a)","2a","z_score Satisfactory",4,66.6666666666667
+"co",7,"6-ppm","Consenso MADe (2a)","2a","z_score Questionable",2,66.6666666666667
+"co",7,"6-ppm","Consenso MADe (2a)","2a","z_score Unsatisfactory",0,66.6666666666667
+"co",7,"6-ppm","Consenso MADe (2a)","2a","z_score N/A",0,66.6666666666667
+"co",7,"6-ppm","Consenso MADe (2a)","2a","zeta_score Satisfactory",6,100
+"co",7,"6-ppm","Consenso MADe (2a)","2a","zeta_score Questionable",0,100
+"co",7,"6-ppm","Consenso MADe (2a)","2a","zeta_score Unsatisfactory",0,100
+"co",7,"6-ppm","Consenso MADe (2a)","2a","zeta_score N/A",0,100
+"co",7,"6-ppm","Consenso nIQR (2b)","2b","En_score Satisfactory",6,100
+"co",7,"6-ppm","Consenso nIQR (2b)","2b","En_score Questionable",0,100
+"co",7,"6-ppm","Consenso nIQR (2b)","2b","En_score Unsatisfactory",0,100
+"co",7,"6-ppm","Consenso nIQR (2b)","2b","En_score N/A",0,100
+"co",7,"6-ppm","Consenso nIQR (2b)","2b","z_score Satisfactory",4,66.6666666666667
+"co",7,"6-ppm","Consenso nIQR (2b)","2b","z_score Questionable",1,66.6666666666667
+"co",7,"6-ppm","Consenso nIQR (2b)","2b","z_score Unsatisfactory",1,66.6666666666667
+"co",7,"6-ppm","Consenso nIQR (2b)","2b","z_score N/A",0,66.6666666666667
+"co",7,"6-ppm","Consenso nIQR (2b)","2b","zeta_score Satisfactory",6,100
+"co",7,"6-ppm","Consenso nIQR (2b)","2b","zeta_score Questionable",0,100
+"co",7,"6-ppm","Consenso nIQR (2b)","2b","zeta_score Unsatisfactory",0,100
+"co",7,"6-ppm","Consenso nIQR (2b)","2b","zeta_score N/A",0,100
+"co",7,"6-ppm","Referencia (1)","1","En_score Satisfactory",6,100
+"co",7,"6-ppm","Referencia (1)","1","En_score Questionable",0,100
+"co",7,"6-ppm","Referencia (1)","1","En_score Unsatisfactory",0,100
+"co",7,"6-ppm","Referencia (1)","1","En_score N/A",0,100
+"co",7,"6-ppm","Referencia (1)","1","z_score Satisfactory",6,100
+"co",7,"6-ppm","Referencia (1)","1","z_score Questionable",0,100
+"co",7,"6-ppm","Referencia (1)","1","z_score Unsatisfactory",0,100
+"co",7,"6-ppm","Referencia (1)","1","z_score N/A",0,100
+"co",7,"6-ppm","Referencia (1)","1","zeta_score Satisfactory",6,100
+"co",7,"6-ppm","Referencia (1)","1","zeta_score Questionable",0,100
+"co",7,"6-ppm","Referencia (1)","1","zeta_score Unsatisfactory",0,100
+"co",7,"6-ppm","Referencia (1)","1","zeta_score N/A",0,100
+"co",7,"8-ppm","Algoritmo A (3)","3","En_score Satisfactory",6,100
+"co",7,"8-ppm","Algoritmo A (3)","3","En_score Questionable",0,100
+"co",7,"8-ppm","Algoritmo A (3)","3","En_score Unsatisfactory",0,100
+"co",7,"8-ppm","Algoritmo A (3)","3","En_score N/A",0,100
+"co",7,"8-ppm","Algoritmo A (3)","3","z_score Satisfactory",5,83.3333333333333
+"co",7,"8-ppm","Algoritmo A (3)","3","z_score Questionable",0,83.3333333333333
+"co",7,"8-ppm","Algoritmo A (3)","3","z_score Unsatisfactory",1,83.3333333333333
+"co",7,"8-ppm","Algoritmo A (3)","3","z_score N/A",0,83.3333333333333
+"co",7,"8-ppm","Algoritmo A (3)","3","zeta_score Satisfactory",6,100
+"co",7,"8-ppm","Algoritmo A (3)","3","zeta_score Questionable",0,100
+"co",7,"8-ppm","Algoritmo A (3)","3","zeta_score Unsatisfactory",0,100
+"co",7,"8-ppm","Algoritmo A (3)","3","zeta_score N/A",0,100
+"co",7,"8-ppm","Consenso MADe (2a)","2a","En_score Satisfactory",6,100
+"co",7,"8-ppm","Consenso MADe (2a)","2a","En_score Questionable",0,100
+"co",7,"8-ppm","Consenso MADe (2a)","2a","En_score Unsatisfactory",0,100
+"co",7,"8-ppm","Consenso MADe (2a)","2a","En_score N/A",0,100
+"co",7,"8-ppm","Consenso MADe (2a)","2a","z_score Satisfactory",5,83.3333333333333
+"co",7,"8-ppm","Consenso MADe (2a)","2a","z_score Questionable",0,83.3333333333333
+"co",7,"8-ppm","Consenso MADe (2a)","2a","z_score Unsatisfactory",1,83.3333333333333
+"co",7,"8-ppm","Consenso MADe (2a)","2a","z_score N/A",0,83.3333333333333
+"co",7,"8-ppm","Consenso MADe (2a)","2a","zeta_score Satisfactory",6,100
+"co",7,"8-ppm","Consenso MADe (2a)","2a","zeta_score Questionable",0,100
+"co",7,"8-ppm","Consenso MADe (2a)","2a","zeta_score Unsatisfactory",0,100
+"co",7,"8-ppm","Consenso MADe (2a)","2a","zeta_score N/A",0,100
+"co",7,"8-ppm","Consenso nIQR (2b)","2b","En_score Satisfactory",6,100
+"co",7,"8-ppm","Consenso nIQR (2b)","2b","En_score Questionable",0,100
+"co",7,"8-ppm","Consenso nIQR (2b)","2b","En_score Unsatisfactory",0,100
+"co",7,"8-ppm","Consenso nIQR (2b)","2b","En_score N/A",0,100
+"co",7,"8-ppm","Consenso nIQR (2b)","2b","z_score Satisfactory",5,83.3333333333333
+"co",7,"8-ppm","Consenso nIQR (2b)","2b","z_score Questionable",0,83.3333333333333
+"co",7,"8-ppm","Consenso nIQR (2b)","2b","z_score Unsatisfactory",1,83.3333333333333
+"co",7,"8-ppm","Consenso nIQR (2b)","2b","z_score N/A",0,83.3333333333333
+"co",7,"8-ppm","Consenso nIQR (2b)","2b","zeta_score Satisfactory",6,100
+"co",7,"8-ppm","Consenso nIQR (2b)","2b","zeta_score Questionable",0,100
+"co",7,"8-ppm","Consenso nIQR (2b)","2b","zeta_score Unsatisfactory",0,100
+"co",7,"8-ppm","Consenso nIQR (2b)","2b","zeta_score N/A",0,100
+"co",7,"8-ppm","Referencia (1)","1","En_score Satisfactory",6,100
+"co",7,"8-ppm","Referencia (1)","1","En_score Questionable",0,100
+"co",7,"8-ppm","Referencia (1)","1","En_score Unsatisfactory",0,100
+"co",7,"8-ppm","Referencia (1)","1","En_score N/A",0,100
+"co",7,"8-ppm","Referencia (1)","1","z_score Satisfactory",6,100
+"co",7,"8-ppm","Referencia (1)","1","z_score Questionable",0,100
+"co",7,"8-ppm","Referencia (1)","1","z_score Unsatisfactory",0,100
+"co",7,"8-ppm","Referencia (1)","1","z_score N/A",0,100
+"co",7,"8-ppm","Referencia (1)","1","zeta_score Satisfactory",6,100
+"co",7,"8-ppm","Referencia (1)","1","zeta_score Questionable",0,100
+"co",7,"8-ppm","Referencia (1)","1","zeta_score Unsatisfactory",0,100
+"co",7,"8-ppm","Referencia (1)","1","zeta_score N/A",0,100
+"no",7,"0-ppb","Algoritmo A (3)","3","En_score Satisfactory",6,100
+"no",7,"0-ppb","Algoritmo A (3)","3","En_score Questionable",0,100
+"no",7,"0-ppb","Algoritmo A (3)","3","En_score Unsatisfactory",0,100
+"no",7,"0-ppb","Algoritmo A (3)","3","En_score N/A",0,100
+"no",7,"0-ppb","Algoritmo A (3)","3","z_score Satisfactory",5,83.3333333333333
+"no",7,"0-ppb","Algoritmo A (3)","3","z_score Questionable",1,83.3333333333333
+"no",7,"0-ppb","Algoritmo A (3)","3","z_score Unsatisfactory",0,83.3333333333333
+"no",7,"0-ppb","Algoritmo A (3)","3","z_score N/A",0,83.3333333333333
+"no",7,"0-ppb","Algoritmo A (3)","3","zeta_score Satisfactory",6,100
+"no",7,"0-ppb","Algoritmo A (3)","3","zeta_score Questionable",0,100
+"no",7,"0-ppb","Algoritmo A (3)","3","zeta_score Unsatisfactory",0,100
+"no",7,"0-ppb","Algoritmo A (3)","3","zeta_score N/A",0,100
+"no",7,"0-ppb","Consenso MADe (2a)","2a","En_score Satisfactory",6,100
+"no",7,"0-ppb","Consenso MADe (2a)","2a","En_score Questionable",0,100
+"no",7,"0-ppb","Consenso MADe (2a)","2a","En_score Unsatisfactory",0,100
+"no",7,"0-ppb","Consenso MADe (2a)","2a","En_score N/A",0,100
+"no",7,"0-ppb","Consenso MADe (2a)","2a","z_score Satisfactory",5,83.3333333333333
+"no",7,"0-ppb","Consenso MADe (2a)","2a","z_score Questionable",1,83.3333333333333
+"no",7,"0-ppb","Consenso MADe (2a)","2a","z_score Unsatisfactory",0,83.3333333333333
+"no",7,"0-ppb","Consenso MADe (2a)","2a","z_score N/A",0,83.3333333333333
+"no",7,"0-ppb","Consenso MADe (2a)","2a","zeta_score Satisfactory",6,100
+"no",7,"0-ppb","Consenso MADe (2a)","2a","zeta_score Questionable",0,100
+"no",7,"0-ppb","Consenso MADe (2a)","2a","zeta_score Unsatisfactory",0,100
+"no",7,"0-ppb","Consenso MADe (2a)","2a","zeta_score N/A",0,100
+"no",7,"0-ppb","Consenso nIQR (2b)","2b","En_score Satisfactory",6,100
+"no",7,"0-ppb","Consenso nIQR (2b)","2b","En_score Questionable",0,100
+"no",7,"0-ppb","Consenso nIQR (2b)","2b","En_score Unsatisfactory",0,100
+"no",7,"0-ppb","Consenso nIQR (2b)","2b","En_score N/A",0,100
+"no",7,"0-ppb","Consenso nIQR (2b)","2b","z_score Satisfactory",5,83.3333333333333
+"no",7,"0-ppb","Consenso nIQR (2b)","2b","z_score Questionable",1,83.3333333333333
+"no",7,"0-ppb","Consenso nIQR (2b)","2b","z_score Unsatisfactory",0,83.3333333333333
+"no",7,"0-ppb","Consenso nIQR (2b)","2b","z_score N/A",0,83.3333333333333
+"no",7,"0-ppb","Consenso nIQR (2b)","2b","zeta_score Satisfactory",6,100
+"no",7,"0-ppb","Consenso nIQR (2b)","2b","zeta_score Questionable",0,100
+"no",7,"0-ppb","Consenso nIQR (2b)","2b","zeta_score Unsatisfactory",0,100
+"no",7,"0-ppb","Consenso nIQR (2b)","2b","zeta_score N/A",0,100
+"no",7,"0-ppb","Referencia (1)","1","En_score Satisfactory",6,100
+"no",7,"0-ppb","Referencia (1)","1","En_score Questionable",0,100
+"no",7,"0-ppb","Referencia (1)","1","En_score Unsatisfactory",0,100
+"no",7,"0-ppb","Referencia (1)","1","En_score N/A",0,100
+"no",7,"0-ppb","Referencia (1)","1","z_score Satisfactory",6,100
+"no",7,"0-ppb","Referencia (1)","1","z_score Questionable",0,100
+"no",7,"0-ppb","Referencia (1)","1","z_score Unsatisfactory",0,100
+"no",7,"0-ppb","Referencia (1)","1","z_score N/A",0,100
+"no",7,"0-ppb","Referencia (1)","1","zeta_score Satisfactory",6,100
+"no",7,"0-ppb","Referencia (1)","1","zeta_score Questionable",0,100
+"no",7,"0-ppb","Referencia (1)","1","zeta_score Unsatisfactory",0,100
+"no",7,"0-ppb","Referencia (1)","1","zeta_score N/A",0,100
+"no",7,"121-ppb","Algoritmo A (3)","3","En_score Satisfactory",6,100
+"no",7,"121-ppb","Algoritmo A (3)","3","En_score Questionable",0,100
+"no",7,"121-ppb","Algoritmo A (3)","3","En_score Unsatisfactory",0,100
+"no",7,"121-ppb","Algoritmo A (3)","3","En_score N/A",0,100
+"no",7,"121-ppb","Algoritmo A (3)","3","z_score Satisfactory",6,100
+"no",7,"121-ppb","Algoritmo A (3)","3","z_score Questionable",0,100
+"no",7,"121-ppb","Algoritmo A (3)","3","z_score Unsatisfactory",0,100
+"no",7,"121-ppb","Algoritmo A (3)","3","z_score N/A",0,100
+"no",7,"121-ppb","Algoritmo A (3)","3","zeta_score Satisfactory",6,100
+"no",7,"121-ppb","Algoritmo A (3)","3","zeta_score Questionable",0,100
+"no",7,"121-ppb","Algoritmo A (3)","3","zeta_score Unsatisfactory",0,100
+"no",7,"121-ppb","Algoritmo A (3)","3","zeta_score N/A",0,100
+"no",7,"121-ppb","Consenso MADe (2a)","2a","En_score Satisfactory",6,100
+"no",7,"121-ppb","Consenso MADe (2a)","2a","En_score Questionable",0,100
+"no",7,"121-ppb","Consenso MADe (2a)","2a","En_score Unsatisfactory",0,100
+"no",7,"121-ppb","Consenso MADe (2a)","2a","En_score N/A",0,100
+"no",7,"121-ppb","Consenso MADe (2a)","2a","z_score Satisfactory",6,100
+"no",7,"121-ppb","Consenso MADe (2a)","2a","z_score Questionable",0,100
+"no",7,"121-ppb","Consenso MADe (2a)","2a","z_score Unsatisfactory",0,100
+"no",7,"121-ppb","Consenso MADe (2a)","2a","z_score N/A",0,100
+"no",7,"121-ppb","Consenso MADe (2a)","2a","zeta_score Satisfactory",6,100
+"no",7,"121-ppb","Consenso MADe (2a)","2a","zeta_score Questionable",0,100
+"no",7,"121-ppb","Consenso MADe (2a)","2a","zeta_score Unsatisfactory",0,100
+"no",7,"121-ppb","Consenso MADe (2a)","2a","zeta_score N/A",0,100
+"no",7,"121-ppb","Consenso nIQR (2b)","2b","En_score Satisfactory",6,100
+"no",7,"121-ppb","Consenso nIQR (2b)","2b","En_score Questionable",0,100
+"no",7,"121-ppb","Consenso nIQR (2b)","2b","En_score Unsatisfactory",0,100
+"no",7,"121-ppb","Consenso nIQR (2b)","2b","En_score N/A",0,100
+"no",7,"121-ppb","Consenso nIQR (2b)","2b","z_score Satisfactory",6,100
+"no",7,"121-ppb","Consenso nIQR (2b)","2b","z_score Questionable",0,100
+"no",7,"121-ppb","Consenso nIQR (2b)","2b","z_score Unsatisfactory",0,100
+"no",7,"121-ppb","Consenso nIQR (2b)","2b","z_score N/A",0,100
+"no",7,"121-ppb","Consenso nIQR (2b)","2b","zeta_score Satisfactory",6,100
+"no",7,"121-ppb","Consenso nIQR (2b)","2b","zeta_score Questionable",0,100
+"no",7,"121-ppb","Consenso nIQR (2b)","2b","zeta_score Unsatisfactory",0,100
+"no",7,"121-ppb","Consenso nIQR (2b)","2b","zeta_score N/A",0,100
+"no",7,"121-ppb","Referencia (1)","1","En_score Satisfactory",6,100
+"no",7,"121-ppb","Referencia (1)","1","En_score Questionable",0,100
+"no",7,"121-ppb","Referencia (1)","1","En_score Unsatisfactory",0,100
+"no",7,"121-ppb","Referencia (1)","1","En_score N/A",0,100
+"no",7,"121-ppb","Referencia (1)","1","z_score Satisfactory",6,100
+"no",7,"121-ppb","Referencia (1)","1","z_score Questionable",0,100
+"no",7,"121-ppb","Referencia (1)","1","z_score Unsatisfactory",0,100
+"no",7,"121-ppb","Referencia (1)","1","z_score N/A",0,100
+"no",7,"121-ppb","Referencia (1)","1","zeta_score Satisfactory",6,100
+"no",7,"121-ppb","Referencia (1)","1","zeta_score Questionable",0,100
+"no",7,"121-ppb","Referencia (1)","1","zeta_score Unsatisfactory",0,100
+"no",7,"121-ppb","Referencia (1)","1","zeta_score N/A",0,100
+"no",7,"122-ppb","Algoritmo A (3)","3","En_score Satisfactory",6,100
+"no",7,"122-ppb","Algoritmo A (3)","3","En_score Questionable",0,100
+"no",7,"122-ppb","Algoritmo A (3)","3","En_score Unsatisfactory",0,100
+"no",7,"122-ppb","Algoritmo A (3)","3","En_score N/A",0,100
+"no",7,"122-ppb","Algoritmo A (3)","3","z_score Satisfactory",5,83.3333333333333
+"no",7,"122-ppb","Algoritmo A (3)","3","z_score Questionable",1,83.3333333333333
+"no",7,"122-ppb","Algoritmo A (3)","3","z_score Unsatisfactory",0,83.3333333333333
+"no",7,"122-ppb","Algoritmo A (3)","3","z_score N/A",0,83.3333333333333
+"no",7,"122-ppb","Algoritmo A (3)","3","zeta_score Satisfactory",6,100
+"no",7,"122-ppb","Algoritmo A (3)","3","zeta_score Questionable",0,100
+"no",7,"122-ppb","Algoritmo A (3)","3","zeta_score Unsatisfactory",0,100
+"no",7,"122-ppb","Algoritmo A (3)","3","zeta_score N/A",0,100
+"no",7,"122-ppb","Consenso MADe (2a)","2a","En_score Satisfactory",6,100
+"no",7,"122-ppb","Consenso MADe (2a)","2a","En_score Questionable",0,100
+"no",7,"122-ppb","Consenso MADe (2a)","2a","En_score Unsatisfactory",0,100
+"no",7,"122-ppb","Consenso MADe (2a)","2a","En_score N/A",0,100
+"no",7,"122-ppb","Consenso MADe (2a)","2a","z_score Satisfactory",5,83.3333333333333
+"no",7,"122-ppb","Consenso MADe (2a)","2a","z_score Questionable",1,83.3333333333333
+"no",7,"122-ppb","Consenso MADe (2a)","2a","z_score Unsatisfactory",0,83.3333333333333
+"no",7,"122-ppb","Consenso MADe (2a)","2a","z_score N/A",0,83.3333333333333
+"no",7,"122-ppb","Consenso MADe (2a)","2a","zeta_score Satisfactory",6,100
+"no",7,"122-ppb","Consenso MADe (2a)","2a","zeta_score Questionable",0,100
+"no",7,"122-ppb","Consenso MADe (2a)","2a","zeta_score Unsatisfactory",0,100
+"no",7,"122-ppb","Consenso MADe (2a)","2a","zeta_score N/A",0,100
+"no",7,"122-ppb","Consenso nIQR (2b)","2b","En_score Satisfactory",6,100
+"no",7,"122-ppb","Consenso nIQR (2b)","2b","En_score Questionable",0,100
+"no",7,"122-ppb","Consenso nIQR (2b)","2b","En_score Unsatisfactory",0,100
+"no",7,"122-ppb","Consenso nIQR (2b)","2b","En_score N/A",0,100
+"no",7,"122-ppb","Consenso nIQR (2b)","2b","z_score Satisfactory",4,66.6666666666667
+"no",7,"122-ppb","Consenso nIQR (2b)","2b","z_score Questionable",1,66.6666666666667
+"no",7,"122-ppb","Consenso nIQR (2b)","2b","z_score Unsatisfactory",1,66.6666666666667
+"no",7,"122-ppb","Consenso nIQR (2b)","2b","z_score N/A",0,66.6666666666667
+"no",7,"122-ppb","Consenso nIQR (2b)","2b","zeta_score Satisfactory",6,100
+"no",7,"122-ppb","Consenso nIQR (2b)","2b","zeta_score Questionable",0,100
+"no",7,"122-ppb","Consenso nIQR (2b)","2b","zeta_score Unsatisfactory",0,100
+"no",7,"122-ppb","Consenso nIQR (2b)","2b","zeta_score N/A",0,100
+"no",7,"122-ppb","Referencia (1)","1","En_score Satisfactory",6,100
+"no",7,"122-ppb","Referencia (1)","1","En_score Questionable",0,100
+"no",7,"122-ppb","Referencia (1)","1","En_score Unsatisfactory",0,100
+"no",7,"122-ppb","Referencia (1)","1","En_score N/A",0,100
+"no",7,"122-ppb","Referencia (1)","1","z_score Satisfactory",6,100
+"no",7,"122-ppb","Referencia (1)","1","z_score Questionable",0,100
+"no",7,"122-ppb","Referencia (1)","1","z_score Unsatisfactory",0,100
+"no",7,"122-ppb","Referencia (1)","1","z_score N/A",0,100
+"no",7,"122-ppb","Referencia (1)","1","zeta_score Satisfactory",6,100
+"no",7,"122-ppb","Referencia (1)","1","zeta_score Questionable",0,100
+"no",7,"122-ppb","Referencia (1)","1","zeta_score Unsatisfactory",0,100
+"no",7,"122-ppb","Referencia (1)","1","zeta_score N/A",0,100
+"no",7,"180-ppb","Algoritmo A (3)","3","En_score Satisfactory",6,100
+"no",7,"180-ppb","Algoritmo A (3)","3","En_score Questionable",0,100
+"no",7,"180-ppb","Algoritmo A (3)","3","En_score Unsatisfactory",0,100
+"no",7,"180-ppb","Algoritmo A (3)","3","En_score N/A",0,100
+"no",7,"180-ppb","Algoritmo A (3)","3","z_score Satisfactory",6,100
+"no",7,"180-ppb","Algoritmo A (3)","3","z_score Questionable",0,100
+"no",7,"180-ppb","Algoritmo A (3)","3","z_score Unsatisfactory",0,100
+"no",7,"180-ppb","Algoritmo A (3)","3","z_score N/A",0,100
+"no",7,"180-ppb","Algoritmo A (3)","3","zeta_score Satisfactory",6,100
+"no",7,"180-ppb","Algoritmo A (3)","3","zeta_score Questionable",0,100
+"no",7,"180-ppb","Algoritmo A (3)","3","zeta_score Unsatisfactory",0,100
+"no",7,"180-ppb","Algoritmo A (3)","3","zeta_score N/A",0,100
+"no",7,"180-ppb","Consenso MADe (2a)","2a","En_score Satisfactory",6,100
+"no",7,"180-ppb","Consenso MADe (2a)","2a","En_score Questionable",0,100
+"no",7,"180-ppb","Consenso MADe (2a)","2a","En_score Unsatisfactory",0,100
+"no",7,"180-ppb","Consenso MADe (2a)","2a","En_score N/A",0,100
+"no",7,"180-ppb","Consenso MADe (2a)","2a","z_score Satisfactory",5,83.3333333333333
+"no",7,"180-ppb","Consenso MADe (2a)","2a","z_score Questionable",1,83.3333333333333
+"no",7,"180-ppb","Consenso MADe (2a)","2a","z_score Unsatisfactory",0,83.3333333333333
+"no",7,"180-ppb","Consenso MADe (2a)","2a","z_score N/A",0,83.3333333333333
+"no",7,"180-ppb","Consenso MADe (2a)","2a","zeta_score Satisfactory",6,100
+"no",7,"180-ppb","Consenso MADe (2a)","2a","zeta_score Questionable",0,100
+"no",7,"180-ppb","Consenso MADe (2a)","2a","zeta_score Unsatisfactory",0,100
+"no",7,"180-ppb","Consenso MADe (2a)","2a","zeta_score N/A",0,100
+"no",7,"180-ppb","Consenso nIQR (2b)","2b","En_score Satisfactory",6,100
+"no",7,"180-ppb","Consenso nIQR (2b)","2b","En_score Questionable",0,100
+"no",7,"180-ppb","Consenso nIQR (2b)","2b","En_score Unsatisfactory",0,100
+"no",7,"180-ppb","Consenso nIQR (2b)","2b","En_score N/A",0,100
+"no",7,"180-ppb","Consenso nIQR (2b)","2b","z_score Satisfactory",5,83.3333333333333
+"no",7,"180-ppb","Consenso nIQR (2b)","2b","z_score Questionable",1,83.3333333333333
+"no",7,"180-ppb","Consenso nIQR (2b)","2b","z_score Unsatisfactory",0,83.3333333333333
+"no",7,"180-ppb","Consenso nIQR (2b)","2b","z_score N/A",0,83.3333333333333
+"no",7,"180-ppb","Consenso nIQR (2b)","2b","zeta_score Satisfactory",6,100
+"no",7,"180-ppb","Consenso nIQR (2b)","2b","zeta_score Questionable",0,100
+"no",7,"180-ppb","Consenso nIQR (2b)","2b","zeta_score Unsatisfactory",0,100
+"no",7,"180-ppb","Consenso nIQR (2b)","2b","zeta_score N/A",0,100
+"no",7,"180-ppb","Referencia (1)","1","En_score Satisfactory",6,100
+"no",7,"180-ppb","Referencia (1)","1","En_score Questionable",0,100
+"no",7,"180-ppb","Referencia (1)","1","En_score Unsatisfactory",0,100
+"no",7,"180-ppb","Referencia (1)","1","En_score N/A",0,100
+"no",7,"180-ppb","Referencia (1)","1","z_score Satisfactory",6,100
+"no",7,"180-ppb","Referencia (1)","1","z_score Questionable",0,100
+"no",7,"180-ppb","Referencia (1)","1","z_score Unsatisfactory",0,100
+"no",7,"180-ppb","Referencia (1)","1","z_score N/A",0,100
+"no",7,"180-ppb","Referencia (1)","1","zeta_score Satisfactory",6,100
+"no",7,"180-ppb","Referencia (1)","1","zeta_score Questionable",0,100
+"no",7,"180-ppb","Referencia (1)","1","zeta_score Unsatisfactory",0,100
+"no",7,"180-ppb","Referencia (1)","1","zeta_score N/A",0,100
+"no",7,"181-ppb","Algoritmo A (3)","3","En_score Satisfactory",6,100
+"no",7,"181-ppb","Algoritmo A (3)","3","En_score Questionable",0,100
+"no",7,"181-ppb","Algoritmo A (3)","3","En_score Unsatisfactory",0,100
+"no",7,"181-ppb","Algoritmo A (3)","3","En_score N/A",0,100
+"no",7,"181-ppb","Algoritmo A (3)","3","z_score Satisfactory",5,83.3333333333333
+"no",7,"181-ppb","Algoritmo A (3)","3","z_score Questionable",0,83.3333333333333
+"no",7,"181-ppb","Algoritmo A (3)","3","z_score Unsatisfactory",1,83.3333333333333
+"no",7,"181-ppb","Algoritmo A (3)","3","z_score N/A",0,83.3333333333333
+"no",7,"181-ppb","Algoritmo A (3)","3","zeta_score Satisfactory",6,100
+"no",7,"181-ppb","Algoritmo A (3)","3","zeta_score Questionable",0,100
+"no",7,"181-ppb","Algoritmo A (3)","3","zeta_score Unsatisfactory",0,100
+"no",7,"181-ppb","Algoritmo A (3)","3","zeta_score N/A",0,100
+"no",7,"181-ppb","Consenso MADe (2a)","2a","En_score Satisfactory",6,100
+"no",7,"181-ppb","Consenso MADe (2a)","2a","En_score Questionable",0,100
+"no",7,"181-ppb","Consenso MADe (2a)","2a","En_score Unsatisfactory",0,100
+"no",7,"181-ppb","Consenso MADe (2a)","2a","En_score N/A",0,100
+"no",7,"181-ppb","Consenso MADe (2a)","2a","z_score Satisfactory",5,83.3333333333333
+"no",7,"181-ppb","Consenso MADe (2a)","2a","z_score Questionable",0,83.3333333333333
+"no",7,"181-ppb","Consenso MADe (2a)","2a","z_score Unsatisfactory",1,83.3333333333333
+"no",7,"181-ppb","Consenso MADe (2a)","2a","z_score N/A",0,83.3333333333333
+"no",7,"181-ppb","Consenso MADe (2a)","2a","zeta_score Satisfactory",6,100
+"no",7,"181-ppb","Consenso MADe (2a)","2a","zeta_score Questionable",0,100
+"no",7,"181-ppb","Consenso MADe (2a)","2a","zeta_score Unsatisfactory",0,100
+"no",7,"181-ppb","Consenso MADe (2a)","2a","zeta_score N/A",0,100
+"no",7,"181-ppb","Consenso nIQR (2b)","2b","En_score Satisfactory",6,100
+"no",7,"181-ppb","Consenso nIQR (2b)","2b","En_score Questionable",0,100
+"no",7,"181-ppb","Consenso nIQR (2b)","2b","En_score Unsatisfactory",0,100
+"no",7,"181-ppb","Consenso nIQR (2b)","2b","En_score N/A",0,100
+"no",7,"181-ppb","Consenso nIQR (2b)","2b","z_score Satisfactory",5,83.3333333333333
+"no",7,"181-ppb","Consenso nIQR (2b)","2b","z_score Questionable",0,83.3333333333333
+"no",7,"181-ppb","Consenso nIQR (2b)","2b","z_score Unsatisfactory",1,83.3333333333333
+"no",7,"181-ppb","Consenso nIQR (2b)","2b","z_score N/A",0,83.3333333333333
+"no",7,"181-ppb","Consenso nIQR (2b)","2b","zeta_score Satisfactory",6,100
+"no",7,"181-ppb","Consenso nIQR (2b)","2b","zeta_score Questionable",0,100
+"no",7,"181-ppb","Consenso nIQR (2b)","2b","zeta_score Unsatisfactory",0,100
+"no",7,"181-ppb","Consenso nIQR (2b)","2b","zeta_score N/A",0,100
+"no",7,"181-ppb","Referencia (1)","1","En_score Satisfactory",6,100
+"no",7,"181-ppb","Referencia (1)","1","En_score Questionable",0,100
+"no",7,"181-ppb","Referencia (1)","1","En_score Unsatisfactory",0,100
+"no",7,"181-ppb","Referencia (1)","1","En_score N/A",0,100
+"no",7,"181-ppb","Referencia (1)","1","z_score Satisfactory",6,100
+"no",7,"181-ppb","Referencia (1)","1","z_score Questionable",0,100
+"no",7,"181-ppb","Referencia (1)","1","z_score Unsatisfactory",0,100
+"no",7,"181-ppb","Referencia (1)","1","z_score N/A",0,100
+"no",7,"181-ppb","Referencia (1)","1","zeta_score Satisfactory",6,100
+"no",7,"181-ppb","Referencia (1)","1","zeta_score Questionable",0,100
+"no",7,"181-ppb","Referencia (1)","1","zeta_score Unsatisfactory",0,100
+"no",7,"181-ppb","Referencia (1)","1","zeta_score N/A",0,100
+"no",7,"182-ppb","Algoritmo A (3)","3","En_score Satisfactory",6,100
+"no",7,"182-ppb","Algoritmo A (3)","3","En_score Questionable",0,100
+"no",7,"182-ppb","Algoritmo A (3)","3","En_score Unsatisfactory",0,100
+"no",7,"182-ppb","Algoritmo A (3)","3","En_score N/A",0,100
+"no",7,"182-ppb","Algoritmo A (3)","3","z_score Satisfactory",5,83.3333333333333
+"no",7,"182-ppb","Algoritmo A (3)","3","z_score Questionable",1,83.3333333333333
+"no",7,"182-ppb","Algoritmo A (3)","3","z_score Unsatisfactory",0,83.3333333333333
+"no",7,"182-ppb","Algoritmo A (3)","3","z_score N/A",0,83.3333333333333
+"no",7,"182-ppb","Algoritmo A (3)","3","zeta_score Satisfactory",6,100
+"no",7,"182-ppb","Algoritmo A (3)","3","zeta_score Questionable",0,100
+"no",7,"182-ppb","Algoritmo A (3)","3","zeta_score Unsatisfactory",0,100
+"no",7,"182-ppb","Algoritmo A (3)","3","zeta_score N/A",0,100
+"no",7,"182-ppb","Consenso MADe (2a)","2a","En_score Satisfactory",6,100
+"no",7,"182-ppb","Consenso MADe (2a)","2a","En_score Questionable",0,100
+"no",7,"182-ppb","Consenso MADe (2a)","2a","En_score Unsatisfactory",0,100
+"no",7,"182-ppb","Consenso MADe (2a)","2a","En_score N/A",0,100
+"no",7,"182-ppb","Consenso MADe (2a)","2a","z_score Satisfactory",5,83.3333333333333
+"no",7,"182-ppb","Consenso MADe (2a)","2a","z_score Questionable",1,83.3333333333333
+"no",7,"182-ppb","Consenso MADe (2a)","2a","z_score Unsatisfactory",0,83.3333333333333
+"no",7,"182-ppb","Consenso MADe (2a)","2a","z_score N/A",0,83.3333333333333
+"no",7,"182-ppb","Consenso MADe (2a)","2a","zeta_score Satisfactory",6,100
+"no",7,"182-ppb","Consenso MADe (2a)","2a","zeta_score Questionable",0,100
+"no",7,"182-ppb","Consenso MADe (2a)","2a","zeta_score Unsatisfactory",0,100
+"no",7,"182-ppb","Consenso MADe (2a)","2a","zeta_score N/A",0,100
+"no",7,"182-ppb","Consenso nIQR (2b)","2b","En_score Satisfactory",6,100
+"no",7,"182-ppb","Consenso nIQR (2b)","2b","En_score Questionable",0,100
+"no",7,"182-ppb","Consenso nIQR (2b)","2b","En_score Unsatisfactory",0,100
+"no",7,"182-ppb","Consenso nIQR (2b)","2b","En_score N/A",0,100
+"no",7,"182-ppb","Consenso nIQR (2b)","2b","z_score Satisfactory",5,83.3333333333333
+"no",7,"182-ppb","Consenso nIQR (2b)","2b","z_score Questionable",1,83.3333333333333
+"no",7,"182-ppb","Consenso nIQR (2b)","2b","z_score Unsatisfactory",0,83.3333333333333
+"no",7,"182-ppb","Consenso nIQR (2b)","2b","z_score N/A",0,83.3333333333333
+"no",7,"182-ppb","Consenso nIQR (2b)","2b","zeta_score Satisfactory",6,100
+"no",7,"182-ppb","Consenso nIQR (2b)","2b","zeta_score Questionable",0,100
+"no",7,"182-ppb","Consenso nIQR (2b)","2b","zeta_score Unsatisfactory",0,100
+"no",7,"182-ppb","Consenso nIQR (2b)","2b","zeta_score N/A",0,100
+"no",7,"182-ppb","Referencia (1)","1","En_score Satisfactory",6,100
+"no",7,"182-ppb","Referencia (1)","1","En_score Questionable",0,100
+"no",7,"182-ppb","Referencia (1)","1","En_score Unsatisfactory",0,100
+"no",7,"182-ppb","Referencia (1)","1","En_score N/A",0,100
+"no",7,"182-ppb","Referencia (1)","1","z_score Satisfactory",6,100
+"no",7,"182-ppb","Referencia (1)","1","z_score Questionable",0,100
+"no",7,"182-ppb","Referencia (1)","1","z_score Unsatisfactory",0,100
+"no",7,"182-ppb","Referencia (1)","1","z_score N/A",0,100
+"no",7,"182-ppb","Referencia (1)","1","zeta_score Satisfactory",6,100
+"no",7,"182-ppb","Referencia (1)","1","zeta_score Questionable",0,100
+"no",7,"182-ppb","Referencia (1)","1","zeta_score Unsatisfactory",0,100
+"no",7,"182-ppb","Referencia (1)","1","zeta_score N/A",0,100
+"no",7,"42-ppb","Algoritmo A (3)","3","En_score Satisfactory",6,100
+"no",7,"42-ppb","Algoritmo A (3)","3","En_score Questionable",0,100
+"no",7,"42-ppb","Algoritmo A (3)","3","En_score Unsatisfactory",0,100
+"no",7,"42-ppb","Algoritmo A (3)","3","En_score N/A",0,100
+"no",7,"42-ppb","Algoritmo A (3)","3","z_score Satisfactory",6,100
+"no",7,"42-ppb","Algoritmo A (3)","3","z_score Questionable",0,100
+"no",7,"42-ppb","Algoritmo A (3)","3","z_score Unsatisfactory",0,100
+"no",7,"42-ppb","Algoritmo A (3)","3","z_score N/A",0,100
+"no",7,"42-ppb","Algoritmo A (3)","3","zeta_score Satisfactory",6,100
+"no",7,"42-ppb","Algoritmo A (3)","3","zeta_score Questionable",0,100
+"no",7,"42-ppb","Algoritmo A (3)","3","zeta_score Unsatisfactory",0,100
+"no",7,"42-ppb","Algoritmo A (3)","3","zeta_score N/A",0,100
+"no",7,"42-ppb","Consenso MADe (2a)","2a","En_score Satisfactory",6,100
+"no",7,"42-ppb","Consenso MADe (2a)","2a","En_score Questionable",0,100
+"no",7,"42-ppb","Consenso MADe (2a)","2a","En_score Unsatisfactory",0,100
+"no",7,"42-ppb","Consenso MADe (2a)","2a","En_score N/A",0,100
+"no",7,"42-ppb","Consenso MADe (2a)","2a","z_score Satisfactory",6,100
+"no",7,"42-ppb","Consenso MADe (2a)","2a","z_score Questionable",0,100
+"no",7,"42-ppb","Consenso MADe (2a)","2a","z_score Unsatisfactory",0,100
+"no",7,"42-ppb","Consenso MADe (2a)","2a","z_score N/A",0,100
+"no",7,"42-ppb","Consenso MADe (2a)","2a","zeta_score Satisfactory",6,100
+"no",7,"42-ppb","Consenso MADe (2a)","2a","zeta_score Questionable",0,100
+"no",7,"42-ppb","Consenso MADe (2a)","2a","zeta_score Unsatisfactory",0,100
+"no",7,"42-ppb","Consenso MADe (2a)","2a","zeta_score N/A",0,100
+"no",7,"42-ppb","Consenso nIQR (2b)","2b","En_score Satisfactory",6,100
+"no",7,"42-ppb","Consenso nIQR (2b)","2b","En_score Questionable",0,100
+"no",7,"42-ppb","Consenso nIQR (2b)","2b","En_score Unsatisfactory",0,100
+"no",7,"42-ppb","Consenso nIQR (2b)","2b","En_score N/A",0,100
+"no",7,"42-ppb","Consenso nIQR (2b)","2b","z_score Satisfactory",6,100
+"no",7,"42-ppb","Consenso nIQR (2b)","2b","z_score Questionable",0,100
+"no",7,"42-ppb","Consenso nIQR (2b)","2b","z_score Unsatisfactory",0,100
+"no",7,"42-ppb","Consenso nIQR (2b)","2b","z_score N/A",0,100
+"no",7,"42-ppb","Consenso nIQR (2b)","2b","zeta_score Satisfactory",6,100
+"no",7,"42-ppb","Consenso nIQR (2b)","2b","zeta_score Questionable",0,100
+"no",7,"42-ppb","Consenso nIQR (2b)","2b","zeta_score Unsatisfactory",0,100
+"no",7,"42-ppb","Consenso nIQR (2b)","2b","zeta_score N/A",0,100
+"no",7,"42-ppb","Referencia (1)","1","En_score Satisfactory",6,100
+"no",7,"42-ppb","Referencia (1)","1","En_score Questionable",0,100
+"no",7,"42-ppb","Referencia (1)","1","En_score Unsatisfactory",0,100
+"no",7,"42-ppb","Referencia (1)","1","En_score N/A",0,100
+"no",7,"42-ppb","Referencia (1)","1","z_score Satisfactory",6,100
+"no",7,"42-ppb","Referencia (1)","1","z_score Questionable",0,100
+"no",7,"42-ppb","Referencia (1)","1","z_score Unsatisfactory",0,100
+"no",7,"42-ppb","Referencia (1)","1","z_score N/A",0,100
+"no",7,"42-ppb","Referencia (1)","1","zeta_score Satisfactory",6,100
+"no",7,"42-ppb","Referencia (1)","1","zeta_score Questionable",0,100
+"no",7,"42-ppb","Referencia (1)","1","zeta_score Unsatisfactory",0,100
+"no",7,"42-ppb","Referencia (1)","1","zeta_score N/A",0,100
+"no",7,"81-ppb","Algoritmo A (3)","3","En_score Satisfactory",6,100
+"no",7,"81-ppb","Algoritmo A (3)","3","En_score Questionable",0,100
+"no",7,"81-ppb","Algoritmo A (3)","3","En_score Unsatisfactory",0,100
+"no",7,"81-ppb","Algoritmo A (3)","3","En_score N/A",0,100
+"no",7,"81-ppb","Algoritmo A (3)","3","z_score Satisfactory",6,100
+"no",7,"81-ppb","Algoritmo A (3)","3","z_score Questionable",0,100
+"no",7,"81-ppb","Algoritmo A (3)","3","z_score Unsatisfactory",0,100
+"no",7,"81-ppb","Algoritmo A (3)","3","z_score N/A",0,100
+"no",7,"81-ppb","Algoritmo A (3)","3","zeta_score Satisfactory",6,100
+"no",7,"81-ppb","Algoritmo A (3)","3","zeta_score Questionable",0,100
+"no",7,"81-ppb","Algoritmo A (3)","3","zeta_score Unsatisfactory",0,100
+"no",7,"81-ppb","Algoritmo A (3)","3","zeta_score N/A",0,100
+"no",7,"81-ppb","Consenso MADe (2a)","2a","En_score Satisfactory",6,100
+"no",7,"81-ppb","Consenso MADe (2a)","2a","En_score Questionable",0,100
+"no",7,"81-ppb","Consenso MADe (2a)","2a","En_score Unsatisfactory",0,100
+"no",7,"81-ppb","Consenso MADe (2a)","2a","En_score N/A",0,100
+"no",7,"81-ppb","Consenso MADe (2a)","2a","z_score Satisfactory",6,100
+"no",7,"81-ppb","Consenso MADe (2a)","2a","z_score Questionable",0,100
+"no",7,"81-ppb","Consenso MADe (2a)","2a","z_score Unsatisfactory",0,100
+"no",7,"81-ppb","Consenso MADe (2a)","2a","z_score N/A",0,100
+"no",7,"81-ppb","Consenso MADe (2a)","2a","zeta_score Satisfactory",6,100
+"no",7,"81-ppb","Consenso MADe (2a)","2a","zeta_score Questionable",0,100
+"no",7,"81-ppb","Consenso MADe (2a)","2a","zeta_score Unsatisfactory",0,100
+"no",7,"81-ppb","Consenso MADe (2a)","2a","zeta_score N/A",0,100
+"no",7,"81-ppb","Consenso nIQR (2b)","2b","En_score Satisfactory",6,100
+"no",7,"81-ppb","Consenso nIQR (2b)","2b","En_score Questionable",0,100
+"no",7,"81-ppb","Consenso nIQR (2b)","2b","En_score Unsatisfactory",0,100
+"no",7,"81-ppb","Consenso nIQR (2b)","2b","En_score N/A",0,100
+"no",7,"81-ppb","Consenso nIQR (2b)","2b","z_score Satisfactory",6,100
+"no",7,"81-ppb","Consenso nIQR (2b)","2b","z_score Questionable",0,100
+"no",7,"81-ppb","Consenso nIQR (2b)","2b","z_score Unsatisfactory",0,100
+"no",7,"81-ppb","Consenso nIQR (2b)","2b","z_score N/A",0,100
+"no",7,"81-ppb","Consenso nIQR (2b)","2b","zeta_score Satisfactory",6,100
+"no",7,"81-ppb","Consenso nIQR (2b)","2b","zeta_score Questionable",0,100
+"no",7,"81-ppb","Consenso nIQR (2b)","2b","zeta_score Unsatisfactory",0,100
+"no",7,"81-ppb","Consenso nIQR (2b)","2b","zeta_score N/A",0,100
+"no",7,"81-ppb","Referencia (1)","1","En_score Satisfactory",6,100
+"no",7,"81-ppb","Referencia (1)","1","En_score Questionable",0,100
+"no",7,"81-ppb","Referencia (1)","1","En_score Unsatisfactory",0,100
+"no",7,"81-ppb","Referencia (1)","1","En_score N/A",0,100
+"no",7,"81-ppb","Referencia (1)","1","z_score Satisfactory",6,100
+"no",7,"81-ppb","Referencia (1)","1","z_score Questionable",0,100
+"no",7,"81-ppb","Referencia (1)","1","z_score Unsatisfactory",0,100
+"no",7,"81-ppb","Referencia (1)","1","z_score N/A",0,100
+"no",7,"81-ppb","Referencia (1)","1","zeta_score Satisfactory",6,100
+"no",7,"81-ppb","Referencia (1)","1","zeta_score Questionable",0,100
+"no",7,"81-ppb","Referencia (1)","1","zeta_score Unsatisfactory",0,100
+"no",7,"81-ppb","Referencia (1)","1","zeta_score N/A",0,100
+"no",7,"82-ppb","Algoritmo A (3)","3","En_score Satisfactory",6,100
+"no",7,"82-ppb","Algoritmo A (3)","3","En_score Questionable",0,100
+"no",7,"82-ppb","Algoritmo A (3)","3","En_score Unsatisfactory",0,100
+"no",7,"82-ppb","Algoritmo A (3)","3","En_score N/A",0,100
+"no",7,"82-ppb","Algoritmo A (3)","3","z_score Satisfactory",6,100
+"no",7,"82-ppb","Algoritmo A (3)","3","z_score Questionable",0,100
+"no",7,"82-ppb","Algoritmo A (3)","3","z_score Unsatisfactory",0,100
+"no",7,"82-ppb","Algoritmo A (3)","3","z_score N/A",0,100
+"no",7,"82-ppb","Algoritmo A (3)","3","zeta_score Satisfactory",6,100
+"no",7,"82-ppb","Algoritmo A (3)","3","zeta_score Questionable",0,100
+"no",7,"82-ppb","Algoritmo A (3)","3","zeta_score Unsatisfactory",0,100
+"no",7,"82-ppb","Algoritmo A (3)","3","zeta_score N/A",0,100
+"no",7,"82-ppb","Consenso MADe (2a)","2a","En_score Satisfactory",6,100
+"no",7,"82-ppb","Consenso MADe (2a)","2a","En_score Questionable",0,100
+"no",7,"82-ppb","Consenso MADe (2a)","2a","En_score Unsatisfactory",0,100
+"no",7,"82-ppb","Consenso MADe (2a)","2a","En_score N/A",0,100
+"no",7,"82-ppb","Consenso MADe (2a)","2a","z_score Satisfactory",6,100
+"no",7,"82-ppb","Consenso MADe (2a)","2a","z_score Questionable",0,100
+"no",7,"82-ppb","Consenso MADe (2a)","2a","z_score Unsatisfactory",0,100
+"no",7,"82-ppb","Consenso MADe (2a)","2a","z_score N/A",0,100
+"no",7,"82-ppb","Consenso MADe (2a)","2a","zeta_score Satisfactory",6,100
+"no",7,"82-ppb","Consenso MADe (2a)","2a","zeta_score Questionable",0,100
+"no",7,"82-ppb","Consenso MADe (2a)","2a","zeta_score Unsatisfactory",0,100
+"no",7,"82-ppb","Consenso MADe (2a)","2a","zeta_score N/A",0,100
+"no",7,"82-ppb","Consenso nIQR (2b)","2b","En_score Satisfactory",6,100
+"no",7,"82-ppb","Consenso nIQR (2b)","2b","En_score Questionable",0,100
+"no",7,"82-ppb","Consenso nIQR (2b)","2b","En_score Unsatisfactory",0,100
+"no",7,"82-ppb","Consenso nIQR (2b)","2b","En_score N/A",0,100
+"no",7,"82-ppb","Consenso nIQR (2b)","2b","z_score Satisfactory",6,100
+"no",7,"82-ppb","Consenso nIQR (2b)","2b","z_score Questionable",0,100
+"no",7,"82-ppb","Consenso nIQR (2b)","2b","z_score Unsatisfactory",0,100
+"no",7,"82-ppb","Consenso nIQR (2b)","2b","z_score N/A",0,100
+"no",7,"82-ppb","Consenso nIQR (2b)","2b","zeta_score Satisfactory",6,100
+"no",7,"82-ppb","Consenso nIQR (2b)","2b","zeta_score Questionable",0,100
+"no",7,"82-ppb","Consenso nIQR (2b)","2b","zeta_score Unsatisfactory",0,100
+"no",7,"82-ppb","Consenso nIQR (2b)","2b","zeta_score N/A",0,100
+"no",7,"82-ppb","Referencia (1)","1","En_score Satisfactory",6,100
+"no",7,"82-ppb","Referencia (1)","1","En_score Questionable",0,100
+"no",7,"82-ppb","Referencia (1)","1","En_score Unsatisfactory",0,100
+"no",7,"82-ppb","Referencia (1)","1","En_score N/A",0,100
+"no",7,"82-ppb","Referencia (1)","1","z_score Satisfactory",6,100
+"no",7,"82-ppb","Referencia (1)","1","z_score Questionable",0,100
+"no",7,"82-ppb","Referencia (1)","1","z_score Unsatisfactory",0,100
+"no",7,"82-ppb","Referencia (1)","1","z_score N/A",0,100
+"no",7,"82-ppb","Referencia (1)","1","zeta_score Satisfactory",6,100
+"no",7,"82-ppb","Referencia (1)","1","zeta_score Questionable",0,100
+"no",7,"82-ppb","Referencia (1)","1","zeta_score Unsatisfactory",0,100
+"no",7,"82-ppb","Referencia (1)","1","zeta_score N/A",0,100
+"no2",7,"0-ppb","Algoritmo A (3)","3","En_score Satisfactory",6,100
+"no2",7,"0-ppb","Algoritmo A (3)","3","En_score Questionable",0,100
+"no2",7,"0-ppb","Algoritmo A (3)","3","En_score Unsatisfactory",0,100
+"no2",7,"0-ppb","Algoritmo A (3)","3","En_score N/A",0,100
+"no2",7,"0-ppb","Algoritmo A (3)","3","z_score Satisfactory",6,100
+"no2",7,"0-ppb","Algoritmo A (3)","3","z_score Questionable",0,100
+"no2",7,"0-ppb","Algoritmo A (3)","3","z_score Unsatisfactory",0,100
+"no2",7,"0-ppb","Algoritmo A (3)","3","z_score N/A",0,100
+"no2",7,"0-ppb","Algoritmo A (3)","3","zeta_score Satisfactory",6,100
+"no2",7,"0-ppb","Algoritmo A (3)","3","zeta_score Questionable",0,100
+"no2",7,"0-ppb","Algoritmo A (3)","3","zeta_score Unsatisfactory",0,100
+"no2",7,"0-ppb","Algoritmo A (3)","3","zeta_score N/A",0,100
+"no2",7,"0-ppb","Consenso MADe (2a)","2a","En_score Satisfactory",6,100
+"no2",7,"0-ppb","Consenso MADe (2a)","2a","En_score Questionable",0,100
+"no2",7,"0-ppb","Consenso MADe (2a)","2a","En_score Unsatisfactory",0,100
+"no2",7,"0-ppb","Consenso MADe (2a)","2a","En_score N/A",0,100
+"no2",7,"0-ppb","Consenso MADe (2a)","2a","z_score Satisfactory",6,100
+"no2",7,"0-ppb","Consenso MADe (2a)","2a","z_score Questionable",0,100
+"no2",7,"0-ppb","Consenso MADe (2a)","2a","z_score Unsatisfactory",0,100
+"no2",7,"0-ppb","Consenso MADe (2a)","2a","z_score N/A",0,100
+"no2",7,"0-ppb","Consenso MADe (2a)","2a","zeta_score Satisfactory",6,100
+"no2",7,"0-ppb","Consenso MADe (2a)","2a","zeta_score Questionable",0,100
+"no2",7,"0-ppb","Consenso MADe (2a)","2a","zeta_score Unsatisfactory",0,100
+"no2",7,"0-ppb","Consenso MADe (2a)","2a","zeta_score N/A",0,100
+"no2",7,"0-ppb","Consenso nIQR (2b)","2b","En_score Satisfactory",6,100
+"no2",7,"0-ppb","Consenso nIQR (2b)","2b","En_score Questionable",0,100
+"no2",7,"0-ppb","Consenso nIQR (2b)","2b","En_score Unsatisfactory",0,100
+"no2",7,"0-ppb","Consenso nIQR (2b)","2b","En_score N/A",0,100
+"no2",7,"0-ppb","Consenso nIQR (2b)","2b","z_score Satisfactory",6,100
+"no2",7,"0-ppb","Consenso nIQR (2b)","2b","z_score Questionable",0,100
+"no2",7,"0-ppb","Consenso nIQR (2b)","2b","z_score Unsatisfactory",0,100
+"no2",7,"0-ppb","Consenso nIQR (2b)","2b","z_score N/A",0,100
+"no2",7,"0-ppb","Consenso nIQR (2b)","2b","zeta_score Satisfactory",6,100
+"no2",7,"0-ppb","Consenso nIQR (2b)","2b","zeta_score Questionable",0,100
+"no2",7,"0-ppb","Consenso nIQR (2b)","2b","zeta_score Unsatisfactory",0,100
+"no2",7,"0-ppb","Consenso nIQR (2b)","2b","zeta_score N/A",0,100
+"no2",7,"0-ppb","Referencia (1)","1","En_score Satisfactory",6,100
+"no2",7,"0-ppb","Referencia (1)","1","En_score Questionable",0,100
+"no2",7,"0-ppb","Referencia (1)","1","En_score Unsatisfactory",0,100
+"no2",7,"0-ppb","Referencia (1)","1","En_score N/A",0,100
+"no2",7,"0-ppb","Referencia (1)","1","z_score Satisfactory",6,100
+"no2",7,"0-ppb","Referencia (1)","1","z_score Questionable",0,100
+"no2",7,"0-ppb","Referencia (1)","1","z_score Unsatisfactory",0,100
+"no2",7,"0-ppb","Referencia (1)","1","z_score N/A",0,100
+"no2",7,"0-ppb","Referencia (1)","1","zeta_score Satisfactory",6,100
+"no2",7,"0-ppb","Referencia (1)","1","zeta_score Questionable",0,100
+"no2",7,"0-ppb","Referencia (1)","1","zeta_score Unsatisfactory",0,100
+"no2",7,"0-ppb","Referencia (1)","1","zeta_score N/A",0,100
+"no2",7,"120-ppb","Algoritmo A (3)","3","En_score Satisfactory",6,100
+"no2",7,"120-ppb","Algoritmo A (3)","3","En_score Questionable",0,100
+"no2",7,"120-ppb","Algoritmo A (3)","3","En_score Unsatisfactory",0,100
+"no2",7,"120-ppb","Algoritmo A (3)","3","En_score N/A",0,100
+"no2",7,"120-ppb","Algoritmo A (3)","3","z_score Satisfactory",6,100
+"no2",7,"120-ppb","Algoritmo A (3)","3","z_score Questionable",0,100
+"no2",7,"120-ppb","Algoritmo A (3)","3","z_score Unsatisfactory",0,100
+"no2",7,"120-ppb","Algoritmo A (3)","3","z_score N/A",0,100
+"no2",7,"120-ppb","Algoritmo A (3)","3","zeta_score Satisfactory",6,100
+"no2",7,"120-ppb","Algoritmo A (3)","3","zeta_score Questionable",0,100
+"no2",7,"120-ppb","Algoritmo A (3)","3","zeta_score Unsatisfactory",0,100
+"no2",7,"120-ppb","Algoritmo A (3)","3","zeta_score N/A",0,100
+"no2",7,"120-ppb","Consenso MADe (2a)","2a","En_score Satisfactory",6,100
+"no2",7,"120-ppb","Consenso MADe (2a)","2a","En_score Questionable",0,100
+"no2",7,"120-ppb","Consenso MADe (2a)","2a","En_score Unsatisfactory",0,100
+"no2",7,"120-ppb","Consenso MADe (2a)","2a","En_score N/A",0,100
+"no2",7,"120-ppb","Consenso MADe (2a)","2a","z_score Satisfactory",6,100
+"no2",7,"120-ppb","Consenso MADe (2a)","2a","z_score Questionable",0,100
+"no2",7,"120-ppb","Consenso MADe (2a)","2a","z_score Unsatisfactory",0,100
+"no2",7,"120-ppb","Consenso MADe (2a)","2a","z_score N/A",0,100
+"no2",7,"120-ppb","Consenso MADe (2a)","2a","zeta_score Satisfactory",6,100
+"no2",7,"120-ppb","Consenso MADe (2a)","2a","zeta_score Questionable",0,100
+"no2",7,"120-ppb","Consenso MADe (2a)","2a","zeta_score Unsatisfactory",0,100
+"no2",7,"120-ppb","Consenso MADe (2a)","2a","zeta_score N/A",0,100
+"no2",7,"120-ppb","Consenso nIQR (2b)","2b","En_score Satisfactory",6,100
+"no2",7,"120-ppb","Consenso nIQR (2b)","2b","En_score Questionable",0,100
+"no2",7,"120-ppb","Consenso nIQR (2b)","2b","En_score Unsatisfactory",0,100
+"no2",7,"120-ppb","Consenso nIQR (2b)","2b","En_score N/A",0,100
+"no2",7,"120-ppb","Consenso nIQR (2b)","2b","z_score Satisfactory",6,100
+"no2",7,"120-ppb","Consenso nIQR (2b)","2b","z_score Questionable",0,100
+"no2",7,"120-ppb","Consenso nIQR (2b)","2b","z_score Unsatisfactory",0,100
+"no2",7,"120-ppb","Consenso nIQR (2b)","2b","z_score N/A",0,100
+"no2",7,"120-ppb","Consenso nIQR (2b)","2b","zeta_score Satisfactory",6,100
+"no2",7,"120-ppb","Consenso nIQR (2b)","2b","zeta_score Questionable",0,100
+"no2",7,"120-ppb","Consenso nIQR (2b)","2b","zeta_score Unsatisfactory",0,100
+"no2",7,"120-ppb","Consenso nIQR (2b)","2b","zeta_score N/A",0,100
+"no2",7,"120-ppb","Referencia (1)","1","En_score Satisfactory",6,100
+"no2",7,"120-ppb","Referencia (1)","1","En_score Questionable",0,100
+"no2",7,"120-ppb","Referencia (1)","1","En_score Unsatisfactory",0,100
+"no2",7,"120-ppb","Referencia (1)","1","En_score N/A",0,100
+"no2",7,"120-ppb","Referencia (1)","1","z_score Satisfactory",6,100
+"no2",7,"120-ppb","Referencia (1)","1","z_score Questionable",0,100
+"no2",7,"120-ppb","Referencia (1)","1","z_score Unsatisfactory",0,100
+"no2",7,"120-ppb","Referencia (1)","1","z_score N/A",0,100
+"no2",7,"120-ppb","Referencia (1)","1","zeta_score Satisfactory",6,100
+"no2",7,"120-ppb","Referencia (1)","1","zeta_score Questionable",0,100
+"no2",7,"120-ppb","Referencia (1)","1","zeta_score Unsatisfactory",0,100
+"no2",7,"120-ppb","Referencia (1)","1","zeta_score N/A",0,100
+"no2",7,"30-ppb","Algoritmo A (3)","3","En_score Satisfactory",6,100
+"no2",7,"30-ppb","Algoritmo A (3)","3","En_score Questionable",0,100
+"no2",7,"30-ppb","Algoritmo A (3)","3","En_score Unsatisfactory",0,100
+"no2",7,"30-ppb","Algoritmo A (3)","3","En_score N/A",0,100
+"no2",7,"30-ppb","Algoritmo A (3)","3","z_score Satisfactory",6,100
+"no2",7,"30-ppb","Algoritmo A (3)","3","z_score Questionable",0,100
+"no2",7,"30-ppb","Algoritmo A (3)","3","z_score Unsatisfactory",0,100
+"no2",7,"30-ppb","Algoritmo A (3)","3","z_score N/A",0,100
+"no2",7,"30-ppb","Algoritmo A (3)","3","zeta_score Satisfactory",6,100
+"no2",7,"30-ppb","Algoritmo A (3)","3","zeta_score Questionable",0,100
+"no2",7,"30-ppb","Algoritmo A (3)","3","zeta_score Unsatisfactory",0,100
+"no2",7,"30-ppb","Algoritmo A (3)","3","zeta_score N/A",0,100
+"no2",7,"30-ppb","Consenso MADe (2a)","2a","En_score Satisfactory",6,100
+"no2",7,"30-ppb","Consenso MADe (2a)","2a","En_score Questionable",0,100
+"no2",7,"30-ppb","Consenso MADe (2a)","2a","En_score Unsatisfactory",0,100
+"no2",7,"30-ppb","Consenso MADe (2a)","2a","En_score N/A",0,100
+"no2",7,"30-ppb","Consenso MADe (2a)","2a","z_score Satisfactory",6,100
+"no2",7,"30-ppb","Consenso MADe (2a)","2a","z_score Questionable",0,100
+"no2",7,"30-ppb","Consenso MADe (2a)","2a","z_score Unsatisfactory",0,100
+"no2",7,"30-ppb","Consenso MADe (2a)","2a","z_score N/A",0,100
+"no2",7,"30-ppb","Consenso MADe (2a)","2a","zeta_score Satisfactory",6,100
+"no2",7,"30-ppb","Consenso MADe (2a)","2a","zeta_score Questionable",0,100
+"no2",7,"30-ppb","Consenso MADe (2a)","2a","zeta_score Unsatisfactory",0,100
+"no2",7,"30-ppb","Consenso MADe (2a)","2a","zeta_score N/A",0,100
+"no2",7,"30-ppb","Consenso nIQR (2b)","2b","En_score Satisfactory",6,100
+"no2",7,"30-ppb","Consenso nIQR (2b)","2b","En_score Questionable",0,100
+"no2",7,"30-ppb","Consenso nIQR (2b)","2b","En_score Unsatisfactory",0,100
+"no2",7,"30-ppb","Consenso nIQR (2b)","2b","En_score N/A",0,100
+"no2",7,"30-ppb","Consenso nIQR (2b)","2b","z_score Satisfactory",6,100
+"no2",7,"30-ppb","Consenso nIQR (2b)","2b","z_score Questionable",0,100
+"no2",7,"30-ppb","Consenso nIQR (2b)","2b","z_score Unsatisfactory",0,100
+"no2",7,"30-ppb","Consenso nIQR (2b)","2b","z_score N/A",0,100
+"no2",7,"30-ppb","Consenso nIQR (2b)","2b","zeta_score Satisfactory",6,100
+"no2",7,"30-ppb","Consenso nIQR (2b)","2b","zeta_score Questionable",0,100
+"no2",7,"30-ppb","Consenso nIQR (2b)","2b","zeta_score Unsatisfactory",0,100
+"no2",7,"30-ppb","Consenso nIQR (2b)","2b","zeta_score N/A",0,100
+"no2",7,"30-ppb","Referencia (1)","1","En_score Satisfactory",6,100
+"no2",7,"30-ppb","Referencia (1)","1","En_score Questionable",0,100
+"no2",7,"30-ppb","Referencia (1)","1","En_score Unsatisfactory",0,100
+"no2",7,"30-ppb","Referencia (1)","1","En_score N/A",0,100
+"no2",7,"30-ppb","Referencia (1)","1","z_score Satisfactory",6,100
+"no2",7,"30-ppb","Referencia (1)","1","z_score Questionable",0,100
+"no2",7,"30-ppb","Referencia (1)","1","z_score Unsatisfactory",0,100
+"no2",7,"30-ppb","Referencia (1)","1","z_score N/A",0,100
+"no2",7,"30-ppb","Referencia (1)","1","zeta_score Satisfactory",6,100
+"no2",7,"30-ppb","Referencia (1)","1","zeta_score Questionable",0,100
+"no2",7,"30-ppb","Referencia (1)","1","zeta_score Unsatisfactory",0,100
+"no2",7,"30-ppb","Referencia (1)","1","zeta_score N/A",0,100
+"no2",7,"60-ppb","Algoritmo A (3)","3","En_score Satisfactory",6,100
+"no2",7,"60-ppb","Algoritmo A (3)","3","En_score Questionable",0,100
+"no2",7,"60-ppb","Algoritmo A (3)","3","En_score Unsatisfactory",0,100
+"no2",7,"60-ppb","Algoritmo A (3)","3","En_score N/A",0,100
+"no2",7,"60-ppb","Algoritmo A (3)","3","z_score Satisfactory",4,66.6666666666667
+"no2",7,"60-ppb","Algoritmo A (3)","3","z_score Questionable",1,66.6666666666667
+"no2",7,"60-ppb","Algoritmo A (3)","3","z_score Unsatisfactory",1,66.6666666666667
+"no2",7,"60-ppb","Algoritmo A (3)","3","z_score N/A",0,66.6666666666667
+"no2",7,"60-ppb","Algoritmo A (3)","3","zeta_score Satisfactory",6,100
+"no2",7,"60-ppb","Algoritmo A (3)","3","zeta_score Questionable",0,100
+"no2",7,"60-ppb","Algoritmo A (3)","3","zeta_score Unsatisfactory",0,100
+"no2",7,"60-ppb","Algoritmo A (3)","3","zeta_score N/A",0,100
+"no2",7,"60-ppb","Consenso MADe (2a)","2a","En_score Satisfactory",6,100
+"no2",7,"60-ppb","Consenso MADe (2a)","2a","En_score Questionable",0,100
+"no2",7,"60-ppb","Consenso MADe (2a)","2a","En_score Unsatisfactory",0,100
+"no2",7,"60-ppb","Consenso MADe (2a)","2a","En_score N/A",0,100
+"no2",7,"60-ppb","Consenso MADe (2a)","2a","z_score Satisfactory",4,66.6666666666667
+"no2",7,"60-ppb","Consenso MADe (2a)","2a","z_score Questionable",0,66.6666666666667
+"no2",7,"60-ppb","Consenso MADe (2a)","2a","z_score Unsatisfactory",2,66.6666666666667
+"no2",7,"60-ppb","Consenso MADe (2a)","2a","z_score N/A",0,66.6666666666667
+"no2",7,"60-ppb","Consenso MADe (2a)","2a","zeta_score Satisfactory",6,100
+"no2",7,"60-ppb","Consenso MADe (2a)","2a","zeta_score Questionable",0,100
+"no2",7,"60-ppb","Consenso MADe (2a)","2a","zeta_score Unsatisfactory",0,100
+"no2",7,"60-ppb","Consenso MADe (2a)","2a","zeta_score N/A",0,100
+"no2",7,"60-ppb","Consenso nIQR (2b)","2b","En_score Satisfactory",6,100
+"no2",7,"60-ppb","Consenso nIQR (2b)","2b","En_score Questionable",0,100
+"no2",7,"60-ppb","Consenso nIQR (2b)","2b","En_score Unsatisfactory",0,100
+"no2",7,"60-ppb","Consenso nIQR (2b)","2b","En_score N/A",0,100
+"no2",7,"60-ppb","Consenso nIQR (2b)","2b","z_score Satisfactory",4,66.6666666666667
+"no2",7,"60-ppb","Consenso nIQR (2b)","2b","z_score Questionable",0,66.6666666666667
+"no2",7,"60-ppb","Consenso nIQR (2b)","2b","z_score Unsatisfactory",2,66.6666666666667
+"no2",7,"60-ppb","Consenso nIQR (2b)","2b","z_score N/A",0,66.6666666666667
+"no2",7,"60-ppb","Consenso nIQR (2b)","2b","zeta_score Satisfactory",6,100
+"no2",7,"60-ppb","Consenso nIQR (2b)","2b","zeta_score Questionable",0,100
+"no2",7,"60-ppb","Consenso nIQR (2b)","2b","zeta_score Unsatisfactory",0,100
+"no2",7,"60-ppb","Consenso nIQR (2b)","2b","zeta_score N/A",0,100
+"no2",7,"60-ppb","Referencia (1)","1","En_score Satisfactory",6,100
+"no2",7,"60-ppb","Referencia (1)","1","En_score Questionable",0,100
+"no2",7,"60-ppb","Referencia (1)","1","En_score Unsatisfactory",0,100
+"no2",7,"60-ppb","Referencia (1)","1","En_score N/A",0,100
+"no2",7,"60-ppb","Referencia (1)","1","z_score Satisfactory",6,100
+"no2",7,"60-ppb","Referencia (1)","1","z_score Questionable",0,100
+"no2",7,"60-ppb","Referencia (1)","1","z_score Unsatisfactory",0,100
+"no2",7,"60-ppb","Referencia (1)","1","z_score N/A",0,100
+"no2",7,"60-ppb","Referencia (1)","1","zeta_score Satisfactory",6,100
+"no2",7,"60-ppb","Referencia (1)","1","zeta_score Questionable",0,100
+"no2",7,"60-ppb","Referencia (1)","1","zeta_score Unsatisfactory",0,100
+"no2",7,"60-ppb","Referencia (1)","1","zeta_score N/A",0,100
+"no2",7,"90-ppb","Algoritmo A (3)","3","En_score Satisfactory",6,100
+"no2",7,"90-ppb","Algoritmo A (3)","3","En_score Questionable",0,100
+"no2",7,"90-ppb","Algoritmo A (3)","3","En_score Unsatisfactory",0,100
+"no2",7,"90-ppb","Algoritmo A (3)","3","En_score N/A",0,100
+"no2",7,"90-ppb","Algoritmo A (3)","3","z_score Satisfactory",6,100
+"no2",7,"90-ppb","Algoritmo A (3)","3","z_score Questionable",0,100
+"no2",7,"90-ppb","Algoritmo A (3)","3","z_score Unsatisfactory",0,100
+"no2",7,"90-ppb","Algoritmo A (3)","3","z_score N/A",0,100
+"no2",7,"90-ppb","Algoritmo A (3)","3","zeta_score Satisfactory",6,100
+"no2",7,"90-ppb","Algoritmo A (3)","3","zeta_score Questionable",0,100
+"no2",7,"90-ppb","Algoritmo A (3)","3","zeta_score Unsatisfactory",0,100
+"no2",7,"90-ppb","Algoritmo A (3)","3","zeta_score N/A",0,100
+"no2",7,"90-ppb","Consenso MADe (2a)","2a","En_score Satisfactory",6,100
+"no2",7,"90-ppb","Consenso MADe (2a)","2a","En_score Questionable",0,100
+"no2",7,"90-ppb","Consenso MADe (2a)","2a","En_score Unsatisfactory",0,100
+"no2",7,"90-ppb","Consenso MADe (2a)","2a","En_score N/A",0,100
+"no2",7,"90-ppb","Consenso MADe (2a)","2a","z_score Satisfactory",6,100
+"no2",7,"90-ppb","Consenso MADe (2a)","2a","z_score Questionable",0,100
+"no2",7,"90-ppb","Consenso MADe (2a)","2a","z_score Unsatisfactory",0,100
+"no2",7,"90-ppb","Consenso MADe (2a)","2a","z_score N/A",0,100
+"no2",7,"90-ppb","Consenso MADe (2a)","2a","zeta_score Satisfactory",6,100
+"no2",7,"90-ppb","Consenso MADe (2a)","2a","zeta_score Questionable",0,100
+"no2",7,"90-ppb","Consenso MADe (2a)","2a","zeta_score Unsatisfactory",0,100
+"no2",7,"90-ppb","Consenso MADe (2a)","2a","zeta_score N/A",0,100
+"no2",7,"90-ppb","Consenso nIQR (2b)","2b","En_score Satisfactory",6,100
+"no2",7,"90-ppb","Consenso nIQR (2b)","2b","En_score Questionable",0,100
+"no2",7,"90-ppb","Consenso nIQR (2b)","2b","En_score Unsatisfactory",0,100
+"no2",7,"90-ppb","Consenso nIQR (2b)","2b","En_score N/A",0,100
+"no2",7,"90-ppb","Consenso nIQR (2b)","2b","z_score Satisfactory",5,83.3333333333333
+"no2",7,"90-ppb","Consenso nIQR (2b)","2b","z_score Questionable",1,83.3333333333333
+"no2",7,"90-ppb","Consenso nIQR (2b)","2b","z_score Unsatisfactory",0,83.3333333333333
+"no2",7,"90-ppb","Consenso nIQR (2b)","2b","z_score N/A",0,83.3333333333333
+"no2",7,"90-ppb","Consenso nIQR (2b)","2b","zeta_score Satisfactory",6,100
+"no2",7,"90-ppb","Consenso nIQR (2b)","2b","zeta_score Questionable",0,100
+"no2",7,"90-ppb","Consenso nIQR (2b)","2b","zeta_score Unsatisfactory",0,100
+"no2",7,"90-ppb","Consenso nIQR (2b)","2b","zeta_score N/A",0,100
+"no2",7,"90-ppb","Referencia (1)","1","En_score Satisfactory",6,100
+"no2",7,"90-ppb","Referencia (1)","1","En_score Questionable",0,100
+"no2",7,"90-ppb","Referencia (1)","1","En_score Unsatisfactory",0,100
+"no2",7,"90-ppb","Referencia (1)","1","En_score N/A",0,100
+"no2",7,"90-ppb","Referencia (1)","1","z_score Satisfactory",6,100
+"no2",7,"90-ppb","Referencia (1)","1","z_score Questionable",0,100
+"no2",7,"90-ppb","Referencia (1)","1","z_score Unsatisfactory",0,100
+"no2",7,"90-ppb","Referencia (1)","1","z_score N/A",0,100
+"no2",7,"90-ppb","Referencia (1)","1","zeta_score Satisfactory",6,100
+"no2",7,"90-ppb","Referencia (1)","1","zeta_score Questionable",0,100
+"no2",7,"90-ppb","Referencia (1)","1","zeta_score Unsatisfactory",0,100
+"no2",7,"90-ppb","Referencia (1)","1","zeta_score N/A",0,100
+"o3",7,"0-ppb","Algoritmo A (3)","3","En_score Satisfactory",6,100
+"o3",7,"0-ppb","Algoritmo A (3)","3","En_score Questionable",0,100
+"o3",7,"0-ppb","Algoritmo A (3)","3","En_score Unsatisfactory",0,100
+"o3",7,"0-ppb","Algoritmo A (3)","3","En_score N/A",0,100
+"o3",7,"0-ppb","Algoritmo A (3)","3","z_score Satisfactory",6,100
+"o3",7,"0-ppb","Algoritmo A (3)","3","z_score Questionable",0,100
+"o3",7,"0-ppb","Algoritmo A (3)","3","z_score Unsatisfactory",0,100
+"o3",7,"0-ppb","Algoritmo A (3)","3","z_score N/A",0,100
+"o3",7,"0-ppb","Algoritmo A (3)","3","zeta_score Satisfactory",6,100
+"o3",7,"0-ppb","Algoritmo A (3)","3","zeta_score Questionable",0,100
+"o3",7,"0-ppb","Algoritmo A (3)","3","zeta_score Unsatisfactory",0,100
+"o3",7,"0-ppb","Algoritmo A (3)","3","zeta_score N/A",0,100
+"o3",7,"0-ppb","Consenso MADe (2a)","2a","En_score Satisfactory",6,100
+"o3",7,"0-ppb","Consenso MADe (2a)","2a","En_score Questionable",0,100
+"o3",7,"0-ppb","Consenso MADe (2a)","2a","En_score Unsatisfactory",0,100
+"o3",7,"0-ppb","Consenso MADe (2a)","2a","En_score N/A",0,100
+"o3",7,"0-ppb","Consenso MADe (2a)","2a","z_score Satisfactory",6,100
+"o3",7,"0-ppb","Consenso MADe (2a)","2a","z_score Questionable",0,100
+"o3",7,"0-ppb","Consenso MADe (2a)","2a","z_score Unsatisfactory",0,100
+"o3",7,"0-ppb","Consenso MADe (2a)","2a","z_score N/A",0,100
+"o3",7,"0-ppb","Consenso MADe (2a)","2a","zeta_score Satisfactory",6,100
+"o3",7,"0-ppb","Consenso MADe (2a)","2a","zeta_score Questionable",0,100
+"o3",7,"0-ppb","Consenso MADe (2a)","2a","zeta_score Unsatisfactory",0,100
+"o3",7,"0-ppb","Consenso MADe (2a)","2a","zeta_score N/A",0,100
+"o3",7,"0-ppb","Consenso nIQR (2b)","2b","En_score Satisfactory",6,100
+"o3",7,"0-ppb","Consenso nIQR (2b)","2b","En_score Questionable",0,100
+"o3",7,"0-ppb","Consenso nIQR (2b)","2b","En_score Unsatisfactory",0,100
+"o3",7,"0-ppb","Consenso nIQR (2b)","2b","En_score N/A",0,100
+"o3",7,"0-ppb","Consenso nIQR (2b)","2b","z_score Satisfactory",6,100
+"o3",7,"0-ppb","Consenso nIQR (2b)","2b","z_score Questionable",0,100
+"o3",7,"0-ppb","Consenso nIQR (2b)","2b","z_score Unsatisfactory",0,100
+"o3",7,"0-ppb","Consenso nIQR (2b)","2b","z_score N/A",0,100
+"o3",7,"0-ppb","Consenso nIQR (2b)","2b","zeta_score Satisfactory",6,100
+"o3",7,"0-ppb","Consenso nIQR (2b)","2b","zeta_score Questionable",0,100
+"o3",7,"0-ppb","Consenso nIQR (2b)","2b","zeta_score Unsatisfactory",0,100
+"o3",7,"0-ppb","Consenso nIQR (2b)","2b","zeta_score N/A",0,100
+"o3",7,"0-ppb","Referencia (1)","1","En_score Satisfactory",6,100
+"o3",7,"0-ppb","Referencia (1)","1","En_score Questionable",0,100
+"o3",7,"0-ppb","Referencia (1)","1","En_score Unsatisfactory",0,100
+"o3",7,"0-ppb","Referencia (1)","1","En_score N/A",0,100
+"o3",7,"0-ppb","Referencia (1)","1","z_score Satisfactory",6,100
+"o3",7,"0-ppb","Referencia (1)","1","z_score Questionable",0,100
+"o3",7,"0-ppb","Referencia (1)","1","z_score Unsatisfactory",0,100
+"o3",7,"0-ppb","Referencia (1)","1","z_score N/A",0,100
+"o3",7,"0-ppb","Referencia (1)","1","zeta_score Satisfactory",6,100
+"o3",7,"0-ppb","Referencia (1)","1","zeta_score Questionable",0,100
+"o3",7,"0-ppb","Referencia (1)","1","zeta_score Unsatisfactory",0,100
+"o3",7,"0-ppb","Referencia (1)","1","zeta_score N/A",0,100
+"o3",7,"120-ppb","Algoritmo A (3)","3","En_score Satisfactory",6,100
+"o3",7,"120-ppb","Algoritmo A (3)","3","En_score Questionable",0,100
+"o3",7,"120-ppb","Algoritmo A (3)","3","En_score Unsatisfactory",0,100
+"o3",7,"120-ppb","Algoritmo A (3)","3","En_score N/A",0,100
+"o3",7,"120-ppb","Algoritmo A (3)","3","z_score Satisfactory",6,100
+"o3",7,"120-ppb","Algoritmo A (3)","3","z_score Questionable",0,100
+"o3",7,"120-ppb","Algoritmo A (3)","3","z_score Unsatisfactory",0,100
+"o3",7,"120-ppb","Algoritmo A (3)","3","z_score N/A",0,100
+"o3",7,"120-ppb","Algoritmo A (3)","3","zeta_score Satisfactory",6,100
+"o3",7,"120-ppb","Algoritmo A (3)","3","zeta_score Questionable",0,100
+"o3",7,"120-ppb","Algoritmo A (3)","3","zeta_score Unsatisfactory",0,100
+"o3",7,"120-ppb","Algoritmo A (3)","3","zeta_score N/A",0,100
+"o3",7,"120-ppb","Consenso MADe (2a)","2a","En_score Satisfactory",6,100
+"o3",7,"120-ppb","Consenso MADe (2a)","2a","En_score Questionable",0,100
+"o3",7,"120-ppb","Consenso MADe (2a)","2a","En_score Unsatisfactory",0,100
+"o3",7,"120-ppb","Consenso MADe (2a)","2a","En_score N/A",0,100
+"o3",7,"120-ppb","Consenso MADe (2a)","2a","z_score Satisfactory",6,100
+"o3",7,"120-ppb","Consenso MADe (2a)","2a","z_score Questionable",0,100
+"o3",7,"120-ppb","Consenso MADe (2a)","2a","z_score Unsatisfactory",0,100
+"o3",7,"120-ppb","Consenso MADe (2a)","2a","z_score N/A",0,100
+"o3",7,"120-ppb","Consenso MADe (2a)","2a","zeta_score Satisfactory",6,100
+"o3",7,"120-ppb","Consenso MADe (2a)","2a","zeta_score Questionable",0,100
+"o3",7,"120-ppb","Consenso MADe (2a)","2a","zeta_score Unsatisfactory",0,100
+"o3",7,"120-ppb","Consenso MADe (2a)","2a","zeta_score N/A",0,100
+"o3",7,"120-ppb","Consenso nIQR (2b)","2b","En_score Satisfactory",6,100
+"o3",7,"120-ppb","Consenso nIQR (2b)","2b","En_score Questionable",0,100
+"o3",7,"120-ppb","Consenso nIQR (2b)","2b","En_score Unsatisfactory",0,100
+"o3",7,"120-ppb","Consenso nIQR (2b)","2b","En_score N/A",0,100
+"o3",7,"120-ppb","Consenso nIQR (2b)","2b","z_score Satisfactory",6,100
+"o3",7,"120-ppb","Consenso nIQR (2b)","2b","z_score Questionable",0,100
+"o3",7,"120-ppb","Consenso nIQR (2b)","2b","z_score Unsatisfactory",0,100
+"o3",7,"120-ppb","Consenso nIQR (2b)","2b","z_score N/A",0,100
+"o3",7,"120-ppb","Consenso nIQR (2b)","2b","zeta_score Satisfactory",6,100
+"o3",7,"120-ppb","Consenso nIQR (2b)","2b","zeta_score Questionable",0,100
+"o3",7,"120-ppb","Consenso nIQR (2b)","2b","zeta_score Unsatisfactory",0,100
+"o3",7,"120-ppb","Consenso nIQR (2b)","2b","zeta_score N/A",0,100
+"o3",7,"120-ppb","Referencia (1)","1","En_score Satisfactory",6,100
+"o3",7,"120-ppb","Referencia (1)","1","En_score Questionable",0,100
+"o3",7,"120-ppb","Referencia (1)","1","En_score Unsatisfactory",0,100
+"o3",7,"120-ppb","Referencia (1)","1","En_score N/A",0,100
+"o3",7,"120-ppb","Referencia (1)","1","z_score Satisfactory",6,100
+"o3",7,"120-ppb","Referencia (1)","1","z_score Questionable",0,100
+"o3",7,"120-ppb","Referencia (1)","1","z_score Unsatisfactory",0,100
+"o3",7,"120-ppb","Referencia (1)","1","z_score N/A",0,100
+"o3",7,"120-ppb","Referencia (1)","1","zeta_score Satisfactory",6,100
+"o3",7,"120-ppb","Referencia (1)","1","zeta_score Questionable",0,100
+"o3",7,"120-ppb","Referencia (1)","1","zeta_score Unsatisfactory",0,100
+"o3",7,"120-ppb","Referencia (1)","1","zeta_score N/A",0,100
+"o3",7,"180-ppb","Algoritmo A (3)","3","En_score Satisfactory",6,100
+"o3",7,"180-ppb","Algoritmo A (3)","3","En_score Questionable",0,100
+"o3",7,"180-ppb","Algoritmo A (3)","3","En_score Unsatisfactory",0,100
+"o3",7,"180-ppb","Algoritmo A (3)","3","En_score N/A",0,100
+"o3",7,"180-ppb","Algoritmo A (3)","3","z_score Satisfactory",6,100
+"o3",7,"180-ppb","Algoritmo A (3)","3","z_score Questionable",0,100
+"o3",7,"180-ppb","Algoritmo A (3)","3","z_score Unsatisfactory",0,100
+"o3",7,"180-ppb","Algoritmo A (3)","3","z_score N/A",0,100
+"o3",7,"180-ppb","Algoritmo A (3)","3","zeta_score Satisfactory",6,100
+"o3",7,"180-ppb","Algoritmo A (3)","3","zeta_score Questionable",0,100
+"o3",7,"180-ppb","Algoritmo A (3)","3","zeta_score Unsatisfactory",0,100
+"o3",7,"180-ppb","Algoritmo A (3)","3","zeta_score N/A",0,100
+"o3",7,"180-ppb","Consenso MADe (2a)","2a","En_score Satisfactory",6,100
+"o3",7,"180-ppb","Consenso MADe (2a)","2a","En_score Questionable",0,100
+"o3",7,"180-ppb","Consenso MADe (2a)","2a","En_score Unsatisfactory",0,100
+"o3",7,"180-ppb","Consenso MADe (2a)","2a","En_score N/A",0,100
+"o3",7,"180-ppb","Consenso MADe (2a)","2a","z_score Satisfactory",6,100
+"o3",7,"180-ppb","Consenso MADe (2a)","2a","z_score Questionable",0,100
+"o3",7,"180-ppb","Consenso MADe (2a)","2a","z_score Unsatisfactory",0,100
+"o3",7,"180-ppb","Consenso MADe (2a)","2a","z_score N/A",0,100
+"o3",7,"180-ppb","Consenso MADe (2a)","2a","zeta_score Satisfactory",6,100
+"o3",7,"180-ppb","Consenso MADe (2a)","2a","zeta_score Questionable",0,100
+"o3",7,"180-ppb","Consenso MADe (2a)","2a","zeta_score Unsatisfactory",0,100
+"o3",7,"180-ppb","Consenso MADe (2a)","2a","zeta_score N/A",0,100
+"o3",7,"180-ppb","Consenso nIQR (2b)","2b","En_score Satisfactory",6,100
+"o3",7,"180-ppb","Consenso nIQR (2b)","2b","En_score Questionable",0,100
+"o3",7,"180-ppb","Consenso nIQR (2b)","2b","En_score Unsatisfactory",0,100
+"o3",7,"180-ppb","Consenso nIQR (2b)","2b","En_score N/A",0,100
+"o3",7,"180-ppb","Consenso nIQR (2b)","2b","z_score Satisfactory",6,100
+"o3",7,"180-ppb","Consenso nIQR (2b)","2b","z_score Questionable",0,100
+"o3",7,"180-ppb","Consenso nIQR (2b)","2b","z_score Unsatisfactory",0,100
+"o3",7,"180-ppb","Consenso nIQR (2b)","2b","z_score N/A",0,100
+"o3",7,"180-ppb","Consenso nIQR (2b)","2b","zeta_score Satisfactory",6,100
+"o3",7,"180-ppb","Consenso nIQR (2b)","2b","zeta_score Questionable",0,100
+"o3",7,"180-ppb","Consenso nIQR (2b)","2b","zeta_score Unsatisfactory",0,100
+"o3",7,"180-ppb","Consenso nIQR (2b)","2b","zeta_score N/A",0,100
+"o3",7,"180-ppb","Referencia (1)","1","En_score Satisfactory",6,100
+"o3",7,"180-ppb","Referencia (1)","1","En_score Questionable",0,100
+"o3",7,"180-ppb","Referencia (1)","1","En_score Unsatisfactory",0,100
+"o3",7,"180-ppb","Referencia (1)","1","En_score N/A",0,100
+"o3",7,"180-ppb","Referencia (1)","1","z_score Satisfactory",3,50
+"o3",7,"180-ppb","Referencia (1)","1","z_score Questionable",1,50
+"o3",7,"180-ppb","Referencia (1)","1","z_score Unsatisfactory",2,50
+"o3",7,"180-ppb","Referencia (1)","1","z_score N/A",0,50
+"o3",7,"180-ppb","Referencia (1)","1","zeta_score Satisfactory",6,100
+"o3",7,"180-ppb","Referencia (1)","1","zeta_score Questionable",0,100
+"o3",7,"180-ppb","Referencia (1)","1","zeta_score Unsatisfactory",0,100
+"o3",7,"180-ppb","Referencia (1)","1","zeta_score N/A",0,100
+"o3",7,"40-ppb","Algoritmo A (3)","3","En_score Satisfactory",6,100
+"o3",7,"40-ppb","Algoritmo A (3)","3","En_score Questionable",0,100
+"o3",7,"40-ppb","Algoritmo A (3)","3","En_score Unsatisfactory",0,100
+"o3",7,"40-ppb","Algoritmo A (3)","3","En_score N/A",0,100
+"o3",7,"40-ppb","Algoritmo A (3)","3","z_score Satisfactory",6,100
+"o3",7,"40-ppb","Algoritmo A (3)","3","z_score Questionable",0,100
+"o3",7,"40-ppb","Algoritmo A (3)","3","z_score Unsatisfactory",0,100
+"o3",7,"40-ppb","Algoritmo A (3)","3","z_score N/A",0,100
+"o3",7,"40-ppb","Algoritmo A (3)","3","zeta_score Satisfactory",6,100
+"o3",7,"40-ppb","Algoritmo A (3)","3","zeta_score Questionable",0,100
+"o3",7,"40-ppb","Algoritmo A (3)","3","zeta_score Unsatisfactory",0,100
+"o3",7,"40-ppb","Algoritmo A (3)","3","zeta_score N/A",0,100
+"o3",7,"40-ppb","Consenso MADe (2a)","2a","En_score Satisfactory",6,100
+"o3",7,"40-ppb","Consenso MADe (2a)","2a","En_score Questionable",0,100
+"o3",7,"40-ppb","Consenso MADe (2a)","2a","En_score Unsatisfactory",0,100
+"o3",7,"40-ppb","Consenso MADe (2a)","2a","En_score N/A",0,100
+"o3",7,"40-ppb","Consenso MADe (2a)","2a","z_score Satisfactory",5,83.3333333333333
+"o3",7,"40-ppb","Consenso MADe (2a)","2a","z_score Questionable",1,83.3333333333333
+"o3",7,"40-ppb","Consenso MADe (2a)","2a","z_score Unsatisfactory",0,83.3333333333333
+"o3",7,"40-ppb","Consenso MADe (2a)","2a","z_score N/A",0,83.3333333333333
+"o3",7,"40-ppb","Consenso MADe (2a)","2a","zeta_score Satisfactory",6,100
+"o3",7,"40-ppb","Consenso MADe (2a)","2a","zeta_score Questionable",0,100
+"o3",7,"40-ppb","Consenso MADe (2a)","2a","zeta_score Unsatisfactory",0,100
+"o3",7,"40-ppb","Consenso MADe (2a)","2a","zeta_score N/A",0,100
+"o3",7,"40-ppb","Consenso nIQR (2b)","2b","En_score Satisfactory",6,100
+"o3",7,"40-ppb","Consenso nIQR (2b)","2b","En_score Questionable",0,100
+"o3",7,"40-ppb","Consenso nIQR (2b)","2b","En_score Unsatisfactory",0,100
+"o3",7,"40-ppb","Consenso nIQR (2b)","2b","En_score N/A",0,100
+"o3",7,"40-ppb","Consenso nIQR (2b)","2b","z_score Satisfactory",6,100
+"o3",7,"40-ppb","Consenso nIQR (2b)","2b","z_score Questionable",0,100
+"o3",7,"40-ppb","Consenso nIQR (2b)","2b","z_score Unsatisfactory",0,100
+"o3",7,"40-ppb","Consenso nIQR (2b)","2b","z_score N/A",0,100
+"o3",7,"40-ppb","Consenso nIQR (2b)","2b","zeta_score Satisfactory",6,100
+"o3",7,"40-ppb","Consenso nIQR (2b)","2b","zeta_score Questionable",0,100
+"o3",7,"40-ppb","Consenso nIQR (2b)","2b","zeta_score Unsatisfactory",0,100
+"o3",7,"40-ppb","Consenso nIQR (2b)","2b","zeta_score N/A",0,100
+"o3",7,"40-ppb","Referencia (1)","1","En_score Satisfactory",6,100
+"o3",7,"40-ppb","Referencia (1)","1","En_score Questionable",0,100
+"o3",7,"40-ppb","Referencia (1)","1","En_score Unsatisfactory",0,100
+"o3",7,"40-ppb","Referencia (1)","1","En_score N/A",0,100
+"o3",7,"40-ppb","Referencia (1)","1","z_score Satisfactory",6,100
+"o3",7,"40-ppb","Referencia (1)","1","z_score Questionable",0,100
+"o3",7,"40-ppb","Referencia (1)","1","z_score Unsatisfactory",0,100
+"o3",7,"40-ppb","Referencia (1)","1","z_score N/A",0,100
+"o3",7,"40-ppb","Referencia (1)","1","zeta_score Satisfactory",6,100
+"o3",7,"40-ppb","Referencia (1)","1","zeta_score Questionable",0,100
+"o3",7,"40-ppb","Referencia (1)","1","zeta_score Unsatisfactory",0,100
+"o3",7,"40-ppb","Referencia (1)","1","zeta_score N/A",0,100
+"o3",7,"80-ppb","Algoritmo A (3)","3","En_score Satisfactory",6,100
+"o3",7,"80-ppb","Algoritmo A (3)","3","En_score Questionable",0,100
+"o3",7,"80-ppb","Algoritmo A (3)","3","En_score Unsatisfactory",0,100
+"o3",7,"80-ppb","Algoritmo A (3)","3","En_score N/A",0,100
+"o3",7,"80-ppb","Algoritmo A (3)","3","z_score Satisfactory",6,100
+"o3",7,"80-ppb","Algoritmo A (3)","3","z_score Questionable",0,100
+"o3",7,"80-ppb","Algoritmo A (3)","3","z_score Unsatisfactory",0,100
+"o3",7,"80-ppb","Algoritmo A (3)","3","z_score N/A",0,100
+"o3",7,"80-ppb","Algoritmo A (3)","3","zeta_score Satisfactory",6,100
+"o3",7,"80-ppb","Algoritmo A (3)","3","zeta_score Questionable",0,100
+"o3",7,"80-ppb","Algoritmo A (3)","3","zeta_score Unsatisfactory",0,100
+"o3",7,"80-ppb","Algoritmo A (3)","3","zeta_score N/A",0,100
+"o3",7,"80-ppb","Consenso MADe (2a)","2a","En_score Satisfactory",6,100
+"o3",7,"80-ppb","Consenso MADe (2a)","2a","En_score Questionable",0,100
+"o3",7,"80-ppb","Consenso MADe (2a)","2a","En_score Unsatisfactory",0,100
+"o3",7,"80-ppb","Consenso MADe (2a)","2a","En_score N/A",0,100
+"o3",7,"80-ppb","Consenso MADe (2a)","2a","z_score Satisfactory",6,100
+"o3",7,"80-ppb","Consenso MADe (2a)","2a","z_score Questionable",0,100
+"o3",7,"80-ppb","Consenso MADe (2a)","2a","z_score Unsatisfactory",0,100
+"o3",7,"80-ppb","Consenso MADe (2a)","2a","z_score N/A",0,100
+"o3",7,"80-ppb","Consenso MADe (2a)","2a","zeta_score Satisfactory",6,100
+"o3",7,"80-ppb","Consenso MADe (2a)","2a","zeta_score Questionable",0,100
+"o3",7,"80-ppb","Consenso MADe (2a)","2a","zeta_score Unsatisfactory",0,100
+"o3",7,"80-ppb","Consenso MADe (2a)","2a","zeta_score N/A",0,100
+"o3",7,"80-ppb","Consenso nIQR (2b)","2b","En_score Satisfactory",6,100
+"o3",7,"80-ppb","Consenso nIQR (2b)","2b","En_score Questionable",0,100
+"o3",7,"80-ppb","Consenso nIQR (2b)","2b","En_score Unsatisfactory",0,100
+"o3",7,"80-ppb","Consenso nIQR (2b)","2b","En_score N/A",0,100
+"o3",7,"80-ppb","Consenso nIQR (2b)","2b","z_score Satisfactory",6,100
+"o3",7,"80-ppb","Consenso nIQR (2b)","2b","z_score Questionable",0,100
+"o3",7,"80-ppb","Consenso nIQR (2b)","2b","z_score Unsatisfactory",0,100
+"o3",7,"80-ppb","Consenso nIQR (2b)","2b","z_score N/A",0,100
+"o3",7,"80-ppb","Consenso nIQR (2b)","2b","zeta_score Satisfactory",6,100
+"o3",7,"80-ppb","Consenso nIQR (2b)","2b","zeta_score Questionable",0,100
+"o3",7,"80-ppb","Consenso nIQR (2b)","2b","zeta_score Unsatisfactory",0,100
+"o3",7,"80-ppb","Consenso nIQR (2b)","2b","zeta_score N/A",0,100
+"o3",7,"80-ppb","Referencia (1)","1","En_score Satisfactory",6,100
+"o3",7,"80-ppb","Referencia (1)","1","En_score Questionable",0,100
+"o3",7,"80-ppb","Referencia (1)","1","En_score Unsatisfactory",0,100
+"o3",7,"80-ppb","Referencia (1)","1","En_score N/A",0,100
+"o3",7,"80-ppb","Referencia (1)","1","z_score Satisfactory",4,66.6666666666667
+"o3",7,"80-ppb","Referencia (1)","1","z_score Questionable",0,66.6666666666667
+"o3",7,"80-ppb","Referencia (1)","1","z_score Unsatisfactory",2,66.6666666666667
+"o3",7,"80-ppb","Referencia (1)","1","z_score N/A",0,66.6666666666667
+"o3",7,"80-ppb","Referencia (1)","1","zeta_score Satisfactory",6,100
+"o3",7,"80-ppb","Referencia (1)","1","zeta_score Questionable",0,100
+"o3",7,"80-ppb","Referencia (1)","1","zeta_score Unsatisfactory",0,100
+"o3",7,"80-ppb","Referencia (1)","1","zeta_score N/A",0,100
+"so2",7,"0-ppb","Algoritmo A (3)","3","En_score Satisfactory",6,100
+"so2",7,"0-ppb","Algoritmo A (3)","3","En_score Questionable",0,100
+"so2",7,"0-ppb","Algoritmo A (3)","3","En_score Unsatisfactory",0,100
+"so2",7,"0-ppb","Algoritmo A (3)","3","En_score N/A",0,100
+"so2",7,"0-ppb","Algoritmo A (3)","3","z_score Satisfactory",6,100
+"so2",7,"0-ppb","Algoritmo A (3)","3","z_score Questionable",0,100
+"so2",7,"0-ppb","Algoritmo A (3)","3","z_score Unsatisfactory",0,100
+"so2",7,"0-ppb","Algoritmo A (3)","3","z_score N/A",0,100
+"so2",7,"0-ppb","Algoritmo A (3)","3","zeta_score Satisfactory",6,100
+"so2",7,"0-ppb","Algoritmo A (3)","3","zeta_score Questionable",0,100
+"so2",7,"0-ppb","Algoritmo A (3)","3","zeta_score Unsatisfactory",0,100
+"so2",7,"0-ppb","Algoritmo A (3)","3","zeta_score N/A",0,100
+"so2",7,"0-ppb","Consenso MADe (2a)","2a","En_score Satisfactory",6,100
+"so2",7,"0-ppb","Consenso MADe (2a)","2a","En_score Questionable",0,100
+"so2",7,"0-ppb","Consenso MADe (2a)","2a","En_score Unsatisfactory",0,100
+"so2",7,"0-ppb","Consenso MADe (2a)","2a","En_score N/A",0,100
+"so2",7,"0-ppb","Consenso MADe (2a)","2a","z_score Satisfactory",4,66.6666666666667
+"so2",7,"0-ppb","Consenso MADe (2a)","2a","z_score Questionable",2,66.6666666666667
+"so2",7,"0-ppb","Consenso MADe (2a)","2a","z_score Unsatisfactory",0,66.6666666666667
+"so2",7,"0-ppb","Consenso MADe (2a)","2a","z_score N/A",0,66.6666666666667
+"so2",7,"0-ppb","Consenso MADe (2a)","2a","zeta_score Satisfactory",6,100
+"so2",7,"0-ppb","Consenso MADe (2a)","2a","zeta_score Questionable",0,100
+"so2",7,"0-ppb","Consenso MADe (2a)","2a","zeta_score Unsatisfactory",0,100
+"so2",7,"0-ppb","Consenso MADe (2a)","2a","zeta_score N/A",0,100
+"so2",7,"0-ppb","Consenso nIQR (2b)","2b","En_score Satisfactory",6,100
+"so2",7,"0-ppb","Consenso nIQR (2b)","2b","En_score Questionable",0,100
+"so2",7,"0-ppb","Consenso nIQR (2b)","2b","En_score Unsatisfactory",0,100
+"so2",7,"0-ppb","Consenso nIQR (2b)","2b","En_score N/A",0,100
+"so2",7,"0-ppb","Consenso nIQR (2b)","2b","z_score Satisfactory",6,100
+"so2",7,"0-ppb","Consenso nIQR (2b)","2b","z_score Questionable",0,100
+"so2",7,"0-ppb","Consenso nIQR (2b)","2b","z_score Unsatisfactory",0,100
+"so2",7,"0-ppb","Consenso nIQR (2b)","2b","z_score N/A",0,100
+"so2",7,"0-ppb","Consenso nIQR (2b)","2b","zeta_score Satisfactory",6,100
+"so2",7,"0-ppb","Consenso nIQR (2b)","2b","zeta_score Questionable",0,100
+"so2",7,"0-ppb","Consenso nIQR (2b)","2b","zeta_score Unsatisfactory",0,100
+"so2",7,"0-ppb","Consenso nIQR (2b)","2b","zeta_score N/A",0,100
+"so2",7,"0-ppb","Referencia (1)","1","En_score Satisfactory",6,100
+"so2",7,"0-ppb","Referencia (1)","1","En_score Questionable",0,100
+"so2",7,"0-ppb","Referencia (1)","1","En_score Unsatisfactory",0,100
+"so2",7,"0-ppb","Referencia (1)","1","En_score N/A",0,100
+"so2",7,"0-ppb","Referencia (1)","1","z_score Satisfactory",6,100
+"so2",7,"0-ppb","Referencia (1)","1","z_score Questionable",0,100
+"so2",7,"0-ppb","Referencia (1)","1","z_score Unsatisfactory",0,100
+"so2",7,"0-ppb","Referencia (1)","1","z_score N/A",0,100
+"so2",7,"0-ppb","Referencia (1)","1","zeta_score Satisfactory",6,100
+"so2",7,"0-ppb","Referencia (1)","1","zeta_score Questionable",0,100
+"so2",7,"0-ppb","Referencia (1)","1","zeta_score Unsatisfactory",0,100
+"so2",7,"0-ppb","Referencia (1)","1","zeta_score N/A",0,100
+"so2",7,"100-ppb","Algoritmo A (3)","3","En_score Satisfactory",6,100
+"so2",7,"100-ppb","Algoritmo A (3)","3","En_score Questionable",0,100
+"so2",7,"100-ppb","Algoritmo A (3)","3","En_score Unsatisfactory",0,100
+"so2",7,"100-ppb","Algoritmo A (3)","3","En_score N/A",0,100
+"so2",7,"100-ppb","Algoritmo A (3)","3","z_score Satisfactory",5,83.3333333333333
+"so2",7,"100-ppb","Algoritmo A (3)","3","z_score Questionable",1,83.3333333333333
+"so2",7,"100-ppb","Algoritmo A (3)","3","z_score Unsatisfactory",0,83.3333333333333
+"so2",7,"100-ppb","Algoritmo A (3)","3","z_score N/A",0,83.3333333333333
+"so2",7,"100-ppb","Algoritmo A (3)","3","zeta_score Satisfactory",6,100
+"so2",7,"100-ppb","Algoritmo A (3)","3","zeta_score Questionable",0,100
+"so2",7,"100-ppb","Algoritmo A (3)","3","zeta_score Unsatisfactory",0,100
+"so2",7,"100-ppb","Algoritmo A (3)","3","zeta_score N/A",0,100
+"so2",7,"100-ppb","Consenso MADe (2a)","2a","En_score Satisfactory",6,100
+"so2",7,"100-ppb","Consenso MADe (2a)","2a","En_score Questionable",0,100
+"so2",7,"100-ppb","Consenso MADe (2a)","2a","En_score Unsatisfactory",0,100
+"so2",7,"100-ppb","Consenso MADe (2a)","2a","En_score N/A",0,100
+"so2",7,"100-ppb","Consenso MADe (2a)","2a","z_score Satisfactory",5,83.3333333333333
+"so2",7,"100-ppb","Consenso MADe (2a)","2a","z_score Questionable",1,83.3333333333333
+"so2",7,"100-ppb","Consenso MADe (2a)","2a","z_score Unsatisfactory",0,83.3333333333333
+"so2",7,"100-ppb","Consenso MADe (2a)","2a","z_score N/A",0,83.3333333333333
+"so2",7,"100-ppb","Consenso MADe (2a)","2a","zeta_score Satisfactory",6,100
+"so2",7,"100-ppb","Consenso MADe (2a)","2a","zeta_score Questionable",0,100
+"so2",7,"100-ppb","Consenso MADe (2a)","2a","zeta_score Unsatisfactory",0,100
+"so2",7,"100-ppb","Consenso MADe (2a)","2a","zeta_score N/A",0,100
+"so2",7,"100-ppb","Consenso nIQR (2b)","2b","En_score Satisfactory",6,100
+"so2",7,"100-ppb","Consenso nIQR (2b)","2b","En_score Questionable",0,100
+"so2",7,"100-ppb","Consenso nIQR (2b)","2b","En_score Unsatisfactory",0,100
+"so2",7,"100-ppb","Consenso nIQR (2b)","2b","En_score N/A",0,100
+"so2",7,"100-ppb","Consenso nIQR (2b)","2b","z_score Satisfactory",5,83.3333333333333
+"so2",7,"100-ppb","Consenso nIQR (2b)","2b","z_score Questionable",0,83.3333333333333
+"so2",7,"100-ppb","Consenso nIQR (2b)","2b","z_score Unsatisfactory",1,83.3333333333333
+"so2",7,"100-ppb","Consenso nIQR (2b)","2b","z_score N/A",0,83.3333333333333
+"so2",7,"100-ppb","Consenso nIQR (2b)","2b","zeta_score Satisfactory",6,100
+"so2",7,"100-ppb","Consenso nIQR (2b)","2b","zeta_score Questionable",0,100
+"so2",7,"100-ppb","Consenso nIQR (2b)","2b","zeta_score Unsatisfactory",0,100
+"so2",7,"100-ppb","Consenso nIQR (2b)","2b","zeta_score N/A",0,100
+"so2",7,"100-ppb","Referencia (1)","1","En_score Satisfactory",6,100
+"so2",7,"100-ppb","Referencia (1)","1","En_score Questionable",0,100
+"so2",7,"100-ppb","Referencia (1)","1","En_score Unsatisfactory",0,100
+"so2",7,"100-ppb","Referencia (1)","1","En_score N/A",0,100
+"so2",7,"100-ppb","Referencia (1)","1","z_score Satisfactory",6,100
+"so2",7,"100-ppb","Referencia (1)","1","z_score Questionable",0,100
+"so2",7,"100-ppb","Referencia (1)","1","z_score Unsatisfactory",0,100
+"so2",7,"100-ppb","Referencia (1)","1","z_score N/A",0,100
+"so2",7,"100-ppb","Referencia (1)","1","zeta_score Satisfactory",6,100
+"so2",7,"100-ppb","Referencia (1)","1","zeta_score Questionable",0,100
+"so2",7,"100-ppb","Referencia (1)","1","zeta_score Unsatisfactory",0,100
+"so2",7,"100-ppb","Referencia (1)","1","zeta_score N/A",0,100
+"so2",7,"140-ppb","Algoritmo A (3)","3","En_score Satisfactory",6,100
+"so2",7,"140-ppb","Algoritmo A (3)","3","En_score Questionable",0,100
+"so2",7,"140-ppb","Algoritmo A (3)","3","En_score Unsatisfactory",0,100
+"so2",7,"140-ppb","Algoritmo A (3)","3","En_score N/A",0,100
+"so2",7,"140-ppb","Algoritmo A (3)","3","z_score Satisfactory",5,83.3333333333333
+"so2",7,"140-ppb","Algoritmo A (3)","3","z_score Questionable",0,83.3333333333333
+"so2",7,"140-ppb","Algoritmo A (3)","3","z_score Unsatisfactory",1,83.3333333333333
+"so2",7,"140-ppb","Algoritmo A (3)","3","z_score N/A",0,83.3333333333333
+"so2",7,"140-ppb","Algoritmo A (3)","3","zeta_score Satisfactory",6,100
+"so2",7,"140-ppb","Algoritmo A (3)","3","zeta_score Questionable",0,100
+"so2",7,"140-ppb","Algoritmo A (3)","3","zeta_score Unsatisfactory",0,100
+"so2",7,"140-ppb","Algoritmo A (3)","3","zeta_score N/A",0,100
+"so2",7,"140-ppb","Consenso MADe (2a)","2a","En_score Satisfactory",6,100
+"so2",7,"140-ppb","Consenso MADe (2a)","2a","En_score Questionable",0,100
+"so2",7,"140-ppb","Consenso MADe (2a)","2a","En_score Unsatisfactory",0,100
+"so2",7,"140-ppb","Consenso MADe (2a)","2a","En_score N/A",0,100
+"so2",7,"140-ppb","Consenso MADe (2a)","2a","z_score Satisfactory",4,66.6666666666667
+"so2",7,"140-ppb","Consenso MADe (2a)","2a","z_score Questionable",0,66.6666666666667
+"so2",7,"140-ppb","Consenso MADe (2a)","2a","z_score Unsatisfactory",2,66.6666666666667
+"so2",7,"140-ppb","Consenso MADe (2a)","2a","z_score N/A",0,66.6666666666667
+"so2",7,"140-ppb","Consenso MADe (2a)","2a","zeta_score Satisfactory",6,100
+"so2",7,"140-ppb","Consenso MADe (2a)","2a","zeta_score Questionable",0,100
+"so2",7,"140-ppb","Consenso MADe (2a)","2a","zeta_score Unsatisfactory",0,100
+"so2",7,"140-ppb","Consenso MADe (2a)","2a","zeta_score N/A",0,100
+"so2",7,"140-ppb","Consenso nIQR (2b)","2b","En_score Satisfactory",6,100
+"so2",7,"140-ppb","Consenso nIQR (2b)","2b","En_score Questionable",0,100
+"so2",7,"140-ppb","Consenso nIQR (2b)","2b","En_score Unsatisfactory",0,100
+"so2",7,"140-ppb","Consenso nIQR (2b)","2b","En_score N/A",0,100
+"so2",7,"140-ppb","Consenso nIQR (2b)","2b","z_score Satisfactory",5,83.3333333333333
+"so2",7,"140-ppb","Consenso nIQR (2b)","2b","z_score Questionable",0,83.3333333333333
+"so2",7,"140-ppb","Consenso nIQR (2b)","2b","z_score Unsatisfactory",1,83.3333333333333
+"so2",7,"140-ppb","Consenso nIQR (2b)","2b","z_score N/A",0,83.3333333333333
+"so2",7,"140-ppb","Consenso nIQR (2b)","2b","zeta_score Satisfactory",6,100
+"so2",7,"140-ppb","Consenso nIQR (2b)","2b","zeta_score Questionable",0,100
+"so2",7,"140-ppb","Consenso nIQR (2b)","2b","zeta_score Unsatisfactory",0,100
+"so2",7,"140-ppb","Consenso nIQR (2b)","2b","zeta_score N/A",0,100
+"so2",7,"140-ppb","Referencia (1)","1","En_score Satisfactory",6,100
+"so2",7,"140-ppb","Referencia (1)","1","En_score Questionable",0,100
+"so2",7,"140-ppb","Referencia (1)","1","En_score Unsatisfactory",0,100
+"so2",7,"140-ppb","Referencia (1)","1","En_score N/A",0,100
+"so2",7,"140-ppb","Referencia (1)","1","z_score Satisfactory",5,83.3333333333333
+"so2",7,"140-ppb","Referencia (1)","1","z_score Questionable",1,83.3333333333333
+"so2",7,"140-ppb","Referencia (1)","1","z_score Unsatisfactory",0,83.3333333333333
+"so2",7,"140-ppb","Referencia (1)","1","z_score N/A",0,83.3333333333333
+"so2",7,"140-ppb","Referencia (1)","1","zeta_score Satisfactory",6,100
+"so2",7,"140-ppb","Referencia (1)","1","zeta_score Questionable",0,100
+"so2",7,"140-ppb","Referencia (1)","1","zeta_score Unsatisfactory",0,100
+"so2",7,"140-ppb","Referencia (1)","1","zeta_score N/A",0,100
+"so2",7,"180-ppb","Algoritmo A (3)","3","En_score Satisfactory",6,100
+"so2",7,"180-ppb","Algoritmo A (3)","3","En_score Questionable",0,100
+"so2",7,"180-ppb","Algoritmo A (3)","3","En_score Unsatisfactory",0,100
+"so2",7,"180-ppb","Algoritmo A (3)","3","En_score N/A",0,100
+"so2",7,"180-ppb","Algoritmo A (3)","3","z_score Satisfactory",6,100
+"so2",7,"180-ppb","Algoritmo A (3)","3","z_score Questionable",0,100
+"so2",7,"180-ppb","Algoritmo A (3)","3","z_score Unsatisfactory",0,100
+"so2",7,"180-ppb","Algoritmo A (3)","3","z_score N/A",0,100
+"so2",7,"180-ppb","Algoritmo A (3)","3","zeta_score Satisfactory",6,100
+"so2",7,"180-ppb","Algoritmo A (3)","3","zeta_score Questionable",0,100
+"so2",7,"180-ppb","Algoritmo A (3)","3","zeta_score Unsatisfactory",0,100
+"so2",7,"180-ppb","Algoritmo A (3)","3","zeta_score N/A",0,100
+"so2",7,"180-ppb","Consenso MADe (2a)","2a","En_score Satisfactory",6,100
+"so2",7,"180-ppb","Consenso MADe (2a)","2a","En_score Questionable",0,100
+"so2",7,"180-ppb","Consenso MADe (2a)","2a","En_score Unsatisfactory",0,100
+"so2",7,"180-ppb","Consenso MADe (2a)","2a","En_score N/A",0,100
+"so2",7,"180-ppb","Consenso MADe (2a)","2a","z_score Satisfactory",6,100
+"so2",7,"180-ppb","Consenso MADe (2a)","2a","z_score Questionable",0,100
+"so2",7,"180-ppb","Consenso MADe (2a)","2a","z_score Unsatisfactory",0,100
+"so2",7,"180-ppb","Consenso MADe (2a)","2a","z_score N/A",0,100
+"so2",7,"180-ppb","Consenso MADe (2a)","2a","zeta_score Satisfactory",6,100
+"so2",7,"180-ppb","Consenso MADe (2a)","2a","zeta_score Questionable",0,100
+"so2",7,"180-ppb","Consenso MADe (2a)","2a","zeta_score Unsatisfactory",0,100
+"so2",7,"180-ppb","Consenso MADe (2a)","2a","zeta_score N/A",0,100
+"so2",7,"180-ppb","Consenso nIQR (2b)","2b","En_score Satisfactory",6,100
+"so2",7,"180-ppb","Consenso nIQR (2b)","2b","En_score Questionable",0,100
+"so2",7,"180-ppb","Consenso nIQR (2b)","2b","En_score Unsatisfactory",0,100
+"so2",7,"180-ppb","Consenso nIQR (2b)","2b","En_score N/A",0,100
+"so2",7,"180-ppb","Consenso nIQR (2b)","2b","z_score Satisfactory",6,100
+"so2",7,"180-ppb","Consenso nIQR (2b)","2b","z_score Questionable",0,100
+"so2",7,"180-ppb","Consenso nIQR (2b)","2b","z_score Unsatisfactory",0,100
+"so2",7,"180-ppb","Consenso nIQR (2b)","2b","z_score N/A",0,100
+"so2",7,"180-ppb","Consenso nIQR (2b)","2b","zeta_score Satisfactory",6,100
+"so2",7,"180-ppb","Consenso nIQR (2b)","2b","zeta_score Questionable",0,100
+"so2",7,"180-ppb","Consenso nIQR (2b)","2b","zeta_score Unsatisfactory",0,100
+"so2",7,"180-ppb","Consenso nIQR (2b)","2b","zeta_score N/A",0,100
+"so2",7,"180-ppb","Referencia (1)","1","En_score Satisfactory",6,100
+"so2",7,"180-ppb","Referencia (1)","1","En_score Questionable",0,100
+"so2",7,"180-ppb","Referencia (1)","1","En_score Unsatisfactory",0,100
+"so2",7,"180-ppb","Referencia (1)","1","En_score N/A",0,100
+"so2",7,"180-ppb","Referencia (1)","1","z_score Satisfactory",6,100
+"so2",7,"180-ppb","Referencia (1)","1","z_score Questionable",0,100
+"so2",7,"180-ppb","Referencia (1)","1","z_score Unsatisfactory",0,100
+"so2",7,"180-ppb","Referencia (1)","1","z_score N/A",0,100
+"so2",7,"180-ppb","Referencia (1)","1","zeta_score Satisfactory",6,100
+"so2",7,"180-ppb","Referencia (1)","1","zeta_score Questionable",0,100
+"so2",7,"180-ppb","Referencia (1)","1","zeta_score Unsatisfactory",0,100
+"so2",7,"180-ppb","Referencia (1)","1","zeta_score N/A",0,100
+"so2",7,"20-ppb","Algoritmo A (3)","3","En_score Satisfactory",6,100
+"so2",7,"20-ppb","Algoritmo A (3)","3","En_score Questionable",0,100
+"so2",7,"20-ppb","Algoritmo A (3)","3","En_score Unsatisfactory",0,100
+"so2",7,"20-ppb","Algoritmo A (3)","3","En_score N/A",0,100
+"so2",7,"20-ppb","Algoritmo A (3)","3","z_score Satisfactory",6,100
+"so2",7,"20-ppb","Algoritmo A (3)","3","z_score Questionable",0,100
+"so2",7,"20-ppb","Algoritmo A (3)","3","z_score Unsatisfactory",0,100
+"so2",7,"20-ppb","Algoritmo A (3)","3","z_score N/A",0,100
+"so2",7,"20-ppb","Algoritmo A (3)","3","zeta_score Satisfactory",6,100
+"so2",7,"20-ppb","Algoritmo A (3)","3","zeta_score Questionable",0,100
+"so2",7,"20-ppb","Algoritmo A (3)","3","zeta_score Unsatisfactory",0,100
+"so2",7,"20-ppb","Algoritmo A (3)","3","zeta_score N/A",0,100
+"so2",7,"20-ppb","Consenso MADe (2a)","2a","En_score Satisfactory",6,100
+"so2",7,"20-ppb","Consenso MADe (2a)","2a","En_score Questionable",0,100
+"so2",7,"20-ppb","Consenso MADe (2a)","2a","En_score Unsatisfactory",0,100
+"so2",7,"20-ppb","Consenso MADe (2a)","2a","En_score N/A",0,100
+"so2",7,"20-ppb","Consenso MADe (2a)","2a","z_score Satisfactory",6,100
+"so2",7,"20-ppb","Consenso MADe (2a)","2a","z_score Questionable",0,100
+"so2",7,"20-ppb","Consenso MADe (2a)","2a","z_score Unsatisfactory",0,100
+"so2",7,"20-ppb","Consenso MADe (2a)","2a","z_score N/A",0,100
+"so2",7,"20-ppb","Consenso MADe (2a)","2a","zeta_score Satisfactory",6,100
+"so2",7,"20-ppb","Consenso MADe (2a)","2a","zeta_score Questionable",0,100
+"so2",7,"20-ppb","Consenso MADe (2a)","2a","zeta_score Unsatisfactory",0,100
+"so2",7,"20-ppb","Consenso MADe (2a)","2a","zeta_score N/A",0,100
+"so2",7,"20-ppb","Consenso nIQR (2b)","2b","En_score Satisfactory",6,100
+"so2",7,"20-ppb","Consenso nIQR (2b)","2b","En_score Questionable",0,100
+"so2",7,"20-ppb","Consenso nIQR (2b)","2b","En_score Unsatisfactory",0,100
+"so2",7,"20-ppb","Consenso nIQR (2b)","2b","En_score N/A",0,100
+"so2",7,"20-ppb","Consenso nIQR (2b)","2b","z_score Satisfactory",6,100
+"so2",7,"20-ppb","Consenso nIQR (2b)","2b","z_score Questionable",0,100
+"so2",7,"20-ppb","Consenso nIQR (2b)","2b","z_score Unsatisfactory",0,100
+"so2",7,"20-ppb","Consenso nIQR (2b)","2b","z_score N/A",0,100
+"so2",7,"20-ppb","Consenso nIQR (2b)","2b","zeta_score Satisfactory",6,100
+"so2",7,"20-ppb","Consenso nIQR (2b)","2b","zeta_score Questionable",0,100
+"so2",7,"20-ppb","Consenso nIQR (2b)","2b","zeta_score Unsatisfactory",0,100
+"so2",7,"20-ppb","Consenso nIQR (2b)","2b","zeta_score N/A",0,100
+"so2",7,"20-ppb","Referencia (1)","1","En_score Satisfactory",6,100
+"so2",7,"20-ppb","Referencia (1)","1","En_score Questionable",0,100
+"so2",7,"20-ppb","Referencia (1)","1","En_score Unsatisfactory",0,100
+"so2",7,"20-ppb","Referencia (1)","1","En_score N/A",0,100
+"so2",7,"20-ppb","Referencia (1)","1","z_score Satisfactory",6,100
+"so2",7,"20-ppb","Referencia (1)","1","z_score Questionable",0,100
+"so2",7,"20-ppb","Referencia (1)","1","z_score Unsatisfactory",0,100
+"so2",7,"20-ppb","Referencia (1)","1","z_score N/A",0,100
+"so2",7,"20-ppb","Referencia (1)","1","zeta_score Satisfactory",6,100
+"so2",7,"20-ppb","Referencia (1)","1","zeta_score Questionable",0,100
+"so2",7,"20-ppb","Referencia (1)","1","zeta_score Unsatisfactory",0,100
+"so2",7,"20-ppb","Referencia (1)","1","zeta_score N/A",0,100
+"so2",7,"60-ppb","Algoritmo A (3)","3","En_score Satisfactory",6,100
+"so2",7,"60-ppb","Algoritmo A (3)","3","En_score Questionable",0,100
+"so2",7,"60-ppb","Algoritmo A (3)","3","En_score Unsatisfactory",0,100
+"so2",7,"60-ppb","Algoritmo A (3)","3","En_score N/A",0,100
+"so2",7,"60-ppb","Algoritmo A (3)","3","z_score Satisfactory",5,83.3333333333333
+"so2",7,"60-ppb","Algoritmo A (3)","3","z_score Questionable",0,83.3333333333333
+"so2",7,"60-ppb","Algoritmo A (3)","3","z_score Unsatisfactory",1,83.3333333333333
+"so2",7,"60-ppb","Algoritmo A (3)","3","z_score N/A",0,83.3333333333333
+"so2",7,"60-ppb","Algoritmo A (3)","3","zeta_score Satisfactory",6,100
+"so2",7,"60-ppb","Algoritmo A (3)","3","zeta_score Questionable",0,100
+"so2",7,"60-ppb","Algoritmo A (3)","3","zeta_score Unsatisfactory",0,100
+"so2",7,"60-ppb","Algoritmo A (3)","3","zeta_score N/A",0,100
+"so2",7,"60-ppb","Consenso MADe (2a)","2a","En_score Satisfactory",6,100
+"so2",7,"60-ppb","Consenso MADe (2a)","2a","En_score Questionable",0,100
+"so2",7,"60-ppb","Consenso MADe (2a)","2a","En_score Unsatisfactory",0,100
+"so2",7,"60-ppb","Consenso MADe (2a)","2a","En_score N/A",0,100
+"so2",7,"60-ppb","Consenso MADe (2a)","2a","z_score Satisfactory",5,83.3333333333333
+"so2",7,"60-ppb","Consenso MADe (2a)","2a","z_score Questionable",0,83.3333333333333
+"so2",7,"60-ppb","Consenso MADe (2a)","2a","z_score Unsatisfactory",1,83.3333333333333
+"so2",7,"60-ppb","Consenso MADe (2a)","2a","z_score N/A",0,83.3333333333333
+"so2",7,"60-ppb","Consenso MADe (2a)","2a","zeta_score Satisfactory",6,100
+"so2",7,"60-ppb","Consenso MADe (2a)","2a","zeta_score Questionable",0,100
+"so2",7,"60-ppb","Consenso MADe (2a)","2a","zeta_score Unsatisfactory",0,100
+"so2",7,"60-ppb","Consenso MADe (2a)","2a","zeta_score N/A",0,100
+"so2",7,"60-ppb","Consenso nIQR (2b)","2b","En_score Satisfactory",6,100
+"so2",7,"60-ppb","Consenso nIQR (2b)","2b","En_score Questionable",0,100
+"so2",7,"60-ppb","Consenso nIQR (2b)","2b","En_score Unsatisfactory",0,100
+"so2",7,"60-ppb","Consenso nIQR (2b)","2b","En_score N/A",0,100
+"so2",7,"60-ppb","Consenso nIQR (2b)","2b","z_score Satisfactory",5,83.3333333333333
+"so2",7,"60-ppb","Consenso nIQR (2b)","2b","z_score Questionable",0,83.3333333333333
+"so2",7,"60-ppb","Consenso nIQR (2b)","2b","z_score Unsatisfactory",1,83.3333333333333
+"so2",7,"60-ppb","Consenso nIQR (2b)","2b","z_score N/A",0,83.3333333333333
+"so2",7,"60-ppb","Consenso nIQR (2b)","2b","zeta_score Satisfactory",6,100
+"so2",7,"60-ppb","Consenso nIQR (2b)","2b","zeta_score Questionable",0,100
+"so2",7,"60-ppb","Consenso nIQR (2b)","2b","zeta_score Unsatisfactory",0,100
+"so2",7,"60-ppb","Consenso nIQR (2b)","2b","zeta_score N/A",0,100
+"so2",7,"60-ppb","Referencia (1)","1","En_score Satisfactory",6,100
+"so2",7,"60-ppb","Referencia (1)","1","En_score Questionable",0,100
+"so2",7,"60-ppb","Referencia (1)","1","En_score Unsatisfactory",0,100
+"so2",7,"60-ppb","Referencia (1)","1","En_score N/A",0,100
+"so2",7,"60-ppb","Referencia (1)","1","z_score Satisfactory",6,100
+"so2",7,"60-ppb","Referencia (1)","1","z_score Questionable",0,100
+"so2",7,"60-ppb","Referencia (1)","1","z_score Unsatisfactory",0,100
+"so2",7,"60-ppb","Referencia (1)","1","z_score N/A",0,100
+"so2",7,"60-ppb","Referencia (1)","1","zeta_score Satisfactory",6,100
+"so2",7,"60-ppb","Referencia (1)","1","zeta_score Questionable",0,100
+"so2",7,"60-ppb","Referencia (1)","1","zeta_score Unsatisfactory",0,100
+"so2",7,"60-ppb","Referencia (1)","1","zeta_score N/A",0,100
+"so2",7,"61-ppb","Algoritmo A (3)","3","En_score Satisfactory",6,100
+"so2",7,"61-ppb","Algoritmo A (3)","3","En_score Questionable",0,100
+"so2",7,"61-ppb","Algoritmo A (3)","3","En_score Unsatisfactory",0,100
+"so2",7,"61-ppb","Algoritmo A (3)","3","En_score N/A",0,100
+"so2",7,"61-ppb","Algoritmo A (3)","3","z_score Satisfactory",6,100
+"so2",7,"61-ppb","Algoritmo A (3)","3","z_score Questionable",0,100
+"so2",7,"61-ppb","Algoritmo A (3)","3","z_score Unsatisfactory",0,100
+"so2",7,"61-ppb","Algoritmo A (3)","3","z_score N/A",0,100
+"so2",7,"61-ppb","Algoritmo A (3)","3","zeta_score Satisfactory",6,100
+"so2",7,"61-ppb","Algoritmo A (3)","3","zeta_score Questionable",0,100
+"so2",7,"61-ppb","Algoritmo A (3)","3","zeta_score Unsatisfactory",0,100
+"so2",7,"61-ppb","Algoritmo A (3)","3","zeta_score N/A",0,100
+"so2",7,"61-ppb","Consenso MADe (2a)","2a","En_score Satisfactory",6,100
+"so2",7,"61-ppb","Consenso MADe (2a)","2a","En_score Questionable",0,100
+"so2",7,"61-ppb","Consenso MADe (2a)","2a","En_score Unsatisfactory",0,100
+"so2",7,"61-ppb","Consenso MADe (2a)","2a","En_score N/A",0,100
+"so2",7,"61-ppb","Consenso MADe (2a)","2a","z_score Satisfactory",6,100
+"so2",7,"61-ppb","Consenso MADe (2a)","2a","z_score Questionable",0,100
+"so2",7,"61-ppb","Consenso MADe (2a)","2a","z_score Unsatisfactory",0,100
+"so2",7,"61-ppb","Consenso MADe (2a)","2a","z_score N/A",0,100
+"so2",7,"61-ppb","Consenso MADe (2a)","2a","zeta_score Satisfactory",6,100
+"so2",7,"61-ppb","Consenso MADe (2a)","2a","zeta_score Questionable",0,100
+"so2",7,"61-ppb","Consenso MADe (2a)","2a","zeta_score Unsatisfactory",0,100
+"so2",7,"61-ppb","Consenso MADe (2a)","2a","zeta_score N/A",0,100
+"so2",7,"61-ppb","Consenso nIQR (2b)","2b","En_score Satisfactory",6,100
+"so2",7,"61-ppb","Consenso nIQR (2b)","2b","En_score Questionable",0,100
+"so2",7,"61-ppb","Consenso nIQR (2b)","2b","En_score Unsatisfactory",0,100
+"so2",7,"61-ppb","Consenso nIQR (2b)","2b","En_score N/A",0,100
+"so2",7,"61-ppb","Consenso nIQR (2b)","2b","z_score Satisfactory",6,100
+"so2",7,"61-ppb","Consenso nIQR (2b)","2b","z_score Questionable",0,100
+"so2",7,"61-ppb","Consenso nIQR (2b)","2b","z_score Unsatisfactory",0,100
+"so2",7,"61-ppb","Consenso nIQR (2b)","2b","z_score N/A",0,100
+"so2",7,"61-ppb","Consenso nIQR (2b)","2b","zeta_score Satisfactory",6,100
+"so2",7,"61-ppb","Consenso nIQR (2b)","2b","zeta_score Questionable",0,100
+"so2",7,"61-ppb","Consenso nIQR (2b)","2b","zeta_score Unsatisfactory",0,100
+"so2",7,"61-ppb","Consenso nIQR (2b)","2b","zeta_score N/A",0,100
+"so2",7,"61-ppb","Referencia (1)","1","En_score Satisfactory",6,100
+"so2",7,"61-ppb","Referencia (1)","1","En_score Questionable",0,100
+"so2",7,"61-ppb","Referencia (1)","1","En_score Unsatisfactory",0,100
+"so2",7,"61-ppb","Referencia (1)","1","En_score N/A",0,100
+"so2",7,"61-ppb","Referencia (1)","1","z_score Satisfactory",6,100
+"so2",7,"61-ppb","Referencia (1)","1","z_score Questionable",0,100
+"so2",7,"61-ppb","Referencia (1)","1","z_score Unsatisfactory",0,100
+"so2",7,"61-ppb","Referencia (1)","1","z_score N/A",0,100
+"so2",7,"61-ppb","Referencia (1)","1","zeta_score Satisfactory",6,100
+"so2",7,"61-ppb","Referencia (1)","1","zeta_score Questionable",0,100
+"so2",7,"61-ppb","Referencia (1)","1","zeta_score Unsatisfactory",0,100
+"so2",7,"61-ppb","Referencia (1)","1","zeta_score N/A",0,100

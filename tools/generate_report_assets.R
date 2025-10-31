@@ -21,11 +21,7 @@ calculate_niqr <- function(x) {
   0.7413 * (quartiles[2] - quartiles[1])
 }
 
-combined_scores_df <- if (length(all_scores_list) > 0) {
-  dplyr::bind_rows(all_scores_list)
-} else {
-  tibble()
-}
+combined_scores_df <- tibble()
 
 get_wide_data <- function(df, target_pollutant) {
     filtered <- df %>% filter(pollutant == target_pollutant)
@@ -730,6 +726,9 @@ for (p in pollutants) {
 }
 
 # --- Combined Participant Summary Plots ---
+if (length(all_scores_list) > 0) {
+  combined_scores_df <- dplyr::bind_rows(all_scores_list)
+}
 print("Generating combined participant summary plots...")
 
 
@@ -794,8 +793,209 @@ if (length(all_scores_list) > 0) {
       plot_annotation(title = paste("Performance Summary for Participant:", participant),
                       theme = theme(plot.title = element_text(size = 16, face = "bold", hjust = 0.5)))
 
-    ggsave(paste0("reports/assets/charts/summary_matrix_", participant, ".png"), combined_plot, width = 10, height = 16)
+    ggsave(
+      filename = paste0("reports/assets/charts/summary_matrix_", participant, ".png"),
+      plot = combined_plot,
+      width = 10,
+      height = 12,
+      units = "in"
+    )
   }
+
+  # --- Score Heatmap ---
+  print("  - Creating score heatmaps by pollutant...")
+  heatmap_specs <- list(
+    z_score = list(
+      label = "Z-Score",
+      short = "z",
+      eval_col = "z_score_eval",
+      colors = c(
+        "Satisfactory" = "#00B050",
+        "Questionable" = "#FFEB3B",
+        "Unsatisfactory" = "#D32F2F",
+        "N/A" = "#BDBDBD"
+      )
+    ),
+    zeta_score = list(
+      label = "Zeta-Score",
+      short = "zeta",
+      eval_col = "zeta_score_eval",
+      colors = c(
+        "Satisfactory" = "#00B050",
+        "Questionable" = "#FFEB3B",
+        "Unsatisfactory" = "#D32F2F",
+        "N/A" = "#BDBDBD"
+      )
+    ),
+    En_score = list(
+      label = "En-Score",
+      short = "en",
+      eval_col = "En_score_eval",
+      colors = c(
+        "Satisfactory" = "#00B050",
+        "Questionable" = "#D32F2F",
+        "Unsatisfactory" = "#D32F2F",
+        "N/A" = "#BDBDBD"
+      )
+    )
+  )
+
+  pollutant_ids <- sort(unique(all_scores_df$pollutant))
+  for (pollutant_id in pollutant_ids) {
+    pollutant_df <- all_scores_df %>% filter(pollutant == pollutant_id)
+    if (nrow(pollutant_df) == 0) next
+
+    participant_levels <- pollutant_df %>%
+      distinct(participant_id) %>%
+      arrange(participant_id) %>%
+      pull(participant_id)
+
+    pollutant_df <- pollutant_df %>%
+      mutate(
+        run_label = as.character(level),
+        combination_id = ifelse(
+          !is.na(combination_label) & combination_label != "",
+          combination_label,
+          combination
+        ),
+        combination_display = ifelse(
+          !is.na(combination_label) & combination_label != "",
+          paste0(combination, " (", combination_label, ")"),
+          combination
+        )
+      )
+
+    run_levels <- pollutant_df %>%
+      distinct(level, run_label) %>%
+      mutate(level_numeric = readr::parse_number(as.character(level))) %>%
+      arrange(level_numeric, level, run_label) %>%
+      pull(run_label)
+
+    if (length(participant_levels) == 0 || length(run_levels) == 0) next
+
+    for (combo_id in unique(pollutant_df$combination_id)) {
+      combo_df <- pollutant_df %>% filter(combination_id == !!combo_id)
+      combination_display <- combo_df %>%
+        distinct(combination_display) %>%
+        pull(combination_display)
+      combination_display <- combination_display[1]
+
+      for (score_name in names(heatmap_specs)) {
+        spec <- heatmap_specs[[score_name]]
+        value_col <- rlang::sym(score_name)
+        eval_col <- rlang::sym(spec$eval_col)
+
+        base_grid <- expand.grid(
+          participant_id = participant_levels,
+          run_label = run_levels,
+          stringsAsFactors = FALSE
+        )
+
+        plot_data <- base_grid %>%
+          left_join(
+            combo_df %>%
+              select(
+                participant_id,
+                run_label,
+                score_value = !!value_col,
+                evaluation = !!eval_col
+              ),
+            by = c("participant_id", "run_label")
+          ) %>%
+          mutate(
+            evaluation = ifelse(is.na(evaluation) | evaluation == "", "N/A", evaluation),
+            tile_label = ifelse(is.finite(score_value), sprintf("%.2f", score_value), ""),
+            participant_id = factor(participant_id, levels = participant_levels),
+            run_label = factor(run_label, levels = run_levels),
+            evaluation = factor(evaluation, levels = names(spec$colors))
+          )
+
+        if (all(is.na(plot_data$score_value))) next
+
+        heatmap_plot <- ggplot(plot_data, aes(x = run_label, y = participant_id, fill = evaluation)) +
+          geom_tile(color = "white") +
+          geom_text(aes(label = tile_label), size = 3, color = "#1B1B1B") +
+          scale_fill_manual(
+            values = spec$colors,
+            limits = names(spec$colors),
+            drop = FALSE,
+            na.value = "#BDBDBD"
+          ) +
+          labs(
+            title = paste(spec$label, "Heatmap for Pollutant:", pollutant_id, "- Combination", combo_id),
+            subtitle = combination_display,
+            x = "Run (Level)",
+            y = "Participant",
+            fill = paste(spec$label, "Evaluation")
+          ) +
+          theme_minimal() +
+          theme(
+            panel.grid = element_blank(),
+            axis.text.x = element_text(angle = 45, hjust = 1),
+            axis.title.x = element_text(margin = margin(t = 12)),
+            axis.title.y = element_text(margin = margin(r = 12)),
+            legend.position = "right"
+          )
+
+        sanitized_pollutant <- gsub("_+$", "", gsub("^_+", "", gsub("[^A-Za-z0-9]+", "_", pollutant_id)))
+        sanitized_combination <- gsub("_+$", "", gsub("^_+", "", gsub("[^A-Za-z0-9]+", "_", combo_id)))
+        score_prefix <- gsub("_+$", "", gsub("^_+", "", gsub("[^A-Za-z0-9]+", "_", tolower(spec$short))))
+        output_path <- file.path(
+          "reports/assets/charts",
+          paste0(score_prefix, "_heatmap_", sanitized_pollutant, "_", sanitized_combination, ".png")
+        )
+        plot_width <- max(6, length(run_levels) * 1.2)
+        plot_height <- max(4, length(participant_levels) * 0.6)
+
+        ggsave(output_path, heatmap_plot, width = plot_width, height = plot_height, dpi = 300)
+      }
+    }
+  }
+
+  xpt_summary <- all_scores_df %>%
+    group_by(pollutant, level, combination, combination_label) %>%
+    summarise(
+      x_pt = dplyr::first(x_pt),
+      u_xpt = dplyr::first(u_xpt),
+      expanded_uncertainty = dplyr::first(k_factor * u_xpt),
+      sigma_pt = dplyr::first(sigma_pt),
+      .groups = "drop"
+    ) %>%
+    mutate(
+      combination_id = ifelse(
+        !is.na(combination_label) & combination_label != "",
+        combination_label,
+        combination
+      )
+    ) %>%
+    select(
+      Pollutant = pollutant,
+      Level = level,
+      Combination = combination,
+      Combination_Label = combination_id,
+      x_pt,
+      u_xpt,
+      expanded_uncertainty,
+      sigma_pt
+    ) %>%
+    arrange(Pollutant, Level, Combination_Label)
+
+  write.csv(xpt_summary, "reports/assets/tables/xpt_summary.csv", row.names = FALSE)
+
+  level_summary <- summary_data %>%
+    distinct(pollutant, level) %>%
+    mutate(level_numeric = readr::parse_number(as.character(level))) %>%
+    arrange(pollutant, level_numeric, level) %>%
+    group_by(pollutant) %>%
+    mutate(Run_Order = row_number()) %>%
+    ungroup() %>%
+    select(
+      Pollutant = pollutant,
+      Run_Order,
+      Level = level
+    )
+
+  write.csv(level_summary, "reports/assets/tables/level_summary.csv", row.names = FALSE)
 }
 
 # --- Generate Detailed Participant Summary CSVs ---

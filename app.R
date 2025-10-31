@@ -1542,7 +1542,10 @@ Stability Criterion (0.3 * sigma_pt):", fmt),
       gg <- gg +
         geom_hline(yintercept = action_limits, linetype = "dashed", color = "#C0392B")
     }
-      gg
+    if (score_col %in% c("z_score", "z_prime_score")) {
+      gg <- gg + coord_cartesian(ylim = c(-4, 4))
+    }
+    gg
   }
 
   compute_scores_for_selection <- function(target_pollutant, target_n_lab, target_level, summary_data, max_iter = 50, k_factor = 2) {
