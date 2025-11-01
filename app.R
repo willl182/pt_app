@@ -16,6 +16,7 @@ library(rhandsontable)
 library(shinythemes)
 library(outliers)
 library(patchwork)
+library(bsplus)
 
 # -------------------------------------------------------------------
 # Helper Functions
@@ -827,85 +828,92 @@ server <- function(input, output, session) {
           )
         )
       ),
-      tabPanel("Algoritmo A",
-        sidebarLayout(
-          sidebarPanel(
-            width = analysis_sidebar_w,
-            h4("1. Ejecutar Análisis"),
-            actionButton("algoA_run", "Calcular Algoritmo A", class = "btn-primary btn-block"),
-            hr(),
-            h4("2. Seleccionar Analito"),
-            uiOutput("algoA_pollutant_selector"),
-            hr(),
-            h4("3. Seleccionar Esquema PT (n)"),
-            uiOutput("algoA_n_selector"),
-            hr(),
-            h4("4. Seleccionar Nivel"),
-            uiOutput("algoA_level_selector"),
-            hr(),
-            h4("5. Parámetros del Algoritmo"),
-            numericInput("algoA_max_iter", "Iteraciones máximas:", value = 50, min = 5, max = 500, step = 5)
-          ),
-          mainPanel(
-            width = analysis_main_w,
-            h4("Resultados del Algoritmo A"),
-            uiOutput("algoA_result_summary"),
-            hr(),
-            h4("Datos de Entrada"),
-            dataTableOutput("algoA_input_table"),
-            hr(),
-            h4("Histograma de Resultados"),
-            plotOutput("algoA_histogram"),
-            hr(),
-            h4("Iteraciones"),
-            dataTableOutput("algoA_iterations_table"),
-            hr(),
-            h4("Pesos Finales por Participante"),
-            dataTableOutput("algoA_weights_table")
+      tabPanel("Assigned Value",
+        bsplus::bs_accordion(id = "assigned_value_section") %>%
+          bsplus::bs_set_opts(use_heading_link = TRUE) %>%
+          bsplus::bs_append(
+            title = "Algoritmo A",
+            content = sidebarLayout(
+              sidebarPanel(
+                width = analysis_sidebar_w,
+                h4("1. Ejecutar Análisis"),
+                actionButton("algoA_run", "Calcular Algoritmo A", class = "btn-primary btn-block"),
+                hr(),
+                h4("2. Seleccionar Analito"),
+                uiOutput("algoA_pollutant_selector"),
+                hr(),
+                h4("3. Seleccionar Esquema PT (n)"),
+                uiOutput("algoA_n_selector"),
+                hr(),
+                h4("4. Seleccionar Nivel"),
+                uiOutput("algoA_level_selector"),
+                hr(),
+                h4("5. Parámetros del Algoritmo"),
+                numericInput("algoA_max_iter", "Iteraciones máximas:", value = 50, min = 5, max = 500, step = 5)
+              ),
+              mainPanel(
+                width = analysis_main_w,
+                h4("Resultados del Algoritmo A"),
+                uiOutput("algoA_result_summary"),
+                hr(),
+                h4("Datos de Entrada"),
+                dataTableOutput("algoA_input_table"),
+                hr(),
+                h4("Histograma de Resultados"),
+                plotOutput("algoA_histogram"),
+                hr(),
+                h4("Iteraciones"),
+                dataTableOutput("algoA_iterations_table"),
+                hr(),
+                h4("Pesos Finales por Participante"),
+                dataTableOutput("algoA_weights_table")
+              )
+            )
+          ) %>%
+          bsplus::bs_append(
+            title = "Consensus Value",
+            content = sidebarLayout(
+              sidebarPanel(
+                width = analysis_sidebar_w,
+                h4("1. Ejecutar Cálculo"),
+                actionButton("consensus_run", "Calcular valores consenso", class = "btn-primary btn-block"),
+                hr(),
+                h4("2. Seleccionar Datos"),
+                uiOutput("consensus_pollutant_selector"),
+                uiOutput("consensus_n_selector"),
+                uiOutput("consensus_level_selector"),
+                hr(),
+                p("Calcula el valor consenso x_pt(2) y las desviaciones robustas sigma_pt_2a (MADe) y sigma_pt_2b (nIQR) para cada combinación disponible.")
+              ),
+              mainPanel(
+                width = analysis_main_w,
+                h4("Resumen del Valor Consenso"),
+                tableOutput("consensus_summary_table"),
+                hr(),
+                h4("Datos de Participantes"),
+                dataTableOutput("consensus_input_table")
+              )
+            )
+          ) %>%
+          bsplus::bs_append(
+            title = "Reference Value",
+            content = sidebarLayout(
+              sidebarPanel(
+                width = analysis_sidebar_w,
+                h4("Seleccionar Datos de Referencia"),
+                uiOutput("reference_pollutant_selector"),
+                uiOutput("reference_n_selector"),
+                uiOutput("reference_level_selector"),
+                hr(),
+                p("Visualiza los resultados declarados como referencia en los archivos summary_n*.csv.")
+              ),
+              mainPanel(
+                width = analysis_main_w,
+                h4("Resultados de Referencia"),
+                dataTableOutput("reference_table")
+              )
+            )
           )
-        )
-      ),
-      tabPanel("Consensus Value",
-        sidebarLayout(
-          sidebarPanel(
-            width = analysis_sidebar_w,
-            h4("1. Ejecutar Cálculo"),
-            actionButton("consensus_run", "Calcular valores consenso", class = "btn-primary btn-block"),
-            hr(),
-            h4("2. Seleccionar Datos"),
-            uiOutput("consensus_pollutant_selector"),
-            uiOutput("consensus_n_selector"),
-            uiOutput("consensus_level_selector"),
-            hr(),
-            p("Calcula el valor consenso x_pt(2) y las desviaciones robustas sigma_pt_2a (MADe) y sigma_pt_2b (nIQR) para cada combinación disponible.")
-          ),
-          mainPanel(
-            width = analysis_main_w,
-            h4("Resumen del Valor Consenso"),
-            tableOutput("consensus_summary_table"),
-            hr(),
-            h4("Datos de Participantes"),
-            dataTableOutput("consensus_input_table")
-          )
-        )
-      ),
-      tabPanel("Reference Value",
-        sidebarLayout(
-          sidebarPanel(
-            width = analysis_sidebar_w,
-            h4("Seleccionar Datos de Referencia"),
-            uiOutput("reference_pollutant_selector"),
-            uiOutput("reference_n_selector"),
-            uiOutput("reference_level_selector"),
-            hr(),
-            p("Visualiza los resultados declarados como referencia en los archivos summary_n*.csv.")
-          ),
-          mainPanel(
-            width = analysis_main_w,
-            h4("Resultados de Referencia"),
-            dataTableOutput("reference_table")
-          )
-        )
       ),
       tabPanel("PT Preparation",
         h3("Proficiency Testing Scheme Analysis"),
