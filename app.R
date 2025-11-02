@@ -829,91 +829,93 @@ server <- function(input, output, session) {
         )
       ),
       tabPanel("Assigned Value",
-        bsplus::bs_accordion(id = "assigned_value_section") %>%
-          bsplus::bs_set_opts(use_heading_link = TRUE) %>%
-          bsplus::bs_append(
-            title = "Algoritmo A",
-            content = sidebarLayout(
-              sidebarPanel(
-                width = analysis_sidebar_w,
-                h4("1. Ejecutar Análisis"),
-                actionButton("algoA_run", "Calcular Algoritmo A", class = "btn-primary btn-block"),
-                hr(),
-                h4("2. Seleccionar Analito"),
-                uiOutput("algoA_pollutant_selector"),
-                hr(),
-                h4("3. Seleccionar Esquema PT (n)"),
-                uiOutput("algoA_n_selector"),
-                hr(),
-                h4("4. Seleccionar Nivel"),
-                uiOutput("algoA_level_selector"),
-                hr(),
-                h4("5. Parámetros del Algoritmo"),
-                numericInput("algoA_max_iter", "Iteraciones máximas:", value = 50, min = 5, max = 500, step = 5)
-              ),
-              mainPanel(
-                width = analysis_main_w,
-                h4("Resultados del Algoritmo A"),
-                uiOutput("algoA_result_summary"),
-                hr(),
-                h4("Datos de Entrada"),
-                dataTableOutput("algoA_input_table"),
-                hr(),
-                h4("Histograma de Resultados"),
-                plotOutput("algoA_histogram"),
-                hr(),
-                h4("Iteraciones"),
-                dataTableOutput("algoA_iterations_table"),
-                hr(),
-                h4("Pesos Finales por Participante"),
-                dataTableOutput("algoA_weights_table")
+        sidebarLayout(
+          sidebarPanel(
+            width = analysis_sidebar_w,
+            h4("Selector de datos"),
+            uiOutput("assigned_pollutant_selector"),
+            uiOutput("assigned_n_selector"),
+            uiOutput("assigned_level_selector"),
+            hr(),
+            helpText("La combinación seleccionada se utiliza en todas las secciones de la derecha.")
+          ),
+          mainPanel(
+            width = 12 - analysis_sidebar_w,
+            bsplus::bs_accordion(id = "assigned_value_section") %>%
+              bsplus::bs_set_opts(use_heading_link = TRUE) %>%
+              bsplus::bs_append(
+                title = "Algoritmo A",
+                content = sidebarLayout(
+                  sidebarPanel(
+                    width = analysis_sidebar_w,
+                    h4("1. Ejecutar Análisis"),
+                    actionButton("algoA_run", "Calcular Algoritmo A", class = "btn-primary btn-block"),
+                    hr(),
+                    h4("2. Parámetros del Algoritmo"),
+                    numericInput("algoA_max_iter", "Iteraciones máximas:", value = 50, min = 5, max = 500, step = 5),
+                    hr(),
+                    helpText("Utilice el selector de la izquierda para elegir analito, esquema PT y nivel.")
+                  ),
+                  mainPanel(
+                    width = analysis_main_w,
+                    h4("Resultados del Algoritmo A"),
+                    uiOutput("algoA_result_summary"),
+                    hr(),
+                    h4("Datos de Entrada"),
+                    dataTableOutput("algoA_input_table"),
+                    hr(),
+                    h4("Histograma de Resultados"),
+                    plotOutput("algoA_histogram"),
+                    hr(),
+                    h4("Iteraciones"),
+                    dataTableOutput("algoA_iterations_table"),
+                    hr(),
+                    h4("Pesos Finales por Participante"),
+                    dataTableOutput("algoA_weights_table")
+                  )
+                )
+              ) %>%
+              bsplus::bs_append(
+                title = "Consensus Value",
+                content = sidebarLayout(
+                  sidebarPanel(
+                    width = analysis_sidebar_w,
+                    h4("Ejecutar Cálculo"),
+                    actionButton("consensus_run", "Calcular valores consenso", class = "btn-primary btn-block"),
+                    hr(),
+                    helpText("Se utiliza la misma selección de datos definida en la izquierda."),
+                    hr(),
+                    p("Calcula el valor consenso x_pt(2) y las desviaciones robustas sigma_pt_2a (MADe) y sigma_pt_2b (nIQR) para cada combinación disponible.")
+                  ),
+                  mainPanel(
+                    width = analysis_main_w,
+                    h4("Resumen del Valor Consenso"),
+                    tableOutput("consensus_summary_table"),
+                    hr(),
+                    h4("Datos de Participantes"),
+                    dataTableOutput("consensus_input_table")
+                  )
+                )
+              ) %>%
+              bsplus::bs_append(
+                title = "Reference Value",
+                content = sidebarLayout(
+                  sidebarPanel(
+                    width = analysis_sidebar_w,
+                    h4("Datos de Referencia"),
+                    helpText("Se muestran los resultados declarados como referencia para la selección actual."),
+                    hr(),
+                    p("Visualiza los resultados declarados como referencia en los archivos summary_n*.csv.")
+                  ),
+                  mainPanel(
+                    width = analysis_main_w,
+                    h4("Resultados de Referencia"),
+                    dataTableOutput("reference_table")
+                  )
+                )
               )
-            )
-          ) %>%
-          bsplus::bs_append(
-            title = "Consensus Value",
-            content = sidebarLayout(
-              sidebarPanel(
-                width = analysis_sidebar_w,
-                h4("1. Ejecutar Cálculo"),
-                actionButton("consensus_run", "Calcular valores consenso", class = "btn-primary btn-block"),
-                hr(),
-                h4("2. Seleccionar Datos"),
-                uiOutput("consensus_pollutant_selector"),
-                uiOutput("consensus_n_selector"),
-                uiOutput("consensus_level_selector"),
-                hr(),
-                p("Calcula el valor consenso x_pt(2) y las desviaciones robustas sigma_pt_2a (MADe) y sigma_pt_2b (nIQR) para cada combinación disponible.")
-              ),
-              mainPanel(
-                width = analysis_main_w,
-                h4("Resumen del Valor Consenso"),
-                tableOutput("consensus_summary_table"),
-                hr(),
-                h4("Datos de Participantes"),
-                dataTableOutput("consensus_input_table")
-              )
-            )
-          ) %>%
-          bsplus::bs_append(
-            title = "Reference Value",
-            content = sidebarLayout(
-              sidebarPanel(
-                width = analysis_sidebar_w,
-                h4("Seleccionar Datos de Referencia"),
-                uiOutput("reference_pollutant_selector"),
-                uiOutput("reference_n_selector"),
-                uiOutput("reference_level_selector"),
-                hr(),
-                p("Visualiza los resultados declarados como referencia en los archivos summary_n*.csv.")
-              ),
-              mainPanel(
-                width = analysis_main_w,
-                h4("Resultados de Referencia"),
-                dataTableOutput("reference_table")
-              )
-            )
           )
+        )
       ),
       tabPanel("PT Preparation",
         h3("Proficiency Testing Scheme Analysis"),
@@ -951,6 +953,128 @@ server <- function(input, output, session) {
               tabPanel("Zeta-Scores", uiOutput("zeta_scores_panel")),
               tabPanel("En-Scores", uiOutput("en_scores_panel"))
             )
+          )
+        )
+      ),
+      tabPanel("Global Report",
+        sidebarLayout(
+          sidebarPanel(
+            width = analysis_sidebar_w,
+            h4("1. Ejecutar cálculo global"),
+            helpText("Use \"Calcular puntajes\" en la pestaña PT Scores para habilitar esta sección."),
+            hr(),
+            h4("2. Seleccionar combinación"),
+            uiOutput("global_report_pollutant_selector"),
+            uiOutput("global_report_n_selector"),
+            uiOutput("global_report_level_selector"),
+            hr(),
+            uiOutput("global_report_pt_size_info")
+          ),
+          mainPanel(
+            width = analysis_main_w,
+            bsplus::bs_accordion(id = "global_report_sections") %>%
+              bsplus::bs_set_opts(use_heading_link = TRUE) %>%
+              bsplus::bs_append(
+                title = "Referencia (1)",
+                content = tagList(
+                  h4("Parámetros principales"),
+                  tableOutput("global_params_ref"),
+                  hr(),
+                  h4("Resultados por participante"),
+                  dataTableOutput("global_overview_ref"),
+                  hr(),
+                  fluidRow(
+                    column(6, plotOutput("global_heatmap_z_ref", height = "350px")),
+                    column(6, plotOutput("global_heatmap_zeta_ref", height = "350px"))
+                  ),
+                  fluidRow(
+                    column(6, plotOutput("global_heatmap_en_ref", height = "350px")),
+                    column(6, plotOutput("global_class_heatmap_z_ref", height = "350px"))
+                  ),
+                  fluidRow(
+                    column(6, plotOutput("global_class_heatmap_zprime_ref", height = "350px"))
+                  )
+                )
+              ) %>%
+              bsplus::bs_append(
+                title = "Consenso MADe (2a)",
+                content = tagList(
+                  h4("Parámetros principales"),
+                  tableOutput("global_params_consensus_ma"),
+                  hr(),
+                  h4("Resultados por participante"),
+                  dataTableOutput("global_overview_consensus_ma"),
+                  hr(),
+                  fluidRow(
+                    column(6, plotOutput("global_heatmap_z_consensus_ma", height = "350px")),
+                    column(6, plotOutput("global_heatmap_zeta_consensus_ma", height = "350px"))
+                  ),
+                  fluidRow(
+                    column(6, plotOutput("global_heatmap_en_consensus_ma", height = "350px")),
+                    column(6, plotOutput("global_class_heatmap_z_consensus_ma", height = "350px"))
+                  ),
+                  fluidRow(
+                    column(6, plotOutput("global_class_heatmap_zprime_consensus_ma", height = "350px"))
+                  )
+                )
+              ) %>%
+              bsplus::bs_append(
+                title = "Consenso nIQR (2b)",
+                content = tagList(
+                  h4("Parámetros principales"),
+                  tableOutput("global_params_consensus_niqr"),
+                  hr(),
+                  h4("Resultados por participante"),
+                  dataTableOutput("global_overview_consensus_niqr"),
+                  hr(),
+                  fluidRow(
+                    column(6, plotOutput("global_heatmap_z_consensus_niqr", height = "350px")),
+                    column(6, plotOutput("global_heatmap_zeta_consensus_niqr", height = "350px"))
+                  ),
+                  fluidRow(
+                    column(6, plotOutput("global_heatmap_en_consensus_niqr", height = "350px")),
+                    column(6, plotOutput("global_class_heatmap_z_consensus_niqr", height = "350px"))
+                  ),
+                  fluidRow(
+                    column(6, plotOutput("global_class_heatmap_zprime_consensus_niqr", height = "350px"))
+                  )
+                )
+              ) %>%
+              bsplus::bs_append(
+                title = "Algoritmo A (3)",
+                content = tagList(
+                  h4("Parámetros principales"),
+                  tableOutput("global_params_algo"),
+                  hr(),
+                  h4("Resultados por participante"),
+                  dataTableOutput("global_overview_algo"),
+                  hr(),
+                  fluidRow(
+                    column(6, plotOutput("global_heatmap_z_algo", height = "350px")),
+                    column(6, plotOutput("global_heatmap_zeta_algo", height = "350px"))
+                  ),
+                  fluidRow(
+                    column(6, plotOutput("global_heatmap_en_algo", height = "350px")),
+                    column(6, plotOutput("global_class_heatmap_z_algo", height = "350px"))
+                  ),
+                  fluidRow(
+                    column(6, plotOutput("global_class_heatmap_zprime_algo", height = "350px"))
+                  )
+                )
+              ) %>%
+              bsplus::bs_append(
+                title = "Global Summaries",
+                content = tagList(
+                  h4("Resumen x_pt"),
+                  dataTableOutput("global_xpt_summary_table"),
+                  hr(),
+                  h4("Resumen de niveles"),
+                  tableOutput("global_level_summary_table"),
+                  hr(),
+                  h4("Resumen de evaluaciones"),
+                  dataTableOutput("global_evaluation_summary_table")
+                )
+              )
           )
         )
       ),
@@ -1450,6 +1574,35 @@ Stability Criterion (0.3 * sigma_pt):", fmt),
     algo = list(title = "Algoritmo A (3)", label = "3")
   )
 
+  global_combo_specs <- list(
+    ref = list(title = "Referencia (1)", label = "1", tab = "z1 - Referencia (1)"),
+    consensus_ma = list(title = "Consenso MADe (2a)", label = "2a", tab = "z2a - Consenso MADe (2a)"),
+    consensus_niqr = list(title = "Consenso nIQR (2b)", label = "2b", tab = "z2b - Consenso nIQR (2b)"),
+    algo = list(title = "Algoritmo A (3)", label = "3", tab = "z3 - Algoritmo A (3)")
+  )
+
+  pt_en_class_labels <- c(
+    a1 = "a1 - Fully Satisfactory",
+    a2 = "a2 - Satisfactory but Conservative",
+    a3 = "a3 - Satisfactory with Underestimated MU",
+    a4 = "a4 - Questionable but Acceptable",
+    a5 = "a5 - Questionable and Inconsistent",
+    a6 = "a6 - Unsatisfactory but MU Covers Deviation",
+    a7 = "a7 - Unsatisfactory (Critical)"
+  )
+
+  pt_en_class_colors <- c(
+    a1 = "#2E7D32",
+    a2 = "#66BB6A",
+    a3 = "#9CCC65",
+    a4 = "#FFF59D",
+    a5 = "#FBC02D",
+    a6 = "#EF9A9A",
+    a7 = "#C62828",
+    mu_missing_z = "#90A4AE",
+    mu_missing_zprime = "#78909C"
+  )
+
   score_eval_z <- function(z) {
     case_when(
       !is.finite(z) ~ "N/A",
@@ -1740,6 +1893,115 @@ Stability Criterion (0.3 * sigma_pt):", fmt),
     scores_trigger(Sys.time())
   })
 
+  global_report_data <- reactive({
+    if (is.null(scores_trigger())) {
+      return(list(
+        error = "Calcule los puntajes para habilitar el reporte global.",
+        summary = tibble(),
+        overview = tibble(),
+        combos = tibble(),
+        errors = tibble()
+      ))
+    }
+
+    cache <- scores_results_cache()
+    if (is.null(cache) || length(cache) == 0) {
+      return(list(
+        error = "No se generaron resultados globales. Ejecute 'Calcular puntajes'.",
+        summary = tibble(),
+        overview = tibble(),
+        combos = tibble(),
+        errors = tibble()
+      ))
+    }
+
+    summary_rows <- list()
+    overview_rows <- list()
+    combo_rows <- list()
+    error_rows <- list()
+
+    purrr::iwalk(cache, function(res, key) {
+      parts <- strsplit(key, "\\|\\|")[[1]]
+      pollutant_val <- parts[1]
+      n_lab_val <- suppressWarnings(as.numeric(parts[2]))
+      if (is.na(n_lab_val)) {
+        n_lab_val <- parts[2]
+      }
+      level_val <- parts[3]
+
+      if (!is.null(res$error)) {
+        error_rows[[length(error_rows) + 1]] <<- tibble(
+          pollutant = pollutant_val,
+          n_lab = n_lab_val,
+          level = level_val,
+          source = "scores",
+          message = res$error
+        )
+        return()
+      }
+
+      if (!is.null(res$summary) && nrow(res$summary) > 0) {
+        summary_rows[[length(summary_rows) + 1]] <<- res$summary %>%
+          mutate(
+            pollutant = pollutant_val,
+            n_lab = n_lab_val,
+            level = level_val
+          )
+      }
+
+      if (!is.null(res$overview) && nrow(res$overview) > 0) {
+        overview_rows[[length(overview_rows) + 1]] <<- res$overview %>%
+          mutate(
+            pollutant = pollutant_val,
+            n_lab = n_lab_val,
+            level = level_val
+          )
+      }
+
+      purrr::iwalk(res$combos, function(combo_res, combo_key) {
+        if (!is.null(combo_res$error)) {
+          error_rows[[length(error_rows) + 1]] <<- tibble(
+            pollutant = pollutant_val,
+            n_lab = n_lab_val,
+            level = level_val,
+            source = combo_key,
+            message = combo_res$error
+          )
+          return()
+        }
+        if (is.null(combo_res$data) || nrow(combo_res$data) == 0) {
+          return()
+        }
+        combo_rows[[length(combo_rows) + 1]] <<- combo_res$data %>%
+          mutate(
+            pollutant = pollutant_val,
+            n_lab = n_lab_val,
+            level = level_val,
+            combo_key = combo_key
+          )
+      })
+    })
+
+    normalize_n <- function(df) {
+      if (is.null(df) || nrow(df) == 0) {
+        return(df)
+      }
+      df %>%
+        mutate(
+          n_lab = as.character(n_lab),
+          n_lab_numeric = suppressWarnings(as.numeric(n_lab))
+        )
+    }
+
+    list(
+      error = NULL,
+      summary = normalize_n(if (length(summary_rows) > 0) dplyr::bind_rows(summary_rows) else tibble()),
+      overview = normalize_n(if (length(overview_rows) > 0) dplyr::bind_rows(overview_rows) else tibble()),
+      combos = normalize_n(if (length(combo_rows) > 0) dplyr::bind_rows(combo_rows) else tibble()),
+      errors = normalize_n(if (length(error_rows) > 0) dplyr::bind_rows(error_rows) else tibble())
+    )
+  })
+
   scores_results_selected <- reactive({
     req(input$scores_pollutant, input$scores_n_lab, input$scores_level)
     get_scores_result(input$scores_pollutant, input$scores_n_lab, input$scores_level)
@@ -1747,6 +2009,667 @@ Stability Criterion (0.3 * sigma_pt):", fmt),
 
   scores_combined_data <- reactive({
     combine_scores_result(scores_results_selected())
+  })
+
+  # --- Global Report Module ---
+  score_heatmap_palettes <- list(
+    z = c(
+      "Satisfactory" = "#00B050",
+      "Questionable" = "#FFEB3B",
+      "Unsatisfactory" = "#D32F2F",
+      "N/A" = "#BDBDBD"
+    ),
+    zeta = c(
+      "Satisfactory" = "#00B050",
+      "Questionable" = "#FFEB3B",
+      "Unsatisfactory" = "#D32F2F",
+      "N/A" = "#BDBDBD"
+    ),
+    en = c(
+      "Satisfactory" = "#00B050",
+      "Questionable" = "#D32F2F",
+      "Unsatisfactory" = "#D32F2F",
+      "N/A" = "#BDBDBD"
+    )
+  )
+
+  global_report_combos <- reactive({
+    data <- global_report_data()
+    if (!is.null(data$error)) {
+      return(tibble())
+    }
+    combos <- data$combos
+    if (is.null(combos) || nrow(combos) == 0) {
+      return(tibble())
+    }
+    combos %>%
+      mutate(
+        pollutant = as.character(pollutant),
+        n_lab = as.character(n_lab),
+        level = as.character(level),
+        combination = as.character(combination),
+        combination_label = as.character(combination_label),
+        participant_id = as.character(participant_id)
+      )
+  })
+
+  global_report_summary <- reactive({
+    data <- global_report_data()
+    if (!is.null(data$error)) {
+      return(tibble())
+    }
+    summary_df <- data$summary
+    if (is.null(summary_df) || nrow(summary_df) == 0) {
+      return(tibble())
+    }
+    summary_df %>%
+      mutate(
+        pollutant = as.character(pollutant),
+        n_lab = as.character(n_lab),
+        level = as.character(level)
+      )
+  })
+
+  global_report_overview <- reactive({
+    data <- global_report_data()
+    if (!is.null(data$error)) {
+      return(tibble())
+    }
+    overview_df <- data$overview
+    if (is.null(overview_df) || nrow(overview_df) == 0) {
+      return(tibble())
+    }
+    overview_df %>%
+      mutate(
+        pollutant = as.character(pollutant),
+        n_lab = as.character(n_lab),
+        level = as.character(level)
+      )
+  })
+
+  global_pt_size_info <- reactive({
+    combos <- global_report_combos()
+    if (nrow(combos) == 0) {
+      return(tibble())
+    }
+    combos %>%
+      filter(combo_key == "ref") %>%
+      group_by(pollutant, n_lab) %>%
+      summarise(
+        participants = n_distinct(participant_id[participant_id != "ref"]),
+        has_ref = any(participant_id == "ref"),
+        .groups = "drop"
+      )
+  })
+
+  global_xpt_summary_data <- reactive({
+    combos <- global_report_combos()
+    if (nrow(combos) == 0) {
+      return(tibble())
+    }
+    combos %>%
+      group_by(pollutant, n_lab, level, combination, combination_label, n_lab_numeric) %>%
+      summarise(
+        x_pt = dplyr::first(x_pt),
+        u_xpt = dplyr::first(u_xpt),
+        sigma_pt = dplyr::first(sigma_pt),
+        k_factor = dplyr::first(k_factor),
+        .groups = "drop"
+      ) %>%
+      mutate(
+        expanded_uncertainty = k_factor * u_xpt
+      )
+  })
+
+  global_evaluation_summary_data <- reactive({
+    combos <- global_report_combos()
+    if (nrow(combos) == 0) {
+      return(tibble())
+    }
+    combos %>%
+      filter(participant_id != "ref") %>%
+      select(pollutant, n_lab, level, combination, combination_label,
+             z_score_eval, zeta_score_eval, En_score_eval) %>%
+      pivot_longer(
+        cols = c(z_score_eval, zeta_score_eval, En_score_eval),
+        names_to = "score_type",
+        values_to = "evaluation"
+      ) %>%
+      mutate(
+        pollutant = as.character(pollutant),
+        n_lab = as.character(n_lab),
+        level = as.character(level),
+        combination = as.character(combination),
+        combination_label = as.character(combination_label),
+        score_type = sub("_eval$", "", score_type),
+        evaluation = factor(evaluation, levels = c("Satisfactory", "Questionable", "Unsatisfactory", "N/A"))
+      ) %>%
+      count(pollutant, n_lab, level, combination, combination_label, score_type, evaluation, .drop = FALSE, name = "Count") %>%
+      group_by(pollutant, n_lab, level, combination, combination_label, score_type) %>%
+      mutate(
+        Total = sum(Count),
+        Percentage = ifelse(Total > 0, (Count / Total) * 100, 0)
+      ) %>%
+      ungroup() %>%
+      select(-Total) %>%
+      mutate(Criteria = paste(score_type, evaluation))
+  })
+
+  global_level_summary_data <- reactive({
+    req(pt_prep_data())
+    data <- pt_prep_data()
+    if (is.null(data) || nrow(data) == 0) {
+      return(tibble())
+    }
+    data %>%
+      mutate(
+        pollutant = as.character(pollutant),
+        n_lab = as.character(n_lab),
+        level = as.character(level)
+      ) %>%
+      distinct(pollutant, n_lab, level) %>%
+      mutate(level_numeric = readr::parse_number(level)) %>%
+      arrange(pollutant, n_lab, level_numeric, level) %>%
+      group_by(pollutant, n_lab) %>%
+      mutate(Run_Order = row_number()) %>%
+      ungroup() %>%
+      select(
+        pollutant,
+        n_lab,
+        Run_Order,
+        level
+      )
+  })
+
+  output$global_report_pollutant_selector <- renderUI({
+    data <- global_report_data()
+    if (!is.null(data$error)) {
+      return(div(class = "alert alert-info", data$error))
+    }
+    combos <- global_report_combos()
+    if (nrow(combos) == 0) {
+      return(helpText("Calcule los puntajes para habilitar esta sección."))
+    }
+    choices <- combos %>%
+      distinct(pollutant) %>%
+      arrange(pollutant) %>%
+      pull(pollutant)
+    selected <- if (!is.null(input$global_report_pollutant) && input$global_report_pollutant %in% choices) {
+      input$global_report_pollutant
+    } else {
+      choices[1]
+    }
+    selectInput("global_report_pollutant", "Analito:", choices = choices, selected = selected)
+  })
+
+  output$global_report_n_selector <- renderUI({
+    combos <- global_report_combos()
+    if (nrow(combos) == 0) {
+      return(NULL)
+    }
+    req(input$global_report_pollutant)
+
+    combos_filtered <- combos %>%
+      filter(pollutant == input$global_report_pollutant, combo_key == "ref")
+    if (nrow(combos_filtered) == 0) {
+      return(helpText("No hay esquemas PT disponibles para este analito."))
+    }
+
+    choices_df <- combos_filtered %>%
+      distinct(n_lab, n_lab_numeric) %>%
+      arrange(n_lab_numeric, n_lab)
+
+    pt_info <- global_pt_size_info()
+    choice_named <- purrr::map_chr(choices_df$n_lab, function(n_val) {
+      row <- pt_info %>%
+        filter(pollutant == input$global_report_pollutant, n_lab == n_val)
+      if (nrow(row) == 0) {
+        return(paste0("n = ", n_val))
+      }
+      ref_txt <- ifelse(row$has_ref[1], " + ref", "")
+      paste0("n = ", n_val, " (", row$participants[1], " participantes", ref_txt, ")")
+    })
+
+    selected <- if (!is.null(input$global_report_n_lab) && input$global_report_n_lab %in% choices_df$n_lab) {
+      input$global_report_n_lab
+    } else {
+      choices_df$n_lab[1]
+    }
+
+    selectInput(
+      "global_report_n_lab",
+      "Esquema PT (n):",
+      choices = stats::setNames(choices_df$n_lab, choice_named),
+      selected = selected
+    )
+  })
+
+  output$global_report_level_selector <- renderUI({
+    combos <- global_report_combos()
+    if (nrow(combos) == 0) {
+      return(NULL)
+    }
+    req(input$global_report_pollutant, input$global_report_n_lab)
+
+    levels_df <- combos %>%
+      filter(
+        pollutant == input$global_report_pollutant,
+        n_lab == input$global_report_n_lab,
+        combo_key == "ref"
+      ) %>%
+      distinct(level) %>%
+      mutate(level_numeric = readr::parse_number(level)) %>%
+      arrange(level_numeric, level)
+
+    if (nrow(levels_df) == 0) {
+      return(helpText("No hay niveles disponibles para esta selección."))
+    }
+
+    selected <- if (!is.null(input$global_report_level) && input$global_report_level %in% levels_df$level) {
+      input$global_report_level
+    } else {
+      levels_df$level[1]
+    }
+
+    selectInput(
+      "global_report_level",
+      "Nivel:",
+      choices = stats::setNames(levels_df$level, levels_df$level),
+      selected = selected
+    )
+  })
+
+  output$global_report_pt_size_info <- renderUI({
+    info <- global_pt_size_info()
+    if (nrow(info) == 0) {
+      return(NULL)
+    }
+    req(input$global_report_pollutant, input$global_report_n_lab)
+    row <- info %>%
+      filter(pollutant == input$global_report_pollutant, n_lab == input$global_report_n_lab)
+    if (nrow(row) == 0) {
+      return(NULL)
+    }
+    participants_text <- sprintf(
+      "%d participantes%s",
+      row$participants[1],
+      ifelse(row$has_ref[1], " + ref", "")
+    )
+    tags$div(
+      class = "small text-muted",
+      strong("Resumen de tamaño PT:"), br(),
+      participants_text
+    )
+  })
+
+  get_global_summary_row <- function(spec) {
+    summary_df <- global_report_summary()
+    if (nrow(summary_df) == 0) {
+      return(tibble())
+    }
+    req(input$global_report_pollutant, input$global_report_n_lab, input$global_report_level)
+    summary_df %>%
+      filter(
+        pollutant == input$global_report_pollutant,
+        n_lab == input$global_report_n_lab,
+        level == input$global_report_level,
+        Etiqueta == spec$label
+      )
+  }
+
+  get_global_overview_data <- function(spec) {
+    overview_df <- global_report_overview()
+    if (nrow(overview_df) == 0) {
+      return(tibble())
+    }
+    req(input$global_report_pollutant, input$global_report_n_lab, input$global_report_level)
+    overview_df %>%
+      filter(
+        pollutant == input$global_report_pollutant,
+        n_lab == input$global_report_n_lab,
+        level == input$global_report_level,
+        Combinación == spec$title
+      )
+  }
+
+  get_combo_levels_order <- function(combos_filtered) {
+    combos_filtered %>%
+      distinct(level) %>%
+      mutate(level_numeric = readr::parse_number(level)) %>%
+      arrange(level_numeric, level) %>%
+      pull(level)
+  }
+
+  render_global_score_heatmap <- function(output_id, combo_key, score_col, eval_col, palette, title_prefix) {
+    output[[output_id]] <- renderPlot({
+      combos <- global_report_combos()
+      req(nrow(combos) > 0, input$global_report_pollutant, input$global_report_n_lab)
+      spec <- global_combo_specs[[combo_key]]
+      filtered <- combos %>%
+        filter(
+          pollutant == input$global_report_pollutant,
+          n_lab == input$global_report_n_lab,
+          combo_key == combo_key,
+          combination_label == spec$label,
+          participant_id != "ref"
+        )
+      if (nrow(filtered) == 0) {
+        return(ggplot() + theme_void() + labs(title = paste(title_prefix, "- sin datos disponibles")))
+      }
+
+      filtered <- filtered %>%
+        mutate(run_label = as.character(level))
+
+      participant_levels <- filtered %>%
+        distinct(participant_id) %>%
+        arrange(participant_id) %>%
+        pull(participant_id)
+
+      run_levels <- filtered %>%
+        distinct(level, run_label) %>%
+        mutate(level_numeric = readr::parse_number(as.character(level))) %>%
+        arrange(level_numeric, level, run_label) %>%
+        pull(run_label)
+
+      base_grid <- expand.grid(
+        participant_id = participant_levels,
+        run_label = run_levels,
+        stringsAsFactors = FALSE
+      ) %>%
+        as_tibble()
+
+      value_sym <- rlang::sym(score_col)
+      eval_sym <- rlang::sym(eval_col)
+
+      plot_data <- base_grid %>%
+        left_join(
+          filtered %>%
+            transmute(
+              participant_id,
+              run_label = as.character(level),
+              score_value = !!value_sym,
+              evaluation = !!eval_sym
+            ),
+          by = c("participant_id", "run_label")
+        ) %>%
+        mutate(
+          evaluation = ifelse(is.na(evaluation) | evaluation == "", "N/A", evaluation),
+          tile_label = ifelse(is.finite(score_value), sprintf("%.2f", score_value), ""),
+          participant_id = factor(participant_id, levels = participant_levels),
+          run_label = factor(run_label, levels = run_levels),
+          evaluation = factor(evaluation, levels = names(palette))
+        )
+
+      ggplot(plot_data, aes(x = run_label, y = participant_id, fill = evaluation)) +
+        geom_tile(color = "white") +
+        geom_text(aes(label = tile_label), size = 3, color = "#1B1B1B") +
+        scale_fill_manual(values = palette, drop = FALSE, na.value = "#BDBDBD") +
+        labs(
+          title = paste(title_prefix, "para", spec$title),
+          subtitle = paste("Analito:", input$global_report_pollutant),
+          x = "Nivel",
+          y = "Participante",
+          fill = "Evaluación"
+        ) +
+        theme_minimal() +
+        theme(
+          panel.grid = element_blank(),
+          axis.text.x = element_text(angle = 45, hjust = 1)
+        )
+    })
+  }
+
+  render_global_classification_heatmap <- function(output_id, combo_key, code_col, label_col, title_prefix) {
+    output[[output_id]] <- renderPlot({
+      combos <- global_report_combos()
+      req(nrow(combos) > 0, input$global_report_pollutant, input$global_report_n_lab)
+      spec <- global_combo_specs[[combo_key]]
+      filtered <- combos %>%
+        filter(
+          pollutant == input$global_report_pollutant,
+          n_lab == input$global_report_n_lab,
+          combo_key == combo_key,
+          combination_label == spec$label,
+          participant_id != "ref"
+        )
+      if (nrow(filtered) == 0) {
+        return(ggplot() + theme_void() + labs(title = paste(title_prefix, "- sin datos disponibles")))
+      }
+      filtered <- filtered %>%
+        mutate(run_label = as.character(level))
+
+      participant_levels <- filtered %>%
+        distinct(participant_id) %>%
+        arrange(participant_id) %>%
+        pull(participant_id)
+
+      run_levels <- filtered %>%
+        distinct(level, run_label) %>%
+        mutate(level_numeric = readr::parse_number(as.character(level))) %>%
+        arrange(level_numeric, level, run_label) %>%
+        pull(run_label)
+
+      base_grid <- expand.grid(
+        participant_id = participant_levels,
+        run_label = run_levels,
+        stringsAsFactors = FALSE
+      ) %>%
+        as_tibble()
+
+      code_sym <- rlang::sym(code_col)
+      label_sym <- rlang::sym(label_col)
+
+      plot_data <- base_grid %>%
+        left_join(
+          filtered %>%
+            transmute(
+              participant_id,
+              run_label = as.character(level),
+              class_code = !!code_sym,
+              class_label = !!label_sym
+            ),
+          by = c("participant_id", "run_label")
+        ) %>%
+        mutate(
+          class_code = ifelse(class_code == "", NA_character_, class_code),
+          class_label = ifelse(is.na(class_label) | class_label == "", "N/A", class_label),
+          participant_id = factor(participant_id, levels = participant_levels),
+          run_label = factor(run_label, levels = run_levels),
+          display_code = case_when(
+            is.na(class_code) ~ "",
+            grepl("^mu_missing", class_code) ~ "MU",
+            TRUE ~ toupper(class_code)
+          ),
+          fill_code = factor(class_code, levels = names(pt_en_class_colors))
+        )
+
+      legend_labels <- c(
+        pt_en_class_labels,
+        `mu_missing_z` = "MU missing - z only",
+        `mu_missing_zprime` = "MU missing - z' only"
+      )
+
+      ggplot(plot_data, aes(x = run_label, y = participant_id, fill = fill_code)) +
+        geom_tile(color = "white") +
+        geom_text(aes(label = display_code), size = 3, color = "#1B1B1B") +
+        scale_fill_manual(
+          values = pt_en_class_colors,
+          breaks = names(pt_en_class_colors),
+          labels = legend_labels,
+          drop = FALSE,
+          na.value = "#EEEEEE"
+        ) +
+        labs(
+          title = paste(title_prefix, "para", spec$title),
+          subtitle = paste("Analito:", input$global_report_pollutant),
+          x = "Nivel",
+          y = "Participante",
+          fill = "Clase"
+        ) +
+        theme_minimal() +
+        theme(
+          panel.grid = element_blank(),
+          axis.text.x = element_text(angle = 45, hjust = 1)
+        )
+    })
+  }
+
+  purrr::iwalk(global_combo_specs, function(spec, combo_key) {
+    output[[paste0("global_params_", combo_key)]] <- renderTable({
+      summary_row <- get_global_summary_row(spec)
+      if (nrow(summary_row) == 0) {
+        return(data.frame(Mensaje = "No hay datos disponibles para esta combinación."))
+      }
+      if (any(summary_row$Nota != "")) {
+        return(summary_row %>% select(Combinación, Nota))
+      }
+      summary_row %>%
+        select(Combinación, `x_pt`, `sigma_pt`, `u(x_pt)`) %>%
+        mutate(
+          `x_pt` = sprintf("%.5f", `x_pt`),
+          `sigma_pt` = sprintf("%.5f", `sigma_pt`),
+          `u(x_pt)` = sprintf("%.5f", `u(x_pt)`)
+        )
+    }, striped = TRUE, spacing = "l", rownames = FALSE)
+
+    output[[paste0("global_overview_", combo_key)]] <- renderDataTable({
+      overview <- get_global_overview_data(spec)
+      if (nrow(overview) == 0) {
+        return(datatable(data.frame(Mensaje = "No hay datos disponibles para esta combinación.")))
+      }
+      datatable(
+        overview,
+        options = list(scrollX = TRUE, pageLength = 12),
+        rownames = FALSE
+      ) %>%
+        formatRound(columns = c("Result", "u(xi)", "z-score", "z'-score", "zeta-score", "En-score"), digits = 3)
+    })
+
+    render_global_score_heatmap(
+      paste0("global_heatmap_z_", combo_key),
+      combo_key,
+      "z_score",
+      "z_score_eval",
+      score_heatmap_palettes$z,
+      "Mapa de calor z-score"
+    )
+
+    render_global_score_heatmap(
+      paste0("global_heatmap_zeta_", combo_key),
+      combo_key,
+      "zeta_score",
+      "zeta_score_eval",
+      score_heatmap_palettes$zeta,
+      "Mapa de calor zeta-score"
+    )
+
+    render_global_score_heatmap(
+      paste0("global_heatmap_en_", combo_key),
+      combo_key,
+      "En_score",
+      "En_score_eval",
+      score_heatmap_palettes$en,
+      "Mapa de calor En-score"
+    )
+
+    render_global_classification_heatmap(
+      paste0("global_class_heatmap_z_", combo_key),
+      combo_key,
+      "classification_z_en_code",
+      "classification_z_en",
+      "Clasificación z + En"
+    )
+
+    render_global_classification_heatmap(
+      paste0("global_class_heatmap_zprime_", combo_key),
+      combo_key,
+      "classification_zprime_en_code",
+      "classification_zprime_en",
+      "Clasificación z' + En"
+    )
+  })
+
+  output$global_xpt_summary_table <- renderDataTable({
+    summary_df <- global_xpt_summary_data()
+    if (nrow(summary_df) == 0) {
+      return(datatable(data.frame(Mensaje = "No hay información x_pt disponible.")))
+    }
+    req(input$global_report_pollutant, input$global_report_n_lab, input$global_report_level)
+    filtered <- summary_df %>%
+      filter(
+        pollutant == input$global_report_pollutant,
+        n_lab == input$global_report_n_lab,
+        level == input$global_report_level
+      ) %>%
+      arrange(combination_label, level)
+    if (nrow(filtered) == 0) {
+      return(datatable(data.frame(Mensaje = "No hay información x_pt para la selección actual.")))
+    }
+    datatable(
+      filtered %>%
+        select(
+          Combination = combination,
+          `Combination Label` = combination_label,
+          Level = level,
+          `x_pt`,
+          `u(x_pt)` = u_xpt,
+          `expanded_uncertainty`,
+          `sigma_pt`
+        ),
+      options = list(pageLength = 10, scrollX = TRUE),
+      rownames = FALSE
+    ) %>%
+      formatRound(columns = c("x_pt", "u(x_pt)", "expanded_uncertainty", "sigma_pt"), digits = 5)
+  })
+
+  output$global_level_summary_table <- renderTable({
+    level_df <- global_level_summary_data()
+    if (nrow(level_df) == 0) {
+      return(data.frame(Mensaje = "No hay información de niveles disponible."))
+    }
+    req(input$global_report_pollutant, input$global_report_n_lab, input$global_report_level)
+    level_df %>%
+      filter(
+        pollutant == input$global_report_pollutant,
+        n_lab == input$global_report_n_lab,
+        level == input$global_report_level
+      ) %>%
+      transmute(
+        `Run Order` = Run_Order,
+        Level = level
+      )
+  }, striped = TRUE, spacing = "l", rownames = FALSE)
+
+  output$global_evaluation_summary_table <- renderDataTable({
+    summary_df <- global_evaluation_summary_data()
+    if (nrow(summary_df) == 0) {
+      return(datatable(data.frame(Mensaje = "No hay evaluaciones calculadas.")))
+    }
+    req(input$global_report_pollutant, input$global_report_n_lab, input$global_report_level)
+    filtered <- summary_df %>%
+      filter(
+        pollutant == input$global_report_pollutant,
+        n_lab == input$global_report_n_lab,
+        level == input$global_report_level
+      ) %>%
+      arrange(combination_label, level, score_type, evaluation)
+    if (nrow(filtered) == 0) {
+      return(datatable(data.frame(Mensaje = "No hay evaluaciones para la selección actual.")))
+    }
+    datatable(
+      filtered %>%
+        select(
+          Combination = combination,
+          Level = level,
+          Criteria,
+          Evaluation = evaluation,
+          Count,
+          Percentage
+        ),
+      options = list(pageLength = 12, scrollX = TRUE),
+      rownames = FALSE
+    ) %>%
+      formatRound(columns = "Percentage", digits = 1)
   })
 
   participants_available <- reactive({
@@ -2406,32 +3329,45 @@ Stability Criterion (0.3 * sigma_pt):", fmt),
 
   # --- Algoritmo A Module ---
 
-  output$algoA_pollutant_selector <- renderUI({
-    req(pt_prep_data())
-    if (nrow(pt_prep_data()) == 0) {
-      return(p("No se encontraron datos para ejecutar el Algoritmo A."))
+  output$assigned_pollutant_selector <- renderUI({
+    data <- pt_prep_data()
+    if (is.null(data) || nrow(data) == 0) {
+      return(helpText("Cargue los archivos summary_n*.csv para habilitar esta sección."))
     }
-    choices <- sort(unique(pt_prep_data()$pollutant))
-    selectInput("algoA_pollutant", "Seleccionar analito:", choices = choices)
+    choices <- sort(unique(data$pollutant))
+    selectInput("assigned_pollutant", "Seleccionar analito:", choices = choices)
   })
 
-  output$algoA_n_selector <- renderUI({
-    req(pt_prep_data(), input$algoA_pollutant)
-    choices <- pt_prep_data() %>%
-      filter(pollutant == input$algoA_pollutant) %>%
+  output$assigned_n_selector <- renderUI({
+    data <- pt_prep_data()
+    req(data, input$assigned_pollutant)
+    subset <- data %>% filter(pollutant == input$assigned_pollutant)
+    if (nrow(subset) == 0) {
+      return(helpText("No hay esquemas PT disponibles para este analito."))
+    }
+    choices <- subset %>%
       pull(n_lab) %>%
       unique() %>%
       sort()
-    selectInput("algoA_n_lab", "Seleccionar esquema PT (n):", choices = choices)
+    selectInput("assigned_n_lab", "Seleccionar esquema PT (n):", choices = choices)
   })
 
-  output$algoA_level_selector <- renderUI({
-    req(pt_prep_data(), input$algoA_pollutant, input$algoA_n_lab)
-    choices <- pt_prep_data() %>%
-      filter(pollutant == input$algoA_pollutant, n_lab == input$algoA_n_lab) %>%
+  output$assigned_level_selector <- renderUI({
+    data <- pt_prep_data()
+    req(data, input$assigned_pollutant, input$assigned_n_lab)
+    subset <- data %>%
+      filter(
+        pollutant == input$assigned_pollutant,
+        n_lab == input$assigned_n_lab
+      )
+    if (nrow(subset) == 0) {
+      return(helpText("No hay niveles disponibles para esta combinación."))
+    }
+    choices <- subset %>%
       pull(level) %>%
-      unique()
-    selectInput("algoA_level", "Seleccionar nivel:", choices = choices)
+      unique() %>%
+      sort()
+    selectInput("assigned_level", "Seleccionar nivel:", choices = choices)
   })
 
   algo_key <- function(pollutant, n_lab, level) paste(pollutant, n_lab, level, sep = "||")
@@ -2525,15 +3461,15 @@ Stability Criterion (0.3 * sigma_pt):", fmt),
 
   algorithm_a_selected <- reactive({
     req(algoA_trigger())
-    req(input$algoA_pollutant, input$algoA_n_lab, input$algoA_level)
+    req(input$assigned_pollutant, input$assigned_n_lab, input$assigned_level)
     cache <- algoA_results_cache()
     if (is.null(cache)) {
       return(list(
         error = "No se generaron resultados. Verifique que existan datos cargados y ejecute nuevamente el Algoritmo A.",
         selected = list(
-          pollutant = input$algoA_pollutant,
-          n_lab = input$algoA_n_lab,
-          level = input$algoA_level
+          pollutant = input$assigned_pollutant,
+          n_lab = input$assigned_n_lab,
+          level = input$assigned_level
         ),
         input_data = tibble(),
         iterations = tibble(),
@@ -2543,16 +3479,16 @@ Stability Criterion (0.3 * sigma_pt):", fmt),
       ))
     }
 
-    key <- algo_key(input$algoA_pollutant, input$algoA_n_lab, input$algoA_level)
+    key <- algo_key(input$assigned_pollutant, input$assigned_n_lab, input$assigned_level)
     res <- cache[[key]]
 
     if (is.null(res)) {
       return(list(
         error = "No se encontraron resultados para la combinación seleccionada. Ejecute nuevamente el Algoritmo A.",
         selected = list(
-          pollutant = input$algoA_pollutant,
-          n_lab = input$algoA_n_lab,
-          level = input$algoA_level
+          pollutant = input$assigned_pollutant,
+          n_lab = input$assigned_n_lab,
+          level = input$assigned_level
         ),
         input_data = tibble(),
         iterations = tibble(),
@@ -2668,48 +3604,6 @@ Stability Criterion (0.3 * sigma_pt):", fmt),
 
   # --- Consensus Value Module ---
 
-  output$consensus_pollutant_selector <- renderUI({
-    req(pt_prep_data())
-    participant_data <- pt_prep_data() %>% filter(participant_id != "ref")
-    if (nrow(participant_data) == 0) {
-      return(helpText("No se encontraron datos de participantes para calcular valores consenso."))
-    }
-    choices <- sort(unique(participant_data$pollutant))
-    selectInput("consensus_pollutant", "Seleccionar analito:", choices = choices)
-  })
-
-  output$consensus_n_selector <- renderUI({
-    req(pt_prep_data(), input$consensus_pollutant)
-    participant_data <- pt_prep_data() %>%
-      filter(participant_id != "ref", pollutant == input$consensus_pollutant)
-    if (nrow(participant_data) == 0) {
-      return(helpText("No se encontraron esquemas PT para este analito."))
-    }
-    choices <- participant_data %>%
-      pull(n_lab) %>%
-      unique() %>%
-      sort()
-    selectInput("consensus_n_lab", "Seleccionar esquema PT (n):", choices = choices)
-  })
-
-  output$consensus_level_selector <- renderUI({
-    req(pt_prep_data(), input$consensus_pollutant, input$consensus_n_lab)
-    participant_data <- pt_prep_data() %>%
-      filter(
-        participant_id != "ref",
-        pollutant == input$consensus_pollutant,
-        n_lab == input$consensus_n_lab
-      )
-    if (nrow(participant_data) == 0) {
-      return(helpText("No se encontraron niveles para esta combinación."))
-    }
-    choices <- participant_data %>%
-      pull(level) %>%
-      unique() %>%
-      sort()
-    selectInput("consensus_level", "Seleccionar nivel:", choices = choices)
-  })
-
   observeEvent(input$consensus_run, {
     req(pt_prep_data())
     data <- isolate(pt_prep_data()) %>% filter(participant_id != "ref")
@@ -2793,7 +3687,7 @@ Stability Criterion (0.3 * sigma_pt):", fmt),
       ))
     }
 
-    req(input$consensus_pollutant, input$consensus_n_lab, input$consensus_level)
+    req(input$assigned_pollutant, input$assigned_n_lab, input$assigned_level)
     cache <- consensus_results_cache()
     if (is.null(cache)) {
       return(list(
@@ -2803,7 +3697,7 @@ Stability Criterion (0.3 * sigma_pt):", fmt),
       ))
     }
 
-    key <- algo_key(input$consensus_pollutant, input$consensus_n_lab, input$consensus_level)
+    key <- algo_key(input$assigned_pollutant, input$assigned_n_lab, input$assigned_level)
     res <- cache[[key]]
 
     if (is.null(res)) {
@@ -2841,56 +3735,14 @@ Stability Criterion (0.3 * sigma_pt):", fmt),
 
   # --- Reference Value Module ---
 
-  output$reference_pollutant_selector <- renderUI({
-    req(pt_prep_data())
-    ref_data <- pt_prep_data() %>% filter(participant_id == "ref")
-    if (nrow(ref_data) == 0) {
-      return(helpText("No se encontraron datos de referencia en los archivos summary_n*.csv."))
-    }
-    choices <- sort(unique(ref_data$pollutant))
-    selectInput("reference_pollutant", "Seleccionar analito:", choices = choices)
-  })
-
-  output$reference_n_selector <- renderUI({
-    req(pt_prep_data(), input$reference_pollutant)
-    ref_data <- pt_prep_data() %>%
-      filter(participant_id == "ref", pollutant == input$reference_pollutant)
-    if (nrow(ref_data) == 0) {
-      return(helpText("No hay esquemas PT disponibles para este analito."))
-    }
-    choices <- ref_data %>%
-      pull(n_lab) %>%
-      unique() %>%
-      sort()
-    selectInput("reference_n_lab", "Seleccionar esquema PT (n):", choices = choices)
-  })
-
-  output$reference_level_selector <- renderUI({
-    req(pt_prep_data(), input$reference_pollutant, input$reference_n_lab)
-    ref_data <- pt_prep_data() %>%
-      filter(
-        participant_id == "ref",
-        pollutant == input$reference_pollutant,
-        n_lab == input$reference_n_lab
-      )
-    if (nrow(ref_data) == 0) {
-      return(helpText("No hay niveles disponibles para esta combinación."))
-    }
-    choices <- ref_data %>%
-      pull(level) %>%
-      unique() %>%
-      sort()
-    selectInput("reference_level", "Seleccionar nivel:", choices = choices)
-  })
-
   reference_table_data <- reactive({
-    req(pt_prep_data(), input$reference_pollutant, input$reference_n_lab, input$reference_level)
+    req(pt_prep_data(), input$assigned_pollutant, input$assigned_n_lab, input$assigned_level)
     pt_prep_data() %>%
       filter(
         participant_id == "ref",
-        pollutant == input$reference_pollutant,
-        n_lab == input$reference_n_lab,
-        level == input$reference_level
+        pollutant == input$assigned_pollutant,
+        n_lab == input$assigned_n_lab,
+        level == input$assigned_level
       )
   })
 

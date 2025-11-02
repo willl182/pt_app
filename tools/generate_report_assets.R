@@ -389,6 +389,69 @@ score_eval_z <- function(z) {
   )
 }
 
+pt_en_class_labels <- c(
+  a1 = "a1 - Fully Satisfactory",
+  a2 = "a2 - Satisfactory but Conservative",
+  a3 = "a3 - Satisfactory with Underestimated MU",
+  a4 = "a4 - Questionable but Acceptable",
+  a5 = "a5 - Questionable and Inconsistent",
+  a6 = "a6 - Unsatisfactory but MU Covers Deviation",
+  a7 = "a7 - Unsatisfactory (Critical)"
+)
+
+pt_en_class_colors <- c(
+  a1 = "#2E7D32",
+  a2 = "#66BB6A",
+  a3 = "#9CCC65",
+  a4 = "#FFF59D",
+  a5 = "#FBC02D",
+  a6 = "#EF9A9A",
+  a7 = "#C62828",
+  mu_missing_z = "#90A4AE",
+  mu_missing_zprime = "#78909C"
+)
+
+classify_with_en <- function(score_val, en_val, U_xi, sigma_pt, mu_missing, score_label) {
+  if (!is.finite(score_val)) {
+    return(list(code = NA_character_, label = "N/A"))
+  }
+
+  if (isTRUE(mu_missing)) {
+    base_eval <- score_eval_z(score_val)
+    if (base_eval == "N/A") {
+      return(list(code = NA_character_, label = "N/A"))
+    }
+    label_key <- tolower(score_label)
+    label_key <- gsub("'", "prime", label_key)
+    label_key <- gsub("[^a-z0-9]+", "", label_key)
+    code <- paste0("mu_missing_", label_key)
+    label <- sprintf("MU missing - %s-only: %s", score_label, base_eval)
+    return(list(code = code, label = label))
+  }
+
+  if (!is.finite(en_val) || !is.finite(sigma_pt) || sigma_pt <= 0 || !is.finite(U_xi)) {
+    return(list(code = NA_character_, label = "N/A"))
+  }
+
+  abs_score <- abs(score_val)
+  abs_en <- abs(en_val)
+  u_is_conservative <- U_xi >= (2 * sigma_pt)
+
+  if (abs_score <= 2) {
+    if (abs_en < 1) {
+      code <- if (u_is_conservative) "a2" else "a1"
+    } else {
+      code <- "a3"
+    }
+  } else if (abs_score < 3) {
+    code <- if (abs_en < 1) "a4" else "a5"
+  } else {
+    code <- if (abs_en < 1) "a6" else "a7"
+  }
+
+  list(code = code, label = pt_en_class_labels[[code]])
+}
+
 run_algorithm_a <- function(values, ids, max_iter = 50) {
   mask <- is.finite(values)
   values <- values[mask]
@@ -482,7 +545,10 @@ compute_combo_scores <- function(participants_df, x_pt, sigma_pt, u_xpt, combo_m
   }
 
   participants_df <- participants_df %>%
-    mutate(uncertainty_std = replace_na(uncertainty_std, 0))
+    mutate(
+      uncertainty_std_missing = !is.finite(uncertainty_std),
+      uncertainty_std = ifelse(uncertainty_std_missing, NA_real_, uncertainty_std)
+    )
 
   z_values <- (participants_df$result - x_pt) / sigma_pt
   zprime_den <- sqrt(sigma_pt^2 + u_xpt^2)
@@ -513,8 +579,22 @@ compute_combo_scores <- function(participants_df, x_pt, sigma_pt, u_xpt, combo_m
         !is.finite(En_score) ~ "N/A",
         abs(En_score) <= 1 ~ "Satisfactory",
         abs(En_score) > 1 ~ "Unsatisfactory"
-      )
+      ),
+      U_xi = U_xi,
+      U_xpt = U_xpt
     )
+  data <- data %>%
+    rowwise() %>%
+    mutate(
+      classification_z_en_res = list(classify_with_en(z_score, En_score, U_xi, sigma_pt, uncertainty_std_missing, "z")),
+      classification_z_en = classification_z_en_res$label,
+      classification_z_en_code = classification_z_en_res$code,
+      classification_zprime_en_res = list(classify_with_en(z_prime_score, En_score, U_xi, sigma_pt, uncertainty_std_missing, "z'")),
+      classification_zprime_en = classification_zprime_en_res$label,
+      classification_zprime_en_code = classification_zprime_en_res$code
+    ) %>%
+    ungroup() %>%
+    select(-classification_z_en_res, -classification_zprime_en_res)
 
   list(
     error = NULL,
@@ -642,7 +722,11 @@ compute_scores_for_selection <- function(summary_data, target_pollutant, target_
         `zeta-score` = NA_real_,
         `zeta-score Eval` = "",
         `En-score` = NA_real_,
-        `En-score Eval` = ""
+        `En-score Eval` = "",
+        `Classification z+En` = "",
+        `Classification z+En Code` = "",
+        `Classification z'+En` = "",
+        `Classification z'+En Code` = ""
       )
     } else {
       combo$data %>%
@@ -658,7 +742,11 @@ compute_scores_for_selection <- function(summary_data, target_pollutant, target_
           `zeta-score` = zeta_score,
           `zeta-score Eval` = zeta_score_eval,
           `En-score` = En_score,
-          `En-score Eval` = En_score_eval
+          `En-score Eval` = En_score_eval,
+          `Classification z+En` = classification_z_en,
+          `Classification z+En Code` = classification_z_en_code,
+          `Classification z'+En` = classification_zprime_en,
+          `Classification z'+En Code` = classification_zprime_en_code
         )
     }
   })
@@ -948,17 +1036,17 @@ if (length(all_scores_list) > 0) {
         distinct(combination_display) %>%
         pull(combination_display)
       combination_display <- combination_display[1]
+      base_grid <- expand.grid(
+        participant_id = participant_levels,
+        run_label = run_levels,
+        stringsAsFactors = FALSE
+      ) %>%
+        tibble::as_tibble()
 
       for (score_name in names(heatmap_specs)) {
         spec <- heatmap_specs[[score_name]]
         value_col <- rlang::sym(score_name)
         eval_col <- rlang::sym(spec$eval_col)
-
-        base_grid <- expand.grid(
-          participant_id = participant_levels,
-          run_label = run_levels,
-          stringsAsFactors = FALSE
-        )
 
         plot_data <- base_grid %>%
           left_join(
@@ -1017,6 +1105,94 @@ if (length(all_scores_list) > 0) {
         plot_height <- max(4, length(participant_levels) * 0.6)
 
         ggsave(output_path, heatmap_plot, width = plot_width, height = plot_height, dpi = 300)
+      }
+
+      classification_specs <- list(
+        list(
+          code_col = "classification_z_en_code",
+          label_col = "classification_z_en",
+          short = "class_z_en",
+          title = "z-score + En Classification"
+        ),
+        list(
+          code_col = "classification_zprime_en_code",
+          label_col = "classification_zprime_en",
+          short = "class_zprime_en",
+          title = "z'-score + En Classification"
+        )
+      )
+
+      for (class_spec in classification_specs) {
+        code_sym <- rlang::sym(class_spec$code_col)
+        label_sym <- rlang::sym(class_spec$label_col)
+
+        class_plot_data <- base_grid %>%
+          left_join(
+            combo_df %>%
+              select(
+                participant_id,
+                run_label,
+                class_code = !!code_sym,
+                class_label = !!label_sym
+              ),
+            by = c("participant_id", "run_label")
+          ) %>%
+          mutate(
+            class_code = ifelse(class_code == "", NA_character_, class_code),
+            class_label = ifelse(is.na(class_label) | class_label == "", "N/A", class_label),
+            participant_id = factor(participant_id, levels = participant_levels),
+            run_label = factor(run_label, levels = run_levels),
+            display_code = case_when(
+              is.na(class_code) ~ "",
+              grepl("^mu_missing", class_code) ~ "MU",
+              TRUE ~ toupper(class_code)
+            ),
+            fill_code = factor(class_code, levels = names(pt_en_class_colors))
+          )
+
+        if (all(is.na(class_plot_data$class_code))) next
+
+        classification_plot <- ggplot(class_plot_data, aes(x = run_label, y = participant_id, fill = fill_code)) +
+          geom_tile(color = "white") +
+          geom_text(aes(label = display_code), size = 3, color = "#1B1B1B") +
+          scale_fill_manual(
+            values = pt_en_class_colors,
+            breaks = names(pt_en_class_colors),
+            drop = FALSE,
+            na.value = "#EEEEEE",
+            labels = c(
+              pt_en_class_labels,
+              `mu_missing_z` = "MU missing - z only",
+              `mu_missing_zprime` = "MU missing - z' only"
+            )
+          ) +
+          labs(
+            title = paste(class_spec$title, "for Pollutant:", pollutant_id, "- Combination", combo_id),
+            subtitle = combination_display,
+            x = "Run (Level)",
+            y = "Participant",
+            fill = "Class"
+          ) +
+          theme_minimal() +
+          theme(
+            panel.grid = element_blank(),
+            axis.text.x = element_text(angle = 45, hjust = 1),
+            axis.title.x = element_text(margin = margin(t = 12)),
+            axis.title.y = element_text(margin = margin(r = 12)),
+            legend.position = "right"
+          )
+
+        sanitized_pollutant <- gsub("_+$", "", gsub("^_+", "", gsub("[^A-Za-z0-9]+", "_", pollutant_id)))
+        sanitized_combination <- gsub("_+$", "", gsub("^_+", "", gsub("[^A-Za-z0-9]+", "_", combo_id)))
+        class_prefix <- gsub("_+$", "", gsub("^_+", "", gsub("[^A-Za-z0-9]+", "_", tolower(class_spec$short))))
+        class_output <- file.path(
+          "reports/assets/charts",
+          paste0(class_prefix, "_table_", sanitized_pollutant, "_", sanitized_combination, ".png")
+        )
+        class_width <- max(6, length(run_levels) * 1.2)
+        class_height <- max(4, length(participant_levels) * 0.6)
+
+        ggsave(class_output, classification_plot, width = class_width, height = class_height, dpi = 300)
       }
     }
   }
