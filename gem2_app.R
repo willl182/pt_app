@@ -3027,7 +3027,7 @@ fluidRow(
           formatRound(columns = c("Result", "x_pt", "sigma_pt", "u(x_pt)", "z-score", "z'-score", "zeta-score", "En-score"), digits = 3)
       })
 
-      output[[plot_id]] <- renderPlot({
+      output[[plot_id]] <- renderPlotly({
         info <- participants_combined_data()
         if (!is.null(info$error)) return(NULL)
         participant_df <- info$data %>%
@@ -3046,7 +3046,7 @@ fluidRow(
           geom_point(aes(y = x_pt, color = "Referencia"), size = 3) + 
           geom_line(aes(y = x_pt, group = 1, color = "Referencia"), linetype = "dashed") + 
           scale_color_manual(values = c("Participante" = "#1F78B4", "Referencia" = "#E31A1C")) + 
-          labs(title = "Valores (Referencia) - " + pid, x = "Nivel", y = "Valor", color = NULL) + 
+          labs(title = paste("Valores (Referencia) -", pid), x = "Nivel", y = "Valor", color = NULL) + 
           theme_minimal() + 
           theme(axis.text.x = element_text(angle = 45, hjust = 1), legend.position = "bottom")
 
@@ -3080,9 +3080,8 @@ fluidRow(
           theme(axis.text.x = element_text(angle = 45, hjust = 1), legend.position = "bottom")
 
         # Combine plots with a shared legend
-        (p_values | p_z + theme(legend.position = "none")) /
-          (p_zeta + theme(legend.position = "none") | p_en + theme(legend.position = "none")) + 
-          plot_layout(guides = "collect") & theme(legend.position = 'bottom')
+        subplot(ggplotly(p_values), ggplotly(p_z), ggplotly(p_zeta), ggplotly(p_en), nrows = 2, shareX = TRUE, titleY = TRUE) %>%
+          layout(showlegend = TRUE)
       })
 
       tabPanel(pid, 
@@ -3836,16 +3835,17 @@ fluidRow(
         })
         
         # Plot
-        output[[paste0("pt_plot_", pollutant_name)]] <- renderPlot({
+        output[[paste0("pt_plot_", pollutant_name)]] <- renderPlotly({
           data <- filtered_data()
           req(nrow(data) > 0)
           
-          ggplot(data, aes(x = participant_id, y = mean_value, fill = sample_group)) + 
+          p <- ggplot(data, aes(x = participant_id, y = mean_value, fill = sample_group)) + 
             geom_bar(stat = "identity", position = "dodge") + 
             geom_errorbar(aes(ymin = mean_value - sd_value, ymax = mean_value + sd_value), width = 0.2, position = position_dodge(0.9)) + 
             labs(title = "Participant Mean Values with SD", x = "Participant", y = "Mean Value") + 
             theme_minimal() + 
             theme(axis.text.x = element_text(angle = 45, hjust = 1))
+          ggplotly(p)
         })
         
         # Table
@@ -3856,7 +3856,7 @@ fluidRow(
         })
         
         # Histogram
-        output[[paste0("pt_histogram_", pollutant_name)]] <- renderPlot({
+        output[[paste0("pt_histogram_", pollutant_name)]] <- renderPlotly({
           data <- filtered_data()
           req(nrow(data) > 0)
           
@@ -3866,16 +3866,17 @@ fluidRow(
             summarise(mean_ref = mean(mean_value, na.rm = TRUE)) %>%
             pull(mean_ref)
             
-          ggplot(participants_data, aes(x = mean_value)) + 
+          p <- ggplot(participants_data, aes(x = mean_value)) + 
             geom_histogram(aes(y = after_stat(density)), color = "black", fill = "skyblue", bins = 15, boundary = 0) + 
             geom_density(alpha = 0.2, fill = "#FF6666") + 
             geom_vline(xintercept = ref_value, color = "red", linetype = "dashed", size = 1) + 
             labs(title = "Histogram of Participant Results", subtitle = "vs. Reference Value (dashed line)", x = "Mean Value", y = "Density") + 
             theme_minimal()
+          ggplotly(p)
         })
         
         # Boxplot
-        output[[paste0("pt_boxplot_", pollutant_name)]] <- renderPlot({
+        output[[paste0("pt_boxplot_", pollutant_name)]] <- renderPlotly({
           data <- filtered_data()
           req(nrow(data) > 0)
           
@@ -3885,15 +3886,16 @@ fluidRow(
             summarise(mean_ref = mean(mean_value, na.rm = TRUE)) %>%
             pull(mean_ref)
             
-          ggplot(participants_data, aes(x = "", y = mean_value)) + 
+          p <- ggplot(participants_data, aes(x = "", y = mean_value)) + 
             geom_boxplot(fill = "lightgreen") + 
             geom_hline(yintercept = ref_value, color = "red", linetype = "dashed", size = 1) + 
             labs(title = "Boxplot of Participant Results", subtitle = "vs. Reference Value (dashed line)", x = "", y = "Mean Value") + 
             theme_minimal()
+          ggplotly(p)
         })
         
         # Density Plot
-        output[[paste0("pt_density_", pollutant_name)]] <- renderPlot({
+        output[[paste0("pt_density_", pollutant_name)]] <- renderPlotly({
           data <- filtered_data()
           req(nrow(data) > 0)
           
@@ -3903,11 +3905,12 @@ fluidRow(
             summarise(mean_ref = mean(mean_value, na.rm = TRUE)) %>%
             pull(mean_ref)
             
-          ggplot(participants_data, aes(x = mean_value)) + 
+          p <- ggplot(participants_data, aes(x = mean_value)) + 
             geom_density(fill = "lightblue", alpha = 0.7) + 
             geom_vline(xintercept = ref_value, color = "red", linetype = "dashed", size = 1) + 
             labs(title = "Kernel Density of Participant Results", subtitle = "vs. Reference Value (dashed line)", x = "Mean Value", y = "Density") + 
             theme_minimal()
+          ggplotly(p)
         })
         
         # Grubbs' Test for Outliers
@@ -3925,27 +3928,27 @@ fluidRow(
         })
 
         # Run Chart
-        output[[paste0("pt_runchart_", pollutant_name)]] <- renderPlot({
-          data <- filtered_data()
-          req(nrow(data) > 0)
-
-          participants_data <- data %>%
-            filter(participant_id != "ref")
-            
-          center_line <- median(participants_data$mean_value, na.rm = TRUE)
-            
-          ggplot(participants_data, aes(x = sample_group, y = mean_value, group = 1)) + 
-            geom_point() + 
-            geom_line() + 
-            geom_hline(yintercept = center_line, color = "red", linetype = "dashed") + 
-            facet_wrap(~ participant_id) + 
-            labs(title = "Run Chart of Mean Values by Participant",
-                 x = "Sample Group",
-                 y = "Mean Value") + 
-            theme_minimal() + 
-            theme(axis.text.x = element_text(angle = 45, hjust = 1))
-        })
-      }) # end local
+        output[[paste0("pt_runchart_", pollutant_name)]] <- renderPlotly({
+                  data <- filtered_data()
+                  req(nrow(data) > 0)
+        
+                  participants_data <- data %>% 
+                    filter(participant_id != "ref")
+                    
+                  center_line <- median(participants_data$mean_value, na.rm = TRUE)
+                    
+                  p <- ggplot(participants_data, aes(x = sample_group, y = mean_value, group = 1)) + 
+                    geom_point() + 
+                    geom_line() + 
+                    geom_hline(yintercept = center_line, color = "red", linetype = "dashed") + 
+                    facet_wrap(~ participant_id) + 
+                    labs(title = "Run Chart of Mean Values by Participant",
+                         x = "Sample Group",
+                         y = "Mean Value") + 
+                    theme_minimal() + 
+                    theme(axis.text.x = element_text(angle = 45, hjust = 1))
+                  ggplotly(p)
+                })      }) # end local
     }) # end lapply
   }) # end observe
 }
