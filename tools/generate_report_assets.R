@@ -973,6 +973,17 @@ if (length(all_scores_list) > 0) {
         "N/A" = "#BDBDBD"
       )
     ),
+    z_prime_score = list(
+      label = "Z'-Score",
+      short = "zprime",
+      eval_col = "z_prime_score_eval",
+      colors = c(
+        "Satisfactory" = "#00B050",
+        "Questionable" = "#FFEB3B",
+        "Unsatisfactory" = "#D32F2F",
+        "N/A" = "#BDBDBD"
+      )
+    ),
     zeta_score = list(
       label = "Zeta-Score",
       short = "zeta",

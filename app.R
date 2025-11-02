@@ -975,6 +975,50 @@ server <- function(input, output, session) {
             bsplus::bs_accordion(id = "global_report_sections") %>%
               bsplus::bs_set_opts(use_heading_link = TRUE) %>%
               bsplus::bs_append(
+                title = "Global Summaries",
+                content = tagList(
+                  h4("Resumen x_pt"),
+                  dataTableOutput("global_xpt_summary_table"),
+                  hr(),
+                  h4("Resumen de niveles"),
+                  tableOutput("global_level_summary_table"),
+                  hr(),
+                  h4("Resumen de evaluaciones"),
+                  dataTableOutput("global_evaluation_summary_table")
+                )
+              ) %>%
+              bsplus::bs_append(
+                title = "Evaluation Classification",
+                content = tagList(
+                  h4("Resumen de clasificación"),
+                  dataTableOutput("global_classification_summary_table"),
+                  hr(),
+                  h4("Referencia (1)"),
+                  fluidRow(
+                    column(6, plotOutput("global_class_heatmap_z_ref", height = "350px")),
+                    column(6, plotOutput("global_class_heatmap_zprime_ref", height = "350px"))
+                  ),
+                  hr(),
+                  h4("Consenso MADe (2a)"),
+                  fluidRow(
+                    column(6, plotOutput("global_class_heatmap_z_consensus_ma", height = "350px")),
+                    column(6, plotOutput("global_class_heatmap_zprime_consensus_ma", height = "350px"))
+                  ),
+                  hr(),
+                  h4("Consenso nIQR (2b)"),
+                  fluidRow(
+                    column(6, plotOutput("global_class_heatmap_z_consensus_niqr", height = "350px")),
+                    column(6, plotOutput("global_class_heatmap_zprime_consensus_niqr", height = "350px"))
+                  ),
+                  hr(),
+                  h4("Algoritmo A (3)"),
+                  fluidRow(
+                    column(6, plotOutput("global_class_heatmap_z_algo", height = "350px")),
+                    column(6, plotOutput("global_class_heatmap_zprime_algo", height = "350px"))
+                  )
+                )
+              ) %>%
+              bsplus::bs_append(
                 title = "Referencia (1)",
                 content = tagList(
                   h4("Parámetros principales"),
@@ -984,15 +1028,10 @@ server <- function(input, output, session) {
                   dataTableOutput("global_overview_ref"),
                   hr(),
                   fluidRow(
-                    column(6, plotOutput("global_heatmap_z_ref", height = "350px")),
-                    column(6, plotOutput("global_heatmap_zeta_ref", height = "350px"))
-                  ),
-                  fluidRow(
-                    column(6, plotOutput("global_heatmap_en_ref", height = "350px")),
-                    column(6, plotOutput("global_class_heatmap_z_ref", height = "350px"))
-                  ),
-                  fluidRow(
-                    column(6, plotOutput("global_class_heatmap_zprime_ref", height = "350px"))
+                    column(3, plotOutput("global_heatmap_z_ref", height = "350px")),
+                    column(3, plotOutput("global_heatmap_zprime_ref", height = "350px")),
+                    column(3, plotOutput("global_heatmap_zeta_ref", height = "350px")),
+                    column(3, plotOutput("global_heatmap_en_ref", height = "350px"))
                   )
                 )
               ) %>%
@@ -1006,15 +1045,10 @@ server <- function(input, output, session) {
                   dataTableOutput("global_overview_consensus_ma"),
                   hr(),
                   fluidRow(
-                    column(6, plotOutput("global_heatmap_z_consensus_ma", height = "350px")),
-                    column(6, plotOutput("global_heatmap_zeta_consensus_ma", height = "350px"))
-                  ),
-                  fluidRow(
-                    column(6, plotOutput("global_heatmap_en_consensus_ma", height = "350px")),
-                    column(6, plotOutput("global_class_heatmap_z_consensus_ma", height = "350px"))
-                  ),
-                  fluidRow(
-                    column(6, plotOutput("global_class_heatmap_zprime_consensus_ma", height = "350px"))
+                    column(3, plotOutput("global_heatmap_z_consensus_ma", height = "350px")),
+                    column(3, plotOutput("global_heatmap_zprime_consensus_ma", height = "350px")),
+                    column(3, plotOutput("global_heatmap_zeta_consensus_ma", height = "350px")),
+                    column(3, plotOutput("global_heatmap_en_consensus_ma", height = "350px"))
                   )
                 )
               ) %>%
@@ -1028,15 +1062,10 @@ server <- function(input, output, session) {
                   dataTableOutput("global_overview_consensus_niqr"),
                   hr(),
                   fluidRow(
-                    column(6, plotOutput("global_heatmap_z_consensus_niqr", height = "350px")),
-                    column(6, plotOutput("global_heatmap_zeta_consensus_niqr", height = "350px"))
-                  ),
-                  fluidRow(
-                    column(6, plotOutput("global_heatmap_en_consensus_niqr", height = "350px")),
-                    column(6, plotOutput("global_class_heatmap_z_consensus_niqr", height = "350px"))
-                  ),
-                  fluidRow(
-                    column(6, plotOutput("global_class_heatmap_zprime_consensus_niqr", height = "350px"))
+                    column(3, plotOutput("global_heatmap_z_consensus_niqr", height = "350px")),
+                    column(3, plotOutput("global_heatmap_zprime_consensus_niqr", height = "350px")),
+                    column(3, plotOutput("global_heatmap_zeta_consensus_niqr", height = "350px")),
+                    column(3, plotOutput("global_heatmap_en_consensus_niqr", height = "350px"))
                   )
                 )
               ) %>%
@@ -1050,29 +1079,11 @@ server <- function(input, output, session) {
                   dataTableOutput("global_overview_algo"),
                   hr(),
                   fluidRow(
-                    column(6, plotOutput("global_heatmap_z_algo", height = "350px")),
-                    column(6, plotOutput("global_heatmap_zeta_algo", height = "350px"))
-                  ),
-                  fluidRow(
-                    column(6, plotOutput("global_heatmap_en_algo", height = "350px")),
-                    column(6, plotOutput("global_class_heatmap_z_algo", height = "350px"))
-                  ),
-                  fluidRow(
-                    column(6, plotOutput("global_class_heatmap_zprime_algo", height = "350px"))
+                    column(3, plotOutput("global_heatmap_z_algo", height = "350px")),
+                    column(3, plotOutput("global_heatmap_zprime_algo", height = "350px")),
+                    column(3, plotOutput("global_heatmap_zeta_algo", height = "350px")),
+                    column(3, plotOutput("global_heatmap_en_algo", height = "350px"))
                   )
-                )
-              ) %>%
-              bsplus::bs_append(
-                title = "Global Summaries",
-                content = tagList(
-                  h4("Resumen x_pt"),
-                  dataTableOutput("global_xpt_summary_table"),
-                  hr(),
-                  h4("Resumen de niveles"),
-                  tableOutput("global_level_summary_table"),
-                  hr(),
-                  h4("Resumen de evaluaciones"),
-                  dataTableOutput("global_evaluation_summary_table")
                 )
               )
           )
@@ -1581,6 +1592,24 @@ Stability Criterion (0.3 * sigma_pt):", fmt),
     algo = list(title = "Algoritmo A (3)", label = "3", tab = "z3 - Algoritmo A (3)")
   )
 
+  ensure_classification_columns <- function(df) {
+    required_cols <- c(
+      "classification_z_en",
+      "classification_z_en_code",
+      "classification_zprime_en",
+      "classification_zprime_en_code"
+    )
+    if (is.null(df)) {
+      return(df)
+    }
+    for (col in required_cols) {
+      if (!col %in% names(df)) {
+        df[[col]] <- rep(NA_character_, nrow(df))
+      }
+    }
+    df
+  }
+
   pt_en_class_labels <- c(
     a1 = "a1 - Fully Satisfactory",
     a2 = "a2 - Satisfactory but Conservative",
@@ -1612,6 +1641,47 @@ Stability Criterion (0.3 * sigma_pt):", fmt),
     )
   }
 
+  classify_with_en <- function(score_val, en_val, U_xi, sigma_pt, mu_missing, score_label) {
+    if (!is.finite(score_val)) {
+      return(list(code = NA_character_, label = "N/A"))
+    }
+
+    if (isTRUE(mu_missing)) {
+      base_eval <- score_eval_z(score_val)
+      if (base_eval == "N/A") {
+        return(list(code = NA_character_, label = "N/A"))
+      }
+      label_key <- tolower(score_label)
+      label_key <- gsub("'", "prime", label_key)
+      label_key <- gsub("[^a-z0-9]+", "", label_key)
+      code <- paste0("mu_missing_", label_key)
+      label <- sprintf("MU missing - %s-only: %s", score_label, base_eval)
+      return(list(code = code, label = label))
+    }
+
+    if (!is.finite(en_val) || !is.finite(sigma_pt) || sigma_pt <= 0 || !is.finite(U_xi)) {
+      return(list(code = NA_character_, label = "N/A"))
+    }
+
+    abs_score <- abs(score_val)
+    abs_en <- abs(en_val)
+    u_is_conservative <- U_xi >= (2 * sigma_pt)
+
+    if (abs_score <= 2) {
+      if (abs_en < 1) {
+        code <- if (u_is_conservative) "a2" else "a1"
+      } else {
+        code <- "a3"
+      }
+    } else if (abs_score < 3) {
+      code <- if (abs_en < 1) "a4" else "a5"
+    } else {
+      code <- if (abs_en < 1) "a6" else "a7"
+    }
+
+    list(code = code, label = pt_en_class_labels[[code]])
+  }
+
   compute_combo_scores <- function(participants_df, x_pt, sigma_pt, u_xpt, combo_meta, k = 2) {
     if (!is.finite(x_pt)) {
       return(list(
@@ -1628,7 +1698,8 @@ Stability Criterion (0.3 * sigma_pt):", fmt),
     }
     participants_df <- participants_df %>%
       mutate(
-        uncertainty_std = replace_na(uncertainty_std, 0)
+        uncertainty_std_missing = !is.finite(uncertainty_std),
+        uncertainty_std = ifelse(uncertainty_std_missing, NA_real_, uncertainty_std)
       )
 
     z_values <- (participants_df$result - x_pt) / sigma_pt
@@ -1664,8 +1735,21 @@ Stability Criterion (0.3 * sigma_pt):", fmt),
           !is.finite(En_score) ~ "N/A",
           abs(En_score) <= 1 ~ "Satisfactory",
           abs(En_score) > 1 ~ "Unsatisfactory"
-        )
-      )
+        ),
+        U_xi = U_xi,
+        U_xpt = U_xpt
+      ) %>%
+      rowwise() %>%
+      mutate(
+        classification_z_en_res = list(classify_with_en(z_score, En_score, U_xi, sigma_pt, uncertainty_std_missing, "z")),
+        classification_z_en = classification_z_en_res$label,
+        classification_z_en_code = classification_z_en_res$code,
+        classification_zprime_en_res = list(classify_with_en(z_prime_score, En_score, U_xi, sigma_pt, uncertainty_std_missing, "z'")),
+        classification_zprime_en = classification_zprime_en_res$label,
+        classification_zprime_en_code = classification_zprime_en_res$code
+      ) %>%
+      ungroup() %>%
+      select(-classification_z_en_res, -classification_zprime_en_res)
 
     list(
       error = NULL,
@@ -2019,6 +2103,12 @@ Stability Criterion (0.3 * sigma_pt):", fmt),
       "Unsatisfactory" = "#D32F2F",
       "N/A" = "#BDBDBD"
     ),
+    zprime = c(
+      "Satisfactory" = "#00B050",
+      "Questionable" = "#FFEB3B",
+      "Unsatisfactory" = "#D32F2F",
+      "N/A" = "#BDBDBD"
+    ),
     zeta = c(
       "Satisfactory" = "#00B050",
       "Questionable" = "#FFEB3B",
@@ -2042,7 +2132,7 @@ Stability Criterion (0.3 * sigma_pt):", fmt),
     if (is.null(combos) || nrow(combos) == 0) {
       return(tibble())
     }
-    combos %>%
+    combos <- combos %>%
       mutate(
         pollutant = as.character(pollutant),
         n_lab = as.character(n_lab),
@@ -2051,6 +2141,7 @@ Stability Criterion (0.3 * sigma_pt):", fmt),
         combination_label = as.character(combination_label),
         participant_id = as.character(participant_id)
       )
+    ensure_classification_columns(combos)
   })
 
   global_report_summary <- reactive({
@@ -2153,6 +2244,76 @@ Stability Criterion (0.3 * sigma_pt):", fmt),
       ungroup() %>%
       select(-Total) %>%
       mutate(Criteria = paste(score_type, evaluation))
+  })
+
+  global_classification_summary_data <- reactive({
+    combos <- global_report_combos()
+    if (nrow(combos) == 0) {
+      return(tibble())
+    }
+    combos <- ensure_classification_columns(combos)
+
+    combos_filtered <- combos %>%
+      filter(participant_id != "ref") %>%
+      mutate(
+        classification_z_en = ifelse(is.na(classification_z_en) | classification_z_en == "", "N/A", classification_z_en),
+        classification_z_en_code = ifelse(is.na(classification_z_en_code) | classification_z_en_code == "", "N/A", classification_z_en_code),
+        classification_zprime_en = ifelse(is.na(classification_zprime_en) | classification_zprime_en == "", "N/A", classification_zprime_en),
+        classification_zprime_en_code = ifelse(is.na(classification_zprime_en_code) | classification_zprime_en_code == "", "N/A", classification_zprime_en_code)
+      )
+
+    if (nrow(combos_filtered) == 0) {
+      return(tibble())
+    }
+
+    classification_long <- dplyr::bind_rows(
+      combos_filtered %>%
+        transmute(
+          pollutant = as.character(pollutant),
+          n_lab = as.character(n_lab),
+          level = as.character(level),
+          combination = as.character(combination),
+          combination_label = as.character(combination_label),
+          classification_type = "z + En",
+          classification_label = classification_z_en,
+          classification_code = classification_z_en_code
+        ),
+      combos_filtered %>%
+        transmute(
+          pollutant = as.character(pollutant),
+          n_lab = as.character(n_lab),
+          level = as.character(level),
+          combination = as.character(combination),
+          combination_label = as.character(combination_label),
+          classification_type = "z' + En",
+          classification_label = classification_zprime_en,
+          classification_code = classification_zprime_en_code
+        )
+    )
+
+    classification_long %>%
+      mutate(
+        classification_label = ifelse(is.na(classification_label) | classification_label == "", "N/A", classification_label),
+        classification_code = ifelse(is.na(classification_code) | classification_code == "", "N/A", classification_code)
+      ) %>%
+      count(
+        pollutant,
+        n_lab,
+        level,
+        combination,
+        combination_label,
+        classification_type,
+        classification_label,
+        classification_code,
+        name = "Count"
+      ) %>%
+      group_by(pollutant, n_lab, level, combination, combination_label, classification_type) %>%
+      mutate(
+        Total = sum(Count),
+        Percentage = ifelse(Total > 0, (Count / Total) * 100, 0)
+      ) %>%
+      ungroup() %>%
+      select(-Total)
   })
 
   global_level_summary_data <- reactive({
@@ -2423,6 +2584,7 @@ Stability Criterion (0.3 * sigma_pt):", fmt),
     output[[output_id]] <- renderPlot({
       combos <- global_report_combos()
       req(nrow(combos) > 0, input$global_report_pollutant, input$global_report_n_lab)
+      combos <- ensure_classification_columns(combos)
       spec <- global_combo_specs[[combo_key]]
       filtered <- combos %>%
         filter(
@@ -2555,6 +2717,15 @@ Stability Criterion (0.3 * sigma_pt):", fmt),
     )
 
     render_global_score_heatmap(
+      paste0("global_heatmap_zprime_", combo_key),
+      combo_key,
+      "z_prime_score",
+      "z_prime_score_eval",
+      score_heatmap_palettes$zprime,
+      "Mapa de calor z'-score"
+    )
+
+    render_global_score_heatmap(
       paste0("global_heatmap_zeta_", combo_key),
       combo_key,
       "zeta_score",
@@ -2663,6 +2834,39 @@ Stability Criterion (0.3 * sigma_pt):", fmt),
           Level = level,
           Criteria,
           Evaluation = evaluation,
+          Count,
+          Percentage
+        ),
+      options = list(pageLength = 12, scrollX = TRUE),
+      rownames = FALSE
+    ) %>%
+      formatRound(columns = "Percentage", digits = 1)
+  })
+
+  output$global_classification_summary_table <- renderDataTable({
+    class_df <- global_classification_summary_data()
+    if (nrow(class_df) == 0) {
+      return(datatable(data.frame(Mensaje = "No hay clasificaciones calculadas.")))
+    }
+    req(input$global_report_pollutant, input$global_report_n_lab, input$global_report_level)
+    filtered <- class_df %>%
+      filter(
+        pollutant == input$global_report_pollutant,
+        n_lab == input$global_report_n_lab,
+        level == input$global_report_level
+      ) %>%
+      arrange(combination_label, level, classification_type, classification_code)
+    if (nrow(filtered) == 0) {
+      return(datatable(data.frame(Mensaje = "No hay clasificaciones para la selección actual.")))
+    }
+    datatable(
+      filtered %>%
+        select(
+          Combination = combination,
+          Level = level,
+          `Clasificación` = classification_type,
+          `Código` = classification_code,
+          `Descripción` = classification_label,
           Count,
           Percentage
         ),
