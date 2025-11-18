@@ -1,0 +1,413 @@
+
+Criterio de estabilidad (0.3 * sigma_pt):
+
+Diferencia absoluta observada:
+
+Media de los datos de estabilidad (y2):
+ (n=
+ + ref
+ participantes
+ x 
+#00B050
+#1A5276
+#1B1B1B
+#1F78B4
+#2C3E50
+#2E7D32
+#5DADE2
+#66BB6A
+#78909C
+#90A4AE
+#9CCC65
+#BDBDBD
+#C0392B
+#C62828
+#D32F2F
+#E31A1C
+#E67E22
+#EEEEEE
+#EF9A9A
+#FBC02D
+#FF6666
+#FFEB3B
+#FFF59D
+%d participantes%s
+- Estabilidad: '%s' cargado (%d filas).\n
+- Estabilidad: No cargado.\n
+- Homogeneidad: '%s' cargado (%d filas).\n
+- Homogeneidad: No cargado.\n
+- Resumen: %d archivo(s) cargado(s) (%d filas en total).\n
+- Resumen: No cargado.\n
+- sin datos disponibles
+- sin datos válidos
+1. Datos de Homogeneidad
+1. Ejecutar Análisis
+1. Ejecutar Cálculo
+1. Ejecutar análisis
+1. Ejecutar cálculo global
+1. Seleccionar Datos
+2. Datos de Estabilidad
+2. Parámetros del Algoritmo
+2. Parámetros del Informe
+2. Seleccionar Datos
+2. Seleccionar analito
+2. Seleccionar combinación
+2. Seleccionar nivel PT
+3. Datos resumen de participantes
+3. Seleccionar nivel
+<strong>Analito:</strong> 
+<strong>Desviación robusta (s*):</strong> 
+<strong>Esquema (n):</strong> 
+<strong>Nivel:</strong> 
+<strong>Suma de pesos efectivos:</strong> 
+<strong>Valor asignado (x*):</strong> 
+Algoritmo A
+Algoritmo A (3)
+Analito:
+Analito: %s\n
+Ancho de la barra lateral de análisis:
+Ancho del panel de navegación:
+Análisis de esquemas de ensayos de aptitud
+Análisis de homogeneidad y estabilidad
+Análisis de los resultados de los participantes de diferentes esquemas PT a partir de archivos resumen.
+Aplicación de análisis de datos PT
+Calcula el valor consenso x_pt(2) y las desviaciones robustas sigma_pt_2a (MADe) y sigma_pt_2b (nIQR) para cada combinación disponible.
+Calcular Algoritmo A
+Calcular puntajes
+Calcular valores consenso
+Calcule los puntajes para habilitar el reporte global.
+Calcule los puntajes para habilitar esta sección.
+Cambio
+Carga Manual de Archivos de Datos
+Carga de datos
+Cargar homogeneity.csv
+Cargar stability.csv
+Cargar summary_n*.csv
+Cargue los archivos summary_n*.csv para habilitar esta sección.
+Clase
+Clasificación z + En
+Clasificación z' + En
+Combinación
+Combinación no disponible.
+Componentes de varianza
+Conclusión
+Conclusión: %s\n
+Conclusión: ADVERTENCIA: el ítem puede ser inestable.
+Conclusión: el ítem es adecuadamente estable.
+Consenso MADe (2a)
+Consenso nIQR (2b)
+Conteo
+Criterio c
+Criterio c (expandido)
+Cuestionable
+Cálculos de estadísticos robustos
+Cálculos por ítem
+DE de medias
+DE dentro de la muestra (sw)
+DE entre muestras (ss)
+DE robusta (MADe)
+DE robusta (sigma_pt)
+Datos cargados correctamente.
+
+Datos de Entrada
+Datos de Referencia
+Datos de estabilidad
+Datos de homogeneidad
+Datos de participantes
+Datos listos para generar el informe.
+Densidad
+Densidad kernel de los resultados de los participantes
+Descargar informe
+Desv. estándar para PT (sigma_pt):
+Desviaciones estándar estimadas del cálculo manual para el conjunto de estabilidad.
+Desviaciones estándar estimadas del cálculo manual.
+Desviación estándar declarada
+Desviación robusta (s*)
+Diagrama de caja de los resultados de los participantes
+Diagrama de caja por nivel
+Diferencia absoluta mediana
+Diferencia absoluta mediana: %.5f\n
+Diferencia absoluta respecto a la media general
+Dimensiones:
+Distribución de datos
+Distribución de resultados
+Distribución de resultados por participante
+Distribución por nivel
+ERROR: faltan columnas obligatorias:
+ERROR: no se encontraron columnas con el prefijo 'sample_'. Son necesarias para el análisis.
+
+Ejecutar
+Ejecutar Cálculo
+Ejecute el cálculo de valores consenso para ver resultados.
+El Algoritmo A colapsó debido a una desviación estándar nula.
+El Algoritmo A requiere al menos 3 resultados válidos.
+El algoritmo alcanzó el número máximo de iteraciones sin estabilizar la tercera cifra decimal de x* y s*.
+El algoritmo convergió cuando los cambios en x* y s* fueron menores que 0.001 (sin variación en la tercera cifra decimal).
+El histograma y el diagrama de caja muestran la distribución de todos los resultados de las columnas 'sample_*' para el nivel seleccionado.
+El informe consolida los resultados de homogeneidad, estabilidad y puntajes de desempeño para la combinación seleccionada.
+El nivel '%s' no existe en los datos de estabilidad del analito '%s'.
+El nivel '%s' no existe para el analito '%s'.
+El paquete 'rmarkdown' es requerido para generar el informe.
+En
+En_score
+En_score_eval
+Error obteniendo parámetros de homogeneidad:
+Esquema PT (n):
+Esquema PT (n): %s\n
+Esquema PT (n_lab):
+Esta tabla muestra los cálculos para cada ítem del conjunto de datos del nivel seleccionado, incluyendo la media y el rango de las mediciones.
+Esta tabla muestra los cálculos para cada ítem del conjunto de estabilidad.
+Esta tabla muestra los datos del analito seleccionado.
+Esta tabla muestra los estadísticos generales de la evaluación de homogeneidad.
+Esta tabla muestra los estadísticos generales para el conjunto de estabilidad.
+Estado de los Datos Cargados
+Estado de los archivos:\n
+Estadísticos resumidos
+Este aplicativo evalua la homogeneidad y estabilidad del item de ensayo de acuerdo a los princiios de la ISO 13528:2022.
+Este aplicativo fue desarrollado en el marco del proyecto «Implementación de Ensayos de Aptitud en la Matriz Aire. Caso Gases Contaminantes Criterio», ejecutado por el Laboratorio CALAIRE de la Universidad Nacional de Colombia en alianza con el Instituto Nacional de Metrología (INM).
+Evaluación
+Evaluación de estabilidad
+Evaluación de homogeneidad
+Factor de cobertura (k):
+Formato de salida:
+Generación de informes
+Grupo de muestra
+Gráfico de corrida
+Gráfico de corrida de valores medios por participante
+Gráfico de resultados por participante
+Gráficos
+HTML
+Histograma de Resultados
+Histograma de los resultados de los participantes
+Inc. estándar del valor asignado (u_xpt):
+Incertidumbre del valor asignado (u_xpt)
+Incertidumbre expandida
+Información resumida
+Informe global
+Iteraciones
+Iteraciones máximas:
+La columna 'level' no se encuentra en el conjunto de datos de estabilidad.
+La columna 'level' no se encuentra en los datos cargados.
+La combinación seleccionada se utiliza en todas las secciones de la derecha.
+La dispersión de los datos es insuficiente para ejecutar el Algoritmo A.
+La exportación en PDF requiere una instalación de LaTeX disponible en el sistema.
+La línea punteada indica el valor asignado robusto (x*)
+La prueba de Grubbs requiere al menos 3 datos.
+Laboratorio Calaire
+Los pesos calculados no son válidos para el Algoritmo A.
+Límite de acción |En|=1
+Límites de advertencia |z'|=2, acción |z'|=3
+Límites de advertencia |z|=2, acción |z|=3
+Límites de advertencia |ζ|=2, acción |ζ|=3
+MADe
+MADe (sigma_pt)
+MADe (sigma_pt): %.5f\n
+MADe = %.4f | nIQR = %.4f\n
+MU
+MU ausente - solo %s: %s
+MU ausente - solo z
+MU ausente - solo z'
+Mapa de calor Puntaje En
+Mapa de calor puntaje z
+Mapa de calor puntaje z'
+Mapa de calor puntaje zeta
+Media de cuadrados
+Media de los datos de homogeneidad (y1):
+Media general
+Mediana (x_pt)
+Mediana de diferencias absolutas
+Mostrar opciones de diseño
+Módulos de análisis
+N/A
+Nivel
+Nivel 
+Nivel:
+Nivel: %s\n
+No hay clasificaciones calculadas.
+No hay clasificaciones para la selección actual.
+No hay datos de puntajes calculados para esta selección.
+No hay datos de referencia para la selección indicada.
+No hay datos disponibles para esta combinación.
+No hay datos resumen disponibles para los puntajes PT.
+No hay esquemas PT disponibles para este analito.
+No hay evaluaciones calculadas.
+No hay evaluaciones para la selección actual.
+No hay información de niveles disponible.
+No hay información x_pt disponible.
+No hay información x_pt para la selección actual.
+No hay niveles comunes entre los datos disponibles para esta combinación.
+No hay niveles disponibles para esta combinación.
+No hay niveles disponibles para esta selección.
+No hay niveles disponibles para este analito.
+No hay participantes disponibles para esta selección.
+No hay suficientes réplicas (se requieren al menos 2) para evaluar la homogeneidad en los datos de estabilidad.
+No hay suficientes réplicas (se requieren al menos 2) para evaluar la homogeneidad.
+No hay suficientes ítems (se requieren al menos 2) para evaluar la homogeneidad en los datos de estabilidad.
+No hay suficientes ítems (se requieren al menos 2) para evaluar la homogeneidad.
+No satisfactorio
+No se encontraron archivos summary_n*.csv o están vacíos. Por favor, agregue esos archivos.
+No se encontraron datos de estabilidad para el analito '%s'.
+No se encontraron datos de homogeneidad para el analito '%s'.
+No se encontraron datos de referencia ('ref') para este nivel.
+No se encontraron datos para la combinación seleccionada.
+No se encontraron datos para los criterios seleccionados.
+No se encontraron datos resumidos de PT (summary_n*.csv).
+No se encontraron participantes (distintos al valor de referencia) para la combinación seleccionada.
+No se encontraron resultados de participantes para esta combinación.
+No se encontraron resultados para la combinación seleccionada. Ejecute nuevamente el Algoritmo A.
+No se encontraron resultados para la combinación seleccionada. Ejecute nuevamente el cálculo.
+No se encontraron resultados para la selección actual. Ejecute nuevamente el cálculo de valores consenso.
+No se encontró información del participante de referencia para esta combinación.
+No se encontró la columna 'sample_1'. Es obligatoria para calcular sigma_pt en los datos de estabilidad.
+No se encontró la columna 'sample_1'. Es obligatoria para calcular sigma_pt.
+No se encontró la plantilla en 'reports/pt_report_template.Rmd'.
+No se generaron resultados globales. Ejecute 'Calcular puntajes'.
+No se generaron resultados. Ejecute 'Calcular puntajes'.
+No se generaron resultados. Verifique los datos cargados y ejecute nuevamente el cálculo de valores consenso.
+No se generaron resultados. Verifique que existan datos cargados y ejecute nuevamente el Algoritmo A.
+No se registraron iteraciones.
+Número de participantes:
+Número de réplicas (m)
+Número de ítems (g)
+Opciones para
+PDF
+Participante
+Participantes
+Participantes evaluados: %d\n
+Participantes:
+Parámetros principales
+Peso
+Pesos Finales por Participante
+Por favor, cargue los archivos CSV necesarios para el análisis. Asegúrese de que los archivos tengan el formato correcto.
+Porcentaje
+Preparación PT
+Prueba de Grubbs para valores atípicos
+Prueba t: no se detecta diferencia estadísticamente significativa entre los dos conjuntos de datos (p > 0.05), se respalda la estabilidad.
+Prueba t: se detecta diferencia estadísticamente significativa entre los dos conjuntos de datos (p <= 0.05), indicando posible inestabilidad.
+Puntaje En
+Puntaje Z
+Puntaje Zeta
+Puntaje z
+Puntaje z'
+Puntaje zeta
+Puntajes En
+Puntajes PT
+Puntajes Z
+Puntajes Z'
+Puntajes Zeta
+Referencia
+Referencia (1)
+Residuo estandarizado
+Residuos
+Resultado
+Resultado (media de cada participante)
+Resultados de Referencia
+Resultados de puntajes
+Resultados del Algoritmo A
+Resultados por participante
+Resumen
+Resumen de evaluaciones
+Resumen de evaluación de puntajes
+Resumen de niveles
+Resumen de parámetros
+Resumen de puntajes por participante
+Resumen de tamaño PT:
+Resumen del Valor Consenso
+Resumen detallado por participante
+Resumen global
+Resumen previo
+Resumen x_pt
+Satisfactorio
+Se encontraron columnas 'sample_*'.
+
+Se encontró la columna 'level'.
+
+Se muestran los resultados declarados como referencia para la selección actual.
+Se requieren al menos tres participantes para calcular el Algoritmo A.
+Se requieren al menos tres participantes para ejecutar el Algoritmo A.
+Se utiliza la misma selección de datos definida en la izquierda.
+Seleccionar analito:
+Seleccionar datos
+Seleccionar esquema PT (n):
+Seleccionar esquema PT (por n):
+Seleccionar nivel:
+Seleccione un analito y nivel.
+Selección inválida.
+Selector de datos
+Sin datos para este participante.
+Suma de cuadrados
+Tabla de datos
+Utilice \"Calcular puntajes\" en la pestaña Puntajes PT para habilitar esta sección.
+Utilice el selector de la izquierda para elegir analito, esquema PT y nivel.
+Validación de datos
+Valor
+Valor asignado
+Valor asignado (x*)
+Valor asignado (xpt)
+Valor asignado no disponible para %s.
+Valor consenso
+Valor de referencia
+Valor mediano: %.5f\n
+Valor medio
+Valores (Referencia) -
+Valores medios de los participantes con DE
+Varianza de las medias (s_x_bar_sq)
+Varianza dentro de la muestra (s_w_sq)
+Vista previa de datos
+Vista previa de datos de entrada
+Vista previa de homogeneidad (nivel y primera muestra)
+Visualiza los resultados declarados como referencia en los archivos summary_n*.csv.
+Word (DOCX)
+Z
+Zeta
+[^A-Za-z0-9]
+\n--- Estabilidad ---\n
+\n--- Homogeneidad ---\n
+\n--- Puntajes PT ---\n
+a1 - Totalmente satisfactorio
+a2 - Satisfactorio pero conservador
+a3 - Satisfactorio con MU subestimada
+a4 - Cuestionable pero aceptable
+a5 - Cuestionable e inconsistente
+a6 - No satisfactorio pero la MU cubre la desviación
+a7 - No satisfactorio (crítico)
+alert alert-danger
+alert alert-info
+alert alert-success
+alert alert-warning
+algoA_histogram
+algoA_input_table
+algoA_iterations_table
+algoA_max_iter
+algoA_result_summary
+algoA_run
+algoA_weights_table
+btn-primary btn-block
+frente al valor de referencia (línea punteada)
+input.show_layout_options == true
+n = 
+nIQR
+nIQR: %.5f\n
+pt_report_template.Rmd
+sigma_pt no válido para %s.
+sigma_pt_2a (MADe)
+sigma_pt_2b (nIQR)
+small text-muted
+ss (%.4f) <= c_criterion (%.4f): CUMPLE CRITERIO ESTABILIDAD
+ss (%.4f) <= c_criterion (%.4f): CUMPLE CRITERIO HOMOGENEIDAD
+ss (%.4f) <= c_expanded (%.4f): CUMPLE CRITERIO EXP HOMOGENEIDAD
+ss (%.4f) > c_criterion (%.4f): NO CUMPLE CRITERIO ESTABILIDAD
+ss (%.4f) > c_criterion (%.4f): NO CUMPLE CRITERIO HOMOGENEIDAD
+ss (%.4f) > c_expanded (%.4f): NO CUMPLE CRITERIO EXP HOMOGENEIDAD
+ss = %.4f | c = %.4f | c_exp = %.4f\n
+text-align:center; font-size:small;
+x_pt = %.4f | sigma_pt = %.4f | u_xpt = %.4f | k = %s\n
+x_pt(2) - Mediana
+z + En
+z' + En
+z1 - Referencia (1)
+z2a - Consenso MADe (2a)
+z2b - Consenso nIQR (2b)
+z3 - Algoritmo A (3)
+|y1 - y2| = %.4f | c = %.4f\n
+Ítem

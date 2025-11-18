@@ -17,6 +17,7 @@ library(shinythemes)
 library(outliers)
 library(patchwork)
 library(bsplus)
+library(plotly)
 
 # -------------------------------------------------------------------
 # Helper Functions
@@ -34,18 +35,18 @@ calculate_niqr <- function(x) {
 ui <- fluidPage(
 
   # 1. Application Title
-  titlePanel("PT Data Analysis Application"),
+  titlePanel("Aplicación de análisis de datos PT"),
   h4("Laboratorio Calaire"),
 
   # Collapsible panel for layout options
-  checkboxInput("show_layout_options", "Show Layout Options", value = FALSE),
+  checkboxInput("show_layout_options", "Mostrar opciones de diseño", value = FALSE),
   conditionalPanel(
     condition = "input.show_layout_options == true",
     wellPanel(
       themeSelector(),
       hr(),
-      sliderInput("nav_width", "Navigation Panel Width:", min = 1, max = 5, value = 2, width = "250px"),
-      sliderInput("analysis_sidebar_width", "Analysis Sidebar Width:", min = 2, max = 6, value = 3, width = "250px")
+      sliderInput("nav_width", "Ancho del panel de navegación:", min = 1, max = 5, value = 2, width = "250px"),
+      sliderInput("analysis_sidebar_width", "Ancho de la barra lateral de análisis:", min = 2, max = 6, value = 3, width = "250px")
     )
   ),
   hr(),
@@ -62,7 +63,7 @@ ui <- fluidPage(
 # ===================================================================
 server <- function(input, output, session) {
 
-  # --- Data Loading and Processing ---
+  # --- Carga de datos and Processing ---
   # This section handles the initial loading of data from user-uploaded files.
   # These reactives are the foundation for all subsequent analyses.
 
@@ -194,13 +195,13 @@ server <- function(input, output, session) {
     req(hom_data_full())
     wide_df <- get_wide_data(hom_data_full(), target_pollutant)
     if (is.null(wide_df)) {
-      return(list(error = sprintf("No homogeneity data found for pollutant '%s'.", target_pollutant)))
+      return(list(error = sprintf("No se encontraron datos de homogeneidad para el analito '%s'.", target_pollutant)))
     }
     if (!"level" %in% names(wide_df)) {
-      return(list(error = "Column 'level' not found in the loaded data."))
+      return(list(error = "La columna 'level' no se encuentra en los datos cargados."))
     }
     if (!(target_level %in% unique(wide_df$level))) {
-      return(list(error = sprintf("Level '%s' not found for pollutant '%s'.", target_level, target_pollutant)))
+      return(list(error = sprintf("El nivel '%s' no existe para el analito '%s'.", target_level, target_pollutant)))
     }
 
     level_data <- wide_df %>%
@@ -211,10 +212,10 @@ server <- function(input, output, session) {
     m <- ncol(level_data)
 
     if (m < 2) {
-      return(list(error = "Not enough replicate runs (at least 2 required) for homogeneity assessment."))
+      return(list(error = "No hay suficientes réplicas (se requieren al menos 2) para evaluar la homogeneidad."))
     }
     if (g < 2) {
-      return(list(error = "Not enough items (at least 2 required) for homogeneity assessment."))
+      return(list(error = "No hay suficientes ítems (se requieren al menos 2) para evaluar la homogeneidad."))
     }
 
     intermediate_df <- if (m == 2) {
@@ -242,11 +243,11 @@ server <- function(input, output, session) {
       pivot_longer(
         cols = -Item,
         names_to = "replicate",
-        values_to = "Result"
+        values_to = "Resultado"
       )
 
     if (!"sample_1" %in% names(level_data)) {
-      return(list(error = "Column 'sample_1' not found. It is required to calculate sigma_pt."))
+      return(list(error = "No se encontró la columna 'sample_1'. Es obligatoria para calcular sigma_pt."))
     }
 
     first_sample_results <- level_data %>% pull(sample_1)
@@ -262,9 +263,9 @@ server <- function(input, output, session) {
     hom_item_stats <- hom_data %>%
       group_by(Item) %>%
       summarise(
-        mean = mean(Result, na.rm = TRUE),
-        var = var(Result, na.rm = TRUE),
-        diff = max(Result, na.rm = TRUE) - min(Result, na.rm = TRUE),
+        mean = mean(Resultado, na.rm = TRUE),
+        var = var(Resultado, na.rm = TRUE),
+        diff = max(Resultado, na.rm = TRUE) - min(Resultado, na.rm = TRUE),
         .groups = "drop"
       )
 
@@ -279,12 +280,12 @@ server <- function(input, output, session) {
     hom_ss <- sqrt(hom_ss_sq)
 
     hom_anova_summary <- data.frame(
-      "Df" = c(g - 1, g * (m - 1)),
-      "Sum Sq" = c(hom_s_x_bar_sq * m * (g - 1), hom_sw^2 * g * (m - 1)),
-      "Mean Sq" = c(hom_s_x_bar_sq * m, hom_sw^2),
+      "gl" = c(g - 1, g * (m - 1)),
+      "Suma de cuadrados" = c(hom_s_x_bar_sq * m * (g - 1), hom_sw^2 * g * (m - 1)),
+      "Media de cuadrados" = c(hom_s_x_bar_sq * m, hom_sw^2),
       check.names = FALSE
     )
-    rownames(hom_anova_summary) <- c("Item", "Residuals")
+    rownames(hom_anova_summary) <- c("Ítem", "Residuos")
 
     hom_sigma_pt <- mad_e
     hom_c_criterion <- 0.3 * hom_sigma_pt
@@ -343,13 +344,13 @@ server <- function(input, output, session) {
     req(stab_data_full())
     wide_df <- get_wide_data(stab_data_full(), target_pollutant)
     if (is.null(wide_df)) {
-      return(list(error = sprintf("No stability data found for pollutant '%s'.", target_pollutant)))
+      return(list(error = sprintf("No se encontraron datos de estabilidad para el analito '%s'.", target_pollutant)))
     }
     if (!"level" %in% names(wide_df)) {
-      return(list(error = "Column 'level' not found in the stability dataset."))
+      return(list(error = "La columna 'level' no se encuentra en el conjunto de datos de estabilidad."))
     }
     if (!(target_level %in% unique(wide_df$level))) {
-      return(list(error = sprintf("Level '%s' not found for stability data of pollutant '%s'.", target_level, target_pollutant)))
+      return(list(error = sprintf("El nivel '%s' no existe en los datos de estabilidad del analito '%s'.", target_level, target_pollutant)))
     }
     if (!is.null(hom_results$error)) {
       return(list(error = hom_results$error))
@@ -363,10 +364,10 @@ server <- function(input, output, session) {
     m <- ncol(level_data)
 
     if (m < 2) {
-      return(list(error = "Not enough replicate runs (at least 2 required) for stability data homogeneity assessment."))
+      return(list(error = "No hay suficientes réplicas (se requieren al menos 2) para evaluar la homogeneidad en los datos de estabilidad."))
     }
     if (g < 2) {
-      return(list(error = "Not enough items (at least 2 required) for stability data homogeneity assessment."))
+      return(list(error = "No hay suficientes ítems (se requieren al menos 2) para evaluar la homogeneidad en los datos de estabilidad."))
     }
 
     intermediate_df <- if (m == 2) {
@@ -394,11 +395,11 @@ server <- function(input, output, session) {
       pivot_longer(
         cols = -Item,
         names_to = "replicate",
-        values_to = "Result"
+        values_to = "Resultado"
       )
 
     if (!"sample_1" %in% names(level_data)) {
-      return(list(error = "Column 'sample_1' not found. It is required to calculate sigma_pt for stability data."))
+      return(list(error = "No se encontró la columna 'sample_1'. Es obligatoria para calcular sigma_pt en los datos de estabilidad."))
     }
 
     first_sample_results <- level_data %>% pull(sample_1)
@@ -414,9 +415,9 @@ server <- function(input, output, session) {
     stab_item_stats <- stab_data %>%
       group_by(Item) %>%
       summarise(
-        mean = mean(Result, na.rm = TRUE),
-        var = var(Result, na.rm = TRUE),
-        diff = max(Result, na.rm = TRUE) - min(Result, na.rm = TRUE),
+        mean = mean(Resultado, na.rm = TRUE),
+        var = var(Resultado, na.rm = TRUE),
+        diff = max(Resultado, na.rm = TRUE) - min(Resultado, na.rm = TRUE),
         .groups = "drop"
       )
 
@@ -433,12 +434,12 @@ server <- function(input, output, session) {
     stab_ss <- sqrt(stab_ss_sq)
 
     stab_anova_summary <- data.frame(
-      "Df" = c(g - 1, g * (m - 1)),
-      "Sum Sq" = c(stab_s_x_bar_sq * m * (g - 1), stab_sw^2 * g * (m - 1)),
-      "Mean Sq" = c(stab_s_x_bar_sq * m, stab_sw^2),
+      "gl" = c(g - 1, g * (m - 1)),
+      "Suma de cuadrados" = c(stab_s_x_bar_sq * m * (g - 1), stab_sw^2 * g * (m - 1)),
+      "Media de cuadrados" = c(stab_s_x_bar_sq * m, stab_sw^2),
       check.names = FALSE
     )
-    rownames(stab_anova_summary) <- c("Item", "Residuals")
+    rownames(stab_anova_summary) <- c("Ítem", "Residuos")
 
     stab_sigma_pt <- mad_e
     stab_c_criterion <- 0.3 * hom_results$sigma_pt
@@ -486,7 +487,7 @@ server <- function(input, output, session) {
 
   compute_scores_metrics <- function(summary_df, target_pollutant, target_n_lab, target_level, sigma_pt, u_xpt, k) {
     if (is.null(summary_df) || nrow(summary_df) == 0) {
-      return(list(error = "No summary data available for PT scores."))
+      return(list(error = "No hay datos resumen disponibles para los puntajes PT."))
     }
 
     data <- summary_df %>%
@@ -497,13 +498,13 @@ server <- function(input, output, session) {
       )
 
     if (nrow(data) == 0) {
-      return(list(error = "No data found for the selected criteria."))
+      return(list(error = "No se encontraron datos para los criterios seleccionados."))
     }
 
     ref_data <- data %>% filter(participant_id == "ref")
 
     if (nrow(ref_data) == 0) {
-      return(list(error = "No reference data ('ref' participant) found for this level."))
+      return(list(error = "No se encontraron datos de referencia ('ref') para este nivel."))
     }
 
     x_pt <- mean(ref_data$mean_value, na.rm = TRUE)
@@ -525,26 +526,26 @@ server <- function(input, output, session) {
       ) %>%
       mutate(
         z_score_eval = case_when(
-          abs(z_score) <= 2 ~ "Satisfactory",
-          abs(z_score) > 2 & abs(z_score) < 3 ~ "Questionable",
-          abs(z_score) >= 3 ~ "Unsatisfactory",
+          abs(z_score) <= 2 ~ "Satisfactorio",
+          abs(z_score) > 2 & abs(z_score) < 3 ~ "Cuestionable",
+          abs(z_score) >= 3 ~ "No satisfactorio",
           TRUE ~ "N/A"
         ),
         z_prime_score_eval = case_when(
-          abs(z_prime_score) <= 2 ~ "Satisfactory",
-          abs(z_prime_score) > 2 & abs(z_prime_score) < 3 ~ "Questionable",
-          abs(z_prime_score) >= 3 ~ "Unsatisfactory",
+          abs(z_prime_score) <= 2 ~ "Satisfactorio",
+          abs(z_prime_score) > 2 & abs(z_prime_score) < 3 ~ "Cuestionable",
+          abs(z_prime_score) >= 3 ~ "No satisfactorio",
           TRUE ~ "N/A"
         ),
         zeta_score_eval = case_when(
-          abs(zeta_score) <= 2 ~ "Satisfactory",
-          abs(zeta_score) > 2 & abs(zeta_score) < 3 ~ "Questionable",
-          abs(zeta_score) >= 3 ~ "Unsatisfactory",
+          abs(zeta_score) <= 2 ~ "Satisfactorio",
+          abs(zeta_score) > 2 & abs(zeta_score) < 3 ~ "Cuestionable",
+          abs(zeta_score) >= 3 ~ "No satisfactorio",
           TRUE ~ "N/A"
         ),
         En_score_eval = case_when(
-          abs(En_score) <= 1 ~ "Satisfactory",
-          abs(En_score) > 1 ~ "Unsatisfactory",
+          abs(En_score) <= 1 ~ "Satisfactorio",
+          abs(En_score) > 1 ~ "No satisfactorio",
           TRUE ~ "N/A"
         )
       )
@@ -718,8 +719,8 @@ server <- function(input, output, session) {
     navlistPanel(
       id = "main_nav",
       widths = c(nav_width, content_width),
-      "Analysis Modules",
-      tabPanel("Data Loading",
+      "Módulos de análisis",
+      tabPanel("Carga de datos",
         h3("Carga Manual de Archivos de Datos"),
         p("Por favor, cargue los archivos CSV necesarios para el análisis. Asegúrese de que los archivos tengan el formato correcto."),
         fluidRow(
@@ -737,7 +738,7 @@ server <- function(input, output, session) {
           ),
           column(width = 4,
             wellPanel(
-              h4("3. Datos Resumen de Participantes"),
+              h4("3. Datos resumen de participantes"),
               fileInput("summary_files", "Cargar summary_n*.csv", accept = ".csv", multiple = TRUE)
             )
           )
@@ -746,18 +747,18 @@ server <- function(input, output, session) {
         h4("Estado de los Datos Cargados"),
         verbatimTextOutput("data_upload_status")
       ),
-      tabPanel("Homogeneity & Stability Analysis",
+      tabPanel("Análisis de homogeneidad y estabilidad",
         sidebarLayout(
           sidebarPanel(
             width = analysis_sidebar_w,
-            h4("1. Ejecutar Análisis (Run Analysis)"),
-            actionButton("run_analysis", "Ejecutar (Run Analysis)",
+            h4("1. Ejecutar análisis"),
+            actionButton("run_analysis", "Ejecutar",
                          class = "btn-primary btn-block"),
             hr(),
-            h4("2. Seleccionar Analito (Select Pollutant)"),
+            h4("2. Seleccionar analito"),
             uiOutput("pollutant_selector_analysis"),
             hr(),
-            h4("3. Seleccionar Nivel (Select Level)"),
+            h4("3. Seleccionar nivel"),
             uiOutput("level_selector"),
             hr(),
             p("Este aplicativo evalua la homogeneidad y estabilidad del item de ensayo de acuerdo a los princiios de la ISO 13528:2022.")
@@ -766,69 +767,69 @@ server <- function(input, output, session) {
             width = analysis_main_w,
             tabsetPanel(
               id = "analysis_tabs",
-              tabPanel("Data Preview",
-                       h4("Data Input Preview"),
-                       p("This table shows the data for the selected pollutant."),
-                       h5("Homogeneity Data"),
+              tabPanel("Vista previa de datos",
+                       h4("Vista previa de datos de entrada"),
+                       p("Esta tabla muestra los datos del analito seleccionado."),
+                       h5("Datos de homogeneidad"),
                        dataTableOutput("raw_data_preview"),
                        hr(),
-                       h5("Stability Data"),
+                       h5("Datos de estabilidad"),
                        dataTableOutput("stability_data_preview"),
                        hr(),
-                       h4("Data Distribution"),
-                       p("The histogram and boxplot below show the distribution of all results from the 'sample_*' columns for the selected level."),
+                       h4("Distribución de datos"),
+                       p("El histograma y el diagrama de caja muestran la distribución de todos los resultados de las columnas 'sample_*' para el nivel seleccionado."),
                        fluidRow(
-                         column(width = 6, plotOutput("results_histogram")),
-                         column(width = 6, plotOutput("results_boxplot"))
+                         column(width = 6, plotlyOutput("results_histogram")),
+                         column(width = 6, plotlyOutput("results_boxplot"))
                        ),
                        hr(),
-                       h4("Data Validation"),
+                       h4("Validación de datos"),
                        verbatimTextOutput("validation_message")
               ),
-              tabPanel("Homogeneity Assessment",
-                       h4("Conclusion"),
+              tabPanel("Evaluación de homogeneidad",
+                       h4("Conclusión"),
                        uiOutput("homog_conclusion"),
                        hr(),
-                       h4("Homogeneity Data Preview (Level and First Sample)"),
+                       h4("Vista previa de homogeneidad (nivel y primera muestra)"),
                        dataTableOutput("homogeneity_preview_table"),
                        hr(),
-                       h4("Robust Statistics Calculations"),
+                       h4("Cálculos de estadísticos robustos"),
                        tableOutput("robust_stats_table"),
                        verbatimTextOutput("robust_stats_summary"),
                        hr(),
-                       h4("Variance Components"),
-                       p("Estimated standard deviations from the manual calculation."),
+                       h4("Componentes de varianza"),
+                       p("Desviaciones estándar estimadas del cálculo manual."),
                        tableOutput("variance_components"),
                        hr(),
-                       h4("Per-Item Calculations"),
-                       p("This table shows calculations for each item (row) in the dataset for the selected level, including the average and range of measurements."),
+                       h4("Cálculos por ítem"),
+                       p("Esta tabla muestra los cálculos para cada ítem del conjunto de datos del nivel seleccionado, incluyendo la media y el rango de las mediciones."),
                        tableOutput("details_per_item_table"),
                        hr(),
-                       h4("Summary Statistics"),
-                       p("This table shows the overall statistics for the homogeneity assessment."),
+                       h4("Estadísticos resumidos"),
+                       p("Esta tabla muestra los estadísticos generales de la evaluación de homogeneidad."),
                        tableOutput("details_summary_stats_table")
               ),
-              tabPanel("Stability Asessment",
-                       h4("Conclusion"),
+              tabPanel("Evaluación de estabilidad",
+                       h4("Conclusión"),
                        uiOutput("homog_conclusion_stability"),
                        hr(),
-                       h4("Variance Components"),
-                       p("Estimated standard deviations from the manual calculation for the stability dataset."),
+                       h4("Componentes de varianza"),
+                       p("Desviaciones estándar estimadas del cálculo manual para el conjunto de estabilidad."),
                        tableOutput("variance_components_stability"),
                        hr(),
-                       h4("Per-Item Calculations"),
-                       p("This table shows calculations for each item (row) in the stability dataset."),
+                       h4("Cálculos por ítem"),
+                       p("Esta tabla muestra los cálculos para cada ítem del conjunto de estabilidad."),
                        tableOutput("details_per_item_table_stability"),
                        hr(),
-                       h4("Summary Statistics"),
-                       p("This table shows the overall statistics for the stability dataset."),
+                       h4("Estadísticos resumidos"),
+                       p("Esta tabla muestra los estadísticos generales para el conjunto de estabilidad."),
                        tableOutput("details_summary_stats_table_stability")
               )
             )
           )
         )
       ),
-      tabPanel("Assigned Value",
+      tabPanel("Valor asignado",
         sidebarLayout(
           sidebarPanel(
             width = analysis_sidebar_w,
@@ -865,7 +866,7 @@ server <- function(input, output, session) {
                     dataTableOutput("algoA_input_table"),
                     hr(),
                     h4("Histograma de Resultados"),
-                    plotOutput("algoA_histogram"),
+                    plotlyOutput("algoA_histogram"),
                     hr(),
                     h4("Iteraciones"),
                     dataTableOutput("algoA_iterations_table"),
@@ -876,7 +877,7 @@ server <- function(input, output, session) {
                 )
               ) %>%
               bsplus::bs_append(
-                title = "Consensus Value",
+                title = "Valor consenso",
                 content = sidebarLayout(
                   sidebarPanel(
                     width = analysis_sidebar_w,
@@ -892,13 +893,13 @@ server <- function(input, output, session) {
                     h4("Resumen del Valor Consenso"),
                     tableOutput("consensus_summary_table"),
                     hr(),
-                    h4("Datos de Participantes"),
+                   h4("Datos de participantes"),
                     dataTableOutput("consensus_input_table")
                   )
                 )
               ) %>%
               bsplus::bs_append(
-                title = "Reference Value",
+                title = "Valor de referencia",
                 content = sidebarLayout(
                   sidebarPanel(
                     width = analysis_sidebar_w,
@@ -917,12 +918,12 @@ server <- function(input, output, session) {
           )
         )
       ),
-      tabPanel("PT Preparation",
-        h3("Proficiency Testing Scheme Analysis"),
-        p("Analysis of participant results from different PT schemes, based on summary data files."),
+      tabPanel("Preparación PT",
+        h3("Análisis de esquemas de ensayos de aptitud"),
+        p("Análisis de los resultados de los participantes de diferentes esquemas PT a partir de archivos resumen."),
         uiOutput("pt_pollutant_tabs")
       ),
-      tabPanel("PT Scores",
+      tabPanel("Puntajes PT",
         sidebarLayout(
           sidebarPanel(
             width = 4,
@@ -938,7 +939,7 @@ server <- function(input, output, session) {
             width = 8,
             tabsetPanel(
               id = "scores_tabs",
-              tabPanel("Scores Results",
+              tabPanel("Resultados de puntajes",
                        h4("Resumen de parámetros"),
                        tableOutput("scores_parameter_table"),
                        hr(),
@@ -948,20 +949,20 @@ server <- function(input, output, session) {
                        h4("Resumen de evaluación de puntajes"),
                        tableOutput("scores_evaluation_summary")
               ),
-              tabPanel("Z-Scores", uiOutput("z_scores_panel")),
-              tabPanel("Z'-Scores", uiOutput("zprime_scores_panel")),
-              tabPanel("Zeta-Scores", uiOutput("zeta_scores_panel")),
-              tabPanel("En-Scores", uiOutput("en_scores_panel"))
+              tabPanel("Puntajes Z", uiOutput("z_scores_panel")),
+              tabPanel("Puntajes Z'", uiOutput("zprime_scores_panel")),
+              tabPanel("Puntajes Zeta", uiOutput("zeta_scores_panel")),
+              tabPanel("Puntajes En", uiOutput("en_scores_panel"))
             )
           )
         )
       ),
-      tabPanel("Global Report",
+      tabPanel("Informe global",
         sidebarLayout(
           sidebarPanel(
             width = analysis_sidebar_w,
             h4("1. Ejecutar cálculo global"),
-            helpText("Use \"Calcular puntajes\" en la pestaña PT Scores para habilitar esta sección."),
+            helpText("Utilice \"Calcular puntajes\" en la pestaña Puntajes PT para habilitar esta sección."),
             hr(),
             h4("2. Seleccionar combinación"),
             uiOutput("global_report_pollutant_selector"),
@@ -975,7 +976,7 @@ server <- function(input, output, session) {
             bsplus::bs_accordion(id = "global_report_sections") %>%
               bsplus::bs_set_opts(use_heading_link = TRUE) %>%
               bsplus::bs_append(
-                title = "Global Summaries",
+                title = "Resumen global",
                 content = tagList(
                   h4("Resumen x_pt"),
                   dataTableOutput("global_xpt_summary_table"),
@@ -988,37 +989,6 @@ server <- function(input, output, session) {
                 )
               ) %>%
               bsplus::bs_append(
-                title = "Evaluation Classification",
-                content = tagList(
-                  h4("Resumen de clasificación"),
-                  dataTableOutput("global_classification_summary_table"),
-                  hr(),
-                  h4("Referencia (1)"),
-                  fluidRow(
-                    column(6, plotOutput("global_class_heatmap_z_ref", height = "350px")),
-                    column(6, plotOutput("global_class_heatmap_zprime_ref", height = "350px"))
-                  ),
-                  hr(),
-                  h4("Consenso MADe (2a)"),
-                  fluidRow(
-                    column(6, plotOutput("global_class_heatmap_z_consensus_ma", height = "350px")),
-                    column(6, plotOutput("global_class_heatmap_zprime_consensus_ma", height = "350px"))
-                  ),
-                  hr(),
-                  h4("Consenso nIQR (2b)"),
-                  fluidRow(
-                    column(6, plotOutput("global_class_heatmap_z_consensus_niqr", height = "350px")),
-                    column(6, plotOutput("global_class_heatmap_zprime_consensus_niqr", height = "350px"))
-                  ),
-                  hr(),
-                  h4("Algoritmo A (3)"),
-                  fluidRow(
-                    column(6, plotOutput("global_class_heatmap_z_algo", height = "350px")),
-                    column(6, plotOutput("global_class_heatmap_zprime_algo", height = "350px"))
-                  )
-                )
-              ) %>%
-              bsplus::bs_append(
                 title = "Referencia (1)",
                 content = tagList(
                   h4("Parámetros principales"),
@@ -1028,10 +998,10 @@ server <- function(input, output, session) {
                   dataTableOutput("global_overview_ref"),
                   hr(),
                   fluidRow(
-                    column(3, plotOutput("global_heatmap_z_ref", height = "350px")),
-                    column(3, plotOutput("global_heatmap_zprime_ref", height = "350px")),
-                    column(3, plotOutput("global_heatmap_zeta_ref", height = "350px")),
-                    column(3, plotOutput("global_heatmap_en_ref", height = "350px"))
+                    column(3, plotlyOutput("global_heatmap_z_ref", height = "350px")),
+                    column(3, plotlyOutput("global_heatmap_zprime_ref", height = "350px")),
+                    column(3, plotlyOutput("global_heatmap_zeta_ref", height = "350px")),
+                    column(3, plotlyOutput("global_heatmap_en_ref", height = "350px"))
                   )
                 )
               ) %>%
@@ -1045,10 +1015,10 @@ server <- function(input, output, session) {
                   dataTableOutput("global_overview_consensus_ma"),
                   hr(),
                   fluidRow(
-                    column(3, plotOutput("global_heatmap_z_consensus_ma", height = "350px")),
-                    column(3, plotOutput("global_heatmap_zprime_consensus_ma", height = "350px")),
-                    column(3, plotOutput("global_heatmap_zeta_consensus_ma", height = "350px")),
-                    column(3, plotOutput("global_heatmap_en_consensus_ma", height = "350px"))
+                    column(3, plotlyOutput("global_heatmap_z_consensus_ma", height = "350px")),
+                    column(3, plotlyOutput("global_heatmap_zprime_consensus_ma", height = "350px")),
+                    column(3, plotlyOutput("global_heatmap_zeta_consensus_ma", height = "350px")),
+                    column(3, plotlyOutput("global_heatmap_en_consensus_ma", height = "350px"))
                   )
                 )
               ) %>%
@@ -1062,10 +1032,10 @@ server <- function(input, output, session) {
                   dataTableOutput("global_overview_consensus_niqr"),
                   hr(),
                   fluidRow(
-                    column(3, plotOutput("global_heatmap_z_consensus_niqr", height = "350px")),
-                    column(3, plotOutput("global_heatmap_zprime_consensus_niqr", height = "350px")),
-                    column(3, plotOutput("global_heatmap_zeta_consensus_niqr", height = "350px")),
-                    column(3, plotOutput("global_heatmap_en_consensus_niqr", height = "350px"))
+                    column(3, plotlyOutput("global_heatmap_z_consensus_niqr", height = "350px")),
+                    column(3, plotlyOutput("global_heatmap_zprime_consensus_niqr", height = "350px")),
+                    column(3, plotlyOutput("global_heatmap_zeta_consensus_niqr", height = "350px")),
+                    column(3, plotlyOutput("global_heatmap_en_consensus_niqr", height = "350px"))
                   )
                 )
               ) %>%
@@ -1079,17 +1049,17 @@ server <- function(input, output, session) {
                   dataTableOutput("global_overview_algo"),
                   hr(),
                   fluidRow(
-                    column(3, plotOutput("global_heatmap_z_algo", height = "350px")),
-                    column(3, plotOutput("global_heatmap_zprime_algo", height = "350px")),
-                    column(3, plotOutput("global_heatmap_zeta_algo", height = "350px")),
-                    column(3, plotOutput("global_heatmap_en_algo", height = "350px"))
+                    column(3, plotlyOutput("global_heatmap_z_algo", height = "350px")),
+                    column(3, plotlyOutput("global_heatmap_zprime_algo", height = "350px")),
+                    column(3, plotlyOutput("global_heatmap_zeta_algo", height = "350px")),
+                    column(3, plotlyOutput("global_heatmap_en_algo", height = "350px"))
                   )
                 )
               )
           )
         )
       ),
-      tabPanel("Participants",
+      tabPanel("Participantes",
         sidebarLayout(
           sidebarPanel(
             width = analysis_sidebar_w,
@@ -1104,7 +1074,7 @@ server <- function(input, output, session) {
           )
         )
       ),
-      tabPanel("Report Generation",
+      tabPanel("Generación de informes",
         sidebarLayout(
           sidebarPanel(
             width = analysis_sidebar_w,
@@ -1114,9 +1084,9 @@ server <- function(input, output, session) {
             uiOutput("report_level_selector"),
             hr(),
             h4("2. Parámetros del Informe"),
-            numericInput("report_sigma_pt", "Std. Dev. for PT (sigma_pt):", value = 5, min = 0, step = 0.1),
-            numericInput("report_u_xpt", "Std. Uncertainty of Assigned Value (u_xpt):", value = 0.5, min = 0, step = 0.01),
-            numericInput("report_k", "Coverage Factor (k):", value = 2, min = 1, step = 1),
+            numericInput("report_sigma_pt", "Desv. estándar para PT (sigma_pt):", value = 5, min = 0, step = 0.1),
+            numericInput("report_u_xpt", "Inc. estándar del valor asignado (u_xpt):", value = 0.5, min = 0, step = 0.01),
+            numericInput("report_k", "Factor de cobertura (k):", value = 2, min = 1, step = 1),
             hr(),
             radioButtons("report_format", "Formato de salida:", choices = c("HTML" = "html", "PDF" = "pdf", "Word (DOCX)" = "word"), selected = "html"),
             helpText("La exportación en PDF requiere una instalación de LaTeX disponible en el sistema."),
@@ -1139,13 +1109,13 @@ server <- function(input, output, session) {
   # III. Homogeneity & Stability Module
   # ===================================================================
 
-  # R1: Reactive for Homogeneity Data
+  # R1: Reactive for Datos de homogeneidad
   raw_data <- reactive({
     req(hom_data_full(), input$pollutant_analysis)
     get_wide_data(hom_data_full(), input$pollutant_analysis)
   })
 
-  # R1.6: Reactive for Stability Data
+  # R1.6: Reactive for Datos de estabilidad
   stability_data_raw <- reactive({
     req(stab_data_full(), input$pollutant_analysis)
     get_wide_data(stab_data_full(), input$pollutant_analysis)
@@ -1156,16 +1126,16 @@ server <- function(input, output, session) {
     data <- raw_data()
     if ("level" %in% names(data)) {
       levels <- unique(data$level)
-      selectInput("target_level", "2. Select PT Level", choices = levels, selected = levels[1])
+      selectInput("target_level", "2. Seleccionar nivel PT", choices = levels, selected = levels[1])
     } else {
-      p("Column 'level' not found in the loaded data.")
+      p("La columna 'level' no se encuentra en los datos cargados.")
     }
   })
 
   output$pollutant_selector_analysis <- renderUI({
     req(hom_data_full())
     choices <- sort(unique(hom_data_full()$pollutant))
-    selectInput("pollutant_analysis", "Select Pollutant:", choices = choices)
+    selectInput("pollutant_analysis", "Seleccionar analito:", choices = choices)
   })
 
   # R3: Homogeneity Execution (Enabled after run button is used)
@@ -1175,7 +1145,7 @@ server <- function(input, output, session) {
     compute_homogeneity_metrics(input$pollutant_analysis, input$target_level)
   })
 
-  # R3.5: Stability Data Homogeneity Execution (Enabled after run button is used)
+  # R3.5: Datos de estabilidad Homogeneity Execution (Enabled after run button is used)
   homogeneity_run_stability <- reactive({
     req(analysis_trigger())
     req(input$pollutant_analysis, input$target_level)
@@ -1206,18 +1176,18 @@ server <- function(input, output, session) {
     fmt <- "%.5f"
 
     details_text <- sprintf(
-      paste("Mean of Homogeneity Data (y1):", fmt, "
-Mean of Stability Data (y2):", fmt, "
-Observed Absolute Difference:", fmt, "
-Stability Criterion (0.3 * sigma_pt):", fmt),
+      paste("Media de los datos de homogeneidad (y1):", fmt, "
+Media de los datos de estabilidad (y2):", fmt, "
+Diferencia absoluta observada:", fmt, "
+Criterio de estabilidad (0.3 * sigma_pt):", fmt),
       y1, y2, diff_observed, stab_criterion_value
     )
 
     if (diff_observed <= stab_criterion_value) {
-      conclusion <- "Conclusion: The item is adequately stable."
+      conclusion <- "Conclusión: el ítem es adecuadamente estable."
       conclusion_class <- "alert alert-success"
     } else {
-      conclusion <- "Conclusion: WARNING: The item may be unstable."
+      conclusion <- "Conclusión: ADVERTENCIA: el ítem puede ser inestable."
       conclusion_class <- "alert alert-warning"
     }
 
@@ -1227,22 +1197,22 @@ Stability Criterion (0.3 * sigma_pt):", fmt),
     data_t1_results <- raw_data() %>%
       filter(level == target_level) %>%
       select(starts_with("sample_")) %>%
-      pivot_longer(everything(), values_to = "Result") %>%
-      pull(Result)
+      pivot_longer(everything(), values_to = "Resultado") %>%
+      pull(Resultado)
 
     data_t2_results <- stability_data_raw() %>%
       filter(level == target_level) %>%
       select(starts_with("sample_")) %>%
-      pivot_longer(everything(), values_to = "Result") %>%
-      pull(Result)
+      pivot_longer(everything(), values_to = "Resultado") %>%
+      pull(Resultado)
 
     # T-test
     t_test_result <- t.test(data_t1_results, data_t2_results)
 
     if (t_test_result$p.value > 0.05) {
-      ttest_conclusion <- "T-test: No statistically significant difference detected between the two datasets (p > 0.05), supporting stability."
+      ttest_conclusion <- "Prueba t: no se detecta diferencia estadísticamente significativa entre los dos conjuntos de datos (p > 0.05), se respalda la estabilidad."
     } else {
-      ttest_conclusion <- "T-test: Statistically significant difference detected between the two datasets (p <= 0.05), indicating potential instability."
+      ttest_conclusion <- "Prueba t: se detecta diferencia estadísticamente significativa entre los dos conjuntos de datos (p <= 0.05), indicando posible inestabilidad."
     }
 
     list(
@@ -1257,7 +1227,7 @@ Stability Criterion (0.3 * sigma_pt):", fmt),
 
   # --- Outputs ---
 
-  # Output: Data Preview
+  # Output: Vista previa de datos
   output$raw_data_preview <- renderDataTable({
     req(raw_data())
     df <- head(raw_data(), 10)
@@ -1282,27 +1252,27 @@ Stability Criterion (0.3 * sigma_pt):", fmt),
   # Output: Validation Message
   output$validation_message <- renderPrint({
     data <- raw_data()
-    cat("Data loaded successfully.
+    cat("Datos cargados correctamente.
 ")
-    cat(paste("Dimensions:", paste(dim(data), collapse = " x "), "
+    cat(paste("Dimensiones:", paste(dim(data), collapse = " x "), "
 "))
 
     required_cols <- c("level")
     has_samples <- any(str_detect(names(data), "sample_"))
 
     if(!all(required_cols %in% names(data))) {
-        cat(paste("ERROR: Missing required column(s):", paste(setdiff(required_cols, names(data)), collapse=", "), "
+        cat(paste("ERROR: faltan columnas obligatorias:", paste(setdiff(required_cols, names(data)), collapse=", "), "
 "))
     } else {
-        cat("Found 'level' column.
+        cat("Se encontró la columna 'level'.
 ")
     }
 
     if(!has_samples) {
-        cat("ERROR: No columns with 'sample_' prefix found. These are needed for the analysis.
+        cat("ERROR: no se encontraron columnas con el prefijo 'sample_'. Son necesarias para el análisis.
 ")
     } else {
-        cat("Found 'sample_*' columns.
+        cat("Se encontraron columnas 'sample_*'.
 ")
     }
   })
@@ -1317,31 +1287,33 @@ Stability Criterion (0.3 * sigma_pt):", fmt),
   })
 
   # Output: Histogram
-  output$results_histogram <- renderPlot({
+  output$results_histogram <- renderPlotly({
     plot_data <- plot_data_long()
     req(plot_data)
-    ggplot(plot_data, aes(x = result)) +
+    hist_plot <- ggplot(plot_data, aes(x = result)) +
       geom_histogram(aes(y = after_stat(density)), color = "black", fill = "skyblue", bins = 20) +
       geom_density(alpha = 0.4, fill = "lightblue") +
       facet_wrap(~level, scales = "free") +
-      labs(title = "Distribution by Level",
-           x = "Result", y = "Density") +
+      labs(title = "Distribución por nivel",
+           x = "Resultado", y = "Densidad") +
       theme_minimal()
+    plotly::ggplotly(hist_plot)
   })
 
   # Output: Boxplot
-  output$results_boxplot <- renderPlot({
+  output$results_boxplot <- renderPlotly({
     plot_data <- plot_data_long()
     req(plot_data)
-    ggplot(plot_data, aes(x = "", y = result)) +
+    box_plot <- ggplot(plot_data, aes(x = "", y = result)) +
       geom_boxplot(fill = "lightgreen", outlier.colour = "red") +
       facet_wrap(~level, scales = "free") +
-      labs(title = "Boxplot by Level",
-           x = NULL, y = "Result") +
+      labs(title = "Diagrama de caja por nivel",
+           x = NULL, y = "Resultado") +
       theme_minimal()
+    plotly::ggplotly(box_plot)
   })
 
-  # Output: Homogeneity Data Preview
+  # Output: Homogeneity Vista previa de datos
   output$homogeneity_preview_table <- renderDataTable({
     req(raw_data(), input$target_level)
     homogeneity_data <- raw_data()
@@ -1358,8 +1330,8 @@ Stability Criterion (0.3 * sigma_pt):", fmt),
     res <- homogeneity_run()
     if (is.null(res$error)) {
       data.frame(
-        Statistic = c("Median (x_pt)", "Median Absolute Difference", "MADe (sigma_pt)", "nIQR"),
-        Value = sprintf("%.5f", c(res$median_val, res$median_abs_diff, res$sigma_pt, res$n_iqr))
+        Estadístico = c("Mediana (x_pt)", "Diferencia absoluta mediana", "MADe (sigma_pt)", "nIQR"),
+        Valor = sprintf("%.5f", c(res$median_val, res$median_abs_diff, res$sigma_pt, res$n_iqr))
       )
     }
   }, spacing = "l")
@@ -1368,14 +1340,14 @@ Stability Criterion (0.3 * sigma_pt):", fmt),
   output$robust_stats_summary <- renderPrint({
     res <- homogeneity_run()
     if (is.null(res$error)) {
-      cat(sprintf("Median Value: %.5f\n", res$median_val))
-      cat(sprintf("Median Absolute Difference: %.5f\n", res$median_abs_diff))
+      cat(sprintf("Valor mediano: %.5f\n", res$median_val))
+      cat(sprintf("Diferencia absoluta mediana: %.5f\n", res$median_abs_diff))
       cat(sprintf("MADe (sigma_pt): %.5f\n", res$sigma_pt))
       cat(sprintf("nIQR: %.5f\n", res$n_iqr))
     }
   })
 
-  # Output: Homogeneity Conclusion
+  # Output: Homogeneity Conclusión
   output$homog_conclusion <- renderUI({
     res <- homogeneity_run()
     if (!is.null(res$error)) {
@@ -1385,30 +1357,30 @@ Stability Criterion (0.3 * sigma_pt):", fmt),
     }
   })
 
-  # Output: Variance Components
+  # Output: Componentes de varianza
   output$variance_components <- renderTable({
     res <- homogeneity_run()
     if (is.null(res$error)) {
         df <- data.frame(
-          Component = c("Assigned Value (xpt)",
-                        "Robust SD (sigma_pt)",
-                        "Uncertainty of Assigned Value (u_xpt)",
-                        "Between-Sample SD (ss)",
-                        "Within-Sample SD (sw)",
+          Componente = c("Valor asignado (xpt)",
+                        "DE robusta (sigma_pt)",
+                        "Incertidumbre del valor asignado (u_xpt)",
+                        "DE entre muestras (ss)",
+                        "DE dentro de la muestra (sw)",
                         "---",
-                        "Criterion c",
-                        "Criterion c (expanded)"),
-          Value = c(
-          format_num(c(res$median_val, res$sigma_pt, res$u_xpt, res$ss, res$sw)),
-          "",
-          format_num(c(res$c_criterion, res$c_criterion_expanded))
+                        "Criterio c",
+                        "Criterio c (expandido)"),
+          Valor = c(
+            format_num(c(res$median_val, res$sigma_pt, res$u_xpt, res$ss, res$sw)),
+            "",
+            format_num(c(res$c_criterion, res$c_criterion_expanded))
           )
         )
         df
     }
   })
 
-  # Output: Stability Conclusion
+  # Output: Stability Conclusión
   output$stability_conclusion <- renderUI({
     res <- stability_run()
     if (!is.null(res$error)) {
@@ -1450,24 +1422,24 @@ Stability Criterion (0.3 * sigma_pt):", fmt),
     res <- homogeneity_run()
     if (is.null(res$error)) {
       data.frame(
-        Parameter = c("General Mean",
-                      "SD of Means",
-                      "Variance of Means (s_x_bar_sq)",
+        Parámetro = c("Media general",
+                      "DE de medias",
+                      "Varianza de las medias (s_x_bar_sq)",
                       "sw",
-                      "Within-Sample Variance (s_w_sq)",
+                      "Varianza dentro de la muestra (s_w_sq)",
                       "ss",
                       "---",
-                      "Assigned Value (xpt)",
-                      "Median of Absolute Differences",
-                      "Number of Items (g)",
-                      "Number of Replicates (m)",
-                      "Robust SD (MADe)",
+                      "Valor asignado (xpt)",
+                      "Mediana de diferencias absolutas",
+                      "Número de ítems (g)",
+                      "Número de réplicas (m)",
+                      "DE robusta (MADe)",
                       "nIQR",
-                      "Uncertainty of Assigned Value (u_xpt)",
+                      "Incertidumbre del valor asignado (u_xpt)",
                       "---",
-                      "Criterion c",
-                      "Criterion c (expanded)"),
-        Value = c(
+                      "Criterio c",
+                      "Criterio c (expandido)"),
+        Valor = c(
           c(format_num(res$general_mean), format_num(res$sd_of_means), format_num(res$s_x_bar_sq), format_num(res$sw), format_num(res$s_w_sq), format_num(res$ss)),
           "",
           c(format_num(res$median_val), format_num(res$median_abs_diff), res$g, res$m, format_num(res$sigma_pt), format_num(res$n_iqr), format_num(res$u_xpt)),
@@ -1478,9 +1450,9 @@ Stability Criterion (0.3 * sigma_pt):", fmt),
     }
   }, spacing = "l")
 
-  # --- Outputs for Stability Data Analysis Tab ---
+  # --- Outputs for Datos de estabilidad Analysis Tab ---
 
-  # Output: Homogeneity Conclusion for Stability Data
+  # Output: Homogeneity Conclusión for Datos de estabilidad
   output$homog_conclusion_stability <- renderUI({
     res <- homogeneity_run_stability()
     if (!is.null(res$error)) {
@@ -1490,15 +1462,15 @@ Stability Criterion (0.3 * sigma_pt):", fmt),
     }
   })
 
-  # Output: Variance Components for Stability Data
+  # Output: Componentes de varianza for Datos de estabilidad
   output$variance_components_stability <- renderTable({
     res <- homogeneity_run_stability()
     if (is.null(res$error)) {
         df <- data.frame(
-          Component = c("Assigned Value (xpt)",
-                        "Robust SD (sigma_pt)",
-                        "Uncertainty of Assigned Value (u_xpt)"),
-          Value = c(
+          Componente = c("Valor asignado (xpt)",
+                        "DE robusta (sigma_pt)",
+                        "Incertidumbre del valor asignado (u_xpt)"),
+          Valor = c(
             sprintf("%.5f", res$stab_median_val),
             sprintf("%.5f", res$stab_sigma_pt),
             sprintf("%.5f", res$stab_u_xpt)
@@ -1508,7 +1480,7 @@ Stability Criterion (0.3 * sigma_pt):", fmt),
     }
   })
 
-  # Output: Details per item table for Stability Data
+  # Output: Details per item table for Datos de estabilidad
   output$details_per_item_table_stability <- renderTable({
     res <- homogeneity_run_stability()
     if (is.null(res$error)) {
@@ -1516,30 +1488,30 @@ Stability Criterion (0.3 * sigma_pt):", fmt),
     }
   }, spacing = "l", digits = 5)
 
-  # Output: Details summary stats table for Stability Data
+  # Output: Details summary stats table for Datos de estabilidad
   output$details_summary_stats_table_stability <- renderTable({
     res <- homogeneity_run_stability()
     if (is.null(res$error)) {
       data.frame(
-        Parameter = c("General Mean",
-                      "Absolute Difference from General Mean",
-                      "SD of Means",
-                      "Variance of Means (s_x_bar_sq)",
+        Parámetro = c("Media general",
+                      "Diferencia absoluta respecto a la media general",
+                      "DE de medias",
+                      "Varianza de las medias (s_x_bar_sq)",
                       "sw",
-                      "Within-Sample Variance (s_w_sq)",
+                      "Varianza dentro de la muestra (s_w_sq)",
                       "ss",
                       "---",
-                      "Assigned Value (xpt)",
-                      "Median of Absolute Differences",
-                      "Number of Items (g)",
-                      "Number of Replicates (m)",
-                      "Robust SD (MADe)",
+                      "Valor asignado (xpt)",
+                      "Mediana de diferencias absolutas",
+                      "Número de ítems (g)",
+                      "Número de réplicas (m)",
+                      "DE robusta (MADe)",
                       "nIQR",
-                      "Uncertainty of Assigned Value (u_xpt)",
+                      "Incertidumbre del valor asignado (u_xpt)",
                       "---",
-                      "Criterion c",
-                      "Criterion c (expanded)"),
-        Value = c(
+                      "Criterio c",
+                      "Criterio c (expandido)"),
+        Valor = c(
           c(format_num(res$stab_general_mean), format_num(res$diff_hom_stab), format_num(res$stab_sd_of_means), format_num(res$stab_s_x_bar_sq), format_num(res$stab_sw), format_num(res$stab_s_w_sq), format_num(res$stab_ss)),
           "",
           c(format_num(res$stab_median_val), format_num(res$stab_median_abs_diff), res$g, res$m, format_num(res$stab_sigma_pt), format_num(res$stab_n_iqr), format_num(res$stab_u_xpt)),
@@ -1550,13 +1522,13 @@ Stability Criterion (0.3 * sigma_pt):", fmt),
     }
   }, spacing = "l")
 
-  # --- PT Scores Module ---
+  # --- Puntajes PT Module ---
 
-  # Dynamic UI for PT Scores selectors
+  # Dynamic UI for Puntajes PT selectors
   output$scores_pollutant_selector <- renderUI({
     req(pt_prep_data())
     choices <- unique(pt_prep_data()$pollutant)
-    selectInput("scores_pollutant", "Select Pollutant:", choices = choices)
+    selectInput("scores_pollutant", "Seleccionar analito:", choices = choices)
   })
 
   output$scores_n_selector <- renderUI({
@@ -1566,7 +1538,7 @@ Stability Criterion (0.3 * sigma_pt):", fmt),
       pull(n_lab) %>%
       unique() %>%
       sort()
-    selectInput("scores_n_lab", "Select PT Scheme (by n):", choices = choices)
+    selectInput("scores_n_lab", "Seleccionar esquema PT (por n):", choices = choices)
   })
 
   output$scores_level_selector <- renderUI({
@@ -1575,7 +1547,7 @@ Stability Criterion (0.3 * sigma_pt):", fmt),
       filter(pollutant == input$scores_pollutant, n_lab == input$scores_n_lab) %>%
       pull(level) %>%
       unique()
-    selectInput("scores_level", "Select Level:", choices = choices)
+    selectInput("scores_level", "Seleccionar nivel:", choices = choices)
   })
 
   score_combo_info <- list(
@@ -1611,13 +1583,13 @@ Stability Criterion (0.3 * sigma_pt):", fmt),
   }
 
   pt_en_class_labels <- c(
-    a1 = "a1 - Fully Satisfactory",
-    a2 = "a2 - Satisfactory but Conservative",
-    a3 = "a3 - Satisfactory with Underestimated MU",
-    a4 = "a4 - Questionable but Acceptable",
-    a5 = "a5 - Questionable and Inconsistent",
-    a6 = "a6 - Unsatisfactory but MU Covers Deviation",
-    a7 = "a7 - Unsatisfactory (Critical)"
+    a1 = "a1 - Totalmente satisfactorio",
+    a2 = "a2 - Satisfactorio pero conservador",
+    a3 = "a3 - Satisfactorio con MU subestimada",
+    a4 = "a4 - Cuestionable pero aceptable",
+    a5 = "a5 - Cuestionable e inconsistente",
+    a6 = "a6 - No satisfactorio pero la MU cubre la desviación",
+    a7 = "a7 - No satisfactorio (crítico)"
   )
 
   pt_en_class_colors <- c(
@@ -1635,9 +1607,9 @@ Stability Criterion (0.3 * sigma_pt):", fmt),
   score_eval_z <- function(z) {
     case_when(
       !is.finite(z) ~ "N/A",
-      abs(z) <= 2 ~ "Satisfactory",
-      abs(z) > 2 & abs(z) < 3 ~ "Questionable",
-      abs(z) >= 3 ~ "Unsatisfactory"
+      abs(z) <= 2 ~ "Satisfactorio",
+      abs(z) > 2 & abs(z) < 3 ~ "Cuestionable",
+      abs(z) >= 3 ~ "No satisfactorio"
     )
   }
 
@@ -1655,7 +1627,7 @@ Stability Criterion (0.3 * sigma_pt):", fmt),
       label_key <- gsub("'", "prime", label_key)
       label_key <- gsub("[^a-z0-9]+", "", label_key)
       code <- paste0("mu_missing_", label_key)
-      label <- sprintf("MU missing - %s-only: %s", score_label, base_eval)
+      label <- sprintf("MU ausente - solo %s: %s", score_label, base_eval)
       return(list(code = code, label = label))
     }
 
@@ -1733,8 +1705,8 @@ Stability Criterion (0.3 * sigma_pt):", fmt),
         En_score = en_values,
         En_score_eval = case_when(
           !is.finite(En_score) ~ "N/A",
-          abs(En_score) <= 1 ~ "Satisfactory",
-          abs(En_score) > 1 ~ "Unsatisfactory"
+          abs(En_score) <= 1 ~ "Satisfactorio",
+          abs(En_score) > 1 ~ "No satisfactorio"
         ),
         U_xi = U_xi,
         U_xpt = U_xpt
@@ -1776,7 +1748,7 @@ Stability Criterion (0.3 * sigma_pt):", fmt),
       geom_hline(yintercept = 0, linetype = "solid", color = "grey50") +
       geom_point(size = 3, color = "#2C3E50") +
       geom_segment(aes(xend = factor(participant_id, levels = participant_levels), yend = 0), color = "#2C3E50") +
-      labs(title = title, subtitle = subtitle, x = "Participant", y = ylab) +
+      labs(title = title, subtitle = subtitle, x = "Participante", y = ylab) +
       theme_minimal() +
       theme(axis.text.x = element_text(angle = 45, hjust = 1))
     if (!is.null(warn_limits)) {
@@ -1899,33 +1871,33 @@ Stability Criterion (0.3 * sigma_pt):", fmt),
       if (!is.null(combo$error)) {
         tibble(
           Combinación = meta$title,
-          Participant = NA_character_,
-          Result = NA_real_,
+          Participante = NA_character_,
+          Resultado = NA_real_,
           `u(xi)` = NA_real_,
-          `z-score` = NA_real_,
-          `z-score Eval` = combo$error,
-          `z'-score` = NA_real_,
-          `z'-score Eval` = "",
-          `zeta-score` = NA_real_,
-          `zeta-score Eval` = "",
-          `En-score` = NA_real_,
-          `En-score Eval` = ""
+          `Puntaje z` = NA_real_,
+          `Evaluación z` = combo$error,
+          `Puntaje z'` = NA_real_,
+          `Evaluación z'` = "",
+          `Puntaje zeta` = NA_real_,
+          `Evaluación zeta` = "",
+          `Puntaje En` = NA_real_,
+          `Puntaje En Eval` = ""
         )
       } else {
         combo$data %>%
           transmute(
             Combinación = combo$title,
-            Participant = participant_id,
-            Result = result,
+            Participante = participant_id,
+            Resultado = result,
             `u(xi)` = uncertainty_std,
-            `z-score` = z_score,
-            `z-score Eval` = z_score_eval,
-            `z'-score` = z_prime_score,
-            `z'-score Eval` = z_prime_score_eval,
-            `zeta-score` = zeta_score,
-            `zeta-score Eval` = zeta_score_eval,
-            `En-score` = En_score,
-            `En-score Eval` = En_score_eval
+            `Puntaje z` = z_score,
+            `Evaluación z` = z_score_eval,
+            `Puntaje z'` = z_prime_score,
+            `Evaluación z'` = z_prime_score_eval,
+            `Puntaje zeta` = zeta_score,
+            `Evaluación zeta` = zeta_score_eval,
+            `Puntaje En` = En_score,
+            `Puntaje En Eval` = En_score_eval
           )
       }
     })
@@ -2095,30 +2067,30 @@ Stability Criterion (0.3 * sigma_pt):", fmt),
     combine_scores_result(scores_results_selected())
   })
 
-  # --- Global Report Module ---
+  # --- Informe global Module ---
   score_heatmap_palettes <- list(
     z = c(
-      "Satisfactory" = "#00B050",
-      "Questionable" = "#FFEB3B",
-      "Unsatisfactory" = "#D32F2F",
+      "Satisfactorio" = "#00B050",
+      "Cuestionable" = "#FFEB3B",
+      "No satisfactorio" = "#D32F2F",
       "N/A" = "#BDBDBD"
     ),
     zprime = c(
-      "Satisfactory" = "#00B050",
-      "Questionable" = "#FFEB3B",
-      "Unsatisfactory" = "#D32F2F",
+      "Satisfactorio" = "#00B050",
+      "Cuestionable" = "#FFEB3B",
+      "No satisfactorio" = "#D32F2F",
       "N/A" = "#BDBDBD"
     ),
     zeta = c(
-      "Satisfactory" = "#00B050",
-      "Questionable" = "#FFEB3B",
-      "Unsatisfactory" = "#D32F2F",
+      "Satisfactorio" = "#00B050",
+      "Cuestionable" = "#FFEB3B",
+      "No satisfactorio" = "#D32F2F",
       "N/A" = "#BDBDBD"
     ),
     en = c(
-      "Satisfactory" = "#00B050",
-      "Questionable" = "#D32F2F",
-      "Unsatisfactory" = "#D32F2F",
+      "Satisfactorio" = "#00B050",
+      "Cuestionable" = "#D32F2F",
+      "No satisfactorio" = "#D32F2F",
       "N/A" = "#BDBDBD"
     )
   )
@@ -2233,17 +2205,17 @@ Stability Criterion (0.3 * sigma_pt):", fmt),
         combination = as.character(combination),
         combination_label = as.character(combination_label),
         score_type = sub("_eval$", "", score_type),
-        evaluation = factor(evaluation, levels = c("Satisfactory", "Questionable", "Unsatisfactory", "N/A"))
+        evaluation = factor(evaluation, levels = c("Satisfactorio", "Cuestionable", "No satisfactorio", "N/A"))
       ) %>%
-      count(pollutant, n_lab, level, combination, combination_label, score_type, evaluation, .drop = FALSE, name = "Count") %>%
+      count(pollutant, n_lab, level, combination, combination_label, score_type, evaluation, .drop = FALSE, name = "Conteo") %>%
       group_by(pollutant, n_lab, level, combination, combination_label, score_type) %>%
       mutate(
-        Total = sum(Count),
-        Percentage = ifelse(Total > 0, (Count / Total) * 100, 0)
+        Total = sum(Conteo),
+        Porcentaje = ifelse(Total > 0, (Conteo / Total) * 100, 0)
       ) %>%
       ungroup() %>%
       select(-Total) %>%
-      mutate(Criteria = paste(score_type, evaluation))
+      mutate(Criterio = paste(score_type, evaluation))
   })
 
   global_classification_summary_data <- reactive({
@@ -2305,12 +2277,12 @@ Stability Criterion (0.3 * sigma_pt):", fmt),
         classification_type,
         classification_label,
         classification_code,
-        name = "Count"
+        name = "Conteo"
       ) %>%
       group_by(pollutant, n_lab, level, combination, combination_label, classification_type) %>%
       mutate(
-        Total = sum(Count),
-        Percentage = ifelse(Total > 0, (Count / Total) * 100, 0)
+        Total = sum(Conteo),
+        Porcentaje = ifelse(Total > 0, (Conteo / Total) * 100, 0)
       ) %>%
       ungroup() %>%
       select(-Total)
@@ -2502,7 +2474,7 @@ Stability Criterion (0.3 * sigma_pt):", fmt),
   }
 
   render_global_score_heatmap <- function(output_id, combo_key, score_col, eval_col, palette, title_prefix) {
-    output[[output_id]] <- renderPlot({
+    output[[output_id]] <- renderPlotly({
       combos <- global_report_combos()
       req(nrow(combos) > 0, input$global_report_pollutant, input$global_report_n_lab)
       spec <- global_combo_specs[[combo_key]]
@@ -2515,7 +2487,8 @@ Stability Criterion (0.3 * sigma_pt):", fmt),
           participant_id != "ref"
         )
       if (nrow(filtered) == 0) {
-        return(ggplot() + theme_void() + labs(title = paste(title_prefix, "- sin datos disponibles")))
+        empty_plot <- ggplot() + theme_void() + labs(title = paste(title_prefix, "- sin datos disponibles"))
+        return(plotly::ggplotly(empty_plot))
       }
 
       filtered <- filtered %>%
@@ -2561,7 +2534,7 @@ Stability Criterion (0.3 * sigma_pt):", fmt),
           evaluation = factor(evaluation, levels = names(palette))
         )
 
-      ggplot(plot_data, aes(x = run_label, y = participant_id, fill = evaluation)) +
+      heatmap_plot <- ggplot(plot_data, aes(x = run_label, y = participant_id, fill = evaluation)) +
         geom_tile(color = "white") +
         geom_text(aes(label = tile_label), size = 3, color = "#1B1B1B") +
         scale_fill_manual(values = palette, drop = FALSE, na.value = "#BDBDBD") +
@@ -2577,11 +2550,12 @@ Stability Criterion (0.3 * sigma_pt):", fmt),
           panel.grid = element_blank(),
           axis.text.x = element_text(angle = 45, hjust = 1)
         )
+      plotly::ggplotly(heatmap_plot)
     })
   }
 
   render_global_classification_heatmap <- function(output_id, combo_key, code_col, label_col, title_prefix) {
-    output[[output_id]] <- renderPlot({
+    output[[output_id]] <- renderPlotly({
       combos <- global_report_combos()
       req(nrow(combos) > 0, input$global_report_pollutant, input$global_report_n_lab)
       combos <- ensure_classification_columns(combos)
@@ -2595,7 +2569,8 @@ Stability Criterion (0.3 * sigma_pt):", fmt),
           participant_id != "ref"
         )
       if (nrow(filtered) == 0) {
-        return(ggplot() + theme_void() + labs(title = paste(title_prefix, "- sin datos disponibles")))
+        empty_plot <- ggplot() + theme_void() + labs(title = paste(title_prefix, "- sin datos disponibles"))
+        return(plotly::ggplotly(empty_plot))
       }
       filtered <- filtered %>%
         mutate(run_label = as.character(level))
@@ -2647,11 +2622,11 @@ Stability Criterion (0.3 * sigma_pt):", fmt),
 
       legend_labels <- c(
         pt_en_class_labels,
-        `mu_missing_z` = "MU missing - z only",
-        `mu_missing_zprime` = "MU missing - z' only"
+        `mu_missing_z` = "MU ausente - solo z",
+        `mu_missing_zprime` = "MU ausente - solo z'"
       )
 
-      ggplot(plot_data, aes(x = run_label, y = participant_id, fill = fill_code)) +
+      class_plot <- ggplot(plot_data, aes(x = run_label, y = participant_id, fill = fill_code)) +
         geom_tile(color = "white") +
         geom_text(aes(label = display_code), size = 3, color = "#1B1B1B") +
         scale_fill_manual(
@@ -2673,6 +2648,7 @@ Stability Criterion (0.3 * sigma_pt):", fmt),
           panel.grid = element_blank(),
           axis.text.x = element_text(angle = 45, hjust = 1)
         )
+      plotly::ggplotly(class_plot)
     })
   }
 
@@ -2704,7 +2680,7 @@ Stability Criterion (0.3 * sigma_pt):", fmt),
         options = list(scrollX = TRUE, pageLength = 12),
         rownames = FALSE
       ) %>%
-        formatRound(columns = c("Result", "u(xi)", "z-score", "z'-score", "zeta-score", "En-score"), digits = 3)
+        formatRound(columns = c("Resultado", "u(xi)", "Puntaje z", "Puntaje z'", "Puntaje zeta", "Puntaje En"), digits = 3)
     })
 
     render_global_score_heatmap(
@@ -2713,7 +2689,7 @@ Stability Criterion (0.3 * sigma_pt):", fmt),
       "z_score",
       "z_score_eval",
       score_heatmap_palettes$z,
-      "Mapa de calor z-score"
+      "Mapa de calor puntaje z"
     )
 
     render_global_score_heatmap(
@@ -2722,7 +2698,7 @@ Stability Criterion (0.3 * sigma_pt):", fmt),
       "z_prime_score",
       "z_prime_score_eval",
       score_heatmap_palettes$zprime,
-      "Mapa de calor z'-score"
+      "Mapa de calor puntaje z'"
     )
 
     render_global_score_heatmap(
@@ -2731,7 +2707,7 @@ Stability Criterion (0.3 * sigma_pt):", fmt),
       "zeta_score",
       "zeta_score_eval",
       score_heatmap_palettes$zeta,
-      "Mapa de calor zeta-score"
+      "Mapa de calor puntaje zeta"
     )
 
     render_global_score_heatmap(
@@ -2740,7 +2716,7 @@ Stability Criterion (0.3 * sigma_pt):", fmt),
       "En_score",
       "En_score_eval",
       score_heatmap_palettes$en,
-      "Mapa de calor En-score"
+      "Mapa de calor Puntaje En"
     )
 
     render_global_classification_heatmap(
@@ -2779,18 +2755,18 @@ Stability Criterion (0.3 * sigma_pt):", fmt),
     datatable(
       filtered %>%
         select(
-          Combination = combination,
-          `Combination Label` = combination_label,
-          Level = level,
+          Combinación = combination,
+          `Etiqueta de combinación` = combination_label,
+          Nivel = level,
           `x_pt`,
           `u(x_pt)` = u_xpt,
-          `expanded_uncertainty`,
+          `Incertidumbre expandida` = expanded_uncertainty,
           `sigma_pt`
         ),
       options = list(pageLength = 10, scrollX = TRUE),
       rownames = FALSE
     ) %>%
-      formatRound(columns = c("x_pt", "u(x_pt)", "expanded_uncertainty", "sigma_pt"), digits = 5)
+      formatRound(columns = c("x_pt", "u(x_pt)", "Incertidumbre expandida", "sigma_pt"), digits = 5)
   })
 
   output$global_level_summary_table <- renderTable({
@@ -2806,8 +2782,8 @@ Stability Criterion (0.3 * sigma_pt):", fmt),
         level == input$global_report_level
       ) %>%
       transmute(
-        `Run Order` = Run_Order,
-        Level = level
+        `Orden de corrida` = Run_Order,
+        Nivel = level
       )
   }, striped = TRUE, spacing = "l", rownames = FALSE)
 
@@ -2830,17 +2806,17 @@ Stability Criterion (0.3 * sigma_pt):", fmt),
     datatable(
       filtered %>%
         select(
-          Combination = combination,
-          Level = level,
-          Criteria,
-          Evaluation = evaluation,
-          Count,
-          Percentage
+          Combinación = combination,
+          Nivel = level,
+          Criterio = Criteria,
+          Evaluación = evaluation,
+          Conteo,
+          Porcentaje
         ),
       options = list(pageLength = 12, scrollX = TRUE),
       rownames = FALSE
     ) %>%
-      formatRound(columns = "Percentage", digits = 1)
+      formatRound(columns = "Porcentaje", digits = 1)
   })
 
   output$global_classification_summary_table <- renderDataTable({
@@ -2862,18 +2838,18 @@ Stability Criterion (0.3 * sigma_pt):", fmt),
     datatable(
       filtered %>%
         select(
-          Combination = combination,
-          Level = level,
+          Combinación = combination,
+          Nivel = level,
           `Clasificación` = classification_type,
           `Código` = classification_code,
           `Descripción` = classification_label,
-          Count,
-          Percentage
+          Conteo,
+          Porcentaje
         ),
       options = list(pageLength = 12, scrollX = TRUE),
       rownames = FALSE
     ) %>%
-      formatRound(columns = "Percentage", digits = 1)
+      formatRound(columns = "Porcentaje", digits = 1)
   })
 
   participants_available <- reactive({
@@ -2977,16 +2953,16 @@ Stability Criterion (0.3 * sigma_pt):", fmt),
       ) %>%
       mutate(
         score_type = sub("_eval$", "", score_type),
-        evaluation = factor(evaluation, levels = c("Satisfactory", "Questionable", "Unsatisfactory", "N/A"))
+        evaluation = factor(evaluation, levels = c("Satisfactorio", "Cuestionable", "No satisfactorio", "N/A"))
       )
 
     evaluation_summary <- scores_long %>%
-      count(combination, score_type, evaluation, .drop = FALSE, name = "Count") %>%
+      count(combination, score_type, evaluation, .drop = FALSE, name = "Conteo") %>%
       group_by(combination, score_type) %>%
-      mutate(Percentage = ifelse(sum(Count) > 0, (Count / sum(Count)) * 100, 0)) %>%
+      mutate(Porcentaje = ifelse(sum(Conteo) > 0, (Conteo / sum(Conteo)) * 100, 0)) %>%
       ungroup() %>%
-      mutate(Criteria = paste(score_type, evaluation)) %>%
-      select(Combination = combination, Criteria, Count, Percentage)
+      mutate(Criterio = paste(score_type, evaluation)) %>%
+      select(Combinación = combination, Criterio, Conteo, Porcentaje)
 
     list(error = NULL, table = evaluation_summary)
   })
@@ -3005,7 +2981,7 @@ Stability Criterion (0.3 * sigma_pt):", fmt),
       return(datatable(data.frame(Mensaje = res$error)))
     }
     datatable(res$overview, options = list(scrollX = TRUE, pageLength = 12), rownames = FALSE) %>%
-      formatRound(columns = c("Result", "u(xi)", "z-score", "z'-score", "zeta-score", "En-score"), digits = 3)
+      formatRound(columns = c("Resultado", "u(xi)", "Puntaje z", "Puntaje z'", "Puntaje zeta", "Puntaje En"), digits = 3)
   })
 
   output$scores_evaluation_summary <- renderTable({
@@ -3032,7 +3008,7 @@ Stability Criterion (0.3 * sigma_pt):", fmt),
         } else {
           tagList(
             dataTableOutput(paste0("z_table_", key)),
-            plotOutput(paste0("z_plot_", key), height = "300px")
+            plotlyOutput(paste0("z_plot_", key), height = "300px")
           )
         },
         hr()
@@ -3056,7 +3032,7 @@ Stability Criterion (0.3 * sigma_pt):", fmt),
         } else {
           tagList(
             dataTableOutput(paste0("zprime_table_", key)),
-            plotOutput(paste0("zprime_plot_", key), height = "300px")
+            plotlyOutput(paste0("zprime_plot_", key), height = "300px")
           )
         },
         hr()
@@ -3080,7 +3056,7 @@ Stability Criterion (0.3 * sigma_pt):", fmt),
         } else {
           tagList(
             dataTableOutput(paste0("zeta_table_", key)),
-            plotOutput(paste0("zeta_plot_", key), height = "300px")
+            plotlyOutput(paste0("zeta_plot_", key), height = "300px")
           )
         },
         hr()
@@ -3104,7 +3080,7 @@ Stability Criterion (0.3 * sigma_pt):", fmt),
         } else {
           tagList(
             dataTableOutput(paste0("en_table_", key)),
-            plotOutput(paste0("en_plot_", key), height = "300px")
+            plotlyOutput(paste0("en_plot_", key), height = "300px")
           )
         },
         hr()
@@ -3124,18 +3100,20 @@ Stability Criterion (0.3 * sigma_pt):", fmt),
         }
         datatable(
           combo$data %>%
-            select(Participant = participant_id, Result = result, `u(xi)` = uncertainty_std, `z-score` = z_score, `z-score Eval` = z_score_eval),
+            select(Participante = participant_id, Resultado = result, `u(xi)` = uncertainty_std, `Puntaje z` = z_score, `Evaluación z` = z_score_eval),
           options = list(scrollX = TRUE, pageLength = 10),
           rownames = FALSE
         ) %>%
-          formatRound(columns = c("Result", "u(xi)", "z-score"), digits = 3)
+          formatRound(columns = c("Resultado", "u(xi)", "Puntaje z"), digits = 3)
       })
 
-      output[[paste0("z_plot_", combo_key)]] <- renderPlot({
+      output[[paste0("z_plot_", combo_key)]] <- renderPlotly({
         res <- scores_results_selected()
         combo <- res$combos[[combo_key]]
         if (is.null(combo) || !is.null(combo$error)) return(NULL)
-        plot_scores(combo$data, "z_score", combo$title, "Límites de advertencia |z|=2, acción |z|=3", "Z-Score", warn_limits = c(-2, 2), action_limits = c(-3, 3))
+        plotly::ggplotly(
+          plot_scores(combo$data, "z_score", combo$title, "Límites de advertencia |z|=2, acción |z|=3", "Puntaje z", warn_limits = c(-2, 2), action_limits = c(-3, 3))
+        )
       })
 
       output[[paste0("zprime_table_", combo_key)]] <- renderDataTable({
@@ -3147,18 +3125,20 @@ Stability Criterion (0.3 * sigma_pt):", fmt),
         }
         datatable(
           combo$data %>%
-            select(Participant = participant_id, Result = result, `u(xi)` = uncertainty_std, `z'-score` = z_prime_score, `z'-score Eval` = z_prime_score_eval),
+            select(Participante = participant_id, Resultado = result, `u(xi)` = uncertainty_std, `Puntaje z'` = z_prime_score, `Evaluación z'` = z_prime_score_eval),
           options = list(scrollX = TRUE, pageLength = 10),
           rownames = FALSE
         ) %>%
-          formatRound(columns = c("Result", "u(xi)", "z'-score"), digits = 3)
+          formatRound(columns = c("Resultado", "u(xi)", "Puntaje z'"), digits = 3)
       })
 
-      output[[paste0("zprime_plot_", combo_key)]] <- renderPlot({
+      output[[paste0("zprime_plot_", combo_key)]] <- renderPlotly({
         res <- scores_results_selected()
         combo <- res$combos[[combo_key]]
         if (is.null(combo) || !is.null(combo$error)) return(NULL)
-        plot_scores(combo$data, "z_prime_score", combo$title, "Límites de advertencia |z'|=2, acción |z'|=3", "Z'-Score", warn_limits = c(-2, 2), action_limits = c(-3, 3))
+        plotly::ggplotly(
+          plot_scores(combo$data, "z_prime_score", combo$title, "Límites de advertencia |z'|=2, acción |z'|=3", "Puntaje z'", warn_limits = c(-2, 2), action_limits = c(-3, 3))
+        )
       })
 
       output[[paste0("zeta_table_", combo_key)]] <- renderDataTable({
@@ -3170,18 +3150,20 @@ Stability Criterion (0.3 * sigma_pt):", fmt),
         }
         datatable(
           combo$data %>%
-            select(Participant = participant_id, Result = result, `u(xi)` = uncertainty_std, `zeta-score` = zeta_score, `zeta-score Eval` = zeta_score_eval),
+            select(Participante = participant_id, Resultado = result, `u(xi)` = uncertainty_std, `Puntaje zeta` = zeta_score, `Evaluación zeta` = zeta_score_eval),
           options = list(scrollX = TRUE, pageLength = 10),
           rownames = FALSE
         ) %>%
-          formatRound(columns = c("Result", "u(xi)", "zeta-score"), digits = 3)
+          formatRound(columns = c("Resultado", "u(xi)", "Puntaje zeta"), digits = 3)
       })
 
-      output[[paste0("zeta_plot_", combo_key)]] <- renderPlot({
+      output[[paste0("zeta_plot_", combo_key)]] <- renderPlotly({
         res <- scores_results_selected()
         combo <- res$combos[[combo_key]]
         if (is.null(combo) || !is.null(combo$error)) return(NULL)
-        plot_scores(combo$data, "zeta_score", combo$title, "Límites de advertencia |ζ|=2, acción |ζ|=3", "Zeta-Score", warn_limits = c(-2, 2), action_limits = c(-3, 3))
+        plotly::ggplotly(
+          plot_scores(combo$data, "zeta_score", combo$title, "Límites de advertencia |ζ|=2, acción |ζ|=3", "Puntaje Zeta", warn_limits = c(-2, 2), action_limits = c(-3, 3))
+        )
       })
 
       output[[paste0("en_table_", combo_key)]] <- renderDataTable({
@@ -3193,18 +3175,20 @@ Stability Criterion (0.3 * sigma_pt):", fmt),
         }
         datatable(
           combo$data %>%
-            select(Participant = participant_id, Result = result, `u(xi)` = uncertainty_std, `En-score` = En_score, `En-score Eval` = En_score_eval),
+            select(Participante = participant_id, Resultado = result, `u(xi)` = uncertainty_std, `Puntaje En` = En_score, `Puntaje En Eval` = En_score_eval),
           options = list(scrollX = TRUE, pageLength = 10),
           rownames = FALSE
         ) %>%
-          formatRound(columns = c("Result", "u(xi)", "En-score"), digits = 3)
+          formatRound(columns = c("Resultado", "u(xi)", "Puntaje En"), digits = 3)
       })
 
-      output[[paste0("en_plot_", combo_key)]] <- renderPlot({
+      output[[paste0("en_plot_", combo_key)]] <- renderPlotly({
         res <- scores_results_selected()
         combo <- res$combos[[combo_key]]
         if (is.null(combo) || !is.null(combo$error)) return(NULL)
-        plot_scores(combo$data, "En_score", combo$title, "Límite de acción |En|=1", "En-Score", action_limits = c(-1, 1))
+        plotly::ggplotly(
+          plot_scores(combo$data, "En_score", combo$title, "Límite de acción |En|=1", "Puntaje En", action_limits = c(-1, 1))
+        )
       })
     })
   }
@@ -3239,28 +3223,28 @@ Stability Criterion (0.3 * sigma_pt):", fmt),
         table_df <- participant_df %>%
           arrange(combination_label, level) %>%
           transmute(
-            Combination = combination,
-            Pollutant = pollutant,
-            `PT Scheme (n)` = n_lab,
-            Level = level,
-            Result = result,
+            Combinación = combination,
+            Analito = pollutant,
+            `Esquema PT (n)` = n_lab,
+            Nivel = level,
+            Resultado = result,
             `x_pt` = x_pt,
             `sigma_pt` = sigma_pt,
             `u(x_pt)` = u_xpt,
-            `z-score` = z_score,
-            `z-score Eval` = z_score_eval,
-            `z'-score` = z_prime_score,
-            `z'-score Eval` = z_prime_score_eval,
-            `zeta-score` = zeta_score,
-            `zeta-score Eval` = zeta_score_eval,
-            `En-score` = En_score,
-            `En-score Eval` = En_score_eval
+            `Puntaje z` = z_score,
+            `Evaluación z` = z_score_eval,
+            `Puntaje z'` = z_prime_score,
+            `Evaluación z'` = z_prime_score_eval,
+            `Puntaje zeta` = zeta_score,
+            `Evaluación zeta` = zeta_score_eval,
+            `Puntaje En` = En_score,
+            `Puntaje En Eval` = En_score_eval
           )
         datatable(table_df, options = list(scrollX = TRUE, pageLength = 10), rownames = FALSE) %>%
-          formatRound(columns = c("Result", "x_pt", "sigma_pt", "u(x_pt)", "z-score", "z'-score", "zeta-score", "En-score"), digits = 3)
+          formatRound(columns = c("Resultado", "x_pt", "sigma_pt", "u(x_pt)", "Puntaje z", "Puntaje z'", "Puntaje zeta", "Puntaje En"), digits = 3)
       })
 
-      output[[plot_id]] <- renderPlot({
+      output[[plot_id]] <- renderPlotly({
         info <- participants_combined_data()
         if (!is.null(info$error)) return(NULL)
         participant_df <- info$data %>%
@@ -3289,7 +3273,7 @@ Stability Criterion (0.3 * sigma_pt):", fmt),
           geom_hline(yintercept = 0, color = "grey50") +
           geom_line(position = position_dodge(width = 0.3)) +
           geom_point(size = 3, position = position_dodge(width = 0.3)) +
-          labs(title = "Z-Score", x = "Nivel", y = "Z", color = "Combinación") +
+          labs(title = "Puntaje Z", x = "Nivel", y = "Z", color = "Combinación") +
           theme_minimal() +
           theme(axis.text.x = element_text(angle = 45, hjust = 1), legend.position = "bottom")
 
@@ -3299,7 +3283,7 @@ Stability Criterion (0.3 * sigma_pt):", fmt),
           geom_hline(yintercept = 0, color = "grey50") +
           geom_line(position = position_dodge(width = 0.3)) +
           geom_point(size = 3, position = position_dodge(width = 0.3)) +
-          labs(title = "Zeta-Score", x = "Nivel", y = "Zeta", color = "Combinación") +
+          labs(title = "Puntaje Zeta", x = "Nivel", y = "Zeta", color = "Combinación") +
           theme_minimal() +
           theme(axis.text.x = element_text(angle = 45, hjust = 1), legend.position = "bottom")
 
@@ -3308,14 +3292,20 @@ Stability Criterion (0.3 * sigma_pt):", fmt),
           geom_hline(yintercept = 0, color = "grey50") +
           geom_line(position = position_dodge(width = 0.3)) +
           geom_point(size = 3, position = position_dodge(width = 0.3)) +
-          labs(title = "En-Score", x = "Nivel", y = "En", color = "Combinación") +
+          labs(title = "Puntaje En", x = "Nivel", y = "En", color = "Combinación") +
           theme_minimal() +
           theme(axis.text.x = element_text(angle = 45, hjust = 1), legend.position = "bottom")
 
-        # Combine plots with a shared legend
-        (p_values | p_z + theme(legend.position = "none")) /
-          (p_zeta + theme(legend.position = "none") | p_en + theme(legend.position = "none")) +
-          plot_layout(guides = "collect") & theme(legend.position = 'bottom')
+        plotly::subplot(
+          plotly::ggplotly(p_values),
+          plotly::ggplotly(p_z),
+          plotly::ggplotly(p_zeta),
+          plotly::ggplotly(p_en),
+          nrows = 2,
+          shareX = FALSE,
+          titleX = TRUE,
+          titleY = TRUE
+        )
       })
 
       tabPanel(pid,
@@ -3323,18 +3313,18 @@ Stability Criterion (0.3 * sigma_pt):", fmt),
         dataTableOutput(table_id),
         hr(),
         h4("Gráficos"),
-        plotOutput(plot_id, height = "600px")
+        plotlyOutput(plot_id, height = "600px")
       )
     })
 
     do.call(tabsetPanel, c(list(id = "scores_participants_tabs"), tab_panels))
   })
 
-  # --- Report Generation Module ---
+  # --- Generación de informes Module ---
 
   output$report_pollutant_selector <- renderUI({
     choices <- sort(unique(hom_data_full()$pollutant))
-    selectInput("report_pollutant", "Select Pollutant:", choices = choices)
+    selectInput("report_pollutant", "Seleccionar analito:", choices = choices)
   })
 
   output$report_n_selector <- renderUI({
@@ -3347,7 +3337,7 @@ Stability Criterion (0.3 * sigma_pt):", fmt),
     if (length(choices) == 0) {
       return(helpText("No hay esquemas PT disponibles para este analito."))
     }
-    selectInput("report_n_lab", "Select PT Scheme (by n):", choices = choices)
+    selectInput("report_n_lab", "Seleccionar esquema PT (por n):", choices = choices)
   })
 
   output$report_level_selector <- renderUI({
@@ -3368,7 +3358,7 @@ Stability Criterion (0.3 * sigma_pt):", fmt),
     if (length(common_levels) == 0) {
       return(helpText("No hay niveles comunes entre los datos disponibles para esta combinación."))
     }
-    selectInput("report_level", "Select Level:", choices = common_levels)
+    selectInput("report_level", "Seleccionar nivel:", choices = common_levels)
   })
 
   report_preview <- reactive({
@@ -3508,26 +3498,26 @@ Stability Criterion (0.3 * sigma_pt):", fmt),
     }
   )
 
-  # --- Data Loading Status ---
+  # --- Carga de datos Status ---
   output$data_upload_status <- renderPrint({
     cat("Estado de los archivos:\n")
     
     if (!is.null(input$hom_file)) {
-      cat(sprintf("- Homogeneity: '%s' cargado (%d filas).\n", input$hom_file$name, nrow(hom_data_full())))
+      cat(sprintf("- Homogeneidad: '%s' cargado (%d filas).\n", input$hom_file$name, nrow(hom_data_full())))
     } else {
-      cat("- Homogeneity: No cargado.\n")
+      cat("- Homogeneidad: No cargado.\n")
     }
     
     if (!is.null(input$stab_file)) {
-      cat(sprintf("- Stability: '%s' cargado (%d filas).\n", input$stab_file$name, nrow(stab_data_full())))
+      cat(sprintf("- Estabilidad: '%s' cargado (%d filas).\n", input$stab_file$name, nrow(stab_data_full())))
     } else {
-      cat("- Stability: No cargado.\n")
+      cat("- Estabilidad: No cargado.\n")
     }
 
     if (!is.null(input$summary_files)) {
-      cat(sprintf("- Summary: %d archivo(s) cargado(s) (%d filas en total).\n", nrow(input$summary_files), nrow(pt_prep_data())))
+      cat(sprintf("- Resumen: %d archivo(s) cargado(s) (%d filas en total).\n", nrow(input$summary_files), nrow(pt_prep_data())))
     } else {
-      cat("- Summary: No cargado.\n")
+      cat("- Resumen: No cargado.\n")
     }
   })
 
@@ -3752,14 +3742,14 @@ Stability Criterion (0.3 * sigma_pt):", fmt),
       formatRound(columns = "Resultado", digits = 6)
   })
 
-  output$algoA_histogram <- renderPlot({
+  output$algoA_histogram <- renderPlotly({
     res <- algorithm_a_selected()
     req(res)
     if (!is.null(res$error)) {
       return(NULL)
     }
 
-    ggplot(res$input_data, aes(x = Resultado)) +
+    algo_plot <- ggplot(res$input_data, aes(x = Resultado)) +
       geom_histogram(aes(y = after_stat(density)), bins = 15, fill = "#5DADE2", color = "white", alpha = 0.8) +
       geom_density(color = "#1A5276", size = 1) +
       geom_vline(xintercept = res$assigned_value, color = "red", linetype = "dashed", size = 1) +
@@ -3770,6 +3760,7 @@ Stability Criterion (0.3 * sigma_pt):", fmt),
         y = "Densidad"
       ) +
       theme_minimal()
+    plotly::ggplotly(algo_plot)
   })
 
   output$algoA_iterations_table <- renderDataTable({
@@ -3806,7 +3797,7 @@ Stability Criterion (0.3 * sigma_pt):", fmt),
       formatRound(columns = c("Resultado", "Peso", "Residuo estandarizado"), digits = 6)
   })
 
-  # --- Consensus Value Module ---
+  # --- Valor consenso Module ---
 
   observeEvent(input$consensus_run, {
     req(pt_prep_data())
@@ -3862,8 +3853,8 @@ Stability Criterion (0.3 * sigma_pt):", fmt),
       participants <- length(values)
 
       summary_df <- tibble::tibble(
-        Statistic = c("x_pt(2) - Median", "MADe", "sigma_pt_2a (MADe)", "sigma_pt_2b (nIQR)", "Participantes"),
-        Value = c(x_pt2, mad_val, sigma_pt_2a, sigma_pt_2b, participants)
+        Estadístico = c("x_pt(2) - Mediana", "MADe", "sigma_pt_2a (MADe)", "sigma_pt_2b (nIQR)", "Participantes"),
+        Valor = c(x_pt2, mad_val, sigma_pt_2a, sigma_pt_2b, participants)
       )
 
       results[[key]] <- list(
@@ -3937,7 +3928,7 @@ Stability Criterion (0.3 * sigma_pt):", fmt),
       formatRound(columns = "Resultado", digits = 6)
   })
 
-  # --- Reference Value Module ---
+  # --- Valor de referencia Module ---
 
   reference_table_data <- reactive({
     req(pt_prep_data(), input$assigned_pollutant, input$assigned_n_lab, input$assigned_level)
@@ -3969,13 +3960,13 @@ Stability Criterion (0.3 * sigma_pt):", fmt),
       formatRound(columns = c("Valor medio", "Desviación estándar declarada"), digits = 6)
   })
 
-  # --- PT Preparation Module ---
+  # --- Preparación PT Module ---
 
   output$pt_pollutant_tabs <- renderUI({
     req(pt_prep_data())
     # Ensure pt_prep_data is not NULL and has rows
     if (is.null(pt_prep_data()) || nrow(pt_prep_data()) == 0) {
-      return(p("No summary data files found or files are empty. Please add summary_n*.csv files."))
+      return(p("No se encontraron archivos summary_n*.csv o están vacíos. Por favor, agregue esos archivos."))
     }
     pollutants <- unique(pt_prep_data()$pollutant)
     
@@ -3984,35 +3975,35 @@ Stability Criterion (0.3 * sigma_pt):", fmt),
         sidebarLayout(
           sidebarPanel(
             width = 4,
-            h4(paste("Options for", toupper(p))),
+            h4(paste("Opciones para", toupper(p))),
             uiOutput(paste0("pt_n_selector_", p)),
             uiOutput(paste0("pt_level_selector_", p)),
             hr(),
-            h4("Summary Information"),
+            h4("Información resumida"),
             verbatimTextOutput(paste0("pt_summary_", p))
           ),
           mainPanel(
             width = 8,
-            h4("Participant Results Plot"),
-            plotOutput(paste0("pt_plot_", p)),
+            h4("Gráfico de resultados por participante"),
+            plotlyOutput(paste0("pt_plot_", p)),
             hr(),
-            h4("Data Table"),
+            h4("Tabla de datos"),
             dataTableOutput(paste0("pt_table_", p)),
             hr(),
-            h4("Results Distribution"),
+            h4("Distribución de resultados"),
             fluidRow(
-              column(width = 6, plotOutput(paste0("pt_histogram_", p))),
-              column(width = 6, plotOutput(paste0("pt_boxplot_", p)))
+              column(width = 6, plotlyOutput(paste0("pt_histogram_", p))),
+              column(width = 6, plotlyOutput(paste0("pt_boxplot_", p)))
             ),
             fluidRow(
-              column(width = 12, plotOutput(paste0("pt_density_", p)))
+              column(width = 12, plotlyOutput(paste0("pt_density_", p)))
             ),
             hr(),
-            h4("Grubbs' Test for Outliers"),
+            h4("Prueba de Grubbs para valores atípicos"),
             verbatimTextOutput(paste0("pt_grubbs_", p)),
             hr(),
-            h4("Run Chart"),
-            plotOutput(paste0("pt_runchart_", p))
+            h4("Gráfico de corrida"),
+            plotlyOutput(paste0("pt_runchart_", p))
           )
         )
       )
@@ -4035,7 +4026,7 @@ Stability Criterion (0.3 * sigma_pt):", fmt),
         # N (scheme) selector
         output[[paste0("pt_n_selector_", pollutant_name)]] <- renderUI({
           choices <- unique(pt_prep_data()[pt_prep_data()$pollutant == pollutant_name, "n_lab"])
-          selectInput(paste0("n_lab_", pollutant_name), "Select PT Scheme (by n):", choices = sort(choices))
+          selectInput(paste0("n_lab_", pollutant_name), "Seleccionar esquema PT (por n):", choices = sort(choices))
         })
         
         # Level selector
@@ -4045,7 +4036,7 @@ Stability Criterion (0.3 * sigma_pt):", fmt),
             filter(pollutant == pollutant_name, n_lab == input[[paste0("n_lab_", pollutant_name)]]) %>%
             pull(level) %>%
             unique()
-          selectInput(paste0("level_", pollutant_name), "Select Level:", choices = choices)
+          selectInput(paste0("level_", pollutant_name), "Seleccionar nivel:", choices = choices)
         })
         
         # Filtered data reactive
@@ -4067,24 +4058,25 @@ Stability Criterion (0.3 * sigma_pt):", fmt),
           n_participants <- n_distinct(data$participant_id[data$participant_id != "ref"])
           participants <- unique(data$participant_id[data$participant_id != "ref"])
           
-          cat("Pollutant:", pollutant_name, "\n")
-          cat("PT Scheme (n_lab):", unique(data$n_lab), "\n")
-          cat("Level:", unique(data$level), "\n")
-          cat("Number of Participants:", n_participants, "\n")
-          cat("Participants:", paste(participants, collapse = ", "))
+          cat("Analito:", pollutant_name, "\n")
+          cat("Esquema PT (n_lab):", unique(data$n_lab), "\n")
+          cat("Nivel:", unique(data$level), "\n")
+          cat("Número de participantes:", n_participants, "\n")
+          cat("Participantes:", paste(participants, collapse = ", "))
         })
         
         # Plot
-        output[[paste0("pt_plot_", pollutant_name)]] <- renderPlot({
+        output[[paste0("pt_plot_", pollutant_name)]] <- renderPlotly({
           data <- filtered_data()
           req(nrow(data) > 0)
           
-          ggplot(data, aes(x = participant_id, y = mean_value, fill = sample_group)) +
+          pt_plot <- ggplot(data, aes(x = participant_id, y = mean_value, fill = sample_group)) +
             geom_bar(stat = "identity", position = "dodge") +
             geom_errorbar(aes(ymin = mean_value - sd_value, ymax = mean_value + sd_value), width = 0.2, position = position_dodge(0.9)) +
-            labs(title = "Participant Mean Values with SD", x = "Participant", y = "Mean Value") +
+            labs(title = "Valores medios de los participantes con DE", x = "Participante", y = "Valor medio") +
             theme_minimal() +
             theme(axis.text.x = element_text(angle = 45, hjust = 1))
+          plotly::ggplotly(pt_plot)
         })
         
         # Table
@@ -4095,7 +4087,7 @@ Stability Criterion (0.3 * sigma_pt):", fmt),
         })
         
         # Histogram
-        output[[paste0("pt_histogram_", pollutant_name)]] <- renderPlot({
+        output[[paste0("pt_histogram_", pollutant_name)]] <- renderPlotly({
           data <- filtered_data()
           req(nrow(data) > 0)
           
@@ -4105,16 +4097,17 @@ Stability Criterion (0.3 * sigma_pt):", fmt),
             summarise(mean_ref = mean(mean_value, na.rm = TRUE)) %>%
             pull(mean_ref)
             
-          ggplot(participants_data, aes(x = mean_value)) +
+          hist_plot <- ggplot(participants_data, aes(x = mean_value)) +
             geom_histogram(aes(y = after_stat(density)), color = "black", fill = "skyblue", bins = 15, boundary = 0) +
             geom_density(alpha = 0.2, fill = "#FF6666") +
             geom_vline(xintercept = ref_value, color = "red", linetype = "dashed", size = 1) +
-            labs(title = "Histogram of Participant Results", subtitle = "vs. Reference Value (dashed line)", x = "Mean Value", y = "Density") +
+            labs(title = "Histograma de los resultados de los participantes", subtitle = "frente al valor de referencia (línea punteada)", x = "Valor medio", y = "Densidad") +
             theme_minimal()
+          plotly::ggplotly(hist_plot)
         })
         
         # Boxplot
-        output[[paste0("pt_boxplot_", pollutant_name)]] <- renderPlot({
+        output[[paste0("pt_boxplot_", pollutant_name)]] <- renderPlotly({
           data <- filtered_data()
           req(nrow(data) > 0)
           
@@ -4124,15 +4117,16 @@ Stability Criterion (0.3 * sigma_pt):", fmt),
             summarise(mean_ref = mean(mean_value, na.rm = TRUE)) %>%
             pull(mean_ref)
             
-          ggplot(participants_data, aes(x = "", y = mean_value)) +
+          box_plot <- ggplot(participants_data, aes(x = "", y = mean_value)) +
             geom_boxplot(fill = "lightgreen") +
             geom_hline(yintercept = ref_value, color = "red", linetype = "dashed", size = 1) +
-            labs(title = "Boxplot of Participant Results", subtitle = "vs. Reference Value (dashed line)", x = "", y = "Mean Value") +
+            labs(title = "Diagrama de caja de los resultados de los participantes", subtitle = "frente al valor de referencia (línea punteada)", x = "", y = "Valor medio") +
             theme_minimal()
+          plotly::ggplotly(box_plot)
         })
         
-        # Density Plot
-        output[[paste0("pt_density_", pollutant_name)]] <- renderPlot({
+        # Densidad Plot
+        output[[paste0("pt_density_", pollutant_name)]] <- renderPlotly({
           data <- filtered_data()
           req(nrow(data) > 0)
           
@@ -4142,14 +4136,15 @@ Stability Criterion (0.3 * sigma_pt):", fmt),
             summarise(mean_ref = mean(mean_value, na.rm = TRUE)) %>%
             pull(mean_ref)
             
-          ggplot(participants_data, aes(x = mean_value)) +
+          density_plot <- ggplot(participants_data, aes(x = mean_value)) +
             geom_density(fill = "lightblue", alpha = 0.7) +
             geom_vline(xintercept = ref_value, color = "red", linetype = "dashed", size = 1) +
-            labs(title = "Kernel Density of Participant Results", subtitle = "vs. Reference Value (dashed line)", x = "Mean Value", y = "Density") +
+            labs(title = "Densidad kernel de los resultados de los participantes", subtitle = "frente al valor de referencia (línea punteada)", x = "Valor medio", y = "Densidad") +
             theme_minimal()
+          plotly::ggplotly(density_plot)
         })
         
-        # Grubbs' Test for Outliers
+        # Prueba de Grubbs para valores atípicos
         output[[paste0("pt_grubbs_", pollutant_name)]] <- renderPrint({
           data <- filtered_data()
           req(nrow(data) > 0)
@@ -4157,14 +4152,14 @@ Stability Criterion (0.3 * sigma_pt):", fmt),
           participants_data <- data %>% filter(participant_id != "ref")
           
           if (length(participants_data$mean_value) < 3) {
-            "Grubbs' test requires at least 3 data points."
+            "La prueba de Grubbs requiere al menos 3 datos."
           } else {
             grubbs.test(participants_data$mean_value)
           }
         })
 
-        # Run Chart
-        output[[paste0("pt_runchart_", pollutant_name)]] <- renderPlot({
+        # Gráfico de corrida
+        output[[paste0("pt_runchart_", pollutant_name)]] <- renderPlotly({
           data <- filtered_data()
           req(nrow(data) > 0)
 
@@ -4173,16 +4168,17 @@ Stability Criterion (0.3 * sigma_pt):", fmt),
             
           center_line <- median(participants_data$mean_value, na.rm = TRUE)
             
-          ggplot(participants_data, aes(x = sample_group, y = mean_value, group = 1)) +
+          run_plot <- ggplot(participants_data, aes(x = sample_group, y = mean_value, group = 1)) +
             geom_point() +
             geom_line() +
             geom_hline(yintercept = center_line, color = "red", linetype = "dashed") +
             facet_wrap(~ participant_id) +
-            labs(title = "Run Chart of Mean Values by Participant",
-                 x = "Sample Group",
-                 y = "Mean Value") +
+            labs(title = "Gráfico de corrida de valores medios por participante",
+                 x = "Grupo de muestra",
+                 y = "Valor medio") +
             theme_minimal() +
             theme(axis.text.x = element_text(angle = 45, hjust = 1))
+          plotly::ggplotly(run_plot)
         })
       }) # end local
     }) # end lapply

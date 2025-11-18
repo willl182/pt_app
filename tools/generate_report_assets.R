@@ -21,6 +21,16 @@ calculate_niqr <- function(x) {
   0.7413 * (quartiles[2] - quartiles[1])
 }
 
+extract_grubbs_value <- function(text_line) {
+  if (is.null(text_line) || !nzchar(text_line)) return(NA_real_)
+  match <- regmatches(text_line, regexec("value ([+-]?\\d+(?:\\.\\d+)?(?:[eE][+-]?\\d+)?)", text_line))[[1]]
+  if (length(match) >= 2) {
+    suppressWarnings(as.numeric(match[2]))
+  } else {
+    NA_real_
+  }
+}
+
 combined_scores_df <- tibble()
 
 get_wide_data <- function(df, target_pollutant) {
@@ -358,15 +368,54 @@ compute_pt_prep_metrics <- function(summary_df, target_pollutant, target_level) 
 
     participants_data <- data %>% filter(participant_id != "ref")
 
-    if (length(participants_data$mean_value) < 3) {
+    valid_values <- participants_data %>%
+      filter(is.finite(mean_value)) %>%
+      pull(mean_value)
+
+    n_valid <- length(valid_values)
+    outlier_summary <- list(
+      n_points = n_valid,
+      p_value = NA_real_,
+      count = NA_integer_,
+      value = NA_real_,
+      participant_id = NA_character_
+    )
+
+    if (n_valid < 3) {
         grubbs_test_result <- "Grubbs' test requires at least 3 data points."
+        outlier_summary$count <- NA_integer_
     } else {
-        grubbs_test_result <- capture.output(grubbs.test(participants_data$mean_value))
+        grubbs_obj <- grubbs.test(valid_values)
+        grubbs_test_result <- capture.output(grubbs_obj)
+        p_val <- grubbs_obj$p.value
+        outlier_summary$p_value <- p_val
+        if (is.finite(p_val) && p_val < 0.05) {
+          outlier_summary$count <- 1L
+          alt_text <- grubbs_obj$alternative
+          candidate_value <- extract_grubbs_value(alt_text)
+          outlier_summary$value <- candidate_value
+          if (is.finite(candidate_value)) {
+            idx <- participants_data %>%
+              mutate(diff = abs(mean_value - candidate_value)) %>%
+              filter(is.finite(diff)) %>%
+              arrange(diff) %>%
+              slice_head(n = 1) %>%
+              pull(participant_id)
+            if (length(idx) == 0) {
+              outlier_summary$participant_id <- NA_character_
+            } else {
+              outlier_summary$participant_id <- idx[1]
+            }
+          }
+        } else {
+          outlier_summary$count <- 0L
+        }
     }
 
     list(
         data = data,
         grubbs = grubbs_test_result,
+        outlier_summary = outlier_summary,
         error = NULL
     )
 }
@@ -390,23 +439,21 @@ score_eval_z <- function(z) {
 }
 
 pt_en_class_labels <- c(
-  a1 = "a1 - Fully Satisfactory",
-  a2 = "a2 - Satisfactory but Conservative",
-  a3 = "a3 - Satisfactory with Underestimated MU",
-  a4 = "a4 - Questionable but Acceptable",
-  a5 = "a5 - Questionable and Inconsistent",
-  a6 = "a6 - Unsatisfactory but MU Covers Deviation",
-  a7 = "a7 - Unsatisfactory (Critical)"
+  sat_en_good = "Z Satisfactory & En ≤ 1",
+  sat_en_bad = "Z Satisfactory & En > 1",
+  ques_en_good = "Z Questionable & En ≤ 1",
+  ques_en_bad = "Z Questionable & En > 1",
+  unsat_en_good = "Z Unsatisfactory & En ≤ 1",
+  unsat_en_bad = "Z Unsatisfactory & En > 1"
 )
 
 pt_en_class_colors <- c(
-  a1 = "#2E7D32",
-  a2 = "#66BB6A",
-  a3 = "#9CCC65",
-  a4 = "#FFF59D",
-  a5 = "#FBC02D",
-  a6 = "#EF9A9A",
-  a7 = "#C62828",
+  sat_en_good = "#2E7D32",
+  sat_en_bad = "#66BB6A",
+  ques_en_good = "#FBC02D",
+  ques_en_bad = "#FFA000",
+  unsat_en_good = "#FB8C00",
+  unsat_en_bad = "#C62828",
   mu_missing_z = "#90A4AE",
   mu_missing_zprime = "#78909C"
 )
@@ -433,20 +480,22 @@ classify_with_en <- function(score_val, en_val, U_xi, sigma_pt, mu_missing, scor
     return(list(code = NA_character_, label = "N/A"))
   }
 
-  abs_score <- abs(score_val)
-  abs_en <- abs(en_val)
-  u_is_conservative <- U_xi >= (2 * sigma_pt)
+  z_eval <- score_eval_z(score_val)
+  if (z_eval == "N/A") {
+    return(list(code = NA_character_, label = "N/A"))
+  }
 
-  if (abs_score <= 2) {
-    if (abs_en < 1) {
-      code <- if (u_is_conservative) "a2" else "a1"
-    } else {
-      code <- "a3"
-    }
-  } else if (abs_score < 3) {
-    code <- if (abs_en < 1) "a4" else "a5"
-  } else {
-    code <- if (abs_en < 1) "a6" else "a7"
+  en_good <- abs(en_val) <= 1
+  code <- switch(
+    z_eval,
+    "Satisfactory" = if (en_good) "sat_en_good" else "sat_en_bad",
+    "Questionable" = if (en_good) "ques_en_good" else "ques_en_bad",
+    "Unsatisfactory" = if (en_good) "unsat_en_good" else "unsat_en_bad",
+    NA_character_
+  )
+
+  if (is.na(code)) {
+    return(list(code = NA_character_, label = "N/A"))
   }
 
   list(code = code, label = pt_en_class_labels[[code]])
@@ -764,8 +813,15 @@ compute_scores_for_selection <- function(summary_data, target_pollutant, target_
 
 # 6. Generate outputs
 pollutants <- sort(unique(summary_data$pollutant))
+pollutant_fill_map <- setNames(
+  grDevices::hcl.colors(max(1, length(pollutants)), palette = "Teal"),
+  pollutants
+)
 all_scores_list <- list()
 scores_results_map <- list()
+grubbs_summary_records <- list()
+hom_summary_records <- list()
+stability_summary_records <- list()
 
 for (p in pollutants) {
   pollutant_data <- summary_data %>% filter(pollutant == p)
@@ -782,15 +838,59 @@ for (p in pollutants) {
       if (!is.null(hom_results$error)) {
         print(paste("  - Homogeneity Error:", hom_results$error))
       } else {
+        hom_summary_records[[length(hom_summary_records) + 1]] <- tibble(
+          pollutant = p,
+          level = l,
+          items = hom_results$g,
+          replicates = hom_results$m,
+          sigma_pt = hom_results$sigma_pt,
+          u_xpt = hom_results$u_xpt,
+          ss = hom_results$ss,
+          sw = hom_results$sw,
+          c_criterion = hom_results$c_criterion,
+          c_criterion_expanded = hom_results$c_criterion_expanded,
+          meets_criterion = hom_results$ss <= hom_results$c_criterion,
+          meets_expanded = hom_results$ss <= hom_results$c_criterion_expanded,
+          conclusion = hom_results$conclusion
+        )
+
         stab_results <- compute_stability_metrics(p, l, hom_results)
         if (!is.null(stab_results$error)) {
           print(paste("  - Stability Error:", stab_results$error))
+        } else {
+          stability_summary_records[[length(stability_summary_records) + 1]] <- tibble(
+            pollutant = p,
+            level = l,
+            items = stab_results$g,
+            replicates = stab_results$m,
+            sigma_pt = stab_results$stab_sigma_pt,
+            u_xpt = stab_results$stab_u_xpt,
+            diff_hom_stab = stab_results$diff_hom_stab,
+            stab_ss = stab_results$stab_ss,
+            stab_sw = stab_results$stab_sw,
+            c_criterion = stab_results$stab_c_criterion,
+            c_criterion_expanded = stab_results$stab_c_criterion_expanded,
+            meets_criterion = stab_results$diff_hom_stab <= stab_results$stab_c_criterion,
+            meets_expanded = stab_results$diff_hom_stab <= stab_results$stab_c_criterion_expanded,
+            conclusion = stab_results$stab_conclusion
+          )
         }
       }
 
       pt_prep_results <- compute_pt_prep_metrics(summary_data, p, l)
       if (!is.null(pt_prep_results$error)) {
         print(paste("  - PT Prep Error:", pt_prep_results$error))
+      } else if (!is.null(pt_prep_results$outlier_summary)) {
+        summary_info <- pt_prep_results$outlier_summary
+        grubbs_summary_records[[length(grubbs_summary_records) + 1]] <- tibble(
+          pollutant = p,
+          level = l,
+          n_tested = summary_info$n_points,
+          grubbs_p_value = summary_info$p_value,
+          outlier_count = summary_info$count,
+          outlier_participant = summary_info$participant_id,
+          outlier_value = summary_info$value
+        )
       }
 
       score_res <- compute_scores_for_selection(summary_data, p, n_val, l, max_iter = 50, k_factor = 2)
@@ -813,6 +913,98 @@ for (p in pollutants) {
   }
 }
 
+if (length(hom_summary_records) > 0) {
+  homogeneity_summary_df <- dplyr::bind_rows(hom_summary_records) %>%
+    mutate(
+      sigma_pt = round(sigma_pt, 4),
+      u_xpt = round(u_xpt, 4),
+      ss = round(ss, 4),
+      sw = round(sw, 4),
+      c_criterion = round(c_criterion, 4),
+      c_criterion_expanded = round(c_criterion_expanded, 4),
+      Meets_Criterion = dplyr::if_else(meets_criterion, "Yes", "No"),
+      Meets_Expanded = dplyr::if_else(meets_expanded, "Yes", "No")
+    ) %>%
+    transmute(
+      Pollutant = pollutant,
+      Level = level,
+      Items = items,
+      Replicates = replicates,
+      sigma_pt,
+      u_xpt,
+      ss,
+      sw,
+      c_criterion,
+      c_criterion_expanded,
+      Meets_Criterion,
+      Meets_Expanded,
+      Conclusion = conclusion
+    ) %>%
+    arrange(Pollutant, Level)
+
+  write.csv(homogeneity_summary_df, "reports/assets/tables/homogeneity_summary.csv", row.names = FALSE)
+} else {
+  print("No homogeneity summary generated (insufficient homogeneity data).")
+}
+
+if (length(stability_summary_records) > 0) {
+  stability_summary_df <- dplyr::bind_rows(stability_summary_records) %>%
+    mutate(
+      sigma_pt = round(sigma_pt, 4),
+      u_xpt = round(u_xpt, 4),
+      diff_hom_stab = round(diff_hom_stab, 4),
+      stab_ss = round(stab_ss, 4),
+      stab_sw = round(stab_sw, 4),
+      c_criterion = round(c_criterion, 4),
+      c_criterion_expanded = round(c_criterion_expanded, 4),
+      Meets_Criterion = dplyr::if_else(meets_criterion, "Yes", "No"),
+      Meets_Expanded = dplyr::if_else(meets_expanded, "Yes", "No")
+    ) %>%
+    transmute(
+      Pollutant = pollutant,
+      Level = level,
+      Items = items,
+      Replicates = replicates,
+      sigma_pt,
+      u_xpt,
+      diff_hom_stab,
+      stab_ss,
+      stab_sw,
+      c_criterion,
+      c_criterion_expanded,
+      Meets_Criterion,
+      Meets_Expanded,
+      Conclusion = conclusion
+    ) %>%
+    arrange(Pollutant, Level)
+
+  write.csv(stability_summary_df, "reports/assets/tables/stability_summary.csv", row.names = FALSE)
+} else {
+  print("No stability summary generated (insufficient stability data).")
+}
+
+if (length(grubbs_summary_records) > 0) {
+  grubbs_summary_df <- dplyr::bind_rows(grubbs_summary_records) %>%
+    mutate(
+      outlier_count = dplyr::if_else(is.na(outlier_count), NA_integer_, as.integer(outlier_count)),
+      grubbs_p_value = ifelse(is.finite(grubbs_p_value), round(grubbs_p_value, 4), grubbs_p_value)
+    ) %>%
+    arrange(pollutant, level) %>%
+    transmute(
+      Pollutant = pollutant,
+      Level = level,
+      `Results Tested` = n_tested,
+      `Grubbs p-value` = grubbs_p_value,
+      `Outliers Detected` = outlier_count,
+      `Outlier Participant` = outlier_participant,
+      `Outlier Value` = outlier_value
+    )
+
+  write.csv(grubbs_summary_df, "reports/assets/tables/grubbs_summary.csv", row.names = FALSE)
+} else {
+  print("No Grubbs test summary generated (insufficient participant data).")
+}
+
 # --- Combined Participant Summary Plots ---
 if (length(all_scores_list) > 0) {
   combined_scores_df <- dplyr::bind_rows(all_scores_list)
@@ -823,7 +1015,20 @@ print("Generating combined participant summary plots...")
 if (length(all_scores_list) > 0) {
     # Combine all scores from all pollutants and levels into one dataframe
   all_scores_df <- do.call(rbind, all_scores_list) %>%
-    filter(participant_id != "ref")
+    filter(participant_id != "ref") %>%
+    mutate(
+      combination_id = ifelse(
+        !is.na(combination_label) & combination_label != "",
+        combination_label,
+        combination
+      ),
+      combination_display = ifelse(
+        !is.na(combination_label) & combination_label != "",
+        paste0(combination, " (", combination_label, ")"),
+        combination
+      ),
+      pollutant = as.character(pollutant)
+    )
 
   all_participants <- unique(all_scores_df$participant_id)
 
@@ -847,6 +1052,7 @@ if (length(all_scores_list) > 0) {
     for (idx in seq_len(nrow(combo_info))) {
       combo_row <- combo_info[idx, ]
       plot_list <- list()
+      pollutant_panels <- list()
 
       for (p_local in pollutants_for_participant) {
         plot_data <- participant_full_data %>% filter(pollutant == p_local)
@@ -899,23 +1105,11 @@ if (length(all_scores_list) > 0) {
           ) +
           theme_minimal() + theme(axis.text.x = element_text(angle = 45, hjust = 1))
 
-        p_zeta_score <- ggplot(combo_data, aes(x = level, y = zeta_score, group = 1)) +
-          geom_hline(yintercept = c(-3, 3), linetype = "dashed", color = "red") +
-          geom_hline(yintercept = c(-2, 2), linetype = "dashed", color = "orange") +
-          geom_hline(yintercept = 0, color = "grey") +
-          geom_line(color = "darkgreen") + geom_point(color = "darkgreen", size = 2) +
-          labs(
-            title = paste(toupper(p_local), "- Zeta-Score"),
-            subtitle = combo_row$combo_display,
-            x = NULL,
-            y = "Zeta-Score"
-          ) +
-          theme_minimal() + theme(axis.text.x = element_text(angle = 45, hjust = 1))
-
         p_en_score <- ggplot(combo_data, aes(x = level, y = En_score, group = 1)) +
           geom_hline(yintercept = c(-1, 1), linetype = "dashed", color = "red") +
           geom_hline(yintercept = 0, color = "grey") +
           geom_line(color = "purple") + geom_point(color = "purple", size = 2) +
+          coord_cartesian(ylim = c(-4, 4)) +
           labs(
             title = paste(toupper(p_local), "- En-Score"),
             subtitle = combo_row$combo_display,
@@ -924,12 +1118,19 @@ if (length(all_scores_list) > 0) {
           ) +
           theme_minimal() + theme(axis.text.x = element_text(angle = 45, hjust = 1))
 
-        plot_list <- c(plot_list, list(p_values, p_z_score, p_zeta_score, p_en_score))
+        plot_list <- c(plot_list, list(p_values, p_z_score, p_en_score))
+        pollutant_panels <- c(
+          pollutant_panels,
+          list(
+            (p_values / p_z_score / p_en_score) +
+              plot_layout(heights = c(1, 1, 1))
+          )
+        )
       }
 
       if (length(plot_list) == 0) next
 
-      combined_plot <- wrap_plots(plot_list, ncol = 4, guides = "collect") +
+      combined_plot <- wrap_plots(plot_list, ncol = 3, guides = "collect") +
         plot_annotation(
           title = paste(
             "Performance Summary for Participant:", participant,
@@ -956,6 +1157,42 @@ if (length(all_scores_list) > 0) {
         height = 12,
         units = "in"
       )
+
+      if (length(pollutant_panels) > 0) {
+        horizontal_plot <- wrap_plots(
+          pollutant_panels,
+          nrow = 1,
+          guides = "collect"
+        ) +
+          plot_annotation(
+            title = paste(
+              "Performance Summary (Pollutants Across Columns) - Participant:",
+              participant,
+              "| Combination",
+              combo_row$combo_id
+            ),
+            theme = theme(
+              plot.title = element_text(size = 16, face = "bold", hjust = 0.5)
+            )
+          )
+
+        horizontal_filename <- paste0(
+          "reports/assets/charts/summary_matrix_horizontal_",
+          participant,
+          "_combo_",
+          sanitized_combo,
+          ".png"
+        )
+
+        ggsave(
+          filename = horizontal_filename,
+          plot = horizontal_plot,
+          width = 22,
+          height = 10,
+          units = "cm",
+          scale = 1.5
+        )
+      }
     }
   }
 
@@ -1168,14 +1405,10 @@ if (length(all_scores_list) > 0) {
           geom_text(aes(label = display_code), size = 3, color = "#1B1B1B") +
           scale_fill_manual(
             values = pt_en_class_colors,
-            breaks = names(pt_en_class_colors),
+            breaks = names(pt_en_class_labels),
+            labels = names(pt_en_class_labels),
             drop = FALSE,
-            na.value = "#EEEEEE",
-            labels = c(
-              pt_en_class_labels,
-              `mu_missing_z` = "MU missing - z only",
-              `mu_missing_zprime` = "MU missing - z' only"
-            )
+            na.value = "#EEEEEE"
           ) +
           labs(
             title = paste(class_spec$title, "for Pollutant:", pollutant_id, "- Combination", combo_id),
@@ -1190,7 +1423,7 @@ if (length(all_scores_list) > 0) {
             axis.text.x = element_text(angle = 45, hjust = 1),
             axis.title.x = element_text(margin = margin(t = 12)),
             axis.title.y = element_text(margin = margin(r = 12)),
-            legend.position = "right"
+            legend.position = "bottom"
           )
 
         sanitized_pollutant <- gsub("_+$", "", gsub("^_+", "", gsub("[^A-Za-z0-9]+", "_", pollutant_id)))
@@ -1206,6 +1439,267 @@ if (length(all_scores_list) > 0) {
         ggsave(class_output, classification_plot, width = class_width, height = class_height, dpi = 300)
       }
     }
+  }
+
+  # --- Combination-Level Performance Summary Plots ---
+  print("  - Creating combination performance summary plots...")
+  combo_ids_for_plot <- sort(unique(stats::na.omit(all_scores_df$combination_id)))
+  for (combo_id in combo_ids_for_plot) {
+    combo_data_all <- all_scores_df %>% filter(combination_id == !!combo_id)
+    if (nrow(combo_data_all) == 0) next
+
+    combo_display_label <- combo_data_all %>%
+      distinct(combination_display) %>%
+      pull(combination_display) %>%
+      .[1]
+
+    level_levels <- combo_data_all %>%
+      mutate(level_numeric = readr::parse_number(as.character(level))) %>%
+      arrange(level_numeric, level) %>%
+      pull(level) %>%
+      unique()
+
+    combo_data_all <- combo_data_all %>%
+      mutate(level_factor = factor(level, levels = level_levels))
+
+    ref_df <- combo_data_all %>%
+      distinct(pollutant, level_factor, x_pt)
+
+    values_plot <- ggplot() +
+      geom_line(
+        data = ref_df,
+        aes(x = level_factor, y = x_pt, color = "Reference", group = pollutant),
+        linetype = "dashed",
+        size = 1
+      ) +
+      geom_point(
+        data = ref_df,
+        aes(x = level_factor, y = x_pt, color = "Reference"),
+        size = 2
+      ) +
+      geom_line(
+        data = combo_data_all,
+        aes(
+          x = level_factor,
+          y = result,
+          group = interaction(participant_id, pollutant),
+          color = "Participants"
+        ),
+        alpha = 0.25
+      ) +
+      geom_point(
+        data = combo_data_all,
+        aes(x = level_factor, y = result, color = "Participants"),
+        position = position_jitter(width = 0.1),
+        alpha = 0.6,
+        size = 1.2
+      ) +
+      scale_color_manual(
+        name = NULL,
+        values = c("Participants" = "#1F77B4", "Reference" = "#D62728")
+      ) +
+      facet_wrap(~pollutant, scales = "free_x") +
+      labs(
+        title = "Participant vs Reference",
+        subtitle = combo_display_label,
+        x = "Level",
+        y = "Value"
+      ) +
+      theme_minimal() +
+      theme(
+        legend.position = "top",
+        axis.text.x = element_text(angle = 45, hjust = 1)
+      )
+
+    z_plot <- ggplot(combo_data_all, aes(x = level_factor, y = z_score, group = 1)) +
+      geom_hline(yintercept = c(-3, 3), linetype = "dashed", color = "#B71C1C") +
+      geom_hline(yintercept = c(-2, 2), linetype = "dashed", color = "#F57F17") +
+      geom_hline(yintercept = 0, color = "#424242") +
+      geom_line(color = "#1565C0") +
+      geom_point(color = "#1565C0", size = 1.8) +
+      coord_cartesian(ylim = c(-4, 4)) +
+      facet_wrap(~pollutant, scales = "free_x") +
+      labs(
+        title = "Z-Score",
+        subtitle = combo_display_label,
+        x = "Level",
+        y = "Z-Score"
+      ) +
+      theme_minimal() +
+      theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+    zprime_plot <- ggplot(combo_data_all, aes(x = level_factor, y = z_prime_score, group = 1)) +
+      geom_hline(yintercept = c(-3, 3), linetype = "dashed", color = "#B71C1C") +
+      geom_hline(yintercept = c(-2, 2), linetype = "dashed", color = "#F57F17") +
+      geom_hline(yintercept = 0, color = "#424242") +
+      geom_line(color = "#FF8F00") +
+      geom_point(color = "#FF8F00", size = 1.8) +
+      coord_cartesian(ylim = c(-4, 4)) +
+      facet_wrap(~pollutant, scales = "free_x") +
+      labs(
+        title = "Z'-Score",
+        subtitle = combo_display_label,
+        x = "Level",
+        y = "Z'-Score"
+      ) +
+      theme_minimal() +
+      theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+    zeta_plot <- ggplot(combo_data_all, aes(x = level_factor, y = zeta_score, group = 1)) +
+      geom_hline(yintercept = c(-3, 3), linetype = "dashed", color = "#B71C1C") +
+      geom_hline(yintercept = c(-2, 2), linetype = "dashed", color = "#F57F17") +
+      geom_hline(yintercept = 0, color = "#424242") +
+      geom_line(color = "#2E7D32") +
+      geom_point(color = "#2E7D32", size = 1.8) +
+      coord_cartesian(ylim = c(-4, 4)) +
+      facet_wrap(~pollutant, scales = "free_x") +
+      labs(
+        title = "Zeta-Score",
+        subtitle = combo_display_label,
+        x = "Level",
+        y = "Zeta-Score"
+      ) +
+      theme_minimal() +
+      theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+    en_plot <- ggplot(combo_data_all, aes(x = level_factor, y = En_score, group = 1)) +
+      geom_hline(yintercept = c(-1, 1), linetype = "dashed", color = "#B71C1C") +
+      geom_hline(yintercept = 0, color = "#424242") +
+      geom_line(color = "#6A1B9A") +
+      geom_point(color = "#6A1B9A", size = 1.8) +
+      coord_cartesian(ylim = c(-4, 4)) +
+      facet_wrap(~pollutant, scales = "free_x") +
+      labs(
+        title = "En-Score",
+        subtitle = combo_display_label,
+        x = "Level",
+        y = "En-Score"
+      ) +
+      theme_minimal() +
+      theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+    sanitized_combo <- gsub("_+$", "", gsub("^_+", "", gsub("[^A-Za-z0-9]+", "_", combo_id)))
+
+    values_grid <- (values_plot | z_plot | en_plot) +
+      plot_layout(widths = c(1, 1, 1)) +
+      plot_annotation(
+        title = paste("Combination", combo_display_label, "- Values, Z-Score & En-Score"),
+        theme = theme(
+          plot.title = element_text(size = 15, face = "bold", hjust = 0.5)
+        )
+      )
+
+    zprime_grid <- (zprime_plot | en_plot) +
+      plot_layout(widths = c(1, 1)) +
+      plot_annotation(
+        title = paste("Combination", combo_display_label, "- Z'-Score & En-Score"),
+        theme = theme(
+          plot.title = element_text(size = 15, face = "bold", hjust = 0.5)
+        )
+      )
+
+    zeta_grid <- (zeta_plot | en_plot) +
+      plot_layout(widths = c(1, 1)) +
+      plot_annotation(
+        title = paste("Combination", combo_display_label, "- Zeta-Score & En-Score"),
+        theme = theme(
+          plot.title = element_text(size = 15, face = "bold", hjust = 0.5)
+        )
+      )
+
+    ggsave(
+      file.path("reports/assets/charts", paste0("combo_performance_values_", sanitized_combo, ".png")),
+      values_grid,
+      width = 15,
+      height = 8,
+      dpi = 300
+    )
+
+    ggsave(
+      file.path("reports/assets/charts", paste0("combo_performance_zprime_", sanitized_combo, ".png")),
+      zprime_grid,
+      width = 10,
+      height = 8,
+      dpi = 300
+    )
+
+    ggsave(
+      file.path("reports/assets/charts", paste0("combo_performance_zeta_", sanitized_combo, ".png")),
+      zeta_grid,
+      width = 10,
+      height = 8,
+      dpi = 300
+    )
+  }
+
+  print("  - Creating score criteria summary tables by combination...")
+  score_eval_map <- c(
+    z_score_eval = "z-score",
+    z_prime_score_eval = "z'-score",
+    zeta_score_eval = "zeta-score",
+    En_score_eval = "En-score"
+  )
+  criteria_levels <- c("Satisfactory", "Questionable", "Unsatisfactory", "N/A")
+  score_order <- unname(score_eval_map)
+
+  combo_ids <- sort(unique(stats::na.omit(all_scores_df$combination_id)))
+  for (combo_id in combo_ids) {
+    combo_df <- all_scores_df %>% filter(combination_id == !!combo_id)
+    if (nrow(combo_df) == 0) next
+
+    pollutant_levels <- sort(unique(combo_df$pollutant))
+    if (length(pollutant_levels) == 0) next
+
+    score_rows <- purrr::imap_dfr(
+      score_eval_map,
+      function(score_title, eval_col_name) {
+        eval_sym <- rlang::sym(eval_col_name)
+        combo_df %>%
+          transmute(
+            score = score_title,
+            pollutant = factor(pollutant, levels = pollutant_levels),
+            criteria = factor(
+              dplyr::case_when(
+                is.na(!!eval_sym) | !!eval_sym == "" ~ "N/A",
+                TRUE ~ as.character(!!eval_sym)
+              ),
+              levels = criteria_levels
+            )
+          ) %>%
+          count(score, pollutant, criteria, name = "Count") %>%
+          tidyr::complete(
+            score,
+            pollutant,
+            criteria,
+            fill = list(Count = 0)
+          )
+      }
+    )
+
+    summary_table <- score_rows %>%
+      mutate(
+        Score = factor(score, levels = score_order),
+        Criteria = factor(criteria, levels = criteria_levels)
+      ) %>%
+      arrange(Score, Criteria) %>%
+      select(Score, Criteria, pollutant, Count) %>%
+      pivot_wider(
+        names_from = pollutant,
+        values_from = Count,
+        values_fill = 0
+      ) %>%
+      mutate(
+        Score = as.character(Score),
+        Criteria = as.character(Criteria)
+      )
+
+    sanitized_combo <- gsub("_+$", "", gsub("^_+", "", gsub("[^A-Za-z0-9]+", "_", combo_id)))
+    output_table_path <- file.path(
+      "reports/assets/tables",
+      paste0("score_criteria_summary_", sanitized_combo, ".csv")
+    )
+
+    write.csv(summary_table, output_table_path, row.names = FALSE)
   }
 
   xpt_summary <- all_scores_df %>%
@@ -1252,6 +1746,165 @@ if (length(all_scores_list) > 0) {
     )
 
   write.csv(level_summary, "reports/assets/tables/level_summary.csv", row.names = FALSE)
+}
+
+# --- Participant Outlier Detection Plots ---
+print("Generating participant distribution plots for outlier detection...")
+participant_distribution_df <- summary_data %>%
+  filter(!is.na(mean_value), is.finite(mean_value))
+
+if (nrow(participant_distribution_df) == 0) {
+  print("  - No participant mean values available for distribution plots.")
+} else {
+  pollutants_for_outliers <- sort(unique(participant_distribution_df$pollutant))
+
+  for (pollutant_id in pollutants_for_outliers) {
+    pollutant_df <- participant_distribution_df %>%
+      filter(pollutant == !!pollutant_id)
+
+    if (nrow(pollutant_df) < 3) {
+      print(paste("  - Skipping", pollutant_id, "because fewer than 3 participant results were found."))
+      next
+    }
+
+    level_order <- pollutant_df %>%
+      distinct(level) %>%
+      mutate(level_numeric = readr::parse_number(as.character(level))) %>%
+      arrange(level_numeric, level) %>%
+      pull(level)
+
+    if (length(level_order) == 0) {
+      next
+    }
+
+    pollutant_df <- pollutant_df %>%
+      mutate(level = factor(level, levels = level_order))
+
+    density_fill <- pollutant_fill_map[[as.character(pollutant_id)]]
+    if (is.null(density_fill)) density_fill <- "#4C78A8"
+
+    box_plot <- ggplot(pollutant_df, aes(x = factor(1), y = mean_value)) +
+      geom_boxplot(
+        fill = "#4C78A8",
+        alpha = 0.55,
+        outlier.colour = "#B22222",
+        outlier.fill = "#B22222",
+        width = 0.4
+      ) +
+      facet_wrap(~level, nrow = 1, ncol = 5, scales = "free_y") +
+      scale_x_discrete(labels = NULL) +
+      labs(
+        title = "Participant boxplots by concentration level",
+        x = NULL,
+        y = "Participant mean value"
+      ) +
+      theme_minimal() +
+      theme(
+        strip.text = element_text(face = "bold"),
+        panel.spacing = grid::unit(1, "lines"),
+        axis.text.x = element_text(angle = 45, hjust = 1),
+        plot.title = element_text(size = 12, face = "bold"),
+        axis.title.x = element_blank()
+      )
+
+    density_flags <- pollutant_df %>%
+      group_by(level) %>%
+      mutate(
+        can_estimate_density = dplyr::n_distinct(mean_value) > 1
+      ) %>%
+      ungroup()
+
+    density_data <- density_flags %>% filter(can_estimate_density)
+
+    density_labels <- density_flags %>%
+      group_by(level) %>%
+      summarise(
+        can_estimate_density = any(can_estimate_density),
+        fallback_x = ifelse(all(is.na(mean_value)), 0, mean(mean_value, na.rm = TRUE)),
+        .groups = "drop"
+      ) %>%
+      filter(!can_estimate_density) %>%
+      mutate(
+        label = "Need >= 2 unique values",
+        fallback_x = ifelse(is.finite(fallback_x), fallback_x, 0),
+        label_y = 0.02
+      )
+
+    if (nrow(density_data) > 0) {
+      density_plot <- ggplot(density_data, aes(x = mean_value)) +
+        geom_density(
+          fill = density_fill,
+          color = NA,
+          alpha = 0.45,
+          adjust = 1
+        ) +
+        facet_wrap(~level, nrow = 1, ncol = 5, scales = "free") +
+        labs(
+          title = "Kernel density of participant means",
+          x = "Participant mean value",
+          y = "Density"
+        ) +
+        theme_minimal() +
+        theme(
+          strip.text = element_text(face = "bold"),
+          panel.spacing = grid::unit(1, "lines"),
+          plot.title = element_text(size = 12, face = "bold"),
+          axis.text.x = element_text(angle = 45, hjust = 1)
+        )
+    } else {
+      density_plot <- ggplot(density_labels, aes(x = fallback_x, y = label_y)) +
+        geom_text(aes(label = label), color = "#555555", size = 3.5) +
+        facet_wrap(~level, nrow = 1, ncol = 5) +
+        labs(
+          title = "Kernel density of participant means",
+          x = "Participant mean value",
+          y = "Density"
+        ) +
+        theme_minimal() +
+        theme(
+          strip.text = element_text(face = "bold"),
+          panel.spacing = grid::unit(1, "lines"),
+          plot.title = element_text(size = 12, face = "bold"),
+          axis.text.x = element_text(angle = 45, hjust = 1)
+        )
+    }
+
+    if (nrow(density_labels) > 0 && nrow(density_data) > 0) {
+      density_plot <- density_plot +
+        geom_text(
+          data = density_labels,
+          aes(x = fallback_x, y = label_y, label = label),
+          color = "#555555",
+          size = 3.5,
+          inherit.aes = FALSE
+        )
+    }
+
+    combined_outlier_plot <- (box_plot | density_plot) +
+      plot_layout(widths = c(1, 1)) +
+      plot_annotation(
+        title = paste("Participant distribution summary -", pollutant_id),
+        subtitle = "Left: boxplots (by level); Right: kernel density for outlier screening",
+        theme = theme(
+          plot.title = element_text(size = 15, face = "bold", hjust = 0.5),
+          plot.subtitle = element_text(size = 11, hjust = 0.5)
+        )
+      )
+
+    sanitized_pollutant <- gsub("_+$", "", gsub("^_+", "", gsub("[^A-Za-z0-9]+", "_", pollutant_id)))
+    outlier_path <- file.path(
+      "reports/assets/charts",
+      paste0("participant_distribution_", sanitized_pollutant, ".png")
+    )
+    ggsave(
+      outlier_path,
+      combined_outlier_plot,
+      width = 20,
+      height = 7,
+      dpi = 300,
+      units = "cm"
+    )
+  }
 }
 
 # --- Generate Detailed Participant Summary CSVs ---

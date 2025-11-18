@@ -1,0 +1,10 @@
+name: pt_app
+title:
+username: w421
+account: w421
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 15974028
+bundleId: 11134977
+url: https://w421.shinyapps.io/pt_app/
+version: 1
