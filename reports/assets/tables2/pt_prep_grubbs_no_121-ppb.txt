@@ -1,7 +1,0 @@
-
-	Grubbs test for one outlier
-
-data:  participants_data$mean_value
-G = 2.17146, U = 0.70632, p-value = 0.1815
-alternative hypothesis: highest value 120.39814229249 is an outlier
-
