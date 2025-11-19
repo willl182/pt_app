@@ -8,7 +8,6 @@ library(tidyverse)
 # List of input files to process
 files_to_process <- c(
   "bsw_co.csv",
-  "bsw_no.csv",
   "bsw_no2.csv",
   "bsw_o3.csv",
   "bsw_so2.csv"

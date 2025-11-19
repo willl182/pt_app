@@ -3,10 +3,10 @@ library(dplyr)
 
 # List of file paths to process
 file_paths <- c(
-  "Z:/201_calferquim/z/pt_app/bsw_sampler_output_n10.csv",
-  "Z:/201_calferquim/z/pt_app/bsw_sampler_output_n13.csv",
-  "Z:/201_calferquim/z/pt_app/bsw_sampler_output_n4.csv",
-  "Z:/201_calferquim/z/pt_app/bsw_sampler_output_n7.csv"
+  "bsw_sampler_output_n10.csv",
+  "bsw_sampler_output_n13.csv",
+  "bsw_sampler_output_n4.csv",
+  "bsw_sampler_output_n7.csv"
 )
 
 # Function to calculate stats and save to a single file per n-value
@@ -31,7 +31,7 @@ calculate_stats_and_save_by_n <- function(file_path) {
     summarise(
       mean_value = mean(value, na.rm = TRUE),
       sd_value = sd(value, na.rm = TRUE),
-      .groups = 'drop'
+      .groups = "drop"
     )
 
   # Construct output filename

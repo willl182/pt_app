@@ -4,7 +4,6 @@ set.seed(421)
 # List of files to process
 files <- c(
   "for_paste_bsw_co.csv",
-  "for_paste_bsw_no.csv",
   "for_paste_bsw_no2.csv",
   "for_paste_bsw_o3.csv",
   "for_paste_bsw_so2.csv"
@@ -19,22 +18,22 @@ all_samples_list <- list()
 for (file_path in files) {
   # Extract pollutant name from filename
   pollutant_name <- gsub("for_paste_bsw_|[.]csv", "", file_path)
-  
+
   # Read the data
   data <- read.csv(file_path)
-  
+
   # Get unique levels
   unique_levels <- unique(data$level)
-  
+
   for (lvl in unique_levels) {
     # Filter data for the current level and convert to a numeric vector
     level_data <- unlist(data[data$level == lvl, -1])
     level_data <- level_data[!is.na(level_data)]
-    
+
     # Take two sets of 10 random samples (replicates) with replacement
     replicate1 <- sample(level_data, 10, replace = TRUE)
     replicate2 <- sample(level_data, 10, replace = TRUE)
-    
+
     # Create data frames for each replicate and add to the list
     df1 <- data.frame(
       pollutant = pollutant_name,
@@ -50,7 +49,7 @@ for (file_path in files) {
       sample_id = 1:10,
       value = replicate2
     )
-    
+
     all_samples_list <- append(all_samples_list, list(df1, df2))
   }
 }
@@ -71,22 +70,22 @@ stability_samples_list <- list()
 for (file_path in files) {
   # Extract pollutant name from filename
   pollutant_name <- gsub("for_paste_bsw_|[.]csv", "", file_path)
-  
+
   # Read the data
   data <- read.csv(file_path)
-  
+
   # Get unique levels
   unique_levels <- unique(data$level)
-  
+
   for (lvl in unique_levels) {
     # Filter data for the current level and convert to a numeric vector
     level_data <- unlist(data[data$level == lvl, -1])
     level_data <- level_data[!is.na(level_data)]
-    
+
     # Take two sets of 2 random samples (replicates) with replacement
     replicate1 <- sample(level_data, 2, replace = TRUE)
     replicate2 <- sample(level_data, 2, replace = TRUE)
-    
+
     # Create data frames for each replicate and add to the list
     df1 <- data.frame(
       pollutant = pollutant_name,
@@ -102,7 +101,7 @@ for (file_path in files) {
       sample_id = 1:2,
       value = replicate2
     )
-    
+
     stability_samples_list <- append(stability_samples_list, list(df1, df2))
   }
 }
@@ -147,10 +146,10 @@ for (n in n_values) {
       for (i in 1:n) {
         # Take samples for the replicate
         replicate_samples <- sample(level_data, num_samples, replace = TRUE)
-        
+
         # Determine participant_id
         participant_id <- if (i == 1) "ref" else paste0("part_", i - 1)
-        
+
         # Create a data frame for the current replicate
         df <- data.frame(
           pollutant = pollutant_name,
@@ -160,7 +159,7 @@ for (n in n_values) {
           sample_id = 1:num_samples,
           value = replicate_samples
         )
-        
+
         # Add the data frame to the list
         all_samples_list_n <- append(all_samples_list_n, list(df))
       }
