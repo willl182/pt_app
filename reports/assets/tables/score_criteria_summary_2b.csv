@@ -1,0 +1,17 @@
+"Score","Criteria","co","no2","o3","so2"
+"z-score","Satisfactory",52,12,29,49
+"z-score","Questionable",2,0,5,2
+"z-score","Unsatisfactory",0,0,2,3
+"z-score","N/A",0,0,0,0
+"z'-score","Satisfactory",52,12,32,49
+"z'-score","Questionable",2,0,3,2
+"z'-score","Unsatisfactory",0,0,1,3
+"z'-score","N/A",0,0,0,0
+"zeta-score","Satisfactory",54,12,36,54
+"zeta-score","Questionable",0,0,0,0
+"zeta-score","Unsatisfactory",0,0,0,0
+"zeta-score","N/A",0,0,0,0
+"En-score","Satisfactory",54,12,36,54
+"En-score","Questionable",0,0,0,0
+"En-score","Unsatisfactory",0,0,0,0
+"En-score","N/A",0,0,0,0

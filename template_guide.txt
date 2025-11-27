@@ -1,0 +1,216 @@
+title: "Informe Final del Ensayo de Aptitud (EA)" subtitle: "Medición de Gases Contaminantes Criterio SO₂, CO, O₃, NO, NO₂" author: "Laboratorio CALAIRE" date: "r Sys.Date()" output: html_document: toc: true toc_depth: 3 theme: flatly word_document: toc: trueknitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE, fig.width = 10, fig.height = 6)
+library(tidyverse)
+library(knitr)
+library(kableExtra)
+library(patchwork) # Para combinar gráficos (Annex C)
+library(outliers)
+
+# --- CONFIGURACIÓN DE PARÁMETROS DEL REPORTE ---
+# Ajuste estos valores según el ensayo actual
+report_config <- list(
+  sigma_pt_default = 5,   # Valor por defecto si no se calcula
+  u_xpt_default = 0.5,
+  k_factor = 2,
+  pollutants = c("so2", "co", "o3", "no", "no2")
+)
+# ==============================================================================
+# FUNCIONES DE CÁLCULO (Adaptadas de appR.txt)
+# ==============================================================================
+
+# 1. Algoritmo A (ISO 13528)
+run_algorithm_a <- function(values, max_iter = 50) {
+  values <- values[is.finite(values)]
+  if (length(values) < 3) return(list(mean = NA, sd = NA))
+  
+  x_star <- median(values, na.rm = TRUE)
+  s_star <- 1.483 * median(abs(values - x_star), na.rm = TRUE)
+  
+  for (i in 1:max_iter) {
+    u_val <- (values - x_star) / (1.5 * s_star)
+    w <- ifelse(abs(u_val) <= 1, 1, 1/u_val^2)
+    x_new <- sum(w * values) / sum(w)
+    s_new <- sqrt(sum(w * (values - x_new)^2) / sum(w))
+    
+    if (abs(x_new - x_star) < 1e-4 & abs(s_new - s_star) < 1e-4) break
+    x_star <- x_new
+    s_star <- s_new
+  }
+  return(list(mean = x_star, sd = s_star))
+}
+
+# 2. Función para calcular puntajes (Z, Zeta, En)
+calculate_scores <- function(df, pollutant_name) {
+  # Filtrar datos
+  df_sub <- df %>% filter(pollutant == pollutant_name)
+  
+  # Si hay datos de referencia explícitos (participant_id == "ref"), usarlos
+  ref_data <- df_sub %>% filter(participant_id == "ref")
+  
+  if(nrow(ref_data) > 0) {
+    # Usar valores de referencia si existen
+    targets <- ref_data %>% 
+      group_by(level) %>% 
+      summarise(x_pt = mean(mean_value), u_xpt = mean(sd_value))
+  } else {
+    # Si no, usar Algoritmo A sobre los participantes
+    targets <- df_sub %>%
+      group_by(level) %>%
+      summarise(
+        algo_res = list(run_algorithm_a(mean_value)),
+        x_pt = algo_res[[1]]$mean,
+        s_star = algo_res[[1]]$sd,
+        u_xpt = 1.25 * s_star / sqrt(n())
+      ) %>%
+      select(-algo_res, -s_star)
+  }
+
+  # Unir objetivos con datos de participantes
+  df_scores <- df_sub %>%
+    filter(participant_id != "ref") %>%
+    left_join(targets, by = "level") %>%
+    mutate(
+      # Definir Sigma PT (Aquí se usa s* o un valor fijo según configuración)
+      sigma_pt = ifelse(is.na(x_pt), NA, x_pt * 0.1), # EJEMPLO: 10% del valor, ajustar lógica según appR
+      
+      # Calcular Scores
+      z_score = (mean_value - x_pt) / sigma_pt,
+      zeta_score = (mean_value - x_pt) / sqrt(sd_value^2 + u_xpt^2),
+      U_lab = 2 * sd_value,
+      U_ref = 2 * u_xpt,
+      en_score = (mean_value - x_pt) / sqrt(U_lab^2 + U_ref^2),
+      
+      # Evaluaciones
+      eval_z = case_when(
+        abs(z_score) <= 2 ~ "Satisfactorio",
+        abs(z_score) < 3 ~ "Cuestionable",
+        TRUE ~ "Insatisfactorio"
+      ),
+      eval_en = ifelse(abs(en_score) <= 1, "Satisfactorio", "Insatisfactorio")
+    )
+  
+  return(df_scores)
+}
+# ==============================================================================
+# CARGA DE DATOS (REEMPLAZAR CON ARCHIVOS REALES)
+# ==============================================================================
+
+# Simulación de datos si no existen archivos (Para que el template compile)
+# EL USUARIO DEBE CAMBIAR ESTO POR: data_summary <- read_csv("sus_datos.csv")
+
+if(file.exists("summary_data.csv")) {
+  data_summary <- read_csv("summary_data.csv")
+} else {
+  # DATOS DUMMY BASADOS EN ESTRUCTURA appR.txt
+  data_summary <- expand.grid(
+    participant_id = c("part_1", "part_2", "part_3", "part_4", "part_5", "part_6"),
+    pollutant = c("so2", "co", "o3", "no", "no2"),
+    level = c("Level 1", "Level 2", "Level 3", "Level 4", "Level 5")
+  ) %>%
+    mutate(
+      mean_value = runif(n(), 10, 100),
+      sd_value = runif(n(), 0.1, 5),
+      n_lab = 1
+    )
+}
+1. Identificación y Contexto1.1. Alcance y Objetivo del EA Este Ensayo de Aptitud (EA) por comparación interlaboratorio abarca la medición de los gases contaminantes criterio SO₂, CO, O₃, NO y NO₂ en aire cero.1.2. Confidencialidad La identidad de los participantes es confidencial (Códigos: PART1, PART2, etc.).1.3. Participantes En esta ronda participaron r length(unique(data_summary$participant_id)) laboratorios.2. Descripción del Ensayo y Metodología2.1. Ítems de Ensayo Atmósferas de gas generadas dinámicamente.2.2. Homogeneidad y Estabilidad (Resultados detallados en Anexo B). Se aplicó el criterio ISO 13528:2022.2.3. Determinación del Valor Asignado ($X_{pt}$) Se utilizó el Algoritmo A (ISO 13528:2022, Anexo C.3) calculado a partir de los resultados de los participantes.3. Metodología de Evaluación de DesempeñoCriterios de Evaluación:Z-score ($\zeta$):$|\zeta| \le 2.0$: Satisfactorio$2.0 < |\zeta| < 3.0$: Cuestionable$|\zeta| \ge 3.0$: Insatisfactorio$E_n$-score:$|E_n| \le 1.0$: Satisfactorio$|E_n| > 1.0$: Insatisfactorio4. Resultados y Discusión4.1. Resumen General# Calcular scores para todos los contaminantes
+all_scores <- map_df(unique(data_summary$pollutant), ~calculate_scores(data_summary, .x))
+
+summary_table <- all_scores %>%
+  group_by(pollutant) %>%
+  summarise(
+    Total_Resultados = n(),
+    Z_Satisfactorio = sum(eval_z == "Satisfactorio", na.rm = TRUE),
+    Z_Cuestionable = sum(eval_z == "Cuestionable", na.rm = TRUE),
+    Z_Insatisfactorio = sum(eval_z == "Insatisfactorio", na.rm = TRUE),
+    En_Satisfactorio = sum(eval_en == "Satisfactorio", na.rm = TRUE)
+  )
+
+kable(summary_table, caption = "Resumen de Desempeño por Contaminante") %>%
+  kable_styling(bootstrap_options = c("striped", "hover"))
+4.2. Evaluación por ContaminanteA continuación se presentan los mapas de calor (Heatmaps) identificados en la aplicación Shiny para cada contaminante.pollutants <- unique(data_summary$pollutant)
+
+for(p in pollutants) {
+  
+  cat(paste("\n### 4.2.", which(pollutants == p), "Resultados para", toupper(p), "\n"))
+  
+  df_p <- all_scores %>% filter(pollutant == p)
+  
+  # --- HEATMAP Z-SCORE ---
+  cat("\n#### Mapa de Calor: Z-Score\n")
+  
+  p_z <- ggplot(df_p, aes(x = level, y = participant_id, fill = eval_z)) +
+    geom_tile(color = "white") +
+    geom_text(aes(label = round(z_score, 2)), size = 3) +
+    scale_fill_manual(values = c(
+      "Satisfactorio" = "#00B050", # Verde
+      "Cuestionable" = "#FFEB3B",  # Amarillo
+      "Insatisfactorio" = "#D32F2F" # Rojo
+    )) +
+    labs(title = paste("Z-Score Heatmap:", toupper(p)), x = "Nivel", y = "Participante", fill = "Evaluación") +
+    theme_minimal() +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1))
+  
+  print(p_z)
+  
+  # --- HEATMAP EN-SCORE ---
+  cat("\n#### Mapa de Calor: En-Score\n")
+  
+  p_en <- ggplot(df_p, aes(x = level, y = participant_id, fill = eval_en)) +
+    geom_tile(color = "white") +
+    geom_text(aes(label = round(en_score, 2)), size = 3) +
+    scale_fill_manual(values = c(
+      "Satisfactorio" = "#00B050",
+      "Insatisfactorio" = "#D32F2F"
+    )) +
+    labs(title = paste("En-Score Heatmap:", toupper(p)), x = "Nivel", y = "Participante", fill = "Evaluación") +
+    theme_minimal() +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1))
+  
+  print(p_en)
+  
+  cat("\n**Discusión:** [Espacio reservado para comentarios cualitativos sobre este contaminante]\n")
+  cat("\n---\n")
+}
+5. ConclusionesEl desempeño general fue del r round(mean(all_scores$eval_z == "Satisfactorio", na.rm=T)*100, 1)% satisfactorio.Laboratorios con desempeño insatisfactorio deben iniciar acciones correctivas.AnexosAnexo A: Valores Asignados ($X_{pt}$)assigned_values <- all_scores %>%
+  group_by(pollutant, level) %>%
+  summarise(
+    X_pt = mean(x_pt, na.rm=TRUE),
+    u_Xpt = mean(u_xpt, na.rm=TRUE),
+    sigma_pt = mean(sigma_pt, na.rm=TRUE)
+  )
+
+kable(assigned_values, caption = "Valores Asignados e Incertidumbres") %>%
+  kable_styling(full_width = F)
+Anexo C: Resultados por ParticipanteGráficos individuales de desempeño (Réplica de la pestaña "Participantes" de la App Shiny).participants <- unique(all_scores$participant_id)
+
+for(part in participants) {
+  cat(paste("\n### Participante:", part, "\n"))
+  
+  df_part <- all_scores %>% filter(participant_id == part)
+  
+  # 1. Gráfico de Valores
+  p1 <- ggplot(df_part, aes(x = level, y = mean_value, group = pollutant, color = pollutant)) +
+    geom_line() + geom_point() +
+    labs(title = "Valores Reportados", y = "Valor") + theme_minimal() +
+    theme(axis.text.x = element_text(angle = 90))
+  
+  # 2. Gráfico Z-Score
+  p2 <- ggplot(df_part, aes(x = level, y = z_score, group = pollutant, color = pollutant)) +
+    geom_line() + geom_point() +
+    geom_hline(yintercept = c(2, -2), linetype = "dashed", color = "orange") +
+    geom_hline(yintercept = c(3, -3), linetype = "dashed", color = "red") +
+    labs(title = "Z-Scores", y = "Z") + theme_minimal() +
+    theme(axis.text.x = element_text(angle = 90))
+
+  # 3. Gráfico En-Score
+  p3 <- ggplot(df_part, aes(x = level, y = en_score, group = pollutant, color = pollutant)) +
+    geom_line() + geom_point() +
+    geom_hline(yintercept = c(1, -1), linetype = "dashed", color = "red") +
+    labs(title = "En-Scores", y = "En") + theme_minimal() +
+    theme(axis.text.x = element_text(angle = 90))
+  
+  # Combinar con Patchwork
+  combined_plot <- (p1 | p2) / p3
+  print(combined_plot)
+  cat("\n")
+}

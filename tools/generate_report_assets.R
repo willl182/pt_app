@@ -16,13 +16,17 @@ suppressPackageStartupMessages({
 # -------------------------------------------------------------------
 calculate_niqr <- function(x) {
   x_clean <- x[is.finite(x)]
-  if (length(x_clean) < 2) return(NA_real_)
+  if (length(x_clean) < 2) {
+    return(NA_real_)
+  }
   quartiles <- stats::quantile(x_clean, probs = c(0.25, 0.75), na.rm = TRUE, type = 7)
   0.7413 * (quartiles[2] - quartiles[1])
 }
 
 extract_grubbs_value <- function(text_line) {
-  if (is.null(text_line) || !nzchar(text_line)) return(NA_real_)
+  if (is.null(text_line) || !nzchar(text_line)) {
+    return(NA_real_)
+  }
   match <- regmatches(text_line, regexec("value ([+-]?\\d+(?:\\.\\d+)?(?:[eE][+-]?\\d+)?)", text_line))[[1]]
   if (length(match) >= 2) {
     suppressWarnings(as.numeric(match[2]))
@@ -34,19 +38,19 @@ extract_grubbs_value <- function(text_line) {
 combined_scores_df <- tibble()
 
 get_wide_data <- function(df, target_pollutant) {
-    filtered <- df %>% filter(pollutant == target_pollutant)
-    if (nrow(filtered) == 0) {
-      return(NULL)
-    }
-    filtered %>%
-      select(-pollutant) %>%
-      pivot_wider(names_from = replicate, values_from = value, names_prefix = "sample_")
+  filtered <- df %>% filter(pollutant == target_pollutant)
+  if (nrow(filtered) == 0) {
+    return(NULL)
+  }
+  filtered %>%
+    select(-pollutant) %>%
+    pivot_wider(names_from = replicate, values_from = value, names_prefix = "sample_")
 }
 
 # 2. Load data
-hom_data_full <- read.csv("homogeneity.csv")
-stab_data_full <- read.csv("stability.csv")
-raw_summary_data <- read.csv("summary_n7.csv")
+hom_data_full <- read.csv("data/homogeneity.csv")
+stab_data_full <- read.csv("data/stability.csv")
+raw_summary_data <- read.csv("data/summary_n7.csv")
 
 # --- Data Aggregation Step ---
 # The raw summary data has one row per replicate (sample_group).
@@ -56,7 +60,7 @@ summary_data <- raw_summary_data %>%
   summarise(
     mean_value = mean(mean_value, na.rm = TRUE),
     sd_value = mean(sd_value, na.rm = TRUE), # Taking the mean of SDs as a representative value
-    .groups = 'drop'
+    .groups = "drop"
   )
 summary_data$n_lab <- 7 # Add n_lab column for consistency with app logic
 
@@ -68,356 +72,356 @@ dir.create("reports/assets/tables", showWarnings = FALSE)
 
 # 3. Homogeneity and Stability Analysis
 compute_homogeneity_metrics <- function(target_pollutant, target_level) {
-    wide_df <- get_wide_data(hom_data_full, target_pollutant)
-    if (is.null(wide_df)) {
-      return(list(error = sprintf("No homogeneity data found for pollutant '%s'.", target_pollutant)))
-    }
-    if (!"level" %in% names(wide_df)) {
-      return(list(error = "Column 'level' not found in the loaded data."))
-    }
-    if (!(target_level %in% unique(wide_df$level))) {
-      return(list(error = sprintf("Level '%s' not found for pollutant '%s'.", target_level, target_pollutant)))
-    }
-
-    level_data <- wide_df %>%
-      filter(level == target_level) %>%
-      select(starts_with("sample_"))
-
-    g <- nrow(level_data)
-    m <- ncol(level_data)
-
-    if (m < 2) {
-      return(list(error = "Not enough replicate runs (at least 2 required) for homogeneity assessment."))
-    }
-    if (g < 2) {
-      return(list(error = "Not enough items (at least 2 required) for homogeneity assessment."))
-    }
-
-    intermediate_df <- if (m == 2) {
-      s1 <- level_data[[1]]
-      s2 <- level_data[[2]]
-      level_data %>%
-        mutate(
-          Item = row_number(),
-          average = (s1 + s2) / 2,
-          range = abs(s1 - s2)
-        ) %>%
-        select(Item, everything())
-    } else {
-      level_data %>%
-        mutate(
-          Item = row_number(),
-          average = rowMeans(., na.rm = TRUE),
-          range = apply(., 1, function(x) max(x, na.rm = TRUE) - min(x, na.rm = TRUE))
-        ) %>%
-        select(Item, everything())
-    }
-
-    hom_data <- level_data %>%
-      mutate(Item = factor(row_number())) %>%
-      pivot_longer(
-        cols = -Item,
-        names_to = "replicate",
-        values_to = "Result"
-      )
-
-    if (!"sample_1" %in% names(level_data)) {
-      return(list(error = "Column 'sample_1' not found. It is required to calculate sigma_pt."))
-    }
-
-    first_sample_results <- level_data %>% pull(sample_1)
-    median_val <- median(first_sample_results, na.rm = TRUE)
-    abs_diff_from_median <- abs(first_sample_results - median_val)
-    median_abs_diff <- median(abs_diff_from_median, na.rm = TRUE)
-    mad_e <- 1.483 * median_abs_diff
-    n_iqr <- calculate_niqr(first_sample_results)
-
-    n_robust <- length(first_sample_results)
-    u_xpt <- 1.25 * mad_e / sqrt(n_robust)
-
-    hom_item_stats <- hom_data %>%
-      group_by(Item) %>%
-      summarise(
-        mean = mean(Result, na.rm = TRUE),
-        var = var(Result, na.rm = TRUE),
-        diff = max(Result, na.rm = TRUE) - min(Result, na.rm = TRUE),
-        .groups = "drop"
-      )
-
-    hom_x_t_bar <- mean(hom_item_stats$mean, na.rm = TRUE)
-    hom_s_x_bar_sq <- var(hom_item_stats$mean, na.rm = TRUE)
-    hom_s_xt <- sqrt(hom_s_x_bar_sq)
-
-    hom_wt <- abs(hom_item_stats$diff)
-    hom_sw <- sqrt(sum(hom_wt^2) / (2 * length(hom_wt)))
-
-    hom_ss_sq <- abs(hom_s_xt^2 - ((hom_sw^2) / 2))
-    hom_ss <- sqrt(hom_ss_sq)
-
-    hom_anova_summary <- data.frame(
-      "Df" = c(g - 1, g * (m - 1)),
-      "Sum Sq" = c(hom_s_x_bar_sq * m * (g - 1), hom_sw^2 * g * (m - 1)),
-      "Mean Sq" = c(hom_s_x_bar_sq * m, hom_sw^2),
-      check.names = FALSE
-    )
-    rownames(hom_anova_summary) <- c("Item", "Residuals")
-
-    hom_sigma_pt <- mad_e
-    hom_c_criterion <- 0.3 * hom_sigma_pt
-    hom_sigma_allowed_sq <- hom_c_criterion^2
-    hom_c_criterion_expanded <- sqrt(hom_sigma_allowed_sq * 1.88 + (hom_sw^2) * 1.01)
-
-    if (hom_ss <= hom_c_criterion) {
-      hom_conclusion1 <- sprintf("ss (%.4f) <= c_criterion (%.4f): CUMPLE CRITERIO HOMOGENEIDAD", hom_ss, hom_c_criterion)
-    } else {
-      hom_conclusion1 <- sprintf("ss (%.4f) > c_criterion (%.4f): NO CUMPLE CRITERIO HOMOGENEIDAD", hom_ss, hom_c_criterion)
-    }
-
-    if (hom_ss <= hom_c_criterion_expanded) {
-      hom_conclusion2 <- sprintf("ss (%.4f) <= c_expanded (%.4f): CUMPLE CRITERIO EXP HOMOGENEIDAD", hom_ss, hom_c_criterion_expanded)
-    } else {
-      hom_conclusion2 <- sprintf("ss (%.4f) > c_expanded (%.4f): NO CUMPLE CRITERIO EXP HOMOGENEIDAD", hom_ss, hom_c_criterion_expanded)
-    }
-
-    hom_conclusion <- paste(hom_conclusion1, hom_conclusion2, sep = "\n")
-
-    list(
-      summary = hom_anova_summary,
-      ss = hom_ss,
-      sw = hom_sw,
-      conclusion = hom_conclusion,
-      g = g,
-      m = m,
-      sigma_allowed_sq = hom_sigma_allowed_sq,
-      c_criterion = hom_c_criterion,
-      c_criterion_expanded = hom_c_criterion_expanded,
-      sigma_pt = hom_sigma_pt,
-      median_val = median_val,
-      median_abs_diff = median_abs_diff,
-      n_iqr = n_iqr,
-      u_xpt = u_xpt,
-      n_robust = n_robust,
-      item_means = hom_item_stats$mean,
-      general_mean = hom_x_t_bar,
-      sd_of_means = hom_s_xt,
-      s_x_bar_sq = hom_s_x_bar_sq,
-      s_w_sq = hom_sw^2,
-      intermediate_df = intermediate_df,
-      first_sample_results = first_sample_results,
-      abs_diff_from_median = abs_diff_from_median,
-      data_wide = wide_df,
-      level = target_level,
-      pollutant = target_pollutant,
-      error = NULL
-    )
+  wide_df <- get_wide_data(hom_data_full, target_pollutant)
+  if (is.null(wide_df)) {
+    return(list(error = sprintf("No homogeneity data found for pollutant '%s'.", target_pollutant)))
   }
+  if (!"level" %in% names(wide_df)) {
+    return(list(error = "Column 'level' not found in the loaded data."))
+  }
+  if (!(target_level %in% unique(wide_df$level))) {
+    return(list(error = sprintf("Level '%s' not found for pollutant '%s'.", target_level, target_pollutant)))
+  }
+
+  level_data <- wide_df %>%
+    filter(level == target_level) %>%
+    select(starts_with("sample_"))
+
+  g <- nrow(level_data)
+  m <- ncol(level_data)
+
+  if (m < 2) {
+    return(list(error = "Not enough replicate runs (at least 2 required) for homogeneity assessment."))
+  }
+  if (g < 2) {
+    return(list(error = "Not enough items (at least 2 required) for homogeneity assessment."))
+  }
+
+  intermediate_df <- if (m == 2) {
+    s1 <- level_data[[1]]
+    s2 <- level_data[[2]]
+    level_data %>%
+      mutate(
+        Item = row_number(),
+        average = (s1 + s2) / 2,
+        range = abs(s1 - s2)
+      ) %>%
+      select(Item, everything())
+  } else {
+    level_data %>%
+      mutate(
+        Item = row_number(),
+        average = rowMeans(., na.rm = TRUE),
+        range = apply(., 1, function(x) max(x, na.rm = TRUE) - min(x, na.rm = TRUE))
+      ) %>%
+      select(Item, everything())
+  }
+
+  hom_data <- level_data %>%
+    mutate(Item = factor(row_number())) %>%
+    pivot_longer(
+      cols = -Item,
+      names_to = "replicate",
+      values_to = "Result"
+    )
+
+  if (!"sample_1" %in% names(level_data)) {
+    return(list(error = "Column 'sample_1' not found. It is required to calculate sigma_pt."))
+  }
+
+  first_sample_results <- level_data %>% pull(sample_1)
+  median_val <- median(first_sample_results, na.rm = TRUE)
+  abs_diff_from_median <- abs(first_sample_results - median_val)
+  median_abs_diff <- median(abs_diff_from_median, na.rm = TRUE)
+  mad_e <- 1.483 * median_abs_diff
+  n_iqr <- calculate_niqr(first_sample_results)
+
+  n_robust <- length(first_sample_results)
+  u_xpt <- 1.25 * mad_e / sqrt(n_robust)
+
+  hom_item_stats <- hom_data %>%
+    group_by(Item) %>%
+    summarise(
+      mean = mean(Result, na.rm = TRUE),
+      var = var(Result, na.rm = TRUE),
+      diff = max(Result, na.rm = TRUE) - min(Result, na.rm = TRUE),
+      .groups = "drop"
+    )
+
+  hom_x_t_bar <- mean(hom_item_stats$mean, na.rm = TRUE)
+  hom_s_x_bar_sq <- var(hom_item_stats$mean, na.rm = TRUE)
+  hom_s_xt <- sqrt(hom_s_x_bar_sq)
+
+  hom_wt <- abs(hom_item_stats$diff)
+  hom_sw <- sqrt(sum(hom_wt^2) / (2 * length(hom_wt)))
+
+  hom_ss_sq <- abs(hom_s_xt^2 - ((hom_sw^2) / 2))
+  hom_ss <- sqrt(hom_ss_sq)
+
+  hom_anova_summary <- data.frame(
+    "Df" = c(g - 1, g * (m - 1)),
+    "Sum Sq" = c(hom_s_x_bar_sq * m * (g - 1), hom_sw^2 * g * (m - 1)),
+    "Mean Sq" = c(hom_s_x_bar_sq * m, hom_sw^2),
+    check.names = FALSE
+  )
+  rownames(hom_anova_summary) <- c("Item", "Residuals")
+
+  hom_sigma_pt <- mad_e
+  hom_c_criterion <- 0.3 * hom_sigma_pt
+  hom_sigma_allowed_sq <- hom_c_criterion^2
+  hom_c_criterion_expanded <- sqrt(hom_sigma_allowed_sq * 1.88 + (hom_sw^2) * 1.01)
+
+  if (hom_ss <= hom_c_criterion) {
+    hom_conclusion1 <- sprintf("ss (%.4f) <= c_criterion (%.4f): CUMPLE CRITERIO HOMOGENEIDAD", hom_ss, hom_c_criterion)
+  } else {
+    hom_conclusion1 <- sprintf("ss (%.4f) > c_criterion (%.4f): NO CUMPLE CRITERIO HOMOGENEIDAD", hom_ss, hom_c_criterion)
+  }
+
+  if (hom_ss <= hom_c_criterion_expanded) {
+    hom_conclusion2 <- sprintf("ss (%.4f) <= c_expanded (%.4f): CUMPLE CRITERIO EXP HOMOGENEIDAD", hom_ss, hom_c_criterion_expanded)
+  } else {
+    hom_conclusion2 <- sprintf("ss (%.4f) > c_expanded (%.4f): NO CUMPLE CRITERIO EXP HOMOGENEIDAD", hom_ss, hom_c_criterion_expanded)
+  }
+
+  hom_conclusion <- paste(hom_conclusion1, hom_conclusion2, sep = "\n")
+
+  list(
+    summary = hom_anova_summary,
+    ss = hom_ss,
+    sw = hom_sw,
+    conclusion = hom_conclusion,
+    g = g,
+    m = m,
+    sigma_allowed_sq = hom_sigma_allowed_sq,
+    c_criterion = hom_c_criterion,
+    c_criterion_expanded = hom_c_criterion_expanded,
+    sigma_pt = hom_sigma_pt,
+    median_val = median_val,
+    median_abs_diff = median_abs_diff,
+    n_iqr = n_iqr,
+    u_xpt = u_xpt,
+    n_robust = n_robust,
+    item_means = hom_item_stats$mean,
+    general_mean = hom_x_t_bar,
+    sd_of_means = hom_s_xt,
+    s_x_bar_sq = hom_s_x_bar_sq,
+    s_w_sq = hom_sw^2,
+    intermediate_df = intermediate_df,
+    first_sample_results = first_sample_results,
+    abs_diff_from_median = abs_diff_from_median,
+    data_wide = wide_df,
+    level = target_level,
+    pollutant = target_pollutant,
+    error = NULL
+  )
+}
 
 compute_stability_metrics <- function(target_pollutant, target_level, hom_results) {
-    wide_df <- get_wide_data(stab_data_full, target_pollutant)
-    if (is.null(wide_df)) {
-      return(list(error = sprintf("No stability data found for pollutant '%s'.", target_pollutant)))
-    }
-    if (!"level" %in% names(wide_df)) {
-      return(list(error = "Column 'level' not found in the stability dataset."))
-    }
-    if (!(target_level %in% unique(wide_df$level))) {
-      return(list(error = sprintf("Level '%s' not found for stability data of pollutant '%s'.", target_level, target_pollutant)))
-    }
-    if (!is.null(hom_results$error)) {
-      return(list(error = hom_results$error))
-    }
-
-    level_data <- wide_df %>%
-      filter(level == target_level) %>%
-      select(starts_with("sample_"))
-
-    g <- nrow(level_data)
-    m <- ncol(level_data)
-
-    if (m < 2) {
-      return(list(error = "Not enough replicate runs (at least 2 required) for stability data homogeneity assessment."))
-    }
-    if (g < 2) {
-      return(list(error = "Not enough items (at least 2 required) for stability data homogeneity assessment."))
-    }
-
-    intermediate_df <- if (m == 2) {
-      s1 <- level_data[[1]]
-      s2 <- level_data[[2]]
-      level_data %>%
-        mutate(
-          Item = row_number(),
-          average = (s1 + s2) / 2,
-          range = abs(s1 - s2)
-        ) %>%
-        select(Item, everything())
-    } else {
-      level_data %>%
-        mutate(
-          Item = row_number(),
-          average = rowMeans(., na.rm = TRUE),
-          range = apply(., 1, function(x) max(x, na.rm = TRUE) - min(x, na.rm = TRUE))
-        ) %>%
-        select(Item, everything())
-    }
-
-    stab_data <- level_data %>%
-      mutate(Item = factor(row_number())) %>%
-      pivot_longer(
-        cols = -Item,
-        names_to = "replicate",
-        values_to = "Result"
-      )
-
-    if (!"sample_1" %in% names(level_data)) {
-      return(list(error = "Column 'sample_1' not found. It is required to calculate sigma_pt for stability data."))
-    }
-
-    first_sample_results <- level_data %>% pull(sample_1)
-    median_val <- median(first_sample_results, na.rm = TRUE)
-    abs_diff_from_median <- abs(first_sample_results - median_val)
-    median_abs_diff <- median(abs_diff_from_median, na.rm = TRUE)
-    mad_e <- 1.483 * median_abs_diff
-    stab_n_iqr <- calculate_niqr(first_sample_results)
-
-    n_robust <- length(first_sample_results)
-    u_xpt <- 1.25 * mad_e / sqrt(n_robust)
-
-    stab_item_stats <- stab_data %>%
-      group_by(Item) %>%
-      summarise(
-        mean = mean(Result, na.rm = TRUE),
-        var = var(Result, na.rm = TRUE),
-        diff = max(Result, na.rm = TRUE) - min(Result, na.rm = TRUE),
-        .groups = "drop"
-      )
-
-    stab_x_t_bar <- mean(stab_item_stats$mean, na.rm = TRUE)
-    diff_hom_stab <- abs(stab_x_t_bar - hom_results$general_mean)
-
-    stab_s_x_bar_sq <- var(stab_item_stats$mean, na.rm = TRUE)
-    stab_s_xt <- sqrt(stab_s_x_bar_sq)
-
-    stab_wt <- abs(stab_item_stats$diff)
-    stab_sw <- sqrt(sum(stab_wt^2) / (2 * length(stab_wt)))
-
-    stab_ss_sq <- abs(stab_s_xt^2 - ((stab_sw^2) / 2))
-    stab_ss <- sqrt(stab_ss_sq)
-
-    stab_anova_summary <- data.frame(
-      "Df" = c(g - 1, g * (m - 1)),
-      "Sum Sq" = c(stab_s_x_bar_sq * m * (g - 1), stab_sw^2 * g * (m - 1)),
-      "Mean Sq" = c(stab_s_x_bar_sq * m, stab_sw^2),
-      check.names = FALSE
-    )
-    rownames(stab_anova_summary) <- c("Item", "Residuals")
-
-    stab_sigma_pt <- mad_e
-    stab_c_criterion <- 0.3 * hom_results$sigma_pt
-    stab_sigma_allowed_sq <- stab_c_criterion^2
-    stab_c_criterion_expanded <- sqrt(stab_sigma_allowed_sq * 1.88 + (stab_sw^2) * 1.01)
-
-    if (diff_hom_stab <= stab_c_criterion) {
-      stab_conclusion1 <- sprintf("ss (%.4f) <= c_criterion (%.4f): CUMPLE CRITERIO ESTABILIDAD", diff_hom_stab, stab_c_criterion)
-    } else {
-      stab_conclusion1 <- sprintf("ss (%.4f) > c_criterion (%.4f): NO CUMPLE CRITERIO ESTABILIDAD", diff_hom_stab, stab_c_criterion)
-    }
-
-    list(
-      stab_summary = stab_anova_summary,
-      stab_ss = stab_ss,
-      stab_sw = stab_sw,
-      stab_conclusion = stab_conclusion1,
-      g = g,
-      m = m,
-      diff_hom_stab = diff_hom_stab,
-      stab_sigma_allowed_sq = stab_sigma_allowed_sq,
-      stab_c_criterion = stab_c_criterion,
-      stab_c_criterion_expanded = stab_c_criterion_expanded,
-      stab_sigma_pt = stab_sigma_pt,
-      stab_median_val = median_val,
-      stab_median_abs_diff = median_abs_diff,
-      stab_n_iqr = stab_n_iqr,
-      stab_u_xpt = u_xpt,
-      n_robust = n_robust,
-      stab_item_means = stab_item_stats$mean,
-      stab_general_mean = stab_x_t_bar,
-      stab_sd_of_means = stab_s_xt,
-      stab_s_x_bar_sq = stab_s_x_bar_sq,
-      stab_s_w_sq = stab_sw^2,
-      stab_intermediate_df = intermediate_df,
-      data_wide = wide_df,
-      level = target_level,
-      pollutant = target_pollutant,
-      error = NULL
-    )
+  wide_df <- get_wide_data(stab_data_full, target_pollutant)
+  if (is.null(wide_df)) {
+    return(list(error = sprintf("No stability data found for pollutant '%s'.", target_pollutant)))
   }
+  if (!"level" %in% names(wide_df)) {
+    return(list(error = "Column 'level' not found in the stability dataset."))
+  }
+  if (!(target_level %in% unique(wide_df$level))) {
+    return(list(error = sprintf("Level '%s' not found for stability data of pollutant '%s'.", target_level, target_pollutant)))
+  }
+  if (!is.null(hom_results$error)) {
+    return(list(error = hom_results$error))
+  }
+
+  level_data <- wide_df %>%
+    filter(level == target_level) %>%
+    select(starts_with("sample_"))
+
+  g <- nrow(level_data)
+  m <- ncol(level_data)
+
+  if (m < 2) {
+    return(list(error = "Not enough replicate runs (at least 2 required) for stability data homogeneity assessment."))
+  }
+  if (g < 2) {
+    return(list(error = "Not enough items (at least 2 required) for stability data homogeneity assessment."))
+  }
+
+  intermediate_df <- if (m == 2) {
+    s1 <- level_data[[1]]
+    s2 <- level_data[[2]]
+    level_data %>%
+      mutate(
+        Item = row_number(),
+        average = (s1 + s2) / 2,
+        range = abs(s1 - s2)
+      ) %>%
+      select(Item, everything())
+  } else {
+    level_data %>%
+      mutate(
+        Item = row_number(),
+        average = rowMeans(., na.rm = TRUE),
+        range = apply(., 1, function(x) max(x, na.rm = TRUE) - min(x, na.rm = TRUE))
+      ) %>%
+      select(Item, everything())
+  }
+
+  stab_data <- level_data %>%
+    mutate(Item = factor(row_number())) %>%
+    pivot_longer(
+      cols = -Item,
+      names_to = "replicate",
+      values_to = "Result"
+    )
+
+  if (!"sample_1" %in% names(level_data)) {
+    return(list(error = "Column 'sample_1' not found. It is required to calculate sigma_pt for stability data."))
+  }
+
+  first_sample_results <- level_data %>% pull(sample_1)
+  median_val <- median(first_sample_results, na.rm = TRUE)
+  abs_diff_from_median <- abs(first_sample_results - median_val)
+  median_abs_diff <- median(abs_diff_from_median, na.rm = TRUE)
+  mad_e <- 1.483 * median_abs_diff
+  stab_n_iqr <- calculate_niqr(first_sample_results)
+
+  n_robust <- length(first_sample_results)
+  u_xpt <- 1.25 * mad_e / sqrt(n_robust)
+
+  stab_item_stats <- stab_data %>%
+    group_by(Item) %>%
+    summarise(
+      mean = mean(Result, na.rm = TRUE),
+      var = var(Result, na.rm = TRUE),
+      diff = max(Result, na.rm = TRUE) - min(Result, na.rm = TRUE),
+      .groups = "drop"
+    )
+
+  stab_x_t_bar <- mean(stab_item_stats$mean, na.rm = TRUE)
+  diff_hom_stab <- abs(stab_x_t_bar - hom_results$general_mean)
+
+  stab_s_x_bar_sq <- var(stab_item_stats$mean, na.rm = TRUE)
+  stab_s_xt <- sqrt(stab_s_x_bar_sq)
+
+  stab_wt <- abs(stab_item_stats$diff)
+  stab_sw <- sqrt(sum(stab_wt^2) / (2 * length(stab_wt)))
+
+  stab_ss_sq <- abs(stab_s_xt^2 - ((stab_sw^2) / 2))
+  stab_ss <- sqrt(stab_ss_sq)
+
+  stab_anova_summary <- data.frame(
+    "Df" = c(g - 1, g * (m - 1)),
+    "Sum Sq" = c(stab_s_x_bar_sq * m * (g - 1), stab_sw^2 * g * (m - 1)),
+    "Mean Sq" = c(stab_s_x_bar_sq * m, stab_sw^2),
+    check.names = FALSE
+  )
+  rownames(stab_anova_summary) <- c("Item", "Residuals")
+
+  stab_sigma_pt <- mad_e
+  stab_c_criterion <- 0.3 * hom_results$sigma_pt
+  stab_sigma_allowed_sq <- stab_c_criterion^2
+  stab_c_criterion_expanded <- sqrt(stab_sigma_allowed_sq * 1.88 + (stab_sw^2) * 1.01)
+
+  if (diff_hom_stab <= stab_c_criterion) {
+    stab_conclusion1 <- sprintf("ss (%.4f) <= c_criterion (%.4f): CUMPLE CRITERIO ESTABILIDAD", diff_hom_stab, stab_c_criterion)
+  } else {
+    stab_conclusion1 <- sprintf("ss (%.4f) > c_criterion (%.4f): NO CUMPLE CRITERIO ESTABILIDAD", diff_hom_stab, stab_c_criterion)
+  }
+
+  list(
+    stab_summary = stab_anova_summary,
+    stab_ss = stab_ss,
+    stab_sw = stab_sw,
+    stab_conclusion = stab_conclusion1,
+    g = g,
+    m = m,
+    diff_hom_stab = diff_hom_stab,
+    stab_sigma_allowed_sq = stab_sigma_allowed_sq,
+    stab_c_criterion = stab_c_criterion,
+    stab_c_criterion_expanded = stab_c_criterion_expanded,
+    stab_sigma_pt = stab_sigma_pt,
+    stab_median_val = median_val,
+    stab_median_abs_diff = median_abs_diff,
+    stab_n_iqr = stab_n_iqr,
+    stab_u_xpt = u_xpt,
+    n_robust = n_robust,
+    stab_item_means = stab_item_stats$mean,
+    stab_general_mean = stab_x_t_bar,
+    stab_sd_of_means = stab_s_xt,
+    stab_s_x_bar_sq = stab_s_x_bar_sq,
+    stab_s_w_sq = stab_sw^2,
+    stab_intermediate_df = intermediate_df,
+    data_wide = wide_df,
+    level = target_level,
+    pollutant = target_pollutant,
+    error = NULL
+  )
+}
 
 
 # 4. PT Preparation Analysis
 compute_pt_prep_metrics <- function(summary_df, target_pollutant, target_level) {
-    data <- summary_df %>%
-      filter(
-        pollutant == target_pollutant,
-        level == target_level
-      )
-
-    if (nrow(data) == 0) {
-        return(list(error = "No data found for the selected criteria."))
-    }
-
-    participants_data <- data %>% filter(participant_id != "ref")
-
-    valid_values <- participants_data %>%
-      filter(is.finite(mean_value)) %>%
-      pull(mean_value)
-
-    n_valid <- length(valid_values)
-    outlier_summary <- list(
-      n_points = n_valid,
-      p_value = NA_real_,
-      count = NA_integer_,
-      value = NA_real_,
-      participant_id = NA_character_
+  data <- summary_df %>%
+    filter(
+      pollutant == target_pollutant,
+      level == target_level
     )
 
-    if (n_valid < 3) {
-        grubbs_test_result <- "Grubbs' test requires at least 3 data points."
-        outlier_summary$count <- NA_integer_
-    } else {
-        grubbs_obj <- grubbs.test(valid_values)
-        grubbs_test_result <- capture.output(grubbs_obj)
-        p_val <- grubbs_obj$p.value
-        outlier_summary$p_value <- p_val
-        if (is.finite(p_val) && p_val < 0.05) {
-          outlier_summary$count <- 1L
-          alt_text <- grubbs_obj$alternative
-          candidate_value <- extract_grubbs_value(alt_text)
-          outlier_summary$value <- candidate_value
-          if (is.finite(candidate_value)) {
-            idx <- participants_data %>%
-              mutate(diff = abs(mean_value - candidate_value)) %>%
-              filter(is.finite(diff)) %>%
-              arrange(diff) %>%
-              slice_head(n = 1) %>%
-              pull(participant_id)
-            if (length(idx) == 0) {
-              outlier_summary$participant_id <- NA_character_
-            } else {
-              outlier_summary$participant_id <- idx[1]
-            }
-          }
+  if (nrow(data) == 0) {
+    return(list(error = "No data found for the selected criteria."))
+  }
+
+  participants_data <- data %>% filter(participant_id != "ref")
+
+  valid_values <- participants_data %>%
+    filter(is.finite(mean_value)) %>%
+    pull(mean_value)
+
+  n_valid <- length(valid_values)
+  outlier_summary <- list(
+    n_points = n_valid,
+    p_value = NA_real_,
+    count = NA_integer_,
+    value = NA_real_,
+    participant_id = NA_character_
+  )
+
+  if (n_valid < 3) {
+    grubbs_test_result <- "Grubbs' test requires at least 3 data points."
+    outlier_summary$count <- NA_integer_
+  } else {
+    grubbs_obj <- grubbs.test(valid_values)
+    grubbs_test_result <- capture.output(grubbs_obj)
+    p_val <- grubbs_obj$p.value
+    outlier_summary$p_value <- p_val
+    if (is.finite(p_val) && p_val < 0.05) {
+      outlier_summary$count <- 1L
+      alt_text <- grubbs_obj$alternative
+      candidate_value <- extract_grubbs_value(alt_text)
+      outlier_summary$value <- candidate_value
+      if (is.finite(candidate_value)) {
+        idx <- participants_data %>%
+          mutate(diff = abs(mean_value - candidate_value)) %>%
+          filter(is.finite(diff)) %>%
+          arrange(diff) %>%
+          slice_head(n = 1) %>%
+          pull(participant_id)
+        if (length(idx) == 0) {
+          outlier_summary$participant_id <- NA_character_
         } else {
-          outlier_summary$count <- 0L
+          outlier_summary$participant_id <- idx[1]
         }
+      }
+    } else {
+      outlier_summary$count <- 0L
     }
+  }
 
-    list(
-        data = data,
-        grubbs = grubbs_test_result,
-        outlier_summary = outlier_summary,
-        error = NULL
-    )
+  list(
+    data = data,
+    grubbs = grubbs_test_result,
+    outlier_summary = outlier_summary,
+    error = NULL
+  )
 }
 
 # 5. PT Scores Analysis (extended to match app calculations)
@@ -486,8 +490,7 @@ classify_with_en <- function(score_val, en_val, U_xi, sigma_pt, mu_missing, scor
   }
 
   en_good <- abs(en_val) <= 1
-  code <- switch(
-    z_eval,
+  code <- switch(z_eval,
     "Satisfactory" = if (en_good) "sat_en_good" else "sat_en_bad",
     "Questionable" = if (en_good) "ques_en_good" else "ques_en_bad",
     "Unsatisfactory" = if (en_good) "unsat_en_good" else "unsat_en_bad",
@@ -674,7 +677,7 @@ compute_scores_for_selection <- function(summary_data, target_pollutant, target_
     summarise(
       result = mean(mean_value, na.rm = TRUE),
       uncertainty_std = mean(sd_value, na.rm = TRUE),
-      .groups = 'drop'
+      .groups = "drop"
     ) %>%
     mutate(
       pollutant = target_pollutant,
@@ -733,7 +736,9 @@ compute_scores_for_selection <- function(summary_data, target_pollutant, target_
   summary_table <- purrr::map_dfr(names(score_combo_info), function(key) {
     meta <- score_combo_info[[key]]
     combo <- combos[[key]]
-    if (is.null(combo)) return(NULL)
+    if (is.null(combo)) {
+      return(NULL)
+    }
     if (!is.null(combo$error)) {
       tibble(
         Combinación = meta$title,
@@ -757,7 +762,9 @@ compute_scores_for_selection <- function(summary_data, target_pollutant, target_
 
   overview_table <- purrr::map_dfr(names(score_combo_info), function(key) {
     combo <- combos[[key]]
-    if (is.null(combo)) return(NULL)
+    if (is.null(combo)) {
+      return(NULL)
+    }
     if (!is.null(combo$error)) {
       tibble(
         Combinación = score_combo_info[[key]]$title,
@@ -807,7 +814,8 @@ compute_scores_for_selection <- function(summary_data, target_pollutant, target_
     overview = overview_table,
     pollutant = target_pollutant,
     n_lab = target_n_lab,
-    level = target_level
+    level = target_level,
+    algo_res = algo_res
   )
 }
 
@@ -854,6 +862,52 @@ for (p in pollutants) {
           conclusion = hom_results$conclusion
         )
 
+        # --- Homogeneity Tables ---
+        # 1. Variance Components
+        hom_var_comp <- data.frame(
+          Componente = c(
+            "Valor asignado (xpt)", "DE robusta (sigma_pt)", "Incertidumbre del valor asignado (u_xpt)",
+            "DE entre muestras (ss)", "DE dentro de la muestra (sw)", "---",
+            "Criterio c", "Criterio c (expandido)"
+          ),
+          Valor = c(
+            sprintf("%.5f", c(hom_results$median_val, hom_results$sigma_pt, hom_results$u_xpt, hom_results$ss, hom_results$sw)),
+            "",
+            sprintf("%.5f", c(hom_results$c_criterion, hom_results$c_criterion_expanded))
+          )
+        )
+        write.csv(hom_var_comp, paste0("reports/assets/tables/homogeneity_variance_components_", p, "_", l, ".csv"), row.names = FALSE)
+
+        # 2. Details per item
+        write.csv(hom_results$intermediate_df, paste0("reports/assets/tables/homogeneity_details_per_item_", p, "_", l, ".csv"), row.names = FALSE)
+
+        # 3. Summary Stats
+        hom_summary_stats <- data.frame(
+          Parametro = c(
+            "Media general", "DE de medias", "Varianza de las medias (s_x_bar_sq)", "sw", "Varianza dentro de la muestra (s_w_sq)", "ss",
+            "---", "Valor asignado (xpt)", "Mediana de diferencias absolutas", "Numero de items (g)", "Numero de replicas (m)",
+            "DE robusta (MADe)", "nIQR", "Incertidumbre del valor asignado (u_xpt)",
+            "---", "Criterio c", "Criterio c (expandido)"
+          ),
+          Valor = c(
+            sprintf("%.5f", c(hom_results$general_mean, hom_results$sd_of_means, hom_results$s_x_bar_sq, hom_results$sw, hom_results$s_w_sq, hom_results$ss)),
+            "",
+            sprintf("%.5f", c(hom_results$median_val, hom_results$median_abs_diff)),
+            as.character(c(hom_results$g, hom_results$m)),
+            sprintf("%.5f", c(hom_results$sigma_pt, hom_results$n_iqr, hom_results$u_xpt)),
+            "",
+            sprintf("%.5f", c(hom_results$c_criterion, hom_results$c_criterion_expanded))
+          )
+        )
+        write.csv(hom_summary_stats, paste0("reports/assets/tables/homogeneity_summary_stats_", p, "_", l, ".csv"), row.names = FALSE)
+
+        # 4. Robust Stats
+        hom_robust_stats <- data.frame(
+          Estadistico = c("Mediana (x_pt)", "Diferencia absoluta mediana", "MADe (sigma_pt)", "nIQR"),
+          Valor = sprintf("%.5f", c(hom_results$median_val, hom_results$median_abs_diff, hom_results$sigma_pt, hom_results$n_iqr))
+        )
+        write.csv(hom_robust_stats, paste0("reports/assets/tables/homogeneity_robust_stats_", p, "_", l, ".csv"), row.names = FALSE)
+
         stab_results <- compute_stability_metrics(p, l, hom_results)
         if (!is.null(stab_results$error)) {
           print(paste("  - Stability Error:", stab_results$error))
@@ -874,6 +928,41 @@ for (p in pollutants) {
             meets_expanded = stab_results$diff_hom_stab <= stab_results$stab_c_criterion_expanded,
             conclusion = stab_results$stab_conclusion
           )
+
+          # --- Stability Tables ---
+          # 1. Variance Components
+          stab_var_comp <- data.frame(
+            Componente = c("Valor asignado (xpt)", "DE robusta (sigma_pt)", "Incertidumbre del valor asignado (u_xpt)"),
+            Valor = sprintf("%.5f", c(stab_results$stab_median_val, stab_results$stab_sigma_pt, stab_results$stab_u_xpt))
+          )
+          write.csv(stab_var_comp, paste0("reports/assets/tables/stability_variance_components_", p, "_", l, ".csv"), row.names = FALSE)
+
+          # 2. Details per item
+          write.csv(stab_results$stab_intermediate_df, paste0("reports/assets/tables/stability_details_per_item_", p, "_", l, ".csv"), row.names = FALSE)
+
+          # 3. Summary Stats
+          stab_summary_stats <- data.frame(
+            Parametro = c(
+              "Media general", "Diferencia absoluta respecto a la media general", "DE de medias", "Varianza de las medias (s_x_bar_sq)",
+              "sw", "Varianza dentro de la muestra (s_w_sq)", "ss",
+              "---", "Valor asignado (xpt)", "Mediana de diferencias absolutas", "Numero de items (g)", "Numero de replicas (m)",
+              "DE robusta (MADe)", "nIQR", "Incertidumbre del valor asignado (u_xpt)",
+              "---", "Criterio c", "Criterio c (expandido)"
+            ),
+            Valor = c(
+              sprintf("%.5f", c(
+                stab_results$stab_general_mean, stab_results$diff_hom_stab, stab_results$stab_sd_of_means, stab_results$stab_s_x_bar_sq,
+                stab_results$stab_sw, stab_results$stab_s_w_sq, stab_results$stab_ss
+              )),
+              "",
+              sprintf("%.5f", c(stab_results$stab_median_val, stab_results$stab_median_abs_diff)),
+              as.character(c(stab_results$g, stab_results$m)),
+              sprintf("%.5f", c(stab_results$stab_sigma_pt, stab_results$stab_n_iqr, stab_results$stab_u_xpt)),
+              "",
+              sprintf("%.5f", c(stab_results$stab_c_criterion, stab_results$stab_c_criterion_expanded))
+            )
+          )
+          write.csv(stab_summary_stats, paste0("reports/assets/tables/stability_summary_stats_", p, "_", l, ".csv"), row.names = FALSE)
         }
       }
 
@@ -908,6 +997,29 @@ for (p in pollutants) {
             all_scores_list[[length(all_scores_list) + 1]] <<- combo$data
           }
         })
+
+        if (!is.null(score_res$algo_res) && is.null(score_res$algo_res$error)) {
+          # Save Iterations
+          write.csv(score_res$algo_res$iterations, paste0("reports/assets/tables/algoA_iterations_", p, "_n", n_val, "_", l, ".csv"), row.names = FALSE)
+
+          # Save Weights
+          write.csv(score_res$algo_res$weights, paste0("reports/assets/tables/algoA_weights_", p, "_n", n_val, "_", l, ".csv"), row.names = FALSE)
+
+          # Generate Histogram
+          algo_hist_plot <- ggplot(score_res$algo_res$weights, aes(x = Resultado)) +
+            geom_histogram(aes(y = after_stat(density)), bins = 15, fill = "#5DADE2", color = "white", alpha = 0.8) +
+            geom_density(color = "#1A5276", size = 1) +
+            geom_vline(xintercept = score_res$algo_res$assigned_value, color = "red", linetype = "dashed", size = 1) +
+            labs(
+              title = "Distribución de resultados por participante",
+              subtitle = "La línea punteada indica el valor asignado robusto (x*)",
+              x = "Resultado",
+              y = "Densidad"
+            ) +
+            theme_minimal()
+
+          ggsave(paste0("reports/assets/charts/algoA_histogram_", p, "_n", n_val, "_", l, ".png"), algo_hist_plot, width = 8, height = 6)
+        }
       }
     }
   }
@@ -1004,16 +1116,190 @@ if (length(grubbs_summary_records) > 0) {
 } else {
   print("No Grubbs test summary generated (insufficient participant data).")
 }
+# --- Global Heatmaps Generation ---
+print("Generating global heatmaps...")
 
-# --- Combined Participant Summary Plots ---
-if (length(all_scores_list) > 0) {
-  combined_scores_df <- dplyr::bind_rows(all_scores_list)
+global_combo_specs <- list(
+  ref = list(title = "Referencia (1)", label = "1"),
+  consensus_ma = list(title = "Consenso MADe (2a)", label = "2a"),
+  consensus_niqr = list(title = "Consenso nIQR (2b)", label = "2b"),
+  algo = list(title = "Algoritmo A (3)", label = "3")
+)
+
+score_heatmap_palettes <- list(
+  z = c("Satisfactorio" = "#00B050", "Cuestionable" = "#FFEB3B", "No satisfactorio" = "#D32F2F", "N/A" = "#BDBDBD"),
+  zprime = c("Satisfactorio" = "#00B050", "Cuestionable" = "#FFEB3B", "No satisfactorio" = "#D32F2F", "N/A" = "#BDBDBD"),
+  zeta = c("Satisfactorio" = "#00B050", "Cuestionable" = "#FFEB3B", "No satisfactorio" = "#D32F2F", "N/A" = "#BDBDBD"),
+  en = c("Satisfactorio" = "#00B050", "Cuestionable" = "#D32F2F", "No satisfactorio" = "#D32F2F", "N/A" = "#BDBDBD")
+)
+
+# Reconstruct global combos data
+combo_rows <- list()
+purrr::iwalk(scores_results_map, function(res, key) {
+  parts <- strsplit(key, "\\|\\|")[[1]]
+  pollutant_val <- parts[1]
+  n_lab_val <- parts[2]
+  level_val <- parts[3]
+
+  if (!is.null(res$error)) {
+    return()
+  }
+
+  purrr::iwalk(res$combos, function(combo_res, combo_key) {
+    if (!is.null(combo_res$error)) {
+      return()
+    }
+    if (is.null(combo_res$data) || nrow(combo_res$data) == 0) {
+      return()
+    }
+
+    combo_rows[[length(combo_rows) + 1]] <<- combo_res$data %>%
+      mutate(
+        pollutant = pollutant_val,
+        n_lab = n_lab_val,
+        level = level_val,
+        combo_key = combo_key
+      )
+  })
+})
+
+global_combos <- if (length(combo_rows) > 0) dplyr::bind_rows(combo_rows) else tibble()
+
+if (nrow(global_combos) > 0) {
+  heatmap_groups <- global_combos %>%
+    distinct(pollutant, n_lab)
+
+  for (i in seq_len(nrow(heatmap_groups))) {
+    p_val <- heatmap_groups$pollutant[i]
+    n_val <- heatmap_groups$n_lab[i]
+
+    # Filter data for this group
+    group_data <- global_combos %>%
+      filter(pollutant == p_val, n_lab == n_val)
+
+    for (combo_key in names(global_combo_specs)) {
+      spec <- global_combo_specs[[combo_key]]
+
+      # Filter for this method
+      method_data <- group_data %>%
+        filter(combo_key == !!combo_key, participant_id != "ref")
+
+      if (nrow(method_data) == 0) next
+
+      # Function to generate and save heatmap
+      generate_heatmap <- function(data, score_col, eval_col, palette, suffix) {
+        plot_data <- data %>%
+          mutate(
+            run_label = as.character(level),
+            score_value = .data[[score_col]],
+            evaluation = .data[[eval_col]]
+          ) %>%
+          mutate(
+            evaluation = ifelse(is.na(evaluation) | evaluation == "", "N/A", evaluation),
+            tile_label = ifelse(is.finite(score_value), sprintf("%.2f", score_value), ""),
+            evaluation = factor(evaluation, levels = names(palette))
+          )
+
+        # Ensure factor levels for ordering
+        participant_levels <- sort(unique(plot_data$participant_id))
+        run_levels <- plot_data %>%
+          distinct(level, run_label) %>%
+          mutate(level_numeric = readr::parse_number(as.character(level))) %>%
+          arrange(level_numeric, level) %>%
+          pull(run_label)
+
+        plot_data$participant_id <- factor(plot_data$participant_id, levels = participant_levels)
+        plot_data$run_label <- factor(plot_data$run_label, levels = run_levels)
+
+        heatmap_plot <- ggplot(plot_data, aes(x = run_label, y = participant_id, fill = evaluation)) +
+          geom_tile(color = "white") +
+          geom_text(aes(label = tile_label), size = 3, color = "#1B1B1B") +
+          scale_fill_manual(values = palette, drop = FALSE, na.value = "#BDBDBD") +
+          labs(
+            title = paste("Mapa de calor", suffix, "-", spec$title),
+            subtitle = paste("Analito:", p_val, "| n =", n_val),
+            x = "Nivel",
+            y = "Participante",
+            fill = "Evaluación"
+          ) +
+          theme_minimal() +
+          theme(
+            panel.grid = element_blank(),
+            axis.text.x = element_text(angle = 45, hjust = 1)
+          )
+
+        ggsave(paste0("reports/assets/charts/global_heatmap_", suffix, "_", combo_key, "_", p_val, "_n", n_val, ".png"), heatmap_plot, width = 10, height = 8)
+      }
+
+      generate_heatmap(method_data, "z_score", "z_score_eval", score_heatmap_palettes$z, "z")
+      generate_heatmap(method_data, "z_prime_score", "z_prime_score_eval", score_heatmap_palettes$zprime, "zprime")
+      generate_heatmap(method_data, "zeta_score", "zeta_score_eval", score_heatmap_palettes$zeta, "zeta")
+      generate_heatmap(method_data, "En_score", "En_score_eval", score_heatmap_palettes$en, "en")
+
+      generate_class_heatmap <- function(data, code_col, label_col, suffix) {
+        plot_data <- data %>%
+          mutate(
+            run_label = as.character(level),
+            class_code = .data[[code_col]],
+            class_label = .data[[label_col]]
+          ) %>%
+          mutate(
+            class_code = ifelse(class_code == "", NA_character_, class_code),
+            display_code = case_when(
+              is.na(class_code) ~ "",
+              grepl("^mu_missing", class_code) ~ "MU",
+              TRUE ~ toupper(class_code)
+            ),
+            fill_code = factor(class_code, levels = names(pt_en_class_colors))
+          )
+
+        # Ensure factor levels
+        participant_levels <- sort(unique(plot_data$participant_id))
+        run_levels <- plot_data %>%
+          distinct(level, run_label) %>%
+          mutate(level_numeric = readr::parse_number(as.character(level))) %>%
+          arrange(level_numeric, level) %>%
+          pull(run_label)
+
+        plot_data$participant_id <- factor(plot_data$participant_id, levels = participant_levels)
+        plot_data$run_label <- factor(plot_data$run_label, levels = run_levels)
+
+        class_plot <- ggplot(plot_data, aes(x = run_label, y = participant_id, fill = fill_code)) +
+          geom_tile(color = "white") +
+          geom_text(aes(label = display_code), size = 3, color = "#1B1B1B") +
+          scale_fill_manual(
+            values = pt_en_class_colors,
+            breaks = names(pt_en_class_colors),
+            drop = FALSE,
+            na.value = "#EEEEEE"
+          ) +
+          labs(
+            title = paste("Clasificación", suffix, "-", spec$title),
+            subtitle = paste("Analito:", p_val, "| n =", n_val),
+            x = "Nivel",
+            y = "Participante",
+            fill = "Clase"
+          ) +
+          theme_minimal() +
+          theme(
+            panel.grid = element_blank(),
+            axis.text.x = element_text(angle = 45, hjust = 1)
+          )
+
+        ggsave(paste0("reports/assets/charts/global_class_heatmap_", suffix, "_", combo_key, "_", p_val, "_n", n_val, ".png"), class_plot, width = 10, height = 8)
+      }
+
+      generate_class_heatmap(method_data, "classification_z_en_code", "classification_z_en", "z")
+      generate_class_heatmap(method_data, "classification_zprime_en_code", "classification_zprime_en", "zprime")
+    }
+  }
 }
+
 print("Generating combined participant summary plots...")
 
 
 if (length(all_scores_list) > 0) {
-    # Combine all scores from all pollutants and levels into one dataframe
+  # Combine all scores from all pollutants and levels into one dataframe
   all_scores_df <- do.call(rbind, all_scores_list) %>%
     filter(participant_id != "ref") %>%
     mutate(
@@ -1095,7 +1381,8 @@ if (length(all_scores_list) > 0) {
           geom_hline(yintercept = c(-3, 3), linetype = "dashed", color = "red") +
           geom_hline(yintercept = c(-2, 2), linetype = "dashed", color = "orange") +
           geom_hline(yintercept = 0, color = "grey") +
-          geom_line(color = "blue") + geom_point(color = "blue", size = 2) +
+          geom_line(color = "blue") +
+          geom_point(color = "blue", size = 2) +
           coord_cartesian(ylim = c(-4, 4)) +
           labs(
             title = paste(toupper(p_local), "- Z-Score"),
@@ -1103,12 +1390,14 @@ if (length(all_scores_list) > 0) {
             x = NULL,
             y = "Z-Score"
           ) +
-          theme_minimal() + theme(axis.text.x = element_text(angle = 45, hjust = 1))
+          theme_minimal() +
+          theme(axis.text.x = element_text(angle = 45, hjust = 1))
 
         p_en_score <- ggplot(combo_data, aes(x = level, y = En_score, group = 1)) +
           geom_hline(yintercept = c(-1, 1), linetype = "dashed", color = "red") +
           geom_hline(yintercept = 0, color = "grey") +
-          geom_line(color = "purple") + geom_point(color = "purple", size = 2) +
+          geom_line(color = "purple") +
+          geom_point(color = "purple", size = 2) +
           coord_cartesian(ylim = c(-4, 4)) +
           labs(
             title = paste(toupper(p_local), "- En-Score"),
@@ -1116,7 +1405,8 @@ if (length(all_scores_list) > 0) {
             x = NULL,
             y = "En-Score"
           ) +
-          theme_minimal() + theme(axis.text.x = element_text(angle = 45, hjust = 1))
+          theme_minimal() +
+          theme(axis.text.x = element_text(angle = 45, hjust = 1))
 
         plot_list <- c(plot_list, list(p_values, p_z_score, p_en_score))
         pollutant_panels <- c(
@@ -1967,8 +2257,10 @@ print("Generating overall score evaluation summary...")
 if (nrow(combined_scores_df) > 0) {
   scores_long <- combined_scores_df %>%
     filter(participant_id != "ref") %>%
-    select(pollutant, n_lab, level, combination, combination_label,
-           z_score_eval, zeta_score_eval, En_score_eval) %>%
+    select(
+      pollutant, n_lab, level, combination, combination_label,
+      z_score_eval, zeta_score_eval, En_score_eval
+    ) %>%
     pivot_longer(
       cols = c(z_score_eval, zeta_score_eval, En_score_eval),
       names_to = "score_type",

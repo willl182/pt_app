@@ -1,0 +1,27 @@
+"Pollutant","Level","Results Tested","Grubbs p-value","Outliers Detected","Outlier Participant","Outlier Value"
+"co","0-ppm",6,0.3501,0,NA,NA
+"co","120-ppb",6,0.1139,0,NA,NA
+"co","180-ppb",6,0.2667,0,NA,NA
+"co","2-ppm",6,0.4796,0,NA,NA
+"co","4-ppm",6,0.3069,0,NA,NA
+"co","40-ppb",6,0.3027,0,NA,NA
+"co","6-ppm",6,0.4254,0,NA,NA
+"co","8-ppm",6,0.14,0,NA,NA
+"co","80-ppb",6,0.4934,0,NA,NA
+"no2","0-ppb",6,0.3714,0,NA,NA
+"no2","180-ppb",6,0.476,0,NA,NA
+"o3","0",6,0.0947,0,NA,NA
+"o3","0-ppb",6,0.5527,0,NA,NA
+"o3","135-ppb",6,0.2598,0,NA,NA
+"o3","180-ppb",6,0.1863,0,NA,NA
+"o3","45-ppb",6,0.1748,0,NA,NA
+"o3","90-ppb",6,0.1522,0,NA,NA
+"so2","0-ppb",6,0.0041,1,"part_5",-0.0319547785547786
+"so2","100-ppb",6,0.6241,0,NA,NA
+"so2","120-ppb",6,0.6323,0,NA,NA
+"so2","140-ppb",6,0.4871,0,NA,NA
+"so2","180-ppb",6,0.3317,0,NA,NA
+"so2","20-ppb",6,0.1062,0,NA,NA
+"so2","40-ppb",6,0.0574,0,NA,NA
+"so2","60-ppb",6,0.0489,1,"part_1",59.905017921147
+"so2","81-ppb",6,0.5467,0,NA,NA
