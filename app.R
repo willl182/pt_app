@@ -1110,8 +1110,14 @@ server <- function(input, output, session) {
           sidebarPanel(
             width = analysis_sidebar_w,
             h4("1. Configuración del Informe"),
+            h5("Selección de datos"),
+            uiOutput("report_n_selector"),
+            uiOutput("report_level_selector"),
+            hr(),
+            h5("Parámetros del informe"),
             selectInput("report_metric", "Métrica:", choices = c("z", "z'", "zeta", "En")),
             selectInput("report_method", "Método:", choices = c("Referencia (1)" = "1", "Consenso MADe (2a)" = "2a", "Consenso nIQR (2b)" = "2b", "Algoritmo A (3)" = "3")),
+            numericInput("report_k", "Factor de cobertura (k):", value = 2, min = 1, max = 3, step = 0.1),
             hr(),
             radioButtons("report_format", "Formato de salida:", choices = c("Word (DOCX)" = "word", "HTML" = "html"), selected = "word"),
             downloadButton("download_report", "Descargar informe", class = "btn-success")
@@ -3439,74 +3445,125 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
 
   # --- Generación de informes Module ---
 
-  output$report_pollutant_selector <- renderUI({
-    choices <- sort(unique(hom_data_full()$pollutant))
-    selectInput("report_pollutant", "Seleccionar analito:", choices = choices)
-  })
-
   output$report_n_selector <- renderUI({
-    req(pt_prep_data(), input$report_pollutant)
+    req(pt_prep_data())
     choices <- pt_prep_data() %>%
-      filter(pollutant == input$report_pollutant) %>%
       pull(n_lab) %>%
       unique() %>%
       sort()
     if (length(choices) == 0) {
-      return(helpText("No hay esquemas PT disponibles para este analito."))
+      return(helpText("No hay esquemas PT disponibles."))
     }
     selectInput("report_n_lab", "Seleccionar esquema PT (por n):", choices = choices)
   })
 
   output$report_level_selector <- renderUI({
-    req(pt_prep_data(), input$report_pollutant, input$report_n_lab)
+    req(pt_prep_data(), input$report_n_lab)
     pt_levels <- pt_prep_data() %>%
-      filter(pollutant == input$report_pollutant, n_lab == input$report_n_lab) %>%
+      filter(n_lab == input$report_n_lab) %>%
       pull(level) %>%
       unique()
     hom_levels <- hom_data_full() %>%
-      filter(pollutant == input$report_pollutant) %>%
       pull(level) %>%
       unique()
     stab_levels <- stab_data_full() %>%
-      filter(pollutant == input$report_pollutant) %>%
       pull(level) %>%
       unique()
     common_levels <- sort(Reduce(intersect, list(pt_levels, hom_levels, stab_levels)))
     if (length(common_levels) == 0) {
-      return(helpText("No hay niveles comunes entre los datos disponibles para esta combinación."))
+      return(helpText("No hay niveles comunes entre los datos disponibles."))
     }
     selectInput("report_level", "Seleccionar nivel:", choices = common_levels)
   })
 
   report_preview <- reactive({
     req(
-      input$report_pollutant, input$report_n_lab, input$report_level,
-      input$report_sigma_pt, input$report_u_xpt, input$report_k
+      input$report_n_lab, input$report_level,
+      input$report_method, input$report_k
     )
     summary_df <- pt_prep_data()
     if (is.null(summary_df)) {
       return(list(error = "No se encontraron datos resumidos de PT (summary_n*.csv)."))
     }
 
-    hom_res <- compute_homogeneity_metrics(input$report_pollutant, input$report_level)
-    if (!is.null(hom_res$error)) {
-      return(list(error = hom_res$error))
+    # For preview, we'll just check the first pollutant
+    first_pollutant <- unique(hom_data_full()$pollutant)[1]
+
+    hom_res <- compute_homogeneity_metrics(first_pollutant, input$report_level)
+    # Homogeneity error is not fatal for preview, but we need it for stability
+
+    stab_res <- if (!is.null(hom_res$error)) {
+      list(error = "No se pudo calcular estabilidad debido a error en homogeneidad.")
+    } else {
+      compute_stability_metrics(first_pollutant, input$report_level, hom_res)
     }
 
-    stab_res <- compute_stability_metrics(input$report_pollutant, input$report_level, hom_res)
-    if (!is.null(stab_res$error)) {
-      return(list(error = stab_res$error))
+    # Calculate assigned value and uncertainty based on method
+    target_data <- summary_df %>%
+      filter(
+        n_lab == input$report_n_lab,
+        level == input$report_level
+      )
+
+    if (nrow(target_data) == 0) {
+      return(list(error = "No hay datos para la combinación seleccionada."))
+    }
+
+    ref_data <- target_data %>% filter(participant_id == "ref")
+    part_data <- target_data %>% filter(participant_id != "ref")
+
+    x_pt <- NA_real_
+    u_xpt <- NA_real_
+    sigma_pt <- NA_real_ # This will be the sigma used for scoring
+
+    method <- input$report_method
+
+    if (method == "1") { # Referencia
+      if (nrow(ref_data) > 0) {
+        x_pt <- mean(ref_data$mean_value, na.rm = TRUE)
+        u_xpt <- mean(ref_data$sd_value, na.rm = TRUE) # Assuming sd_value is uncertainty for ref
+        # For sigma_pt in method 1, usually use hom_res$sigma_pt or a fixed value.
+        # Here we default to hom_res$sigma_pt if available, else 0.
+        sigma_pt <- if (!is.null(hom_res$sigma_pt)) hom_res$sigma_pt else 0
+      } else {
+        return(list(error = "No hay datos de referencia para el método seleccionado."))
+      }
+    } else if (method == "2a") { # Consenso MADe
+      vals <- part_data$mean_value
+      x_pt <- median(vals, na.rm = TRUE)
+      made <- 1.483 * median(abs(vals - x_pt), na.rm = TRUE)
+      u_xpt <- 1.25 * made / sqrt(length(vals))
+      sigma_pt <- made
+    } else if (method == "2b") { # Consenso nIQR
+      vals <- part_data$mean_value
+      x_pt <- median(vals, na.rm = TRUE)
+      niqr_val <- calculate_niqr(vals)
+      u_xpt <- 1.25 * niqr_val / sqrt(length(vals))
+      sigma_pt <- niqr_val
+    } else if (method == "3") { # Algoritmo A
+      # We need to run Algo A here or fetch from cache.
+      # For preview simplicity, let's run it on the fly if small data
+      vals <- part_data$mean_value
+      ids <- part_data$participant_id
+      algo_res <- run_algorithm_a(vals, ids)
+      if (!is.null(algo_res$error)) {
+        return(list(error = paste("Error en Algoritmo A:", algo_res$error)))
+      }
+      x_pt <- algo_res$assigned_value
+      sigma_pt <- algo_res$robust_sd
+      u_xpt <- 1.25 * sigma_pt / sqrt(length(vals))
     }
 
     scores_res <- compute_scores_metrics(
       summary_df = summary_df,
-      target_pollutant = input$report_pollutant,
+      target_pollutant = first_pollutant,
       target_n_lab = input$report_n_lab,
       target_level = input$report_level,
-      sigma_pt = input$report_sigma_pt,
-      u_xpt = input$report_u_xpt,
+      sigma_pt = sigma_pt,
+      u_xpt = u_xpt,
       k = input$report_k
     )
+
     if (!is.null(scores_res$error)) {
       return(list(error = scores_res$error))
     }
@@ -3579,6 +3636,7 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
       temp_report <- file.path(temp_dir, "report_template.Rmd")
       file.copy(template_path, temp_report, overwrite = TRUE)
 
+      # Determine output format
       output_format <- switch(input$report_format,
         html = "html_document",
         word = "word_document"
@@ -3589,9 +3647,14 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
         stab_data = stab_data_full(),
         summary_data = pt_prep_data(),
         metric = input$report_metric,
-        method = input$report_method
+        method = input$report_method,
+        pollutant = input$report_pollutant,
+        level = input$report_level,
+        n_lab = input$report_n_lab,
+        k_factor = input$report_k
       )
 
+      # Render directly to the Shiny download file path
       rmarkdown::render(
         temp_report,
         output_format = output_format,

@@ -7,123 +7,48 @@ output:
   word_document:
     toc: true
     toc_depth: 3
+    reference_docx: null
 params:
   hom_data: NA
   stab_data: NA
   summary_data: NA
   metric: "z"
-  method: "1"
+  method: "3"
+  pollutant: NULL     # NULL = all pollutants
+  level: "level_1"
+  n_lab: 7
+  k_factor: 2
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE, fig.width = 10, fig.height = 6)
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE, fig.width = 8, fig.height = 5)
 library(tidyverse)
 library(knitr)
 library(kableExtra)
-library(patchwork)
 library(outliers)
 
-# Helper Functions
+# Helper: nIQR
 calculate_niqr <- function(x) {
   x_clean <- x[is.finite(x)]
-  if (length(x_clean) < 2) {
-    return(NA_real_)
-  }
+  if (length(x_clean) < 2) return(NA_real_)
   quartiles <- stats::quantile(x_clean, probs = c(0.25, 0.75), na.rm = TRUE, type = 7)
   0.7413 * (quartiles[2] - quartiles[1])
 }
 
+# Helper: Prepare Wide Data
 get_wide_data <- function(df, target_pollutant) {
   filtered <- df %>% filter(pollutant == target_pollutant)
-  if (nrow(filtered) == 0) {
-    return(NULL)
-  }
+  if (nrow(filtered) == 0) return(NULL)
   filtered %>%
     select(-pollutant) %>%
     pivot_wider(names_from = replicate, values_from = value, names_prefix = "sample_")
 }
 
-compute_homogeneity_metrics <- function(hom_data_full, target_pollutant, target_level) {
-  wide_df <- get_wide_data(hom_data_full, target_pollutant)
-  if (is.null(wide_df)) return(NULL)
-  
-  level_data <- wide_df %>%
-    filter(level == target_level) %>%
-    select(starts_with("sample_"))
-  
-  if (nrow(level_data) < 2 || ncol(level_data) < 2) return(NULL)
-  
-  g <- nrow(level_data)
-  m <- ncol(level_data)
-  
-  hom_data <- level_data %>%
-    mutate(Item = factor(row_number())) %>%
-    pivot_longer(cols = -Item, names_to = "replicate", values_to = "Result")
-  
-  first_sample_results <- level_data %>% pull(sample_1)
-  median_val <- median(first_sample_results, na.rm = TRUE)
-  mad_e <- 1.483 * median(abs(first_sample_results - median_val), na.rm = TRUE)
-  
-  hom_item_stats <- hom_data %>%
-    group_by(Item) %>%
-    summarise(
-      mean = mean(Result, na.rm = TRUE),
-      diff = max(Result, na.rm = TRUE) - min(Result, na.rm = TRUE),
-      .groups = "drop"
-    )
-  
-  hom_x_t_bar <- mean(hom_item_stats$mean, na.rm = TRUE)
-  hom_s_x_bar_sq <- var(hom_item_stats$mean, na.rm = TRUE)
-  hom_s_xt <- sqrt(hom_s_x_bar_sq)
-  hom_wt <- abs(hom_item_stats$diff)
-  hom_sw <- sqrt(sum(hom_wt^2) / (2 * length(hom_wt)))
-  hom_ss <- sqrt(abs(hom_s_xt^2 - ((hom_sw^2) / 2)))
-  
-  hom_sigma_pt <- mad_e
-  hom_c_criterion <- 0.3 * hom_sigma_pt
-  
-  list(
-    ss = hom_ss,
-    c_criterion = hom_c_criterion,
-    sigma_pt = hom_sigma_pt,
-    general_mean = hom_x_t_bar,
-    passed = hom_ss <= hom_c_criterion
-  )
-}
-
-compute_stability_metrics <- function(stab_data_full, target_pollutant, target_level, hom_results) {
-  wide_df <- get_wide_data(stab_data_full, target_pollutant)
-  if (is.null(wide_df)) return(NULL)
-  
-  level_data <- wide_df %>%
-    filter(level == target_level) %>%
-    select(starts_with("sample_"))
-  
-  if (nrow(level_data) < 2 || ncol(level_data) < 2) return(NULL)
-  
-  stab_data <- level_data %>%
-    mutate(Item = factor(row_number())) %>%
-    pivot_longer(cols = -Item, names_to = "replicate", values_to = "Result")
-    
-  stab_item_stats <- stab_data %>%
-    group_by(Item) %>%
-    summarise(mean = mean(Result, na.rm = TRUE), .groups = "drop")
-    
-  stab_x_t_bar <- mean(stab_item_stats$mean, na.rm = TRUE)
-  diff_hom_stab <- abs(stab_x_t_bar - hom_results$general_mean)
-  
-  stab_c_criterion <- 0.3 * hom_results$sigma_pt
-  
-  list(
-    check_value = diff_hom_stab,
-    c_criterion = stab_c_criterion,
-    passed = diff_hom_stab <= stab_c_criterion
-  )
-}
-
+# Lógica: Algoritmo A (ISO 13528)
 run_algorithm_a <- function(values, max_iter = 50) {
   values <- values[is.finite(values)]
-  if (length(values) < 3) return(list(mean = NA, sd = NA))
+  n <- length(values)
+  if (n < 3) return(list(mean = NA, sd = NA, error = "N<3"))
   
   x_star <- median(values, na.rm = TRUE)
   s_star <- 1.483 * median(abs(values - x_star), na.rm = TRUE)
@@ -131,6 +56,7 @@ run_algorithm_a <- function(values, max_iter = 50) {
   for (i in 1:max_iter) {
     u_val <- (values - x_star) / (1.5 * s_star)
     w <- ifelse(abs(u_val) <= 1, 1, 1/u_val^2)
+    
     x_new <- sum(w * values) / sum(w)
     s_new <- sqrt(sum(w * (values - x_new)^2) / sum(w))
     
@@ -138,280 +64,221 @@ run_algorithm_a <- function(values, max_iter = 50) {
     x_star <- x_new
     s_star <- s_new
   }
-  return(list(mean = x_star, sd = s_star))
+  list(mean = x_star, sd = s_star, error = NULL)
 }
 
-calculate_scores <- function(df, pollutant_name, method_code) {
-  df_sub <- df %>% filter(pollutant == pollutant_name)
+# Lógica: Cálculo de Homogeneidad
+compute_homogeneity <- function(data_full, pol, lev) {
+  wide <- get_wide_data(data_full, pol) %>% filter(level == lev)
+  if(nrow(wide) == 0) return(NULL)
   
-  # Determine targets based on method
-  targets <- NULL
+  cols_sample <- grep("sample_", names(wide), value = TRUE)
+  m <- length(cols_sample)
+  g <- nrow(wide)
   
-  if (method_code == "1") { # Reference
-    ref_data <- df_sub %>% filter(participant_id == "ref")
-    if(nrow(ref_data) > 0) {
-      targets <- ref_data %>% 
-        group_by(level) %>% 
-        summarise(
-          x_pt = mean(mean_value), 
-          u_xpt = mean(sd_value), 
-          sigma_pt = x_pt * 0.1, 
-          .groups = "drop"
-        )
+  long_data <- wide %>%
+    mutate(Item = row_number()) %>%
+    pivot_longer(cols = all_of(cols_sample), values_to = "Result")
+  
+  item_stats <- long_data %>%
+    group_by(Item) %>%
+    summarise(mean = mean(Result), diff = max(Result) - min(Result))
+  
+  general_mean <- mean(item_stats$mean)
+  s_x_bar_sq <- var(item_stats$mean)
+  
+  sw <- sqrt(sum(item_stats$diff^2) / (2 * g))
+  ss <- sqrt(max(0, s_x_bar_sq - (sw^2 / m)))
+  
+  sample1 <- wide$sample_1
+  sigma_pt <- 1.483 * median(abs(sample1 - median(sample1)))
+  c_crit <- 0.3 * sigma_pt
+  
+  list(
+    ss = ss, sw = sw, sigma_pt = sigma_pt, c_crit = c_crit, 
+    mean = general_mean, passed = ss <= c_crit
+  )
+}
+
+# Lógica: Cálculo de Estabilidad
+compute_stability <- function(stab_full, pol, lev, hom_mean, hom_sigma) {
+  wide <- get_wide_data(stab_full, pol) %>% filter(level == lev)
+  if(nrow(wide) == 0) return(NULL)
+  
+  cols_sample <- grep("sample_", names(wide), value = TRUE)
+  vals <- wide %>% select(all_of(cols_sample)) %>% unlist()
+  stab_mean <- mean(vals, na.rm=TRUE)
+  
+  diff_stab <- abs(hom_mean - stab_mean)
+  c_crit <- 0.3 * hom_sigma
+  
+  list(
+    mean = stab_mean, diff = diff_stab, c_crit = c_crit, 
+    passed = diff_stab <= c_crit
+  )
+}
+
+# Determine which pollutants to process
+pollutants_to_process <- if (is.null(params$pollutant)) {
+  unique(params$summary_data$pollutant)
+} else {
+  params$pollutant
+}
+```
+
+# Informe de Ensayo de Aptitud
+
+**Fecha:** `r Sys.Date()`  
+**Esquema (n):** `r params$n_lab`  
+**Nivel:** `r params$level`  
+**Métrica:** `r params$metric`  
+**Método:** `r params$method`
+
+```{r process_all_pollutants, results='asis'}
+for (pol in pollutants_to_process) {
+  cat("\n\n## Analito:", toupper(pol), "\n\n")
+  
+  # Selección de Datos Específicos
+  target_pt_data <- params$summary_data %>%
+    filter(pollutant == pol, 
+           level == params$level, 
+           n_lab == params$n_lab)
+  
+  if (nrow(target_pt_data) == 0) {
+    cat("No hay datos disponibles para esta combinación.\n\n")
+    next
+  }
+  
+  ref_data <- target_pt_data %>% filter(participant_id == "ref")
+  part_data <- target_pt_data %>% filter(participant_id != "ref")
+  
+  # Cálculo del Valor Asignado
+  calc_assigned_value <- function(method, p_data, r_data) {
+    if (method == "1") {
+      return(list(xpt = mean(r_data$mean_value), u_xpt = mean(r_data$sd_value), source = "Referencia"))
+    } else if (method == "2a") {
+      vals <- p_data$mean_value
+      med <- median(vals, na.rm = TRUE)
+      made <- 1.483 * median(abs(vals - med), na.rm = TRUE)
+      return(list(xpt = med, u_xpt = 1.25 * made / sqrt(length(vals)), sigma = made, source = "Consenso MADe"))
+    } else if (method == "2b") {
+      vals <- p_data$mean_value
+      med <- median(vals, na.rm = TRUE)
+      niqr <- calculate_niqr(vals)
+      return(list(xpt = med, u_xpt = 1.25 * niqr / sqrt(length(vals)), sigma = niqr, source = "Consenso nIQR"))
+    } else if (method == "3") {
+      res <- run_algorithm_a(p_data$mean_value)
+      return(list(xpt = res$mean, u_xpt = 1.25 * res$sd / sqrt(nrow(p_data)), sigma = res$sd, source = "Algoritmo A"))
     }
-  } else if (method_code == "3") { # Algorithm A
-     targets <- df_sub %>%
-      group_by(level) %>%
-      summarise(
-        algo_res = list(run_algorithm_a(mean_value)),
-        x_pt = algo_res[[1]]$mean,
-        s_star = algo_res[[1]]$sd,
-        u_xpt = 1.25 * s_star / sqrt(n()),
-        sigma_pt = s_star,
-        .groups = "drop"
-      ) %>%
-      select(-algo_res, -s_star)
-  } else if (method_code == "2a") { # Consensus MADe
-     targets <- df_sub %>%
-      group_by(level) %>%
-      summarise(
-        x_pt = median(mean_value, na.rm = TRUE),
-        mad_val = median(abs(mean_value - median(mean_value, na.rm = TRUE)), na.rm = TRUE),
-        sigma_pt = 1.483 * mad_val,
-        u_xpt = 1.25 * sigma_pt / sqrt(n()),
-        .groups = "drop"
-      ) %>%
-      select(-mad_val)
-  } else if (method_code == "2b") { # Consensus nIQR
-     targets <- df_sub %>%
-      group_by(level) %>%
-      summarise(
-        x_pt = median(mean_value, na.rm = TRUE),
-        sigma_pt = calculate_niqr(mean_value),
-        u_xpt = 1.25 * sigma_pt / sqrt(n()),
-        .groups = "drop"
-      )
+    return(list(xpt = NA, u_xpt = NA, source = "Desconocido"))
   }
-
-  if (is.null(targets)) {
-      # Fallback or empty return if method not applicable (e.g. no ref data)
-      return(df_sub %>% mutate(z_score = NA, en_score = NA, eval_z = "N/A", eval_en = "N/A"))
-  }
-
-  df_scores <- df_sub %>%
-    filter(participant_id != "ref") %>%
-    left_join(targets, by = "level") %>%
+  
+  # Ejecutar Cálculos
+  hom_res <- compute_homogeneity(params$hom_data, pol, params$level)
+  assigned <- calc_assigned_value(params$method, part_data, ref_data)
+  
+  # Determinar Sigma pt final
+  final_sigma <- if(!is.null(assigned$sigma)) assigned$sigma else hom_res$sigma_pt
+  
+  # Calcular Scores
+  scores_df <- part_data %>%
     mutate(
-      z_score = (mean_value - x_pt) / sigma_pt,
-      # Calculate other scores if needed, but we focus on the selected metric for display
-      z_prime_score = (mean_value - x_pt) / sqrt(sigma_pt^2 + u_xpt^2),
-      zeta_score = (mean_value - x_pt) / sqrt(sd_value^2 + u_xpt^2),
-      
-      U_lab = 2 * sd_value,
-      U_ref = 2 * u_xpt,
-      en_score = (mean_value - x_pt) / sqrt(U_lab^2 + U_ref^2),
-      
-      eval_z = case_when(
-        abs(z_score) <= 2 ~ "Satisfactorio",
-        abs(z_score) < 3 ~ "Cuestionable",
-        TRUE ~ "Insatisfactorio"
-      ),
-      eval_en = ifelse(abs(en_score) <= 1, "Satisfactorio", "Insatisfactorio")
+      z_score = (mean_value - assigned$xpt) / final_sigma,
+      z_prime = (mean_value - assigned$xpt) / sqrt(final_sigma^2 + assigned$u_xpt^2),
+      zeta_score = (mean_value - assigned$xpt) / sqrt(sd_value^2 + assigned$u_xpt^2),
+      En_score = (mean_value - assigned$xpt) / sqrt((params$k_factor * sd_value)^2 + (params$k_factor * assigned$u_xpt)^2)
     )
   
-  return(df_scores)
-}
-```
-
-# 1. Identificación y Contexto
-
-## 1.1. Alcance y Objetivo del EA
-Este Ensayo de Aptitud (EA) por comparación interlaboratorio abarca la medición de los gases contaminantes criterio SO₂, CO, O₃, NO y NO₂ en aire cero.
-
-## 1.2. Confidencialidad
-La identidad de los participantes es confidencial.
-
-## 1.3. Participantes
-En esta ronda participaron `r if(!is.null(params$summary_data)) length(unique(params$summary_data$participant_id)) else 0` laboratorios.
-
-# 2. Descripción del Ensayo y Metodología
-
-## 2.1. Ítems de Ensayo
-Atmósferas de gas generadas dinámicamente.
-
-## 2.2. Homogeneidad y Estabilidad
-Se aplicó el criterio ISO 13528:2022.
-
-```{r homogeneity_summary}
-if (!is.null(params$hom_data) && !is.null(params$summary_data)) {
-  pollutants <- unique(params$summary_data$pollutant)
-  levels <- unique(params$summary_data$level)
-  
-  hom_results_df <- expand.grid(Pollutant = pollutants, Level = levels) %>%
-    rowwise() %>%
-    mutate(
-      hom_res = list(compute_homogeneity_metrics(params$hom_data, Pollutant, Level)),
-      stab_res = if(!is.null(hom_res)) list(compute_stability_metrics(params$stab_data, Pollutant, Level, hom_res)) else list(NULL),
-      
-      Hom_Passed = if(!is.null(hom_res)) hom_res$passed else NA,
-      Stab_Passed = if(!is.null(stab_res)) stab_res$passed else NA
-    ) %>%
-    select(Pollutant, Level, Hom_Passed, Stab_Passed)
-    
-  kable(hom_results_df, caption = "Resumen de Homogeneidad y Estabilidad")
-} else {
-  cat("No hay datos de homogeneidad disponibles.")
-}
-```
-
-## 2.3. Determinación del Valor Asignado ($X_{pt}$)
-Se utilizó el Algoritmo A (ISO 13528:2022, Anexo C.3) calculado a partir de los resultados de los participantes (o valor de referencia si está disponible).
-
-# 3. Metodología de Evaluación de Desempeño
-
-**Criterios de Evaluación:**
-
-*   **Z-score ($z$):**
-    *   $|z| \le 2.0$: Satisfactorio
-    *   $2.0 < |z| < 3.0$: Cuestionable
-    *   $|z| \ge 3.0$: Insatisfactorio
-
-*   **$E_n$-score:**
-    *   $|E_n| \le 1.0$: Satisfactorio
-    *   $|E_n| > 1.0$: Insatisfactorio
-
-# 4. Resultados y Discusión
-
-## 4.1. Resumen General
-
-```{r scores_calc}
-if (!is.null(params$summary_data)) {
-  all_scores <- map_df(unique(params$summary_data$pollutant), ~calculate_scores(params$summary_data, .x, params$method))
-  
-  # Select the metric to display
   metric_col <- switch(params$metric,
                        "z" = "z_score",
-                       "z'" = "z_prime_score",
+                       "z_prime" = "z_prime",
+                       "z'" = "z_prime",
                        "zeta" = "zeta_score",
-                       "En" = "en_score")
-                       
-  # For summary, we might still want Z and En, or just the selected one. 
-  # The user asked to make info conditional. Let's focus on the selected metric.
+                       "En" = "En_score")
   
-  summary_table <- all_scores %>%
-    group_by(pollutant) %>%
-    summarise(
-      Total_Resultados = n(),
-      Satisfactorio = sum(case_when(
-        params$metric == "En" ~ abs(en_score) <= 1,
-        TRUE ~ abs(get(metric_col)) <= 2
-      ), na.rm = TRUE),
-      Cuestionable = sum(case_when(
-        params$metric == "En" ~ FALSE, # En doesn't have questionable
-        TRUE ~ abs(get(metric_col)) > 2 & abs(get(metric_col)) < 3
-      ), na.rm = TRUE),
-      Insatisfactorio = sum(case_when(
-        params$metric == "En" ~ abs(en_score) > 1,
-        TRUE ~ abs(get(metric_col)) >= 3
-      ), na.rm = TRUE)
+  scores_df <- scores_df %>%
+    mutate(Score_Final = .data[[metric_col]]) %>%
+    mutate(Evaluacion = case_when(
+      params$metric == "En" & abs(Score_Final) <= 1 ~ "Satisfactorio",
+      params$metric == "En" & abs(Score_Final) > 1 ~ "Insatisfactorio",
+      params$metric != "En" & abs(Score_Final) <= 2 ~ "Satisfactorio",
+      params$metric != "En" & abs(Score_Final) < 3 ~ "Cuestionable",
+      TRUE ~ "Insatisfactorio"
+    ))
+  
+  # Homogeneidad y Estabilidad
+  cat("### 1. Evaluación de Homogeneidad y Estabilidad\n\n")
+  
+  if(!is.null(hom_res)) {
+    hom_df <- data.frame(
+      Parámetro = c("Desviación estándar entre muestras (ss)", "Criterio de aceptación (c)", "Conclusión"),
+      Valor = c(sprintf("%.4f", hom_res$ss), sprintf("%.4f", hom_res$c_crit), 
+                ifelse(hom_res$passed, "CUMPLE", "NO CUMPLE"))
     )
-  
-  kable(summary_table, caption = paste("Resumen de Desempeño (Métrica:", params$metric, ")"))
-}
-```
-
-## 4.2. Evaluación por Contaminante
-
-```{r heatmaps, results='asis'}
-if (!is.null(params$summary_data) && exists("all_scores")) {
-  pollutants <- unique(params$summary_data$pollutant)
-  
-  for(p in pollutants) {
-    cat(paste("\n### 4.2.", which(pollutants == p), "Resultados para", toupper(p), "\n"))
-    
-    df_p <- all_scores %>% filter(pollutant == p)
-    
-    # Heatmap for selected metric
-    cat(paste("\n#### Mapa de Calor:", params$metric, "\n"))
-    
-    # Determine evaluation column and colors
-    if (params$metric == "En") {
-      df_p$eval_plot <- df_p$eval_en
-      colors <- c("Satisfactorio" = "#00B050", "Insatisfactorio" = "#D32F2F")
-    } else {
-      # For z, z', zeta, we use the z-score evaluation logic (Sat <=2, Ques <3, Unsat >=3)
-      # We need to recalculate eval based on the specific metric if it's not z
-      val <- df_p[[switch(params$metric, "z"="z_score", "z'"="z_prime_score", "zeta"="zeta_score")]]
-      df_p$eval_plot <- case_when(
-        abs(val) <= 2 ~ "Satisfactorio",
-        abs(val) < 3 ~ "Cuestionable",
-        TRUE ~ "Insatisfactorio"
-      )
-      colors <- c("Satisfactorio" = "#00B050", "Cuestionable" = "#FFEB3B", "Insatisfactorio" = "#D32F2F")
-    }
-    
-    val_col <- switch(params$metric, "z"="z_score", "z'"="z_prime_score", "zeta"="zeta_score", "En"="en_score")
-
-    p_map <- ggplot(df_p, aes(x = level, y = participant_id, fill = eval_plot)) +
-      geom_tile(color = "white") +
-      geom_text(aes(label = round(get(val_col), 2)), size = 3) +
-      scale_fill_manual(values = colors) +
-      labs(title = paste(params$metric, "Score:", toupper(p)), x = "Nivel", y = "Participante", fill = "Evaluación") +
-      theme_minimal() +
-      theme(axis.text.x = element_text(angle = 45, hjust = 1))
-    
-    print(p_map)
-    cat("\n")
+    print(kable(hom_df, caption = "Resultados de Homogeneidad"))
   }
-}
-```
-
-# 5. Conclusiones
-El desempeño general de los laboratorios se presenta en las secciones anteriores.
-
-# Anexos
-
-## Anexo A: Valores Asignados
-
-```{r assigned_values}
-if (exists("all_scores")) {
-  assigned_values <- all_scores %>%
-    group_by(pollutant, level) %>%
-    summarise(
-      X_pt = mean(x_pt, na.rm=TRUE),
-      u_Xpt = mean(u_xpt, na.rm=TRUE),
-      sigma_pt = mean(sigma_pt, na.rm=TRUE),
-      .groups = "drop"
+  
+  stab_res <- compute_stability(params$stab_data, pol, params$level, hom_res$mean, hom_res$sigma_pt)
+  
+  if(!is.null(stab_res)) {
+    stab_df <- data.frame(
+      Parámetro = c("Diferencia medias (Hom vs Stab)", "Criterio de estabilidad (0.3 * sigma)", "Conclusión"),
+      Valor = c(sprintf("%.4f", stab_res$diff), sprintf("%.4f", stab_res$c_crit),
+                ifelse(stab_res$passed, "CUMPLE", "NO CUMPLE"))
     )
-  
-  kable(assigned_values, caption = "Valores Asignados e Incertidumbres")
-}
-```
-
-## Anexo C: Resultados por Participante
-
-```{r participant_plots, results='asis'}
-if (exists("all_scores")) {
-  participants <- unique(all_scores$participant_id)
-  
-  for(part in participants) {
-    cat(paste("\n### Participante:", part, "\n"))
-    
-    df_part <- all_scores %>% filter(participant_id == part)
-    
-    p1 <- ggplot(df_part, aes(x = level, y = mean_value, group = pollutant, color = pollutant)) +
-      geom_line() + geom_point() +
-      labs(title = "Valores Reportados", y = "Valor") + theme_minimal() +
-      theme(axis.text.x = element_text(angle = 90))
-    
-    p2 <- ggplot(df_part, aes(x = level, y = get(val_col), group = pollutant, color = pollutant)) +
-      geom_line() + geom_point() +
-      geom_hline(yintercept = if(params$metric == "En") c(1, -1) else c(2, -2), linetype = "dashed", color = "orange") +
-      labs(title = paste(params$metric, "Scores"), y = params$metric) + theme_minimal() +
-      theme(axis.text.x = element_text(angle = 90))
-    
-    print(p1 / p2)
-    cat("\n")
+    print(kable(stab_df, caption = "Resultados de Estabilidad"))
   }
+  
+  # Valor Asignado
+  cat("\n\n### 2. Determinación del Valor Asignado\n\n")
+  cat("El valor asignado ($x_{pt}$) se determinó utilizando el método:", assigned$source, "\n\n")
+  cat("*   **Valor Asignado ($x_{pt}$):**", sprintf("%.4f", assigned$xpt), "\n")
+  cat("*   **Incertidumbre ($u(x_{pt})$):**", sprintf("%.4f", assigned$u_xpt), "\n")
+  cat("*   **Desviación estándar para evaluación ($\\sigma_{pt}$):**", sprintf("%.4f", final_sigma), "\n\n")
+  
+  # Resultados de Participantes
+  cat("### 3. Resultados de los Participantes\n\n")
+  
+  table_view <- scores_df %>%
+    select(Participante = participant_id, 
+           Resultado = mean_value, 
+           Incertidumbre = sd_value, 
+           Score = Score_Final, 
+           Evaluación = Evaluacion)
+  
+  print(kable(table_view, digits = 4, caption = paste("Resultados y Puntaje", params$metric)))
+  
+  # Gráfico de Desempeño
+  cat("\n\n### 4. Gráfico de Desempeño\n\n")
+  
+  p <- ggplot(scores_df, aes(x = participant_id, y = Score_Final)) +
+    geom_bar(stat = "identity", fill = ifelse(scores_df$Evaluacion == "Satisfactorio", "#2E7D32", "#C62828"), width = 0.6) +
+    geom_hline(yintercept = 0, color = "black") +
+    labs(title = paste("Desempeño de Participantes -", toupper(pol), "- Puntaje", params$metric),
+         x = "Participante", y = paste("Puntaje", params$metric)) +
+    theme_minimal() +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1))
+  
+  if(params$metric == "En") {
+    p <- p + 
+      geom_hline(yintercept = 1, linetype = "dashed", color = "red") +
+      geom_hline(yintercept = -1, linetype = "dashed", color = "red")
+  } else {
+    p <- p + 
+      geom_hline(yintercept = 2, linetype = "dashed", color = "orange") +
+      geom_hline(yintercept = -2, linetype = "dashed", color = "orange") +
+      geom_hline(yintercept = 3, linetype = "dashed", color = "red") +
+      geom_hline(yintercept = -3, linetype = "dashed", color = "red")
+  }
+  
+  print(p)
+  
+  # Conclusiones
+  cat("\n\n### 5. Conclusiones\n\n")
+  cat("*   **Número total de participantes:**", nrow(scores_df), "\n")
+  cat("*   **Resultados Satisfactorios:**", sum(scores_df$Evaluacion == "Satisfactorio"), "\n")
+  cat("*   **Resultados Insatisfactorios/Cuestionables:**", sum(scores_df$Evaluacion != "Satisfactorio"), "\n\n")
+  
+  cat("\n\n---\n\n")
 }
 ```

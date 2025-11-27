@@ -18,13 +18,16 @@ library(outliers)
 library(patchwork)
 library(bsplus)
 library(plotly)
+library(rmarkdown)
 
 # -------------------------------------------------------------------
 # Helper Functions
 # -------------------------------------------------------------------
 calculate_niqr <- function(x) {
   x_clean <- x[is.finite(x)]
-  if (length(x_clean) < 2) return(NA_real_)
+  if (length(x_clean) < 2) {
+    return(NA_real_)
+  }
   quartiles <- stats::quantile(x_clean, probs = c(0.25, 0.75), na.rm = TRUE, type = 7)
   0.7413 * (quartiles[2] - quartiles[1])
 }
@@ -53,16 +56,14 @@ ui <- fluidPage(
 
   # Dynamic UI for the main layout
   uiOutput("main_layout"),
-
   hr(),
-  p(em("Este aplicativo fue desarrollado en el marco del proyecto «Implementación de Ensayos de Aptitud en la Matriz Aire. Caso Gases Contaminantes Criterio», ejecutado por el Laboratorio CALAIRE de la Universidad Nacional de Colombia en alianza con el Instituto Nacional de Metrología (INM)."), style="text-align:center; font-size:small;")
+  p(em("Este aplicativo fue desarrollado en el marco del proyecto «Implementación de Ensayos de Aptitud en la Matriz Aire. Caso Gases Contaminantes Criterio», ejecutado por el Laboratorio CALAIRE de la Universidad Nacional de Colombia en alianza con el Instituto Nacional de Metrología (INM)."), style = "text-align:center; font-size:small;")
 )
 
 # ===================================================================
 # II. Server Logic
 # ===================================================================
 server <- function(input, output, session) {
-
   # --- Carga de datos and Processing ---
   # This section handles the initial loading of data from user-uploaded files.
   # These reactives are the foundation for all subsequent analyses.
@@ -88,7 +89,9 @@ server <- function(input, output, session) {
       return(df)
     })
 
-    if (length(data_list) == 0) return(NULL)
+    if (length(data_list) == 0) {
+      return(NULL)
+    }
 
     raw_data <- do.call(rbind, data_list)
     if (is.null(raw_data) || nrow(raw_data) == 0) {
@@ -110,7 +113,7 @@ server <- function(input, output, session) {
       summarise(
         mean_value = mean(mean_value, na.rm = TRUE),
         sd_value = mean(sd_value, na.rm = TRUE),
-        .groups = 'drop'
+        .groups = "drop"
       )
   })
 
@@ -166,19 +169,25 @@ server <- function(input, output, session) {
     analysis_trigger(Sys.time())
   })
 
-  observeEvent(list(input$hom_file, input$stab_file, input$summary_files), {
-    analysis_trigger(NULL)
-  }, ignoreNULL = FALSE)
+  observeEvent(list(input$hom_file, input$stab_file, input$summary_files),
+    {
+      analysis_trigger(NULL)
+    },
+    ignoreNULL = FALSE
+  )
 
-  observeEvent(input$summary_files, {
-    algoA_results_cache(NULL)
-    algoA_trigger(NULL)
-    robust_trigger(NULL)
-    consensus_results_cache(NULL)
-    consensus_trigger(NULL)
-    scores_results_cache(NULL)
-    scores_trigger(NULL)
-  }, ignoreNULL = FALSE)
+  observeEvent(input$summary_files,
+    {
+      algoA_results_cache(NULL)
+      algoA_trigger(NULL)
+      robust_trigger(NULL)
+      consensus_results_cache(NULL)
+      consensus_trigger(NULL)
+      scores_results_cache(NULL)
+      scores_trigger(NULL)
+    },
+    ignoreNULL = FALSE
+  )
 
   # --- Shared computation helpers ---
   get_wide_data <- function(df, target_pollutant) {
@@ -623,13 +632,19 @@ server <- function(input, output, session) {
       }
     }
 
-    iteration_df <- if (length(iteration_records) > 0) { bind_rows(iteration_records) } else { tibble() }
+    iteration_df <- if (length(iteration_records) > 0) {
+      bind_rows(iteration_records)
+    } else {
+      tibble()
+    }
     u_final <- (values - x_star) / (1.5 * s_star)
     weights_final <- ifelse(abs(u_final) <= 1, 1, 1 / (u_final^2))
-    weights_df <- tibble( Participante = ids, Resultado = values, Peso = weights_final, `Residuo estandarizado` = u_final )
+    weights_df <- tibble(Participante = ids, Resultado = values, Peso = weights_final, `Residuo estandarizado` = u_final)
 
-    list( assigned_value = x_star, robust_sd = s_star, iterations = iteration_df, weights = weights_df,
-          converged = converged, effective_weight = sum(weights_final), error = NULL )
+    list(
+      assigned_value = x_star, robust_sd = s_star, iterations = iteration_df, weights = weights_df,
+      converged = converged, effective_weight = sum(weights_final), error = NULL
+    )
   }
 
   observeEvent(input$algoA_run, {
@@ -720,23 +735,27 @@ server <- function(input, output, session) {
       id = "main_nav",
       widths = c(nav_width, content_width),
       "Módulos de análisis",
-      tabPanel("Carga de datos",
+      tabPanel(
+        "Carga de datos",
         h3("Carga Manual de Archivos de Datos"),
         p("Por favor, cargue los archivos CSV necesarios para el análisis. Asegúrese de que los archivos tengan el formato correcto."),
         fluidRow(
-          column(width = 4,
+          column(
+            width = 4,
             wellPanel(
               h4("1. Datos de Homogeneidad"),
               fileInput("hom_file", "Cargar homogeneity.csv", accept = ".csv")
             )
           ),
-          column(width = 4,
+          column(
+            width = 4,
             wellPanel(
               h4("2. Datos de Estabilidad"),
               fileInput("stab_file", "Cargar stability.csv", accept = ".csv")
             )
           ),
-          column(width = 4,
+          column(
+            width = 4,
             wellPanel(
               h4("3. Datos resumen de participantes"),
               fileInput("summary_files", "Cargar summary_n*.csv", accept = ".csv", multiple = TRUE)
@@ -747,13 +766,15 @@ server <- function(input, output, session) {
         h4("Estado de los Datos Cargados"),
         verbatimTextOutput("data_upload_status")
       ),
-      tabPanel("Análisis de homogeneidad y estabilidad",
+      tabPanel(
+        "Análisis de homogeneidad y estabilidad",
         sidebarLayout(
           sidebarPanel(
             width = analysis_sidebar_w,
             h4("1. Ejecutar análisis"),
             actionButton("run_analysis", "Ejecutar",
-                         class = "btn-primary btn-block"),
+              class = "btn-primary btn-block"
+            ),
             hr(),
             h4("2. Seleccionar analito"),
             uiOutput("pollutant_selector_analysis"),
@@ -761,75 +782,79 @@ server <- function(input, output, session) {
             h4("3. Seleccionar nivel"),
             uiOutput("level_selector"),
             hr(),
-            p("Este aplicativo evalua la homogeneidad y estabilidad del item de ensayo de acuerdo a los princiios de la ISO 13528:2022.")
+            p("Este aplicativo evalua la homogeneidad y estabilidad del item de ensayo de acuerdo a los princiios de la ISO 13528:2022."),
           ),
           mainPanel(
             width = analysis_main_w,
             tabsetPanel(
               id = "analysis_tabs",
-              tabPanel("Vista previa de datos",
-                       h4("Vista previa de datos de entrada"),
-                       p("Esta tabla muestra los datos del analito seleccionado."),
-                       h5("Datos de homogeneidad"),
-                       dataTableOutput("raw_data_preview"),
-                       hr(),
-                       h5("Datos de estabilidad"),
-                       dataTableOutput("stability_data_preview"),
-                       hr(),
-                       h4("Distribución de datos"),
-                       p("El histograma y el diagrama de caja muestran la distribución de todos los resultados de las columnas 'sample_*' para el nivel seleccionado."),
-                       fluidRow(
-                         column(width = 6, plotlyOutput("results_histogram")),
-                         column(width = 6, plotlyOutput("results_boxplot"))
-                       ),
-                       hr(),
-                       h4("Validación de datos"),
-                       verbatimTextOutput("validation_message")
+              tabPanel(
+                "Vista previa de datos",
+                h4("Vista previa de datos de entrada"),
+                p("Esta tabla muestra los datos del analito seleccionado."),
+                h5("Datos de homogeneidad"),
+                dataTableOutput("raw_data_preview"),
+                hr(),
+                h5("Datos de estabilidad"),
+                dataTableOutput("stability_data_preview"),
+                hr(),
+                h4("Distribución de datos"),
+                p("El histograma y el diagrama de caja muestran la distribución de todos los resultados de las columnas 'sample_*' para el nivel seleccionado."),
+                fluidRow(
+                  column(width = 6, plotlyOutput("results_histogram")),
+                  column(width = 6, plotlyOutput("results_boxplot"))
+                ),
+                hr(),
+                h4("Validación de datos"),
+                verbatimTextOutput("validation_message")
               ),
-              tabPanel("Evaluación de homogeneidad",
-                       h4("Conclusión"),
-                       uiOutput("homog_conclusion"),
-                       hr(),
-                       h4("Vista previa de homogeneidad (nivel y primera muestra)"),
-                       dataTableOutput("homogeneity_preview_table"),
-                       hr(),
-                       h4("Cálculos de estadísticos robustos"),
-                       tableOutput("robust_stats_table"),
-                       verbatimTextOutput("robust_stats_summary"),
-                       hr(),
-                       h4("Componentes de varianza"),
-                       p("Desviaciones estándar estimadas del cálculo manual."),
-                       tableOutput("variance_components"),
-                       hr(),
-                       h4("Cálculos por ítem"),
-                       p("Esta tabla muestra los cálculos para cada ítem del conjunto de datos del nivel seleccionado, incluyendo la media y el rango de las mediciones."),
-                       tableOutput("details_per_item_table"),
-                       hr(),
-                       h4("Estadísticos resumidos"),
-                       p("Esta tabla muestra los estadísticos generales de la evaluación de homogeneidad."),
-                       tableOutput("details_summary_stats_table")
+              tabPanel(
+                "Evaluación de homogeneidad",
+                h4("Conclusión"),
+                uiOutput("homog_conclusion"),
+                hr(),
+                h4("Vista previa de homogeneidad (nivel y primera muestra)"),
+                dataTableOutput("homogeneity_preview_table"),
+                hr(),
+                h4("Cálculos de estadísticos robustos"),
+                tableOutput("robust_stats_table"),
+                verbatimTextOutput("robust_stats_summary"),
+                hr(),
+                h4("Componentes de varianza"),
+                p("Desviaciones estándar estimadas del cálculo manual."),
+                tableOutput("variance_components"),
+                hr(),
+                h4("Cálculos por ítem"),
+                p("Esta tabla muestra los cálculos para cada ítem del conjunto de datos del nivel seleccionado, incluyendo la media y el rango de las mediciones."),
+                tableOutput("details_per_item_table"),
+                hr(),
+                h4("Estadísticos resumidos"),
+                p("Esta tabla muestra los estadísticos generales de la evaluación de homogeneidad."),
+                tableOutput("details_summary_stats_table")
               ),
-              tabPanel("Evaluación de estabilidad",
-                       h4("Conclusión"),
-                       uiOutput("homog_conclusion_stability"),
-                       hr(),
-                       h4("Componentes de varianza"),
-                       p("Desviaciones estándar estimadas del cálculo manual para el conjunto de estabilidad."),
-                       tableOutput("variance_components_stability"),
-                       hr(),
-                       h4("Cálculos por ítem"),
-                       p("Esta tabla muestra los cálculos para cada ítem del conjunto de estabilidad."),
-                       tableOutput("details_per_item_table_stability"),
-                       hr(),
-                       h4("Estadísticos resumidos"),
-                       p("Esta tabla muestra los estadísticos generales para el conjunto de estabilidad."),
-                       tableOutput("details_summary_stats_table_stability")
+              tabPanel(
+                "Evaluación de estabilidad",
+                h4("Conclusión"),
+                uiOutput("homog_conclusion_stability"),
+                hr(),
+                h4("Componentes de varianza"),
+                p("Desviaciones estándar estimadas del cálculo manual para el conjunto de estabilidad."),
+                tableOutput("variance_components_stability"),
+                hr(),
+                h4("Cálculos por ítem"),
+                p("Esta tabla muestra los cálculos para cada ítem del conjunto de estabilidad."),
+                tableOutput("details_per_item_table_stability"),
+                hr(),
+                h4("Estadísticos resumidos"),
+                p("Esta tabla muestra los estadísticos generales para el conjunto de estabilidad."),
+                tableOutput("details_summary_stats_table_stability")
               )
             )
           )
         )
       ),
-      tabPanel("Valor asignado",
+      tabPanel(
+        "Valor asignado",
         sidebarLayout(
           sidebarPanel(
             width = analysis_sidebar_w,
@@ -893,7 +918,7 @@ server <- function(input, output, session) {
                     h4("Resumen del Valor Consenso"),
                     tableOutput("consensus_summary_table"),
                     hr(),
-                   h4("Datos de participantes"),
+                    h4("Datos de participantes"),
                     dataTableOutput("consensus_input_table")
                   )
                 )
@@ -918,12 +943,14 @@ server <- function(input, output, session) {
           )
         )
       ),
-      tabPanel("Preparación PT",
+      tabPanel(
+        "Preparación PT",
         h3("Análisis de esquemas de ensayos de aptitud"),
         p("Análisis de los resultados de los participantes de diferentes esquemas PT a partir de archivos resumen."),
         uiOutput("pt_pollutant_tabs")
       ),
-      tabPanel("Puntajes PT",
+      tabPanel(
+        "Puntajes PT",
         sidebarLayout(
           sidebarPanel(
             width = 4,
@@ -939,15 +966,16 @@ server <- function(input, output, session) {
             width = 8,
             tabsetPanel(
               id = "scores_tabs",
-              tabPanel("Resultados de puntajes",
-                       h4("Resumen de parámetros"),
-                       tableOutput("scores_parameter_table"),
-                       hr(),
-                       h4("Resumen de puntajes por participante"),
-                       dataTableOutput("scores_overview_table"),
-                       hr(),
-                       h4("Resumen de evaluación de puntajes"),
-                       tableOutput("scores_evaluation_summary")
+              tabPanel(
+                "Resultados de puntajes",
+                h4("Resumen de parámetros"),
+                tableOutput("scores_parameter_table"),
+                hr(),
+                h4("Resumen de puntajes por participante"),
+                dataTableOutput("scores_overview_table"),
+                hr(),
+                h4("Resumen de evaluación de puntajes"),
+                tableOutput("scores_evaluation_summary")
               ),
               tabPanel("Puntajes Z", uiOutput("z_scores_panel")),
               tabPanel("Puntajes Z'", uiOutput("zprime_scores_panel")),
@@ -957,7 +985,8 @@ server <- function(input, output, session) {
           )
         )
       ),
-      tabPanel("Informe global",
+      tabPanel(
+        "Informe global",
         sidebarLayout(
           sidebarPanel(
             width = analysis_sidebar_w,
@@ -1059,7 +1088,8 @@ server <- function(input, output, session) {
           )
         )
       ),
-      tabPanel("Participantes",
+      tabPanel(
+        "Participantes",
         sidebarLayout(
           sidebarPanel(
             width = analysis_sidebar_w,
@@ -1074,29 +1104,20 @@ server <- function(input, output, session) {
           )
         )
       ),
-      tabPanel("Generación de informes",
+      tabPanel(
+        "Generación de informes",
         sidebarLayout(
           sidebarPanel(
             width = analysis_sidebar_w,
-            h4("1. Seleccionar Datos"),
-            uiOutput("report_pollutant_selector"),
-            uiOutput("report_n_selector"),
-            uiOutput("report_level_selector"),
+            h4("1. Configuración del Informe"),
+            selectInput("report_metric", "Métrica:", choices = c("z", "z'", "zeta", "En")),
+            selectInput("report_method", "Método:", choices = c("Referencia (1)" = "1", "Consenso MADe (2a)" = "2a", "Consenso nIQR (2b)" = "2b", "Algoritmo A (3)" = "3")),
             hr(),
-            h4("2. Parámetros del Informe"),
-            numericInput("report_sigma_pt", "Desv. estándar para PT (sigma_pt):", value = 5, min = 0, step = 0.1),
-            numericInput("report_u_xpt", "Inc. estándar del valor asignado (u_xpt):", value = 0.5, min = 0, step = 0.01),
-            numericInput("report_k", "Factor de cobertura (k):", value = 2, min = 1, step = 1),
-            hr(),
-            radioButtons("report_format", "Formato de salida:", choices = c("HTML" = "html", "PDF" = "pdf", "Word (DOCX)" = "word"), selected = "html"),
-            helpText("La exportación en PDF requiere una instalación de LaTeX disponible en el sistema."),
+            radioButtons("report_format", "Formato de salida:", choices = c("Word (DOCX)" = "word", "HTML" = "html"), selected = "word"),
             downloadButton("download_report", "Descargar informe", class = "btn-success")
           ),
           mainPanel(
             width = analysis_main_w,
-            h4("Resumen previo"),
-            uiOutput("report_status"),
-            verbatimTextOutput("report_preview_summary"),
             hr(),
             p("El informe consolida los resultados de homogeneidad, estabilidad y puntajes de desempeño para la combinación seleccionada.")
           )
@@ -1160,8 +1181,12 @@ server <- function(input, output, session) {
     stab_hom_results <- homogeneity_run_stability()
 
     # Check for errors from the upstream reactives
-    if (!is.null(hom_results$error)) return(list(error = hom_results$error))
-    if (!is.null(stab_hom_results$error)) return(list(error = stab_hom_results$error))
+    if (!is.null(hom_results$error)) {
+      return(list(error = hom_results$error))
+    }
+    if (!is.null(stab_hom_results$error)) {
+      return(list(error = stab_hom_results$error))
+    }
 
     # Get the means from the results of the two homogeneity runs
     y1 <- hom_results$general_mean
@@ -1193,7 +1218,7 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
 
     # For the t-test, we need the raw results from both datasets for the selected level
     target_level <- input$target_level
-    
+
     data_t1_results <- raw_data() %>%
       filter(level == target_level) %>%
       select(starts_with("sample_")) %>%
@@ -1237,7 +1262,7 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
       mutate(across(all_of(numeric_cols), ~ sprintf("%.5f", .x)))
     datatable(df, options = list(scrollX = TRUE))
   })
-  
+
   output$stability_data_preview <- renderDataTable({
     req(stability_data_raw())
     df <- head(stability_data_raw(), 10)
@@ -1260,19 +1285,19 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
     required_cols <- c("level")
     has_samples <- any(str_detect(names(data), "sample_"))
 
-    if(!all(required_cols %in% names(data))) {
-        cat(paste("ERROR: faltan columnas obligatorias:", paste(setdiff(required_cols, names(data)), collapse=", "), "
+    if (!all(required_cols %in% names(data))) {
+      cat(paste("ERROR: faltan columnas obligatorias:", paste(setdiff(required_cols, names(data)), collapse = ", "), "
 "))
     } else {
-        cat("Se encontró la columna 'level'.
+      cat("Se encontró la columna 'level'.
 ")
     }
 
-    if(!has_samples) {
-        cat("ERROR: no se encontraron columnas con el prefijo 'sample_'. Son necesarias para el análisis.
+    if (!has_samples) {
+      cat("ERROR: no se encontraron columnas con el prefijo 'sample_'. Son necesarias para el análisis.
 ")
     } else {
-        cat("Se encontraron columnas 'sample_*'.
+      cat("Se encontraron columnas 'sample_*'.
 ")
     }
   })
@@ -1280,7 +1305,9 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
   # Reactive expression for plotting data
   plot_data_long <- reactive({
     req(raw_data())
-    if (!"level" %in% names(raw_data())) return(NULL)
+    if (!"level" %in% names(raw_data())) {
+      return(NULL)
+    }
     raw_data() %>%
       select(level, starts_with("sample_")) %>%
       pivot_longer(-level, names_to = "sample", values_to = "result")
@@ -1294,8 +1321,10 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
       geom_histogram(aes(y = after_stat(density)), color = "black", fill = "skyblue", bins = 20) +
       geom_density(alpha = 0.4, fill = "lightblue") +
       facet_wrap(~level, scales = "free") +
-      labs(title = "Distribución por nivel",
-           x = "Resultado", y = "Densidad") +
+      labs(
+        title = "Distribución por nivel",
+        x = "Resultado", y = "Densidad"
+      ) +
       theme_minimal()
     plotly::ggplotly(hist_plot)
   })
@@ -1307,8 +1336,10 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
     box_plot <- ggplot(plot_data, aes(x = "", y = result)) +
       geom_boxplot(fill = "lightgreen", outlier.colour = "red") +
       facet_wrap(~level, scales = "free") +
-      labs(title = "Diagrama de caja por nivel",
-           x = NULL, y = "Resultado") +
+      labs(
+        title = "Diagrama de caja por nivel",
+        x = NULL, y = "Resultado"
+      ) +
       theme_minimal()
     plotly::ggplotly(box_plot)
   })
@@ -1326,15 +1357,18 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
   })
 
   # Output: Robust Stats Table
-  output$robust_stats_table <- renderTable({
-    res <- homogeneity_run()
-    if (is.null(res$error)) {
-      data.frame(
-        Estadístico = c("Mediana (x_pt)", "Diferencia absoluta mediana", "MADe (sigma_pt)", "nIQR"),
-        Valor = sprintf("%.5f", c(res$median_val, res$median_abs_diff, res$sigma_pt, res$n_iqr))
-      )
-    }
-  }, spacing = "l")
+  output$robust_stats_table <- renderTable(
+    {
+      res <- homogeneity_run()
+      if (is.null(res$error)) {
+        data.frame(
+          Estadístico = c("Mediana (x_pt)", "Diferencia absoluta mediana", "MADe (sigma_pt)", "nIQR"),
+          Valor = sprintf("%.5f", c(res$median_val, res$median_abs_diff, res$sigma_pt, res$n_iqr))
+        )
+      }
+    },
+    spacing = "l"
+  )
 
   # Output: Robust Stats Summary
   output$robust_stats_summary <- renderPrint({
@@ -1351,9 +1385,9 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
   output$homog_conclusion <- renderUI({
     res <- homogeneity_run()
     if (!is.null(res$error)) {
-        div(class = "alert alert-danger", res$error)
+      div(class = "alert alert-danger", res$error)
     } else {
-        div(class = res$conclusion_class, HTML(res$conclusion))
+      div(class = res$conclusion_class, HTML(res$conclusion))
     }
   })
 
@@ -1361,22 +1395,24 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
   output$variance_components <- renderTable({
     res <- homogeneity_run()
     if (is.null(res$error)) {
-        df <- data.frame(
-          Componente = c("Valor asignado (xpt)",
-                        "DE robusta (sigma_pt)",
-                        "Incertidumbre del valor asignado (u_xpt)",
-                        "DE entre muestras (ss)",
-                        "DE dentro de la muestra (sw)",
-                        "---",
-                        "Criterio c",
-                        "Criterio c (expandido)"),
-          Valor = c(
-            format_num(c(res$median_val, res$sigma_pt, res$u_xpt, res$ss, res$sw)),
-            "",
-            format_num(c(res$c_criterion, res$c_criterion_expanded))
-          )
+      df <- data.frame(
+        Componente = c(
+          "Valor asignado (xpt)",
+          "DE robusta (sigma_pt)",
+          "Incertidumbre del valor asignado (u_xpt)",
+          "DE entre muestras (ss)",
+          "DE dentro de la muestra (sw)",
+          "---",
+          "Criterio c",
+          "Criterio c (expandido)"
+        ),
+        Valor = c(
+          format_num(c(res$median_val, res$sigma_pt, res$u_xpt, res$ss, res$sw)),
+          "",
+          format_num(c(res$c_criterion, res$c_criterion_expanded))
         )
-        df
+      )
+      df
     }
   })
 
@@ -1384,71 +1420,80 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
   output$stability_conclusion <- renderUI({
     res <- stability_run()
     if (!is.null(res$error)) {
-        div(class = "alert alert-danger", res$error)
+      div(class = "alert alert-danger", res$error)
     } else {
-        div(class = res$conclusion_class, HTML(res$conclusion))
+      div(class = res$conclusion_class, HTML(res$conclusion))
     }
   })
 
   # Output: Stability Details
   output$stability_details <- renderPrint({
-      res <- stability_run()
-      if (is.null(res$error)) {
-          cat(res$details)
-      }
+    res <- stability_run()
+    if (is.null(res$error)) {
+      cat(res$details)
+    }
   })
 
   # Output: Stability T-test
   output$stability_ttest <- renderPrint({
-      res <- stability_run()
-      if (is.null(res$error)) {
-          cat(res$ttest_conclusion, "
+    res <- stability_run()
+    if (is.null(res$error)) {
+      cat(res$ttest_conclusion, "
 
 ")
-          print(res$ttest_summary, digits = 9)
-      }
+      print(res$ttest_summary, digits = 9)
+    }
   })
 
   # Output: Details per item table
-  output$details_per_item_table <- renderTable({
-    res <- homogeneity_run()
-    if (is.null(res$error)) {
-      res$intermediate_df %>% mutate(across(where(is.numeric), ~ round(.x, 5)))
-    }
-  }, spacing = "l", digits = 5)
+  output$details_per_item_table <- renderTable(
+    {
+      res <- homogeneity_run()
+      if (is.null(res$error)) {
+        res$intermediate_df %>% mutate(across(where(is.numeric), ~ round(.x, 5)))
+      }
+    },
+    spacing = "l",
+    digits = 5
+  )
 
   # Output: Details summary stats table
-  output$details_summary_stats_table <- renderTable({
-    res <- homogeneity_run()
-    if (is.null(res$error)) {
-      data.frame(
-        Parámetro = c("Media general",
-                      "DE de medias",
-                      "Varianza de las medias (s_x_bar_sq)",
-                      "sw",
-                      "Varianza dentro de la muestra (s_w_sq)",
-                      "ss",
-                      "---",
-                      "Valor asignado (xpt)",
-                      "Mediana de diferencias absolutas",
-                      "Número de ítems (g)",
-                      "Número de réplicas (m)",
-                      "DE robusta (MADe)",
-                      "nIQR",
-                      "Incertidumbre del valor asignado (u_xpt)",
-                      "---",
-                      "Criterio c",
-                      "Criterio c (expandido)"),
-        Valor = c(
-          c(format_num(res$general_mean), format_num(res$sd_of_means), format_num(res$s_x_bar_sq), format_num(res$sw), format_num(res$s_w_sq), format_num(res$ss)),
-          "",
-          c(format_num(res$median_val), format_num(res$median_abs_diff), res$g, res$m, format_num(res$sigma_pt), format_num(res$n_iqr), format_num(res$u_xpt)),
-          "",
-          c(format_num(res$c_criterion), format_num(res$c_criterion_expanded))
+  output$details_summary_stats_table <- renderTable(
+    {
+      res <- homogeneity_run()
+      if (is.null(res$error)) {
+        data.frame(
+          Parámetro = c(
+            "Media general",
+            "DE de medias",
+            "Varianza de las medias (s_x_bar_sq)",
+            "sw",
+            "Varianza dentro de la muestra (s_w_sq)",
+            "ss",
+            "---",
+            "Valor asignado (xpt)",
+            "Mediana de diferencias absolutas",
+            "Número de ítems (g)",
+            "Número de réplicas (m)",
+            "DE robusta (MADe)",
+            "nIQR",
+            "Incertidumbre del valor asignado (u_xpt)",
+            "---",
+            "Criterio c",
+            "Criterio c (expandido)"
+          ),
+          Valor = c(
+            c(format_num(res$general_mean), format_num(res$sd_of_means), format_num(res$s_x_bar_sq), format_num(res$sw), format_num(res$s_w_sq), format_num(res$ss)),
+            "",
+            c(format_num(res$median_val), format_num(res$median_abs_diff), res$g, res$m, format_num(res$sigma_pt), format_num(res$n_iqr), format_num(res$u_xpt)),
+            "",
+            c(format_num(res$c_criterion), format_num(res$c_criterion_expanded))
+          )
         )
-      )
-    }
-  }, spacing = "l")
+      }
+    },
+    spacing = "l"
+  )
 
   # --- Outputs for Datos de estabilidad Analysis Tab ---
 
@@ -1456,9 +1501,9 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
   output$homog_conclusion_stability <- renderUI({
     res <- homogeneity_run_stability()
     if (!is.null(res$error)) {
-        div(class = "alert alert-danger", res$error)
+      div(class = "alert alert-danger", res$error)
     } else {
-        div(class = res$stab_conclusion_class, HTML(res$stab_conclusion))
+      div(class = res$stab_conclusion_class, HTML(res$stab_conclusion))
     }
   })
 
@@ -1466,61 +1511,72 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
   output$variance_components_stability <- renderTable({
     res <- homogeneity_run_stability()
     if (is.null(res$error)) {
-        df <- data.frame(
-          Componente = c("Valor asignado (xpt)",
-                        "DE robusta (sigma_pt)",
-                        "Incertidumbre del valor asignado (u_xpt)"),
-          Valor = c(
-            sprintf("%.5f", res$stab_median_val),
-            sprintf("%.5f", res$stab_sigma_pt),
-            sprintf("%.5f", res$stab_u_xpt)
-          )
+      df <- data.frame(
+        Componente = c(
+          "Valor asignado (xpt)",
+          "DE robusta (sigma_pt)",
+          "Incertidumbre del valor asignado (u_xpt)"
+        ),
+        Valor = c(
+          sprintf("%.5f", res$stab_median_val),
+          sprintf("%.5f", res$stab_sigma_pt),
+          sprintf("%.5f", res$stab_u_xpt)
         )
-        df
+      )
+      df
     }
   })
 
   # Output: Details per item table for Datos de estabilidad
-  output$details_per_item_table_stability <- renderTable({
-    res <- homogeneity_run_stability()
-    if (is.null(res$error)) {
-      res$stab_intermediate_df %>% mutate(across(where(is.numeric), ~ round(.x, 5)))
-    }
-  }, spacing = "l", digits = 5)
+  output$details_per_item_table_stability <- renderTable(
+    {
+      res <- homogeneity_run_stability()
+      if (is.null(res$error)) {
+        res$stab_intermediate_df %>% mutate(across(where(is.numeric), ~ round(.x, 5)))
+      }
+    },
+    spacing = "l",
+    digits = 5
+  )
 
   # Output: Details summary stats table for Datos de estabilidad
-  output$details_summary_stats_table_stability <- renderTable({
-    res <- homogeneity_run_stability()
-    if (is.null(res$error)) {
-      data.frame(
-        Parámetro = c("Media general",
-                      "Diferencia absoluta respecto a la media general",
-                      "DE de medias",
-                      "Varianza de las medias (s_x_bar_sq)",
-                      "sw",
-                      "Varianza dentro de la muestra (s_w_sq)",
-                      "ss",
-                      "---",
-                      "Valor asignado (xpt)",
-                      "Mediana de diferencias absolutas",
-                      "Número de ítems (g)",
-                      "Número de réplicas (m)",
-                      "DE robusta (MADe)",
-                      "nIQR",
-                      "Incertidumbre del valor asignado (u_xpt)",
-                      "---",
-                      "Criterio c",
-                      "Criterio c (expandido)"),
-        Valor = c(
-          c(format_num(res$stab_general_mean), format_num(res$diff_hom_stab), format_num(res$stab_sd_of_means), format_num(res$stab_s_x_bar_sq), format_num(res$stab_sw), format_num(res$stab_s_w_sq), format_num(res$stab_ss)),
-          "",
-          c(format_num(res$stab_median_val), format_num(res$stab_median_abs_diff), res$g, res$m, format_num(res$stab_sigma_pt), format_num(res$stab_n_iqr), format_num(res$stab_u_xpt)),
-          "",
-          c(format_num(res$stab_c_criterion), format_num(res$stab_c_criterion_expanded))
+  output$details_summary_stats_table_stability <- renderTable(
+    {
+      res <- homogeneity_run_stability()
+      if (is.null(res$error)) {
+        data.frame(
+          Parámetro = c(
+            "Media general",
+            "Diferencia absoluta respecto a la media general",
+            "DE de medias",
+            "Varianza de las medias (s_x_bar_sq)",
+            "sw",
+            "Varianza dentro de la muestra (s_w_sq)",
+            "ss",
+            "---",
+            "Valor asignado (xpt)",
+            "Mediana de diferencias absolutas",
+            "Número de ítems (g)",
+            "Número de réplicas (m)",
+            "DE robusta (MADe)",
+            "nIQR",
+            "Incertidumbre del valor asignado (u_xpt)",
+            "---",
+            "Criterio c",
+            "Criterio c (expandido)"
+          ),
+          Valor = c(
+            c(format_num(res$stab_general_mean), format_num(res$diff_hom_stab), format_num(res$stab_sd_of_means), format_num(res$stab_s_x_bar_sq), format_num(res$stab_sw), format_num(res$stab_s_w_sq), format_num(res$stab_ss)),
+            "",
+            c(format_num(res$stab_median_val), format_num(res$stab_median_abs_diff), res$g, res$m, format_num(res$stab_sigma_pt), format_num(res$stab_n_iqr), format_num(res$stab_u_xpt)),
+            "",
+            c(format_num(res$stab_c_criterion), format_num(res$stab_c_criterion_expanded))
+          )
         )
-      )
-    }
-  }, spacing = "l")
+      }
+    },
+    spacing = "l"
+  )
 
   # --- Puntajes PT Module ---
 
@@ -1842,7 +1898,9 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
     summary_table <- map_dfr(names(score_combo_info), function(key) {
       meta <- score_combo_info[[key]]
       combo <- combos[[key]]
-      if (is.null(combo)) return(NULL)
+      if (is.null(combo)) {
+        return(NULL)
+      }
       if (!is.null(combo$error)) {
         tibble(
           Combinación = meta$title,
@@ -1867,7 +1925,9 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
     overview_table <- map_dfr(names(score_combo_info), function(key) {
       meta <- score_combo_info[[key]]
       combo <- combos[[key]]
-      if (is.null(combo)) return(NULL)
+      if (is.null(combo)) {
+        return(NULL)
+      }
       if (!is.null(combo$error)) {
         tibble(
           Combinación = meta$title,
@@ -2191,8 +2251,10 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
     }
     combos %>%
       filter(participant_id != "ref") %>%
-      select(pollutant, n_lab, level, combination, combination_label,
-             z_score_eval, zeta_score_eval, En_score_eval) %>%
+      select(
+        pollutant, n_lab, level, combination, combination_label,
+        z_score_eval, zeta_score_eval, En_score_eval
+      ) %>%
       pivot_longer(
         cols = c(z_score_eval, zeta_score_eval, En_score_eval),
         names_to = "score_type",
@@ -2487,7 +2549,9 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
           participant_id != "ref"
         )
       if (nrow(filtered) == 0) {
-        empty_plot <- ggplot() + theme_void() + labs(title = paste(title_prefix, "- sin datos disponibles"))
+        empty_plot <- ggplot() +
+          theme_void() +
+          labs(title = paste(title_prefix, "- sin datos disponibles"))
         return(plotly::ggplotly(empty_plot))
       }
 
@@ -2569,7 +2633,9 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
           participant_id != "ref"
         )
       if (nrow(filtered) == 0) {
-        empty_plot <- ggplot() + theme_void() + labs(title = paste(title_prefix, "- sin datos disponibles"))
+        empty_plot <- ggplot() +
+          theme_void() +
+          labs(title = paste(title_prefix, "- sin datos disponibles"))
         return(plotly::ggplotly(empty_plot))
       }
       filtered <- filtered %>%
@@ -2653,22 +2719,27 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
   }
 
   purrr::iwalk(global_combo_specs, function(spec, combo_key) {
-    output[[paste0("global_params_", combo_key)]] <- renderTable({
-      summary_row <- get_global_summary_row(spec)
-      if (nrow(summary_row) == 0) {
-        return(data.frame(Mensaje = "No hay datos disponibles para esta combinación."))
-      }
-      if (any(summary_row$Nota != "")) {
-        return(summary_row %>% select(Combinación, Nota))
-      }
-      summary_row %>%
-        select(Combinación, `x_pt`, `sigma_pt`, `u(x_pt)`) %>%
-        mutate(
-          `x_pt` = sprintf("%.5f", `x_pt`),
-          `sigma_pt` = sprintf("%.5f", `sigma_pt`),
-          `u(x_pt)` = sprintf("%.5f", `u(x_pt)`)
-        )
-    }, striped = TRUE, spacing = "l", rownames = FALSE)
+    output[[paste0("global_params_", combo_key)]] <- renderTable(
+      {
+        summary_row <- get_global_summary_row(spec)
+        if (nrow(summary_row) == 0) {
+          return(data.frame(Mensaje = "No hay datos disponibles para esta combinación."))
+        }
+        if (any(summary_row$Nota != "")) {
+          return(summary_row %>% select(Combinación, Nota))
+        }
+        summary_row %>%
+          select(Combinación, `x_pt`, `sigma_pt`, `u(x_pt)`) %>%
+          mutate(
+            `x_pt` = sprintf("%.5f", `x_pt`),
+            `sigma_pt` = sprintf("%.5f", `sigma_pt`),
+            `u(x_pt)` = sprintf("%.5f", `u(x_pt)`)
+          )
+      },
+      striped = TRUE,
+      spacing = "l",
+      rownames = FALSE
+    )
 
     output[[paste0("global_overview_", combo_key)]] <- renderDataTable({
       overview <- get_global_overview_data(spec)
@@ -2769,23 +2840,28 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
       formatRound(columns = c("x_pt", "u(x_pt)", "Incertidumbre expandida", "sigma_pt"), digits = 5)
   })
 
-  output$global_level_summary_table <- renderTable({
-    level_df <- global_level_summary_data()
-    if (nrow(level_df) == 0) {
-      return(data.frame(Mensaje = "No hay información de niveles disponible."))
-    }
-    req(input$global_report_pollutant, input$global_report_n_lab, input$global_report_level)
-    level_df %>%
-      filter(
-        pollutant == input$global_report_pollutant,
-        n_lab == input$global_report_n_lab,
-        level == input$global_report_level
-      ) %>%
-      transmute(
-        `Orden de corrida` = Run_Order,
-        Nivel = level
-      )
-  }, striped = TRUE, spacing = "l", rownames = FALSE)
+  output$global_level_summary_table <- renderTable(
+    {
+      level_df <- global_level_summary_data()
+      if (nrow(level_df) == 0) {
+        return(data.frame(Mensaje = "No hay información de niveles disponible."))
+      }
+      req(input$global_report_pollutant, input$global_report_n_lab, input$global_report_level)
+      level_df %>%
+        filter(
+          pollutant == input$global_report_pollutant,
+          n_lab == input$global_report_n_lab,
+          level == input$global_report_level
+        ) %>%
+        transmute(
+          `Orden de corrida` = Run_Order,
+          Nivel = level
+        )
+    },
+    striped = TRUE,
+    spacing = "l",
+    rownames = FALSE
+  )
 
   output$global_evaluation_summary_table <- renderDataTable({
     summary_df <- global_evaluation_summary_data()
@@ -2967,13 +3043,19 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
     list(error = NULL, table = evaluation_summary)
   })
 
-  output$scores_parameter_table <- renderTable({
-    res <- scores_results_selected()
-    if (!is.null(res$error)) {
-      return(data.frame(Mensaje = res$error))
-    }
-    res$summary
-  }, digits = 6, striped = TRUE, spacing = "l", rownames = FALSE)
+  output$scores_parameter_table <- renderTable(
+    {
+      res <- scores_results_selected()
+      if (!is.null(res$error)) {
+        return(data.frame(Mensaje = res$error))
+      }
+      res$summary
+    },
+    digits = 6,
+    striped = TRUE,
+    spacing = "l",
+    rownames = FALSE
+  )
 
   output$scores_overview_table <- renderDataTable({
     res <- scores_results_selected()
@@ -2984,13 +3066,19 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
       formatRound(columns = c("Resultado", "u(xi)", "Puntaje z", "Puntaje z'", "Puntaje zeta", "Puntaje En"), digits = 3)
   })
 
-  output$scores_evaluation_summary <- renderTable({
-    eval_res <- scores_evaluation_summary()
-    if (!is.null(eval_res$error)) {
-      return(data.frame(Mensaje = eval_res$error))
-    }
-    eval_res$table
-  }, digits = 2, striped = TRUE, spacing = "l", rownames = FALSE)
+  output$scores_evaluation_summary <- renderTable(
+    {
+      eval_res <- scores_evaluation_summary()
+      if (!is.null(eval_res$error)) {
+        return(data.frame(Mensaje = eval_res$error))
+      }
+      eval_res$table
+    },
+    digits = 2,
+    striped = TRUE,
+    spacing = "l",
+    rownames = FALSE
+  )
 
   output$z_scores_panel <- renderUI({
     res <- scores_results_selected()
@@ -3000,7 +3088,9 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
     tagList(lapply(names(score_combo_info), function(key) {
       combo <- res$combos[[key]]
       meta <- score_combo_info[[key]]
-      if (is.null(combo)) return(NULL)
+      if (is.null(combo)) {
+        return(NULL)
+      }
       tagList(
         h4(meta$title),
         if (!is.null(combo$error)) {
@@ -3024,7 +3114,9 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
     tagList(lapply(names(score_combo_info), function(key) {
       combo <- res$combos[[key]]
       meta <- score_combo_info[[key]]
-      if (is.null(combo)) return(NULL)
+      if (is.null(combo)) {
+        return(NULL)
+      }
       tagList(
         h4(meta$title),
         if (!is.null(combo$error)) {
@@ -3048,7 +3140,9 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
     tagList(lapply(names(score_combo_info), function(key) {
       combo <- res$combos[[key]]
       meta <- score_combo_info[[key]]
-      if (is.null(combo)) return(NULL)
+      if (is.null(combo)) {
+        return(NULL)
+      }
       tagList(
         h4(meta$title),
         if (!is.null(combo$error)) {
@@ -3072,7 +3166,9 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
     tagList(lapply(names(score_combo_info), function(key) {
       combo <- res$combos[[key]]
       meta <- score_combo_info[[key]]
-      if (is.null(combo)) return(NULL)
+      if (is.null(combo)) {
+        return(NULL)
+      }
       tagList(
         h4(meta$title),
         if (!is.null(combo$error)) {
@@ -3094,7 +3190,9 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
       output[[paste0("z_table_", combo_key)]] <- renderDataTable({
         res <- scores_results_selected()
         combo <- res$combos[[combo_key]]
-        if (is.null(combo)) return(datatable(data.frame(Mensaje = "Combinación no disponible.")))
+        if (is.null(combo)) {
+          return(datatable(data.frame(Mensaje = "Combinación no disponible.")))
+        }
         if (!is.null(combo$error)) {
           return(datatable(data.frame(Mensaje = combo$error)))
         }
@@ -3110,7 +3208,9 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
       output[[paste0("z_plot_", combo_key)]] <- renderPlotly({
         res <- scores_results_selected()
         combo <- res$combos[[combo_key]]
-        if (is.null(combo) || !is.null(combo$error)) return(NULL)
+        if (is.null(combo) || !is.null(combo$error)) {
+          return(NULL)
+        }
         plotly::ggplotly(
           plot_scores(combo$data, "z_score", combo$title, "Límites de advertencia |z|=2, acción |z|=3", "Puntaje z", warn_limits = c(-2, 2), action_limits = c(-3, 3))
         )
@@ -3119,7 +3219,9 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
       output[[paste0("zprime_table_", combo_key)]] <- renderDataTable({
         res <- scores_results_selected()
         combo <- res$combos[[combo_key]]
-        if (is.null(combo)) return(datatable(data.frame(Mensaje = "Combinación no disponible.")))
+        if (is.null(combo)) {
+          return(datatable(data.frame(Mensaje = "Combinación no disponible.")))
+        }
         if (!is.null(combo$error)) {
           return(datatable(data.frame(Mensaje = combo$error)))
         }
@@ -3135,7 +3237,9 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
       output[[paste0("zprime_plot_", combo_key)]] <- renderPlotly({
         res <- scores_results_selected()
         combo <- res$combos[[combo_key]]
-        if (is.null(combo) || !is.null(combo$error)) return(NULL)
+        if (is.null(combo) || !is.null(combo$error)) {
+          return(NULL)
+        }
         plotly::ggplotly(
           plot_scores(combo$data, "z_prime_score", combo$title, "Límites de advertencia |z'|=2, acción |z'|=3", "Puntaje z'", warn_limits = c(-2, 2), action_limits = c(-3, 3))
         )
@@ -3144,7 +3248,9 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
       output[[paste0("zeta_table_", combo_key)]] <- renderDataTable({
         res <- scores_results_selected()
         combo <- res$combos[[combo_key]]
-        if (is.null(combo)) return(datatable(data.frame(Mensaje = "Combinación no disponible.")))
+        if (is.null(combo)) {
+          return(datatable(data.frame(Mensaje = "Combinación no disponible.")))
+        }
         if (!is.null(combo$error)) {
           return(datatable(data.frame(Mensaje = combo$error)))
         }
@@ -3160,7 +3266,9 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
       output[[paste0("zeta_plot_", combo_key)]] <- renderPlotly({
         res <- scores_results_selected()
         combo <- res$combos[[combo_key]]
-        if (is.null(combo) || !is.null(combo$error)) return(NULL)
+        if (is.null(combo) || !is.null(combo$error)) {
+          return(NULL)
+        }
         plotly::ggplotly(
           plot_scores(combo$data, "zeta_score", combo$title, "Límites de advertencia |ζ|=2, acción |ζ|=3", "Puntaje Zeta", warn_limits = c(-2, 2), action_limits = c(-3, 3))
         )
@@ -3169,7 +3277,9 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
       output[[paste0("en_table_", combo_key)]] <- renderDataTable({
         res <- scores_results_selected()
         combo <- res$combos[[combo_key]]
-        if (is.null(combo)) return(datatable(data.frame(Mensaje = "Combinación no disponible.")))
+        if (is.null(combo)) {
+          return(datatable(data.frame(Mensaje = "Combinación no disponible.")))
+        }
         if (!is.null(combo$error)) {
           return(datatable(data.frame(Mensaje = combo$error)))
         }
@@ -3185,7 +3295,9 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
       output[[paste0("en_plot_", combo_key)]] <- renderPlotly({
         res <- scores_results_selected()
         combo <- res$combos[[combo_key]]
-        if (is.null(combo) || !is.null(combo$error)) return(NULL)
+        if (is.null(combo) || !is.null(combo$error)) {
+          return(NULL)
+        }
         plotly::ggplotly(
           plot_scores(combo$data, "En_score", combo$title, "Límite de acción |En|=1", "Puntaje En", action_limits = c(-1, 1))
         )
@@ -3246,10 +3358,14 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
 
       output[[plot_id]] <- renderPlotly({
         info <- participants_combined_data()
-        if (!is.null(info$error)) return(NULL)
+        if (!is.null(info$error)) {
+          return(NULL)
+        }
         participant_df <- info$data %>%
           filter(participant_id == pid)
-        if (nrow(participant_df) == 0) return(NULL)
+        if (nrow(participant_df) == 0) {
+          return(NULL)
+        }
 
         plot_df <- participant_df %>%
           filter(combination_label == "1" | combination_label == min(combination_label)) %>%
@@ -3308,7 +3424,8 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
         )
       })
 
-      tabPanel(pid,
+      tabPanel(
+        pid,
         h4("Resumen"),
         dataTableOutput(table_id),
         hr(),
@@ -3362,8 +3479,10 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
   })
 
   report_preview <- reactive({
-    req(input$report_pollutant, input$report_n_lab, input$report_level,
-        input$report_sigma_pt, input$report_u_xpt, input$report_k)
+    req(
+      input$report_pollutant, input$report_n_lab, input$report_level,
+      input$report_sigma_pt, input$report_u_xpt, input$report_k
+    )
     summary_df <- pt_prep_data()
     if (is.null(summary_df)) {
       return(list(error = "No se encontraron datos resumidos de PT (summary_n*.csv)."))
@@ -3430,84 +3549,69 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
     cat(sprintf("Conclusión: %s\n", stab$stab_conclusion))
     cat(sprintf("|y1 - y2| = %.4f | c = %.4f\n", stab$diff_hom_stab, stab$stab_c_criterion))
     cat("\n--- Puntajes PT ---\n")
-    cat(sprintf("x_pt = %.4f | sigma_pt = %.4f | u_xpt = %.4f | k = %s\n",
-                scores$x_pt, scores$sigma_pt, scores$u_xpt, scores$k))
+    cat(sprintf(
+      "x_pt = %.4f | sigma_pt = %.4f | u_xpt = %.4f | k = %s\n",
+      scores$x_pt, scores$sigma_pt, scores$u_xpt, scores$k
+    ))
     cat(sprintf("Participantes evaluados: %d\n", nrow(scores$scores)))
   })
 
   output$download_report <- downloadHandler(
     filename = function() {
       ext <- switch(input$report_format,
-                    html = "html",
-                    pdf = "pdf",
-                    word = "docx")
-      paste0("pt_report_", input$report_pollutant, "_", input$report_level, ".", ext)
+        html = "html",
+        word = "docx"
+      )
+      paste0("Informe_EA_", Sys.Date(), ".", ext)
     },
     content = function(file) {
       if (!requireNamespace("rmarkdown", quietly = TRUE)) {
         stop("El paquete 'rmarkdown' es requerido para generar el informe.")
       }
-      preview <- isolate(report_preview())
-      if (!is.null(preview$error)) {
-        stop(preview$error)
-      }
 
-      template_path <- file.path("reports", "pt_report_template.Rmd")
+      # Use the new template
+      template_path <- file.path("reports", "report_template.Rmd")
       if (!file.exists(template_path)) {
-        stop("No se encontró la plantilla en 'reports/pt_report_template.Rmd'.")
+        stop("No se encontró la plantilla en 'reports/report_template.Rmd'.")
       }
 
       temp_dir <- tempdir()
-      temp_report <- file.path(temp_dir, "pt_report_template.Rmd")
+      temp_report <- file.path(temp_dir, "report_template.Rmd")
       file.copy(template_path, temp_report, overwrite = TRUE)
 
       output_format <- switch(input$report_format,
-                              html = "html_document",
-                              pdf = "pdf_document",
-                              word = "word_document")
-      ext <- switch(input$report_format,
-                    html = "html",
-                    pdf = "pdf",
-                    word = "docx")
-      output_file_name <- paste0("pt_app_report.", ext)
+        html = "html_document",
+        word = "word_document"
+      )
 
       params <- list(
-        pollutant = preview$hom$pollutant,
-        n_lab = preview$scores$n_lab,
-        level = preview$hom$level,
-        sigma_pt_input = input$report_sigma_pt,
-        u_xpt_input = input$report_u_xpt,
-        k_input = input$report_k,
-        hom = preview$hom,
-        stab = preview$stab,
-        scores = preview$scores,
-        generated_at = Sys.time()
+        hom_data = hom_data_full(),
+        stab_data = stab_data_full(),
+        summary_data = pt_prep_data(),
+        metric = input$report_metric,
+        method = input$report_method
       )
 
       rmarkdown::render(
         temp_report,
         output_format = output_format,
-        output_file = output_file_name,
-        output_dir = temp_dir,
+        output_file = file,
         params = params,
         envir = new.env(parent = globalenv())
       )
-
-      generated_path <- file.path(temp_dir, output_file_name)
-      file.copy(generated_path, file, overwrite = TRUE)
     }
   )
 
   # --- Carga de datos Status ---
   output$data_upload_status <- renderPrint({
     cat("Estado de los archivos:\n")
-    
+
     if (!is.null(input$hom_file)) {
       cat(sprintf("- Homogeneidad: '%s' cargado (%d filas).\n", input$hom_file$name, nrow(hom_data_full())))
     } else {
       cat("- Homogeneidad: No cargado.\n")
     }
-    
+
     if (!is.null(input$stab_file)) {
       cat(sprintf("- Estabilidad: '%s' cargado (%d filas).\n", input$stab_file$name, nrow(stab_data_full())))
     } else {
@@ -3906,13 +4010,19 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
     res
   })
 
-  output$consensus_summary_table <- renderTable({
-    res <- consensus_selected()
-    if (!is.null(res$error)) {
-      return(data.frame(Mensaje = res$error))
-    }
-    res$summary
-  }, digits = 6, striped = TRUE, spacing = "l", rownames = FALSE)
+  output$consensus_summary_table <- renderTable(
+    {
+      res <- consensus_selected()
+      if (!is.null(res$error)) {
+        return(data.frame(Mensaje = res$error))
+      }
+      res$summary
+    },
+    digits = 6,
+    striped = TRUE,
+    spacing = "l",
+    rownames = FALSE
+  )
 
   output$consensus_input_table <- renderDataTable({
     res <- consensus_selected()
@@ -3969,9 +4079,10 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
       return(p("No se encontraron archivos summary_n*.csv o están vacíos. Por favor, agregue esos archivos."))
     }
     pollutants <- unique(pt_prep_data()$pollutant)
-    
+
     tabs <- lapply(pollutants, function(p) {
-      tabPanel(toupper(p),
+      tabPanel(
+        toupper(p),
         sidebarLayout(
           sidebarPanel(
             width = 4,
@@ -4008,27 +4119,29 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
         )
       )
     })
-    
+
     do.call(tabsetPanel, c(list(id = "pt_main_tabs"), tabs))
   })
 
   observe({
     req(pt_prep_data())
-    if (is.null(pt_prep_data()) || nrow(pt_prep_data()) == 0) return()
-    
+    if (is.null(pt_prep_data()) || nrow(pt_prep_data()) == 0) {
+      return()
+    }
+
     pollutants <- unique(pt_prep_data()$pollutant)
-    
+
     lapply(pollutants, function(p) {
       local({
         # Need a local copy for the reactive expressions
         pollutant_name <- p
-        
+
         # N (scheme) selector
         output[[paste0("pt_n_selector_", pollutant_name)]] <- renderUI({
           choices <- unique(pt_prep_data()[pt_prep_data()$pollutant == pollutant_name, "n_lab"])
           selectInput(paste0("n_lab_", pollutant_name), "Seleccionar esquema PT (por n):", choices = sort(choices))
         })
-        
+
         # Level selector
         output[[paste0("pt_level_selector_", pollutant_name)]] <- renderUI({
           req(input[[paste0("n_lab_", pollutant_name)]])
@@ -4038,7 +4151,7 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
             unique()
           selectInput(paste0("level_", pollutant_name), "Seleccionar nivel:", choices = choices)
         })
-        
+
         # Filtered data reactive
         filtered_data <- reactive({
           req(pt_prep_data(), input[[paste0("n_lab_", pollutant_name)]], input[[paste0("level_", pollutant_name)]])
@@ -4049,27 +4162,27 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
               level == input[[paste0("level_", pollutant_name)]]
             )
         })
-        
+
         # Summary info
         output[[paste0("pt_summary_", pollutant_name)]] <- renderPrint({
           data <- filtered_data()
           req(nrow(data) > 0)
-          
+
           n_participants <- n_distinct(data$participant_id[data$participant_id != "ref"])
           participants <- unique(data$participant_id[data$participant_id != "ref"])
-          
+
           cat("Analito:", pollutant_name, "\n")
           cat("Esquema PT (n_lab):", unique(data$n_lab), "\n")
           cat("Nivel:", unique(data$level), "\n")
           cat("Número de participantes:", n_participants, "\n")
           cat("Participantes:", paste(participants, collapse = ", "))
         })
-        
+
         # Plot
         output[[paste0("pt_plot_", pollutant_name)]] <- renderPlotly({
           data <- filtered_data()
           req(nrow(data) > 0)
-          
+
           pt_plot <- ggplot(data, aes(x = participant_id, y = mean_value, fill = sample_group)) +
             geom_bar(stat = "identity", position = "dodge") +
             geom_errorbar(aes(ymin = mean_value - sd_value, ymax = mean_value + sd_value), width = 0.2, position = position_dodge(0.9)) +
@@ -4078,25 +4191,25 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
             theme(axis.text.x = element_text(angle = 45, hjust = 1))
           plotly::ggplotly(pt_plot)
         })
-        
+
         # Table
         output[[paste0("pt_table_", pollutant_name)]] <- renderDataTable({
           data <- filtered_data()
           req(nrow(data) > 0)
           datatable(data, options = list(scrollX = TRUE, pageLength = 5))
         })
-        
+
         # Histogram
         output[[paste0("pt_histogram_", pollutant_name)]] <- renderPlotly({
           data <- filtered_data()
           req(nrow(data) > 0)
-          
+
           participants_data <- data %>% filter(participant_id != "ref")
           ref_value <- data %>%
             filter(participant_id == "ref") %>%
             summarise(mean_ref = mean(mean_value, na.rm = TRUE)) %>%
             pull(mean_ref)
-            
+
           hist_plot <- ggplot(participants_data, aes(x = mean_value)) +
             geom_histogram(aes(y = after_stat(density)), color = "black", fill = "skyblue", bins = 15, boundary = 0) +
             geom_density(alpha = 0.2, fill = "#FF6666") +
@@ -4105,18 +4218,18 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
             theme_minimal()
           plotly::ggplotly(hist_plot)
         })
-        
+
         # Boxplot
         output[[paste0("pt_boxplot_", pollutant_name)]] <- renderPlotly({
           data <- filtered_data()
           req(nrow(data) > 0)
-          
+
           participants_data <- data %>% filter(participant_id != "ref")
           ref_value <- data %>%
             filter(participant_id == "ref") %>%
             summarise(mean_ref = mean(mean_value, na.rm = TRUE)) %>%
             pull(mean_ref)
-            
+
           box_plot <- ggplot(participants_data, aes(x = "", y = mean_value)) +
             geom_boxplot(fill = "lightgreen") +
             geom_hline(yintercept = ref_value, color = "red", linetype = "dashed", size = 1) +
@@ -4124,18 +4237,18 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
             theme_minimal()
           plotly::ggplotly(box_plot)
         })
-        
+
         # Densidad Plot
         output[[paste0("pt_density_", pollutant_name)]] <- renderPlotly({
           data <- filtered_data()
           req(nrow(data) > 0)
-          
+
           participants_data <- data %>% filter(participant_id != "ref")
           ref_value <- data %>%
             filter(participant_id == "ref") %>%
             summarise(mean_ref = mean(mean_value, na.rm = TRUE)) %>%
             pull(mean_ref)
-            
+
           density_plot <- ggplot(participants_data, aes(x = mean_value)) +
             geom_density(fill = "lightblue", alpha = 0.7) +
             geom_vline(xintercept = ref_value, color = "red", linetype = "dashed", size = 1) +
@@ -4143,14 +4256,14 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
             theme_minimal()
           plotly::ggplotly(density_plot)
         })
-        
+
         # Prueba de Grubbs para valores atípicos
         output[[paste0("pt_grubbs_", pollutant_name)]] <- renderPrint({
           data <- filtered_data()
           req(nrow(data) > 0)
-          
+
           participants_data <- data %>% filter(participant_id != "ref")
-          
+
           if (length(participants_data$mean_value) < 3) {
             "La prueba de Grubbs requiere al menos 3 datos."
           } else {
@@ -4163,19 +4276,21 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
           data <- filtered_data()
           req(nrow(data) > 0)
 
-          participants_data <- data %>% 
+          participants_data <- data %>%
             filter(participant_id != "ref")
-            
+
           center_line <- median(participants_data$mean_value, na.rm = TRUE)
-            
+
           run_plot <- ggplot(participants_data, aes(x = sample_group, y = mean_value, group = 1)) +
             geom_point() +
             geom_line() +
             geom_hline(yintercept = center_line, color = "red", linetype = "dashed") +
-            facet_wrap(~ participant_id) +
-            labs(title = "Gráfico de corrida de valores medios por participante",
-                 x = "Grupo de muestra",
-                 y = "Valor medio") +
+            facet_wrap(~participant_id) +
+            labs(
+              title = "Gráfico de corrida de valores medios por participante",
+              x = "Grupo de muestra",
+              y = "Valor medio"
+            ) +
             theme_minimal() +
             theme(axis.text.x = element_text(angle = 45, hjust = 1))
           plotly::ggplotly(run_plot)
@@ -4183,7 +4298,8 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
       }) # end local
     }) # end lapply
   }) # end observe
-}
+} # end server function
+
 
 # ===================================================================
 # III. Run the Application
