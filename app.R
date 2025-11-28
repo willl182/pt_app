@@ -1108,24 +1108,60 @@ server <- function(input, output, session) {
         "Generación de informes",
         sidebarLayout(
           sidebarPanel(
-            width = analysis_sidebar_w,
-            h4("1. Configuración del Informe"),
-            h5("Selección de datos"),
+            width = 3,
+            h4("2. Selección de Datos"),
             uiOutput("report_n_selector"),
             uiOutput("report_level_selector"),
+            p(class = "text-info", style = "font-size: 0.9em;", "Nota: Se incluirán todos los analitos disponibles."),
             hr(),
-            h5("Parámetros del informe"),
+            h4("3. Parámetros"),
             selectInput("report_metric", "Métrica:", choices = c("z", "z'", "zeta", "En")),
             selectInput("report_method", "Método:", choices = c("Referencia (1)" = "1", "Consenso MADe (2a)" = "2a", "Consenso nIQR (2b)" = "2b", "Algoritmo A (3)" = "3")),
             numericInput("report_k", "Factor de cobertura (k):", value = 2, min = 1, max = 3, step = 0.1),
             hr(),
-            radioButtons("report_format", "Formato de salida:", choices = c("Word (DOCX)" = "word", "HTML" = "html"), selected = "word"),
-            downloadButton("download_report", "Descargar informe", class = "btn-success")
+            h4("Datos de Participantes"),
+            fileInput("participants_data_upload", "Tabla de Instrumentación (CSV):", accept = ".csv"),
+            helpText("Formato: Codigo_Lab, Analizador_SO2, Analizador_CO, Analizador_O3, Analizador_NO_NO2"),
+            hr(),
+            h4("Descarga"),
+            radioButtons("report_format", "Formato:", choices = c("Word (DOCX)" = "word", "HTML" = "html"), selected = "word"),
+            downloadButton("download_report", "Descargar informe", class = "btn-success btn-block")
           ),
           mainPanel(
-            width = analysis_main_w,
+            width = 9,
+            h3("Generación de Informe Final"),
+            p("Configure los detalles de identificación y verifique la vista previa."),
             hr(),
-            p("El informe consolida los resultados de homogeneidad, estabilidad y puntajes de desempeño para la combinación seleccionada.")
+            tabsetPanel(
+              tabPanel(
+                "1. Identificación",
+                br(),
+                h4("1. Identificación y Contexto"),
+                fluidRow(
+                  column(
+                    6,
+                    textInput("report_scheme_id", "ID Esquema EA:", value = "EA-202X-XX"),
+                    textInput("report_id", "ID Informe:", value = "INF-202X-XX"),
+                    dateInput("report_date", "Fecha de Emisión:", value = Sys.Date()),
+                    textInput("report_period", "Periodo del Ensayo:", value = "Mes - Mes Año")
+                  ),
+                  column(
+                    6,
+                    textInput("report_coordinator", "Coordinador EA:", value = ""),
+                    textInput("report_quality_pro", "Profesional Calidad Aire:", value = ""),
+                    textInput("report_ops_eng", "Ingeniero Operativo:", value = ""),
+                    textInput("report_quality_manager", "Profesional Gestión Calidad:", value = "")
+                  )
+                )
+              ),
+              tabPanel(
+                "Vista Previa",
+                br(),
+                h4("Vista Previa del Estado"),
+                uiOutput("report_status"),
+                verbatimTextOutput("report_preview_summary")
+              )
+            )
           )
         )
       )
@@ -3476,6 +3512,630 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
     selectInput("report_level", "Seleccionar nivel:", choices = common_levels)
   })
 
+  # Reactive for participants instrumentation data
+  participants_instrumentation <- reactive({
+    req(input$participants_data_upload)
+    tryCatch(
+      {
+        df <- read.csv(input$participants_data_upload$datapath, stringsAsFactors = FALSE)
+        # Validate required columns
+        required_cols <- c("Codigo_Lab", "Analizador_SO2", "Analizador_CO", "Analizador_O3", "Analizador_NO_NO2")
+        if (!all(required_cols %in% names(df))) {
+          return(NULL)
+        }
+        df
+      },
+      error = function(e) {
+        NULL
+      }
+    )
+  })
+
+  # Reactive for Grubbs Summary
+  grubbs_summary <- reactive({
+    req(pt_prep_data())
+    data <- pt_prep_data()
+
+    if (nrow(data) == 0) {
+      return(NULL)
+    }
+
+    # Get all combinations
+    combos <- data %>%
+      distinct(pollutant, n_lab, level)
+
+    results_list <- list()
+
+    for (i in 1:nrow(combos)) {
+      pol <- combos$pollutant[i]
+      n <- combos$n_lab[i]
+      lev <- combos$level[i]
+
+      subset_data <- data %>%
+        filter(pollutant == pol, n_lab == n, level == lev, participant_id != "ref")
+
+      n_eval <- nrow(subset_data)
+      p_val <- NA
+      outliers_detected <- 0
+      outlier_participant <- "NA"
+      outlier_value <- "NA"
+
+      if (n_eval >= 3) {
+        tryCatch(
+          {
+            test_res <- outliers::grubbs.test(subset_data$mean_value)
+            p_val <- test_res$p.value
+
+            if (p_val < 0.05) {
+              outliers_detected <- 1
+              # Identify the outlier value
+              # grubbs.test returns the value in alternative hypothesis string usually,
+              # but we can find it by checking which value maximizes the deviation
+              # For simplicity, we can check min and max
+              vals <- subset_data$mean_value
+              mean_val <- mean(vals)
+              sd_val <- sd(vals)
+              z_vals <- abs(vals - mean_val) / sd_val
+              idx_max <- which.max(z_vals)
+              outlier_val_num <- vals[idx_max]
+              outlier_participant <- subset_data$participant_id[idx_max]
+              outlier_value <- as.character(round(outlier_val_num, 3))
+            }
+          },
+          error = function(e) {
+            # Handle error
+          }
+        )
+      }
+
+      results_list[[i]] <- data.frame(
+        Contaminante = pol,
+        Nivel = lev,
+        Participantes_Evaluados = n_eval,
+        Valor_p = ifelse(is.na(p_val), "NA", sprintf("%.4f", p_val)),
+        Atipicos_detectados = outliers_detected,
+        Participante = outlier_participant,
+        Valor_Atipico = outlier_value,
+        stringsAsFactors = FALSE
+      )
+    }
+
+    do.call(rbind, results_list)
+  })
+
+  # Reactive for Report Xpt Summary (Annex A)
+  report_xpt_summary <- reactive({
+    req(pt_prep_data(), input$report_method)
+    data <- pt_prep_data()
+    method <- input$report_method
+
+    if (nrow(data) == 0) {
+      return(NULL)
+    }
+
+    # Helper functions (replicated from report template/logic)
+    calculate_niqr <- function(x) {
+      x_clean <- x[is.finite(x)]
+      if (length(x_clean) < 2) {
+        return(NA_real_)
+      }
+      quartiles <- stats::quantile(x_clean, probs = c(0.25, 0.75), na.rm = TRUE, type = 7)
+      0.7413 * (quartiles[2] - quartiles[1])
+    }
+
+    # Get all combinations
+    combos <- data %>%
+      distinct(pollutant, n_lab, level)
+
+    results_list <- list()
+
+    for (i in 1:nrow(combos)) {
+      pol <- combos$pollutant[i]
+      n <- combos$n_lab[i]
+      lev <- combos$level[i]
+
+      subset_data <- data %>%
+        filter(pollutant == pol, n_lab == n, level == lev)
+
+      ref_data <- subset_data %>% filter(participant_id == "ref")
+      part_data <- subset_data %>% filter(participant_id != "ref")
+
+      xpt <- NA
+      u_xpt <- NA
+      sigma_pt <- NA
+      source_method <- "Desconocido"
+
+      if (method == "1") { # Referencia
+        if (nrow(ref_data) > 0) {
+          xpt <- mean(ref_data$mean_value, na.rm = TRUE)
+          u_xpt <- mean(ref_data$sd_value, na.rm = TRUE)
+          # For method 1, sigma usually comes from homogeneity or fixed,
+          # here we might not have easy access to hom_res for all,
+          # so we might leave NA or try to fetch if available.
+          # For now, let's leave NA as per logic or set to 0 if needed.
+          source_method <- "Referencia"
+        }
+      } else if (method == "2a") { # Consenso MADe
+        vals <- part_data$mean_value
+        if (length(vals) > 0) {
+          xpt <- median(vals, na.rm = TRUE)
+          made <- 1.483 * median(abs(vals - xpt), na.rm = TRUE)
+          u_xpt <- 1.25 * made / sqrt(length(vals))
+          sigma_pt <- made
+          source_method <- "Consenso MADe"
+        }
+      } else if (method == "2b") { # Consenso nIQR
+        vals <- part_data$mean_value
+        if (length(vals) > 0) {
+          xpt <- median(vals, na.rm = TRUE)
+          niqr <- calculate_niqr(vals)
+          u_xpt <- 1.25 * niqr / sqrt(length(vals))
+          sigma_pt <- niqr
+          source_method <- "Consenso nIQR"
+        }
+      } else if (method == "3") { # Algoritmo A
+        vals <- part_data$mean_value
+        ids <- part_data$participant_id
+        if (length(vals) >= 3) {
+          # We can use the existing run_algorithm_a function in app.R if accessible,
+          # or the one defined inside this reactive scope if we copy it.
+          # Since run_algorithm_a is defined in global scope of server or ui?
+          # It seems to be in server scope. Let's try to use it.
+          # Note: run_algorithm_a in app.R takes (values, ids).
+          res_algo <- run_algorithm_a(vals, ids)
+          if (is.null(res_algo$error)) {
+            xpt <- res_algo$assigned_value
+            sigma_pt <- res_algo$robust_sd
+            u_xpt <- 1.25 * sigma_pt / sqrt(length(vals))
+            source_method <- "Algoritmo A"
+          }
+        }
+      }
+
+      results_list[[i]] <- data.frame(
+        Contaminante = pol,
+        Nivel = lev,
+        Metodo = source_method,
+        x_pt = ifelse(is.na(xpt), NA, xpt),
+        u_xpt = ifelse(is.na(u_xpt), NA, u_xpt),
+        sigma_pt = ifelse(is.na(sigma_pt), NA, sigma_pt),
+        stringsAsFactors = FALSE
+      )
+    }
+
+    do.call(rbind, results_list)
+  })
+
+  # Reactive for Homogeneity Summary (Annex B)
+  report_homogeneity_summary <- reactive({
+    req(hom_data_full())
+    data <- pt_prep_data()
+
+    if (nrow(data) == 0) {
+      return(NULL)
+    }
+
+    # Get all combinations
+    combos <- data %>%
+      distinct(pollutant, level)
+
+    hom_records <- list()
+
+    for (i in 1:nrow(combos)) {
+      pol <- combos$pollutant[i]
+      lev <- combos$level[i]
+
+      hom_res <- tryCatch(
+        {
+          compute_homogeneity_metrics(pol, lev)
+        },
+        error = function(e) {
+          list(error = conditionMessage(e))
+        }
+      )
+
+      if (!is.null(hom_res$error)) next
+
+      hom_records[[i]] <- data.frame(
+        Contaminante = pol,
+        Nivel = lev,
+        Items = hom_res$g,
+        Replicas = hom_res$m,
+        sigma_pt = round(hom_res$sigma_pt, 4),
+        u_xpt = round(hom_res$u_xpt, 4),
+        ss = round(hom_res$ss, 4),
+        sw = round(hom_res$sw, 4),
+        c_criterio = round(hom_res$c_criterion, 4),
+        Cumple_Criterio = ifelse(hom_res$ss <= hom_res$c_criterion, "Sí", "No"),
+        Conclusion = hom_res$conclusion,
+        stringsAsFactors = FALSE
+      )
+    }
+
+    if (length(hom_records) > 0) {
+      do.call(rbind, hom_records)
+    } else {
+      NULL
+    }
+  })
+
+  # Reactive for Stability Summary (Annex B)
+  report_stability_summary <- reactive({
+    req(hom_data_full(), stab_data_full())
+    data <- pt_prep_data()
+
+    if (nrow(data) == 0) {
+      return(NULL)
+    }
+
+    # Get all combinations
+    combos <- data %>%
+      distinct(pollutant, level)
+
+    stab_records <- list()
+
+    for (i in 1:nrow(combos)) {
+      pol <- combos$pollutant[i]
+      lev <- combos$level[i]
+
+      # First get homogeneity results
+      hom_res <- tryCatch(
+        {
+          compute_homogeneity_metrics(pol, lev)
+        },
+        error = function(e) {
+          list(error = conditionMessage(e))
+        }
+      )
+
+      if (!is.null(hom_res$error)) next
+
+      # Then get stability results
+      stab_res <- tryCatch(
+        {
+          compute_stability_metrics(pol, lev, hom_res)
+        },
+        error = function(e) {
+          list(error = conditionMessage(e))
+        }
+      )
+
+      if (!is.null(stab_res$error)) next
+
+      stab_records[[i]] <- data.frame(
+        Contaminante = pol,
+        Nivel = lev,
+        Itms = stab_res$g,
+        Replicas = stab_res$m,
+        sigma_pt = round(stab_res$stab_sigma_pt, 4),
+        u_xpt = round(stab_res$stab_u_xpt, 4),
+        diff_hom_stab = round(stab_res$diff_hom_stab, 4),
+        c_criterio = round(stab_res$stab_c_criterion, 4),
+        Cumple_Criterio = ifelse(stab_res$diff_hom_stab <= stab_res$stab_c_criterion, "Sí", "No"),
+        Conclusion = stab_res$stab_conclusion,
+        stringsAsFactors = FALSE
+      )
+    }
+
+    if (length(stab_records) > 0) {
+      do.call(rbind, stab_records)
+    } else {
+      NULL
+    }
+  })
+
+  # --- Helper functions for Report Score Summaries ---
+
+  calculate_method_scores_df <- function(method_code) {
+    data <- pt_prep_data()
+    if (nrow(data) == 0) {
+      return(NULL)
+    }
+
+    combos <- data %>% distinct(pollutant, level)
+    all_scores <- list()
+
+    for (i in 1:nrow(combos)) {
+      pol <- combos$pollutant[i]
+      lev <- combos$level[i]
+
+      subset_data <- data %>% filter(pollutant == pol, level == lev)
+      ref_data <- subset_data %>% filter(participant_id == "ref")
+      part_data <- subset_data %>% filter(participant_id != "ref")
+
+      # Calculate Assigned Value
+      assigned <- list(xpt = NA, u_xpt = NA, sigma = NA)
+
+      if (method_code == "1") {
+        assigned <- list(xpt = mean(ref_data$mean_value, na.rm = TRUE), u_xpt = mean(ref_data$sd_value, na.rm = TRUE), sigma = NA)
+      } else if (method_code == "2a") {
+        vals <- part_data$mean_value
+        med <- median(vals, na.rm = TRUE)
+        made <- 1.483 * median(abs(vals - med), na.rm = TRUE)
+        assigned <- list(xpt = med, u_xpt = 1.25 * made / sqrt(length(vals)), sigma = made)
+      } else if (method_code == "2b") {
+        vals <- part_data$mean_value
+        med <- median(vals, na.rm = TRUE)
+        niqr <- calculate_niqr(vals)
+        assigned <- list(xpt = med, u_xpt = 1.25 * niqr / sqrt(length(vals)), sigma = niqr)
+      } else if (method_code == "3") {
+        res <- run_algorithm_a(part_data$mean_value)
+        assigned <- list(xpt = res$mean, u_xpt = 1.25 * res$sd / sqrt(nrow(part_data)), sigma = res$sd)
+      }
+
+      # Determine Sigma
+      hom_res <- tryCatch(compute_homogeneity_metrics(pol, lev), error = function(e) NULL)
+      final_sigma <- if (!is.na(assigned$sigma) && !is.null(assigned$sigma)) assigned$sigma else if (!is.null(hom_res)) hom_res$sigma_pt else NA
+
+      if (is.na(final_sigma)) next
+
+      # Calculate Scores
+      scores <- part_data %>%
+        mutate(
+          z_score = (mean_value - assigned$xpt) / final_sigma,
+          En_score = (mean_value - assigned$xpt) / sqrt((input$report_k * sd_value)^2 + (input$report_k * assigned$u_xpt)^2)
+        ) %>%
+        select(participant_id, pollutant, level, z_score, En_score)
+
+      all_scores[[i]] <- scores
+    }
+
+    if (length(all_scores) > 0) do.call(rbind, all_scores) else NULL
+  }
+
+  summarize_scores <- function(df) {
+    if (is.null(df)) {
+      return(NULL)
+    }
+
+    # Define categories
+    df <- df %>%
+      mutate(
+        z_eval = case_when(
+          abs(z_score) <= 2 ~ "Satisfactorio",
+          abs(z_score) < 3 ~ "Cuestionable",
+          TRUE ~ "Insatisfactorio"
+        ),
+        En_eval = case_when(
+          abs(En_score) <= 1 ~ "Satisfactorio",
+          TRUE ~ "Insatisfactorio"
+        )
+      )
+
+    # Create summary table structure
+    pollutants <- unique(df$pollutant)
+
+    # Helper to count
+    count_eval <- function(metric, eval_type) {
+      counts <- sapply(pollutants, function(p) {
+        if (metric == "z") {
+          sum(df$pollutant == p & df$z_eval == eval_type, na.rm = TRUE)
+        } else {
+          sum(df$pollutant == p & df$En_eval == eval_type, na.rm = TRUE)
+        }
+      })
+      c(counts, sum(counts))
+    }
+
+    # Build rows
+    z_sat <- c("z-score", "Satisfactorio", count_eval("z", "Satisfactorio"))
+    z_quest <- c("", "Cuestionable", count_eval("z", "Cuestionable"))
+    z_unsat <- c("", "Insatisfactorio", count_eval("z", "Insatisfactorio"))
+
+    en_sat <- c("En-score", "Satisfactorio", count_eval("En", "Satisfactorio"))
+    en_unsat <- c("", "Insatisfactorio", count_eval("En", "Insatisfactorio"))
+
+    # Combine
+    summary_df <- rbind(z_sat, z_quest, z_unsat, en_sat, en_unsat)
+    colnames(summary_df) <- c("Indicador", "Evaluación", pollutants, "TOTAL")
+
+    # Add Percentage column
+    # Calculate total results (participants * levels * pollutants)
+    # Actually, df has one row per participant-level-pollutant
+    total_results <- nrow(df)
+
+    summary_df <- as.data.frame(summary_df, stringsAsFactors = FALSE)
+
+    # Convert counts to numeric for percentage calc
+    summary_df$TOTAL <- as.numeric(summary_df$TOTAL)
+    # Calculate percentage based on the row total vs grand total?
+    # The example shows percentages for each category.
+    # Total results for z-score is total_results. Total for En is total_results.
+
+    summary_df$Percentage <- sprintf("%.2f%%", (summary_df$TOTAL / total_results) * 100)
+    colnames(summary_df)[ncol(summary_df)] <- "TOTAL (%)"
+
+    summary_df
+  }
+
+  # Reactives
+  score_criteria_summary_1 <- reactive({
+    summarize_scores(calculate_method_scores_df("1"))
+  })
+  score_criteria_summary_2a <- reactive({
+    summarize_scores(calculate_method_scores_df("2a"))
+  })
+  score_criteria_summary_2b <- reactive({
+    summarize_scores(calculate_method_scores_df("2b"))
+  })
+  score_criteria_summary_3 <- reactive({
+    summarize_scores(calculate_method_scores_df("3"))
+  })
+
+  report_score_summary <- reactive({
+    switch(input$report_method,
+      "1" = score_criteria_summary_1(),
+      "2a" = score_criteria_summary_2a(),
+      "2b" = score_criteria_summary_2b(),
+      "3" = score_criteria_summary_3()
+    )
+  })
+
+  report_heatmaps <- reactive({
+    data <- pt_prep_data()
+    if (nrow(data) == 0) {
+      return(NULL)
+    }
+
+    scores_df <- calculate_method_scores_df(input$report_method)
+    if (is.null(scores_df)) {
+      return(NULL)
+    }
+
+    pollutants <- unique(scores_df$pollutant)
+    plot_list <- list()
+
+    for (pol in pollutants) {
+      pol_data <- scores_df %>% filter(pollutant == pol)
+
+      if (input$report_metric == "En") {
+        pol_data$eval <- case_when(
+          abs(pol_data$En_score) <= 1 ~ "Satisfactorio",
+          TRUE ~ "Insatisfactorio"
+        )
+        pol_data$score_val <- pol_data$En_score
+      } else {
+        pol_data$eval <- case_when(
+          abs(pol_data$z_score) <= 2 ~ "Satisfactorio",
+          abs(pol_data$z_score) < 3 ~ "Cuestionable",
+          TRUE ~ "Insatisfactorio"
+        )
+        pol_data$score_val <- pol_data$z_score
+      }
+
+      p <- ggplot(pol_data, aes(x = level, y = participant_id, fill = eval)) +
+        geom_tile(color = "white") +
+        geom_text(aes(label = round(score_val, 2)), color = "white", size = 3) +
+        scale_fill_manual(values = c("Satisfactorio" = "#2E7D32", "Cuestionable" = "#F9A825", "Insatisfactorio" = "#C62828")) +
+        labs(title = paste("Mapa de Calor -", toupper(pol)), x = "Nivel", y = "Participante", fill = "Evaluación") +
+        theme_minimal()
+
+      plot_list[[pol]] <- p
+    }
+    plot_list
+    plot_list
+  })
+
+  report_participant_data <- reactive({
+    data <- pt_prep_data()
+    if (nrow(data) == 0) {
+      return(NULL)
+    }
+
+    scores_df <- calculate_method_scores_df(input$report_method)
+    if (is.null(scores_df)) {
+      return(NULL)
+    }
+
+    # Add evaluation column
+    if (input$report_metric == "En") {
+      scores_df$eval <- case_when(
+        abs(scores_df$En_score) <= 1 ~ "Satisfactorio",
+        TRUE ~ "Insatisfactorio"
+      )
+      scores_df$score_val <- scores_df$En_score
+    } else {
+      scores_df$eval <- case_when(
+        abs(scores_df$z_score) <= 2 ~ "Satisfactorio",
+        abs(scores_df$z_score) < 3 ~ "Cuestionable",
+        TRUE ~ "Insatisfactorio"
+      )
+      scores_df$score_val <- scores_df$z_score
+    }
+
+    # Get all participants (excluding ref)
+    participants <- unique(scores_df$participant_id)
+    participants <- participants[participants != "ref"]
+
+    part_list <- list()
+
+    for (pid in participants) {
+      p_data <- scores_df %>% filter(participant_id == pid)
+
+      # 1. Summary Table
+      # We need to join with original data to get result, uncertainty, assigned value, etc.
+      # Re-calculate assigned values for display or grab them from somewhere?
+      # calculate_method_scores_df doesn't return assigned values.
+      # Let's reconstruct the table data.
+
+      table_rows <- list()
+      for (i in 1:nrow(p_data)) {
+        pol <- p_data$pollutant[i]
+        lev <- p_data$level[i]
+
+        # Get raw data
+        raw_sub <- data %>% filter(pollutant == pol, level == lev)
+        p_res <- raw_sub %>% filter(participant_id == pid)
+        ref_res <- raw_sub %>% filter(participant_id == "ref")
+
+        # Recalculate assigned value (simplified, reusing logic would be better but this is isolated)
+        # Actually, let's just use the score and back-calculate or re-run the small logic
+        # It's safer to re-run the logic for this specific combo
+
+        # ... Or better, modify calculate_method_scores_df to return everything?
+        # No, let's keep it simple and just do what's needed here.
+
+        # Get Assigned Value
+        assigned <- list(xpt = NA, u_xpt = NA)
+        method_code <- input$report_method
+
+        if (method_code == "1") {
+          assigned <- list(xpt = mean(ref_res$mean_value, na.rm = TRUE), u_xpt = mean(ref_res$sd_value, na.rm = TRUE))
+        } else if (method_code == "2a") {
+          vals <- raw_sub %>%
+            filter(participant_id != "ref") %>%
+            pull(mean_value)
+          med <- median(vals, na.rm = TRUE)
+          made <- 1.483 * median(abs(vals - med), na.rm = TRUE)
+          assigned <- list(xpt = med, u_xpt = 1.25 * made / sqrt(length(vals)))
+        } else if (method_code == "2b") {
+          vals <- raw_sub %>%
+            filter(participant_id != "ref") %>%
+            pull(mean_value)
+          med <- median(vals, na.rm = TRUE)
+          niqr <- calculate_niqr(vals)
+          assigned <- list(xpt = med, u_xpt = 1.25 * niqr / sqrt(length(vals)))
+        } else if (method_code == "3") {
+          vals <- raw_sub %>%
+            filter(participant_id != "ref") %>%
+            pull(mean_value)
+          res <- run_algorithm_a(vals)
+          assigned <- list(xpt = res$mean, u_xpt = 1.25 * res$sd / sqrt(length(vals)))
+        }
+
+        table_rows[[i]] <- data.frame(
+          Contaminante = pol,
+          Nivel = lev,
+          Resultado = p_res$mean_value,
+          Incertidumbre = p_res$sd_value,
+          Valor_Asignado = assigned$xpt,
+          Incertidumbre_VA = assigned$u_xpt,
+          Score = p_data$score_val[i],
+          Evaluacion = p_data$eval[i],
+          stringsAsFactors = FALSE
+        )
+      }
+      summary_table <- do.call(rbind, table_rows)
+
+      # 2. Matrix Plot (Horizontal)
+      # Pollutant on Y, Level on X? Or Pollutant on X?
+      # "summary_matrix_horizontal" implies Pollutants on Y-axis maybe?
+      # Let's put Pollutant on Y and Level on X.
+
+      matrix_plot <- ggplot(p_data, aes(x = level, y = pollutant, fill = eval)) +
+        geom_tile(color = "white") +
+        geom_text(aes(label = round(score_val, 2)), color = "white", size = 3) +
+        scale_fill_manual(values = c("Satisfactorio" = "#2E7D32", "Cuestionable" = "#F9A825", "Insatisfactorio" = "#C62828")) +
+        labs(title = paste("Matriz de Desempeño - Participante", pid), x = "Nivel", y = "Contaminante", fill = "Evaluación") +
+        theme_minimal()
+
+      part_list[[pid]] <- list(
+        summary_table = summary_table,
+        matrix_plot = matrix_plot
+      )
+    }
+    part_list
+  })
   report_preview <- reactive({
     req(
       input$report_n_lab, input$report_level,
@@ -3648,10 +4308,33 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
         summary_data = pt_prep_data(),
         metric = input$report_metric,
         method = input$report_method,
-        pollutant = input$report_pollutant,
+        pollutant = NULL, # NULL means process all pollutants
         level = input$report_level,
         n_lab = input$report_n_lab,
-        k_factor = input$report_k
+        k_factor = input$report_k,
+        # Identification params
+        scheme_id = input$report_scheme_id,
+        report_id = input$report_id,
+        issue_date = input$report_date,
+        period = input$report_period,
+        coordinator = input$report_coordinator,
+        quality_pro = input$report_quality_pro,
+        ops_eng = input$report_ops_eng,
+        quality_manager = input$report_quality_manager,
+        # Participants instrumentation data
+        participants_data = participants_instrumentation(),
+        # Grubbs Summary
+        grubbs_summary = grubbs_summary(),
+        # Annex A Summary
+        xpt_summary = report_xpt_summary(),
+        # Annex B Summaries
+        homogeneity_summary = report_homogeneity_summary(),
+        stability_summary = report_stability_summary(),
+        # Section 4 & 5 Data
+        score_summary = report_score_summary(),
+        heatmaps = report_heatmaps(),
+        # Annex C Data
+        participant_data = report_participant_data()
       )
 
       # Render directly to the Shiny download file path
