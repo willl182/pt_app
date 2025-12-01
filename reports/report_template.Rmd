@@ -36,6 +36,8 @@ params:
   score_summary: NA
   heatmaps: NA
   participant_data: NA
+  metrological_compatibility: NA
+  metrological_compatibility_method: "2a"
 ---
 
 ```{r setup, include=FALSE}
@@ -131,33 +133,6 @@ compute_homogeneity <- function(data_full, pol, lev) {
 ```
 
 ## 1.1. Información del Proveedor y del esquema
-
-```{r info_table, echo=FALSE}
-info_data <- data.frame(
-  Campo = c(
-    "Nombre y Contacto del Proveedor de EA",
-    "Identificación Única del Esquema de EA",
-    "Identificación Única del Informe",
-    "Estado del Informe",
-    "Fecha de Emisión",
-    "Periodo del Ensayo",
-    "Declaración de Servicios Externos"
-  ),
-  Valor = c(
-    "Laboratorio CALAIRE Campus El Volador, Cra 65 No59A - 110 Bloque 19A, laboratorio 401 calaire_med@unal.edu.co 314 874 8191",
-    params$scheme_id,
-    params$report_id,
-    "FINAL",
-    as.character(params$issue_date),
-    params$period,
-    "El Laboratorio CALAIRE es el único organizador y responsable integral de las actividades clave. No se utilizaron proveedores externos para el diseño, la planificación del esquema de EA, la evaluación del rendimiento ni la autorización de este informe, según lo exige la cláusula 6.4.1 de ISO/IEC 17043:2023."
-  )
-)
-
-kable(info_data, col.names = NULL, caption = "Tabla 1 Información del Ensayo de Aptitud")
-```
-
-## 1.2. Alcance y Objetivo del EA
 
 **Alcance:** Este Ensayo de Aptitud (EA) por comparación interlaboratorio abarca la medición de los gases contaminantes criterio SO₂, CO, O₃, NO y NO₂ en aire cero, según lo definido en el `r params$scheme_id`.
 
@@ -265,29 +240,70 @@ Dado que los ítems de ensayo se generan dinámicamente y se miden in situ, la e
 
 ## 2.3. Determinación del Valor Asignado (Xp)
 
-El Valor Asignado (Xpt) para cada nivel de concentración y contaminante se determinó utilizando el **Algoritmo A** (ISO 13528:2022, Anexo C.3) aplicado a los resultados reportados por los participantes. Se calcularon la media robusta x* cómo Xpt y la desviación estándar robusta s*. La incertidumbre estándar del valor asignado, u(Xpt), se estimó mediante u(Xpt) = 1.25 s* / √p es el número de participantes incluidos en el cálculo robusto.
+```{r assigned_value_text, echo=FALSE, results='asis'}
+if (!is.null(params$method) && as.character(params$method) == "1") {
+  cat("El valor asignado corresponde al valor determinado por el laboratorio de referencia: $x_{pt} = x_{ref}$.\n\n")
+  cat("La desviación estándar para la evaluación de la aptitud ($\\sigma_{pt}$) corresponde a la desviación estándar reportada por el laboratorio de referencia.")
+} else if (as.character(params$method) == "2a") {
+  cat("El valor asignado se determinó por consenso de los participantes, utilizando un estimador robusto (mediana y MADe).\n\n")
+  cat("La desviación estándar para la evaluación de la aptitud ($\\sigma_{pt}$) se estableció para cada contaminante basándose en ISO 13528:2022.\n\n")
+  cat("**Método Específico:** *Por consenso:* $\\sigma_{pt} = MADe$.")
+} else if (as.character(params$method) == "2b") {
+  cat("El valor asignado se determinó por consenso de los participantes, utilizando un estimador robusto (mediana y nIQR).\n\n")
+  cat("La desviación estándar para la evaluación de la aptitud ($\\sigma_{pt}$) se estableció para cada contaminante basándose en ISO 13528:2022.\n\n")
+  cat("**Método Específico:** *Por consenso:* $\\sigma_{pt} = nIQR$.")
+} else if (as.character(params$method) == "3") {
+  cat("El valor asignado se determinó por consenso de los participantes, utilizando un estimador robusto (Algoritmo A).\n\n")
+  cat("La desviación estándar para la evaluación de la aptitud ($\\sigma_{pt}$) se estableció para cada contaminante basándose en ISO 13528:2022.\n\n")
+  cat("**Método Específico:** *Por consenso:* $\\sigma_{pt} = s^*$, donde $s^*$ es la desviación estándar robusta calculada mediante el Algoritmo A.")
+} else {
+  cat("El valor asignado se determinó por consenso de los participantes, utilizando un estimador robusto.\n\n")
+  cat("La desviación estándar para la evaluación de la aptitud ($\\sigma_{pt}$) se estableció para cada contaminante basándose en ISO 13528:2022.")
+}
+```
 
-Los valores asignados finales Xpt y sus incertidumbres estándar u(Xpt) y expandidas U(Xpt) para cada contaminante y nivel se presentan en el Anexo A.
+Los valores de $\sigma_{pt}$ calculados para cada nivel se presentan en el Anexo A.
 
 ## 2.4. Compatibilidad Metrológica
 
-Se verificó la compatibilidad metrológica de los valores de acuerdo a lo establecido en la ISO 13528 Numeral 7.8
+Se evaluó la compatibilidad metrológica calculando las diferencias entre el valor de referencia ($x_{pt,ref}$) y los valores de consenso ($x_{pt,2a}$, $x_{pt,2b}$ y $x_{pt,3}$) para cada contaminante y nivel.
 
-# 3. Metodología de Evaluación de Desempeño
+```{r metrological_compatibility_table, echo=FALSE}
+if (!is.null(params$metrological_compatibility) && is.data.frame(params$metrological_compatibility) && nrow(params$metrological_compatibility) > 0) {
+  
+  mc_df <- params$metrological_compatibility
+  method <- params$metrological_compatibility_method
+  
+  # Filter columns based on selected method
+  if (method == "2a") {
+    mc_df <- mc_df %>% select(pollutant, n_lab, level, x_pt_ref, x_pt_2a, Diff_Ref_2a)
+    colnames(mc_df) <- c("Contaminante", "N_Lab", "Nivel", "Valor Ref", "Valor Consenso 2a", "Dif (Ref - 2a)")
+  } else if (method == "2b") {
+    mc_df <- mc_df %>% select(pollutant, n_lab, level, x_pt_ref, x_pt_2b, Diff_Ref_2b)
+    colnames(mc_df) <- c("Contaminante", "N_Lab", "Nivel", "Valor Ref", "Valor Consenso 2b", "Dif (Ref - 2b)")
+  } else if (method == "3") {
+    mc_df <- mc_df %>% select(pollutant, n_lab, level, x_pt_ref, x_pt_3, Diff_Ref_3)
+    colnames(mc_df) <- c("Contaminante", "N_Lab", "Nivel", "Valor Ref", "Valor Consenso 3 (Alg A)", "Dif (Ref - 3)")
+  } else {
+    # Fallback: Show all
+    colnames(mc_df) <- c("Contaminante", "N_Lab", "Nivel", "Valor Ref", "Valor Consenso 2a", "Valor Consenso 2b", "Valor Consenso 3 (Alg A)", "Dif (Ref - 2a)", "Dif (Ref - 2b)", "Dif (Ref - 3)")
+  }
+  
+  kable(mc_df, digits = 4, caption = "Tabla. Compatibilidad Metrológica: Diferencias entre Valor de Referencia y Consenso")
+} else {
+  cat("No hay datos de compatibilidad metrológica disponibles.")
+}
+```
 
-La evaluación del desempeño de los participantes se realizó de acuerdo con los lineamientos de ISO 13528:2022, Cláusula 9, y P-PSEA-06.
+# 3. Criterios de Evaluación
 
-## 3.1. Desviación Estándar para Evaluación de Aptitud (σ)
+## 3.1. Desviación Estándar para la Evaluación de la Aptitud
 
-La desviación estándar para la evaluación de la aptitud (σ) se estableció para cada contaminante basándose en ISO 13528:2022.
-
-**Método Específico:** *Por consenso:* σpt = s*, donde s* es la desviación estándar robusta calculada mediante el Algoritmo A.
-
-Los valores de σ_pt calculados para cada nivel se presentan en el Anexo A.
+La desviación estándar para la evaluación de la aptitud ($\sigma_{pt}$) se utilizó para el cálculo de los indicadores de desempeño z, z' y zeta.
 
 ## 3.2. Indicadores de Desempeño y criterios de evaluación
 
-Se calcularon los siguientes indicadores de desempeño para cada resultado reportado x_i por cada participante:
+Se calcularon los siguientes indicadores de desempeño para cada resultado reportado $x_i$ por cada participante:
 
 | Indicador | Evaluación |
 | :---- | :---- |

@@ -48,9 +48,9 @@ get_wide_data <- function(df, target_pollutant) {
 }
 
 # 2. Load data
-hom_data_full <- read.csv("data/homogeneity.csv")
-stab_data_full <- read.csv("data/stability.csv")
-raw_summary_data <- read.csv("data/summary_n7.csv")
+hom_data_full <- read_csv("data/homogeneity.csv", show_col_types = FALSE)
+stab_data_full <- read_csv("data/stability.csv", show_col_types = FALSE)
+raw_summary_data <- read_csv("data/summary_n7.csv", show_col_types = FALSE)
 
 # --- Data Aggregation Step ---
 # The raw summary data has one row per replicate (sample_group).
@@ -702,8 +702,8 @@ compute_scores_for_selection <- function(summary_data, target_pollutant, target_
   if (!is.null(hom_res$error)) {
     return(list(error = paste("Error obteniendo parámetros de homogeneidad:", hom_res$error)))
   }
-  sigma_pt1 <- hom_res$sigma_pt
-  u_xpt1 <- hom_res$u_xpt
+  sigma_pt1 <- mean(ref_data$sd_value, na.rm = TRUE)
+  u_xpt1 <- mean(ref_data$sd_value, na.rm = TRUE)
 
   values <- participant_data$result
   n_part <- length(values)
