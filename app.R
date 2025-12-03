@@ -2445,47 +2445,85 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
   })
 
   metrological_compatibility_data <- eventReactive(input$run_metrological_compatibility, {
-    combos <- global_report_combos()
-    if (nrow(combos) == 0) {
-      return(tibble())
+    # 1. Get Reference Values
+    prep_data <- pt_prep_data()
+    if (is.null(prep_data)) return(tibble())
+    
+    ref_data <- prep_data %>%
+      filter(participant_id == "ref") %>%
+      group_by(pollutant, n_lab, level) %>%
+      summarise(x_pt_ref = mean(mean_value, na.rm = TRUE), .groups = "drop") %>%
+      mutate(n_lab = as.character(n_lab))
+    
+    # 2. Get Consensus Values (MADe and nIQR)
+    consensus_cache <- consensus_results_cache()
+    consensus_rows <- list()
+    
+    if (!is.null(consensus_cache)) {
+      purrr::iwalk(consensus_cache, function(res, key) {
+        if (is.null(res$summary)) return()
+        parts <- strsplit(key, "\\|\\|")[[1]]
+        
+        val_row <- res$summary %>% filter(Estadístico == "x_pt(2) - Mediana")
+        if (nrow(val_row) > 0) {
+          consensus_rows[[length(consensus_rows) + 1]] <<- tibble(
+            pollutant = parts[1],
+            n_lab = parts[2],
+            level = parts[3],
+            x_pt_consensus = val_row$Valor
+          )
+        }
+      })
     }
-
-    # Filter for relevant methods: Reference (1), Consensus MADe (2a), Consensus nIQR (2b), Algorithm A (3)
-    target_methods <- c("ref", "consensus_ma", "consensus_niqr", "algo")
-
-    data_filtered <- combos %>%
-      filter(combo_key %in% target_methods) %>%
-      select(pollutant, n_lab, level, combo_key, x_pt) %>%
-      distinct()
-
-    if (nrow(data_filtered) == 0) {
-      return(tibble())
+    
+    consensus_df <- if (length(consensus_rows) > 0) bind_rows(consensus_rows) else tibble()
+    
+    # 3. Get Algorithm A Values
+    algo_cache <- algoA_results_cache()
+    algo_rows <- list()
+    
+    if (!is.null(algo_cache)) {
+      purrr::iwalk(algo_cache, function(res, key) {
+        if (is.null(res$assigned_value)) return()
+        parts <- strsplit(key, "\\|\\|")[[1]]
+        
+        algo_rows[[length(algo_rows) + 1]] <<- tibble(
+          pollutant = parts[1],
+          n_lab = parts[2],
+          level = parts[3],
+          x_pt_algo = res$assigned_value
+        )
+      })
     }
-
-    # Pivot to wide format to have x_pt for each method in columns
-    data_wide <- data_filtered %>%
-      pivot_wider(names_from = combo_key, values_from = x_pt)
-
-    # Ensure columns exist before calculation
-    if (!"ref" %in% names(data_wide)) {
-      return(tibble())
-    }
-
-    # Calculate differences
-    data_calc <- data_wide %>%
+    
+    algo_df <- if (length(algo_rows) > 0) bind_rows(algo_rows) else tibble()
+    
+    # 4. Merge all
+    # Start with all unique combinations found in any source
+    all_combos <- bind_rows(
+      ref_data %>% select(pollutant, n_lab, level),
+      if (nrow(consensus_df) > 0) consensus_df %>% select(pollutant, n_lab, level) else tibble(),
+      if (nrow(algo_df) > 0) algo_df %>% select(pollutant, n_lab, level) else tibble()
+    ) %>% distinct()
+    
+    if (nrow(all_combos) == 0) return(tibble())
+    
+    final_df <- all_combos %>%
+      left_join(ref_data, by = c("pollutant", "n_lab", "level")) %>%
+      left_join(consensus_df, by = c("pollutant", "n_lab", "level")) %>%
+      left_join(algo_df, by = c("pollutant", "n_lab", "level")) %>%
       mutate(
-        x_pt_ref = ref,
-        x_pt_2a = if ("consensus_ma" %in% names(.)) consensus_ma else NA_real_,
-        x_pt_2b = if ("consensus_niqr" %in% names(.)) consensus_niqr else NA_real_,
-        x_pt_3 = if ("algo" %in% names(.)) algo else NA_real_,
-        Diff_Ref_2a = if ("consensus_ma" %in% names(.)) x_pt_ref - x_pt_2a else NA_real_,
-        Diff_Ref_2b = if ("consensus_niqr" %in% names(.)) x_pt_ref - x_pt_2b else NA_real_,
-        Diff_Ref_3 = if ("algo" %in% names(.)) x_pt_ref - x_pt_3 else NA_real_
+        x_pt_2a = x_pt_consensus, # Median is used for both
+        x_pt_2b = x_pt_consensus,
+        x_pt_3 = x_pt_algo,
+        Diff_Ref_2a = x_pt_ref - x_pt_2a,
+        Diff_Ref_2b = x_pt_ref - x_pt_2b,
+        Diff_Ref_3 = x_pt_ref - x_pt_3
       ) %>%
       select(pollutant, n_lab, level, x_pt_ref, x_pt_2a, x_pt_2b, x_pt_3, Diff_Ref_2a, Diff_Ref_2b, Diff_Ref_3) %>%
       arrange(pollutant, n_lab, level)
-
-    data_calc
+      
+    final_df
   })
 
   global_level_summary_data <- reactive({
