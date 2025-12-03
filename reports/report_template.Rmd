@@ -238,7 +238,7 @@ Dado que los ítems de ensayo se generan dinámicamente y se miden in situ, la e
 
 **Estabilidad:** Se monitoreó la estabilidad de la concentración generada durante cada corrida mediante los instrumentos de referencia de CALAIRE, según ISO 13528:2022, Anexo B. Los datos de estabilidad se presentan en el Anexo B.
 
-## 2.3. Determinación del Valor Asignado (Xp)
+## 2.3. Determinación del Valor Asignado ($x_{pt}$) y su desviación ($\sigma_{pt}$)
 
 ```{r assigned_value_text, echo=FALSE, results='asis'}
 if (!is.null(params$method) && as.character(params$method) == "1") {
@@ -262,11 +262,22 @@ if (!is.null(params$method) && as.character(params$method) == "1") {
 }
 ```
 
-Los valores de $\sigma_{pt}$ calculados para cada nivel se presentan en el Anexo A.
+Los valores de $x_{pt}$ y $\sigma_{pt}$ calculados para cada nivel se presentan en el Anexo A.
 
 ## 2.4. Compatibilidad Metrológica
 
-Se evaluó la compatibilidad metrológica calculando las diferencias entre el valor de referencia ($x_{pt,ref}$) y los valores de consenso ($x_{pt,2a}$, $x_{pt,2b}$ y $x_{pt,3}$) para cada contaminante y nivel.
+```{r metrological_compatibility_text, echo=FALSE, results='asis'}
+method <- params$metrological_compatibility_method
+if (method == "2a") {
+  cat("Se evaluó la compatibilidad metrológica calculando las diferencias entre el valor de referencia ($x_{pt,ref}$) y el valor de consenso ($x_{pt,2a}$) para cada contaminante y nivel.")
+} else if (method == "2b") {
+  cat("Se evaluó la compatibilidad metrológica calculando las diferencias entre el valor de referencia ($x_{pt,ref}$) y el valor de consenso ($x_{pt,2b}$) para cada contaminante y nivel.")
+} else if (method == "3") {
+  cat("Se evaluó la compatibilidad metrológica calculando las diferencias entre el valor de referencia ($x_{pt,ref}$) y el valor de consenso ($x_{pt,3}$) para cada contaminante y nivel.")
+} else {
+  cat("Se evaluó la compatibilidad metrológica calculando las diferencias entre el valor de referencia ($x_{pt,ref}$) y los valores de consenso ($x_{pt,2a}$, $x_{pt,2b}$ y $x_{pt,3}$) para cada contaminante y nivel.")
+}
+```
 
 ```{r metrological_compatibility_table, echo=FALSE}
 if (!is.null(params$metrological_compatibility) && is.data.frame(params$metrological_compatibility) && nrow(params$metrological_compatibility) > 0) {
@@ -297,20 +308,54 @@ if (!is.null(params$metrological_compatibility) && is.data.frame(params$metrolog
 
 # 3. Criterios de Evaluación
 
-## 3.1. Desviación Estándar para la Evaluación de la Aptitud
-
-La desviación estándar para la evaluación de la aptitud ($\sigma_{pt}$) se utilizó para el cálculo de los indicadores de desempeño z, z' y zeta.
-
-## 3.2. Indicadores de Desempeño y criterios de evaluación
+## 3.1. Indicadores de Desempeño y criterios de evaluación
 
 Se calcularon los siguientes indicadores de desempeño para cada resultado reportado $x_i$ por cada participante:
 
-| Indicador | Evaluación |
-| :---- | :---- |
-| **Puntuación z/z’/zeta:** | |z| ≤ 2.0: **Satisfactorio**<br>2.0 < |z| < 3.0: **Cuestionable (Señal de Advertencia)**<br>|z| ≥ 3.0: **Insatisfactorio (Señal de Acción)** |
-| **Puntuación En:** | |E_n| ≤ 1.0: **Satisfactorio**<br>|E_n| > 1.0: **Insatisfactorio** |
+```{r performance_criteria_table, echo=FALSE}
+metric <- params$metric
+criteria_df <- data.frame(
+  Indicador = character(),
+  Ecuacion = character(),
+  Evaluacion = character(),
+  stringsAsFactors = FALSE
+)
 
-## 3.3. Tratamiento Estadístico de Datos
+if (metric == "z") {
+  criteria_df <- data.frame(
+    Indicador = "Puntuación z",
+    Ecuacion = "$z = \\frac{x_i - x_{pt}}{\\sigma_{pt}}$",
+    Evaluacion = "|z| ≤ 2.0: **Satisfactorio**<br>2.0 < |z| < 3.0: **Cuestionable**<br>|z| ≥ 3.0: **Insatisfactorio**",
+    stringsAsFactors = FALSE
+  )
+} else if (metric == "z'") {
+  criteria_df <- data.frame(
+    Indicador = "Puntuación z'",
+    Ecuacion = "$z' = \\frac{x_i - x_{pt}}{\\sqrt{\\sigma_{pt}^2 + u(x_{pt})^2}}$",
+    Evaluacion = "|z'| ≤ 2.0: **Satisfactorio**<br>2.0 < |z'| < 3.0: **Cuestionable**<br>|z'| ≥ 3.0: **Insatisfactorio**",
+    stringsAsFactors = FALSE
+  )
+} else if (metric == "zeta") {
+  criteria_df <- data.frame(
+    Indicador = "Puntuación zeta",
+    Ecuacion = "$\\zeta = \\frac{x_i - x_{pt}}{\\sqrt{u(x_i)^2 + u(x_{pt})^2}}$",
+    Evaluacion = "|zeta| ≤ 2.0: **Satisfactorio**<br>2.0 < |zeta| < 3.0: **Cuestionable**<br>|zeta| ≥ 3.0: **Insatisfactorio**",
+    stringsAsFactors = FALSE
+  )
+} else if (metric == "En") {
+  criteria_df <- data.frame(
+    Indicador = "Puntuación En",
+    Ecuacion = "$E_n = \\frac{x_i - x_{pt}}{\\sqrt{U(x_i)^2 + U(x_{pt})^2}}$",
+    Evaluacion = "|En| ≤ 1.0: **Satisfactorio**<br>|En| > 1.0: **Insatisfactorio**",
+    stringsAsFactors = FALSE
+  )
+}
+
+colnames(criteria_df) <- c("Indicador", "Ecuación", "Evaluación")
+kable(criteria_df, escape = FALSE, caption = "Tabla. Criterios de evaluación del desempeño")
+```
+
+## 3.2. Tratamiento Estadístico de Datos
 
 **Recepción y Validación:** Los resultados reportados por los participantes fueron recibidos a través del Aplicativo Web/Formulario y validados para verificar formato, unidades y completitud.
 

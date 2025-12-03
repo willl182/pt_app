@@ -70,12 +70,26 @@ server <- function(input, output, session) {
 
   hom_data_full <- reactive({
     req(input$hom_file)
-    vroom::vroom(input$hom_file$datapath, show_col_types = FALSE)
+    df <- vroom::vroom(input$hom_file$datapath, show_col_types = FALSE)
+    validate(
+      need(
+        all(c("value", "pollutant", "level") %in% names(df)),
+        "Error: El archivo de homogeneidad debe contener las columnas 'value', 'pollutant' y 'level'. Verifique que ha subido el archivo correcto."
+      )
+    )
+    df
   })
 
   stab_data_full <- reactive({
     req(input$stab_file)
-    vroom::vroom(input$stab_file$datapath, show_col_types = FALSE)
+    df <- vroom::vroom(input$stab_file$datapath, show_col_types = FALSE)
+    validate(
+      need(
+        all(c("value", "pollutant", "level") %in% names(df)),
+        "Error: El archivo de estabilidad debe contener las columnas 'value', 'pollutant' y 'level'. Verifique que ha subido el archivo correcto."
+      )
+    )
+    df
   })
 
   # PT Prep data
@@ -97,6 +111,13 @@ server <- function(input, output, session) {
     if (is.null(raw_data) || nrow(raw_data) == 0) {
       return(NULL)
     }
+
+    validate(
+      need(
+        all(c("participant_id", "pollutant", "level", "mean_value", "sd_value") %in% names(raw_data)),
+        "Error: Los archivos resumen deben contener las columnas 'participant_id', 'pollutant', 'level', 'mean_value' y 'sd_value'. Verifique que ha subido los archivos correctos."
+      )
+    )
 
     # Store raw data in a reactive value for use in sigma_pt_1 calculation
     rv$raw_summary_data <- raw_data
@@ -193,6 +214,9 @@ server <- function(input, output, session) {
   get_wide_data <- function(df, target_pollutant) {
     filtered <- df %>% filter(pollutant == target_pollutant)
     if (is.null(filtered) || nrow(filtered) == 0) {
+      return(NULL)
+    }
+    if (!"value" %in% names(filtered)) {
       return(NULL)
     }
     filtered %>%
@@ -4087,19 +4111,27 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
     for (pol in pollutants) {
       pol_data <- scores_df %>% filter(pollutant == pol)
 
-      if (input$report_metric == "En") {
+      metric <- input$report_metric
+
+      if (metric == "En") {
+        pol_data$score_val <- pol_data$En_score
         pol_data$eval <- case_when(
           abs(pol_data$En_score) <= 1 ~ "Satisfactorio",
           TRUE ~ "Insatisfactorio"
         )
-        pol_data$score_val <- pol_data$En_score
       } else {
+        # Select score based on metric
+        pol_data$score_val <- switch(metric,
+          "z" = pol_data$z_score,
+          "z'" = pol_data$z_prime_score,
+          "zeta" = pol_data$zeta_score
+        )
+
         pol_data$eval <- case_when(
-          abs(pol_data$z_score) <= 2 ~ "Satisfactorio",
-          abs(pol_data$z_score) < 3 ~ "Cuestionable",
+          abs(pol_data$score_val) <= 2 ~ "Satisfactorio",
+          abs(pol_data$score_val) < 3 ~ "Cuestionable",
           TRUE ~ "Insatisfactorio"
         )
-        pol_data$score_val <- pol_data$z_score
       }
 
       p <- ggplot(pol_data, aes(x = level, y = participant_id, fill = eval)) +
@@ -4180,8 +4212,16 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
         lev <- p_data$level[i]
 
         # Determine evaluation based on selected metric for the table
-        score_val <- if (input$report_metric == "En") p_data$En_score[i] else p_data$z_score[i]
-        eval_val <- if (input$report_metric == "En") {
+        # Determine evaluation based on selected metric for the table
+        metric <- input$report_metric
+        score_val <- switch(metric,
+          "z" = p_data$z_score[i],
+          "z'" = p_data$z_prime_score[i],
+          "zeta" = p_data$zeta_score[i],
+          "En" = p_data$En_score[i]
+        )
+
+        eval_val <- if (metric == "En") {
           case_when(abs(score_val) <= 1 ~ "Satisfactorio", TRUE ~ "Insatisfactorio")
         } else {
           case_when(abs(score_val) <= 2 ~ "Satisfactorio", abs(score_val) < 3 ~ "Cuestionable", TRUE ~ "Insatisfactorio")
@@ -4395,7 +4435,18 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
         html = "html",
         word = "docx"
       )
-      paste0("Informe_EA_", Sys.Date(), ".", ext)
+
+      # Construct filename with parameters: n_lab-metric-method-compatibility
+      # Example: Informe_EA_2025-12-02_13-zeta-2a-2a
+      fname <- paste0(
+        "Informe_EA_", Sys.Date(), "_",
+        input$report_n_lab, "-",
+        input$report_metric, "-",
+        input$report_method, "-",
+        input$report_metrological_compatibility
+      )
+
+      paste0(fname, ".", ext)
     },
     content = function(file) {
       if (!requireNamespace("rmarkdown", quietly = TRUE)) {
