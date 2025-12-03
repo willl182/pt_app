@@ -1070,10 +1070,12 @@ server <- function(input, output, session) {
                   dataTableOutput("global_overview_ref"),
                   hr(),
                   fluidRow(
-                    column(3, plotlyOutput("global_heatmap_z_ref", height = "350px")),
-                    column(3, plotlyOutput("global_heatmap_zprime_ref", height = "350px")),
-                    column(3, plotlyOutput("global_heatmap_zeta_ref", height = "350px")),
-                    column(3, plotlyOutput("global_heatmap_en_ref", height = "350px"))
+                    column(6, plotlyOutput("global_heatmap_z_ref", height = "350px")),
+                    column(6, plotlyOutput("global_heatmap_zprime_ref", height = "350px"))
+                  ),
+                  fluidRow(
+                    column(6, plotlyOutput("global_heatmap_zeta_ref", height = "350px")),
+                    column(6, plotlyOutput("global_heatmap_en_ref", height = "350px"))
                   )
                 )
               ) %>%
@@ -1087,10 +1089,12 @@ server <- function(input, output, session) {
                   dataTableOutput("global_overview_consensus_ma"),
                   hr(),
                   fluidRow(
-                    column(3, plotlyOutput("global_heatmap_z_consensus_ma", height = "350px")),
-                    column(3, plotlyOutput("global_heatmap_zprime_consensus_ma", height = "350px")),
-                    column(3, plotlyOutput("global_heatmap_zeta_consensus_ma", height = "350px")),
-                    column(3, plotlyOutput("global_heatmap_en_consensus_ma", height = "350px"))
+                    column(6, plotlyOutput("global_heatmap_z_consensus_ma", height = "350px")),
+                    column(6, plotlyOutput("global_heatmap_zprime_consensus_ma", height = "350px"))
+                  ),
+                  fluidRow(
+                    column(6, plotlyOutput("global_heatmap_zeta_consensus_ma", height = "350px")),
+                    column(6, plotlyOutput("global_heatmap_en_consensus_ma", height = "350px"))
                   )
                 )
               ) %>%
@@ -1104,10 +1108,12 @@ server <- function(input, output, session) {
                   dataTableOutput("global_overview_consensus_niqr"),
                   hr(),
                   fluidRow(
-                    column(3, plotlyOutput("global_heatmap_z_consensus_niqr", height = "350px")),
-                    column(3, plotlyOutput("global_heatmap_zprime_consensus_niqr", height = "350px")),
-                    column(3, plotlyOutput("global_heatmap_zeta_consensus_niqr", height = "350px")),
-                    column(3, plotlyOutput("global_heatmap_en_consensus_niqr", height = "350px"))
+                    column(6, plotlyOutput("global_heatmap_z_consensus_niqr", height = "350px")),
+                    column(6, plotlyOutput("global_heatmap_zprime_consensus_niqr", height = "350px"))
+                  ),
+                  fluidRow(
+                    column(6, plotlyOutput("global_heatmap_zeta_consensus_niqr", height = "350px")),
+                    column(6, plotlyOutput("global_heatmap_en_consensus_niqr", height = "350px"))
                   )
                 )
               ) %>%
@@ -1121,10 +1127,12 @@ server <- function(input, output, session) {
                   dataTableOutput("global_overview_algo"),
                   hr(),
                   fluidRow(
-                    column(3, plotlyOutput("global_heatmap_z_algo", height = "350px")),
-                    column(3, plotlyOutput("global_heatmap_zprime_algo", height = "350px")),
-                    column(3, plotlyOutput("global_heatmap_zeta_algo", height = "350px")),
-                    column(3, plotlyOutput("global_heatmap_en_algo", height = "350px"))
+                    column(6, plotlyOutput("global_heatmap_z_algo", height = "350px")),
+                    column(6, plotlyOutput("global_heatmap_zprime_algo", height = "350px"))
+                  ),
+                  fluidRow(
+                    column(6, plotlyOutput("global_heatmap_zeta_algo", height = "350px")),
+                    column(6, plotlyOutput("global_heatmap_en_algo", height = "350px"))
                   )
                 )
               )
@@ -4988,12 +4996,18 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
 
   # --- Preparación PT Module ---
 
-  output$global_overview_algo <- renderDataTable(
-    {
-      get_global_overview_data(global_combo_specs$algo)
-    },
-    options = list(pageLength = 10, scrollX = TRUE)
-  )
+  output$global_overview_algo <- renderDataTable({
+    overview <- get_global_overview_data(global_combo_specs$algo)
+    if (nrow(overview) == 0) {
+      return(datatable(data.frame(Mensaje = "No hay datos disponibles para esta combinación.")))
+    }
+    datatable(
+      overview,
+      options = list(scrollX = TRUE, pageLength = 12),
+      rownames = FALSE
+    ) %>%
+      formatRound(columns = c("Resultado", "u(xi)", "Puntaje z", "Puntaje z'", "Puntaje zeta", "Puntaje En"), digits = 3)
+  })
 
   output$metrological_compatibility_table <- renderDataTable({
     data <- metrological_compatibility_data()
