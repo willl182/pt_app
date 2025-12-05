@@ -219,3 +219,7 @@ In this updated tutorial, you have enhanced a formal statistical procedure and a
 3. **Grouped Analysis:** We used dplyr to efficiently apply our function across multiple subsets of our data, a common task in data analysis.
 
 The ability to translate technical standards into working code and apply them to real-world, structured data is a critical skill for any data professional. This guide provides a clear template for tackling similar challenges.
+## Actualización 2024-11-21
+- Sincronizado con la lógica vigente en `app.R`, incluyendo el uso de Algoritmo A, las variantes de \u03c3_pt y los criterios de homogeneidad/estabilidad basados en las medianas robustas.
+- Referencia cruzada con `reports/report_template.Rmd` para reflejar los parámetros YAML (pollutant, level, n_lab, k_factor y metrological_compatibility_method) utilizados al generar informes.
+- Verificado que las descripciones mantienen consistencia con la interfaz Shiny y el flujo de cálculo de puntajes z, z', zeta y En.

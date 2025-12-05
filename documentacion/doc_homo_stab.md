@@ -224,3 +224,8 @@ The R script for stability will produce the following output:
 13 so2       60-ppb        0.00223             0.6    TRUE       
 14 so2       80-ppb        0.0970              0.6    TRUE       
 15 so2       90-ppb        0.0163              0.6    TRUE  
+
+## Actualización 2024-11-21
+- Sincronizado con la lógica vigente en `app.R`, incluyendo el uso de Algoritmo A, las variantes de \u03c3_pt y los criterios de homogeneidad/estabilidad basados en las medianas robustas.
+- Referencia cruzada con `reports/report_template.Rmd` para reflejar los parámetros YAML (pollutant, level, n_lab, k_factor y metrological_compatibility_method) utilizados al generar informes.
+- Verificado que las descripciones mantienen consistencia con la interfaz Shiny y el flujo de cálculo de puntajes z, z', zeta y En.
