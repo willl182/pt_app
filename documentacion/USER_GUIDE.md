@@ -9,9 +9,11 @@ Esta guía proporciona instrucciones detalladas sobre cómo utilizar la aplicaci
     - [1. Carga de Datos](#1-carga-de-datos)
     - [2. Análisis de Homogeneidad y Estabilidad](#2-análisis-de-homogeneidad-y-estabilidad)
     - [3. Valor Asignado](#3-valor-asignado)
-    - [4. Puntajes PT](#4-puntajes-pt)
-    - [5. Informe Global](#5-informe-global)
-    - [6. Generación de Informes](#6-generación-de-informes)
+    - [4. Outlier](#4-outlier)
+    - [5. Puntajes PT](#5-puntajes-pt)
+    - [6. Informe Global](#6-informe-global)
+    - [7. Participantes](#7-participantes)
+    - [8. Generación de Informes](#8-generación-de-informes)
 4. [Referencia de Cálculos](#referencia-de-cálculos)
 
 ---
@@ -96,7 +98,15 @@ Define el valor verdadero convencional ($x_{pt}$) y su incertidumbre ($u(x_{pt})
    - **Valor consenso**: Calcula la media robusta, MADe y nIQR de todos los participantes.
    - **Valor de referencia**: Muestra los datos del laboratorio marcado como "ref".
 
-### 4. Puntajes PT
+### 4. Outlier
+Esta sección presenta un resumen de la detección de valores atípicos utilizando la prueba de Grubbs.
+
+1. Vaya a la pestaña **"Outlier"**.
+2. Revise la tabla "Resumen de valores atípicos (Grubbs)".
+   - Muestra el valor p y si se detectaron atípicos para cada combinación de contaminante y nivel.
+   - Identifica al participante y el valor atípico si aplica.
+
+### 5. Puntajes PT
 Calcula el desempeño de los participantes.
 
 1. Vaya a la pestaña **"Puntajes PT"**.
@@ -109,7 +119,7 @@ Calcula el desempeño de los participantes.
      - **Zeta-score**: Incluye la incertidumbre del participante.
      - **En-score**: Error normalizado.
 
-### 5. Informe Global
+### 6. Informe Global
 Ofrece una vista panorámica de todos los métodos de evaluación.
 
 1. Vaya a la pestaña **"Informe global"**.
@@ -117,7 +127,16 @@ Ofrece una vista panorámica de todos los métodos de evaluación.
 3. Seleccione la combinación de interés.
 4. Visualice mapas de calor (Heatmaps) que comparan el desempeño de los participantes bajo diferentes métodos de asignación de valor (Referencia, Consenso, Algoritmo A).
 
-### 6. Generación de Informes
+### 7. Participantes
+Permite ver un resumen detallado individual por participante.
+
+1. Vaya a la pestaña **"Participantes"**.
+2. Seleccione el **Analito** y el **Nivel**.
+3. El sistema generará pestañas para cada participante con:
+   - Tabla resumen de sus resultados y puntajes.
+   - Gráficos individuales de desempeño.
+
+### 8. Generación de Informes
 Exporte los resultados finales.
 
 1. Vaya a la pestaña **"Generación de informes"**.

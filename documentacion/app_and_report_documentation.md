@@ -31,9 +31,32 @@
        hom_data = homogeneity_df,
        stab_data = stability_df,
        summary_data = participant_summary,
-       pollutant = "so2",
+       metric = "z",
+       method = "3",
+       pollutant = NULL,
        level = "level_1",
-       n_lab = 7
+       n_lab = 7,
+       k_factor = 2,
+       # Identification params
+       scheme_id = "EA-202X-XX",
+       report_id = "INF-202X-XX",
+       issue_date = Sys.Date(),
+       period = "Mes - Mes Año",
+       coordinator = "Nombre",
+       quality_pro = "Nombre",
+       ops_eng = "Nombre",
+       quality_manager = "Nombre",
+       # Data summaries
+       participants_data = participants_instrumentation_df,
+       grubbs_summary = grubbs_summary_df,
+       xpt_summary = xpt_summary_df,
+       homogeneity_summary = homogeneity_summary_df,
+       stability_summary = stability_summary_df,
+       score_summary = score_summary_df,
+       heatmaps = heatmaps_list,
+       participant_data = participant_data_list,
+       metrological_compatibility = metrological_compatibility_df,
+       metrological_compatibility_method = "2a"
      )
    )
    ```

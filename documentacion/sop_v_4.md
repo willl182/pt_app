@@ -73,18 +73,33 @@ nIQR_manual <- function(x){
   0.7413 * (q[2] - q[1])
 }
 
-algorithm_A <- function(x, max_iter=100){
-  x <- x[!is.na(x)]
-  x_star <- median(x); s_star <- mad(x, constant=1.4826)
-  for(i in 1:max_iter){
-    delta <- 1.5 * s_star
-    x_prime <- pmin(pmax(x, x_star - delta), x_star + delta)
-    new_x <- mean(x_prime)
-    new_s <- 1.134 * sd(x_prime)
-    if(abs(new_x - x_star) < 1e-6 && abs(new_s - s_star) < 1e-6) break
-    x_star <- new_x; s_star <- new_s
+run_algorithm_a <- function(values, max_iter = 50) {
+  values <- values[is.finite(values)]
+  n <- length(values)
+  if (n < 3) return(list(robust_mean = NA, robust_sd = NA, error = "N<3"))
+
+  x_star <- median(values, na.rm = TRUE)
+  s_star <- 1.483 * median(abs(values - x_star), na.rm = TRUE)
+  if (s_star < 1e-9) s_star <- sd(values, na.rm = TRUE)
+  if (s_star < 1e-9) return(list(robust_mean = x_star, robust_sd = 0, error = "Zero dispersion"))
+
+  for (i in 1:max_iter) {
+    u_values <- (values - x_star) / (1.5 * s_star)
+    weights <- ifelse(abs(u_values) <= 1, 1, 1 / (u_values^2))
+    weight_sum <- sum(weights)
+
+    x_new <- sum(weights * values) / weight_sum
+    s_new <- sqrt(sum(weights * (values - x_new)^2) / weight_sum)
+
+    delta_x <- abs(x_new - x_star)
+    delta_s <- abs(s_new - s_star)
+
+    x_star <- x_new
+    s_star <- s_new
+
+    if (delta_x < 1e-03 && delta_s < 1e-03) break
   }
-  list(robust_mean=x_star, robust_sd=s_star)
+  list(robust_mean = x_star, robust_sd = s_star, error = NULL)
 }
 ```
 

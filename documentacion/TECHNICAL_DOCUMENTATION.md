@@ -167,8 +167,8 @@ This algorithm iteratively calculates a robust mean ($x^*$) and robust standard 
     3.  Update Mean:
         $$ x^*_{new} = \frac{\sum w_i x_i}{\sum w_i} $$
     4.  Update SD:
-        $$ s^*_{new} = 1.134 \times \sqrt{ \frac{\sum w_i (x_i - x^*_{new})^2}{\sum w_i} } $$
-        *(Note: The actual implementation in `app.R` uses `s_new <- sqrt(sum(weights * (values - x_new)^2) / weight_sum)`. The factor 1.134 typically seen in ISO 13528 for converting to expectation of Gaussian SD is implicit or handled differently in this specific codebase version; check specific version. In the provided `app.R` code, the factor 1.134 is **NOT** present in the update step line 616, making it a weighted RMS calculation).*
+        $$ s^*_{new} = \sqrt{ \frac{\sum w_i (x_i - x^*_{new})^2}{\sum w_i} } $$
+        *(Note: The actual implementation in `app.R` uses `s_new <- sqrt(sum(weights * (values - x_new)^2) / weight_sum)`. The factor 1.134, which is typically seen in ISO 13528 for converting the standard deviation of winsorized data to the expectation of Gaussian SD, is NOT present in this implementation. This implementation performs a weighted RMS calculation, where weights are determined by standardized residuals).*
 
 *   **Convergence**: Stops when relative change in $x^*$ and $s^*$ is $< 0.001$.
 
