@@ -4,6 +4,8 @@ This Shiny application provides a comprehensive toolkit for analyzing data from 
 
 ## User Guide
 
+For a step-by-step installation walkthrough and a deeper explanation of how the app and report template calculate homogeneity, stability, and participant scores, see `documentacion/app_and_report_documentation.md`.
+
 ### Getting Started
 
 To run the application, you need to have R and the required packages installed.
