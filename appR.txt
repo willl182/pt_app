@@ -70,12 +70,26 @@ server <- function(input, output, session) {
 
   hom_data_full <- reactive({
     req(input$hom_file)
-    vroom::vroom(input$hom_file$datapath, show_col_types = FALSE)
+    df <- vroom::vroom(input$hom_file$datapath, show_col_types = FALSE)
+    validate(
+      need(
+        all(c("value", "pollutant", "level") %in% names(df)),
+        "Error: El archivo de homogeneidad debe contener las columnas 'value', 'pollutant' y 'level'. Verifique que ha subido el archivo correcto."
+      )
+    )
+    df
   })
 
   stab_data_full <- reactive({
     req(input$stab_file)
-    vroom::vroom(input$stab_file$datapath, show_col_types = FALSE)
+    df <- vroom::vroom(input$stab_file$datapath, show_col_types = FALSE)
+    validate(
+      need(
+        all(c("value", "pollutant", "level") %in% names(df)),
+        "Error: El archivo de estabilidad debe contener las columnas 'value', 'pollutant' y 'level'. Verifique que ha subido el archivo correcto."
+      )
+    )
+    df
   })
 
   # PT Prep data
@@ -97,6 +111,13 @@ server <- function(input, output, session) {
     if (is.null(raw_data) || nrow(raw_data) == 0) {
       return(NULL)
     }
+
+    validate(
+      need(
+        all(c("participant_id", "pollutant", "level", "mean_value", "sd_value") %in% names(raw_data)),
+        "Error: Los archivos resumen deben contener las columnas 'participant_id', 'pollutant', 'level', 'mean_value' y 'sd_value'. Verifique que ha subido los archivos correctos."
+      )
+    )
 
     # Store raw data in a reactive value for use in sigma_pt_1 calculation
     rv$raw_summary_data <- raw_data
@@ -193,6 +214,9 @@ server <- function(input, output, session) {
   get_wide_data <- function(df, target_pollutant) {
     filtered <- df %>% filter(pollutant == target_pollutant)
     if (is.null(filtered) || nrow(filtered) == 0) {
+      return(NULL)
+    }
+    if (!"value" %in% names(filtered)) {
       return(NULL)
     }
     filtered %>%
@@ -939,15 +963,34 @@ server <- function(input, output, session) {
                     dataTableOutput("reference_table")
                   )
                 )
+              ) %>%
+              bsplus::bs_append(
+                title = "Compatibilidad Metrológica",
+                content = sidebarLayout(
+                  sidebarPanel(
+                    width = analysis_sidebar_w,
+                    h4("Ejecutar Cálculo"),
+                    actionButton("run_metrological_compatibility", "Calcular Compatibilidad", class = "btn-primary btn-block"),
+                    hr(),
+                    helpText("Calcula las diferencias entre el valor de referencia y los valores de consenso (2a y 2b).")
+                  ),
+                  mainPanel(
+                    width = analysis_main_w,
+                    h4("Diferencias entre Valor de Referencia y Consenso"),
+                    p("Esta tabla muestra la compatibilidad metrológica entre el valor de referencia y los valores de consenso calculados."),
+                    dataTableOutput("metrological_compatibility_table"),
+                    p(class = "text-muted", "Nota: D_2a = x_pt(Ref) - x_pt(2a); D_2b = x_pt(Ref) - x_pt(2b)")
+                  )
+                )
               )
           )
         )
       ),
       tabPanel(
-        "Preparación PT",
-        h3("Análisis de esquemas de ensayos de aptitud"),
-        p("Análisis de los resultados de los participantes de diferentes esquemas PT a partir de archivos resumen."),
-        uiOutput("pt_pollutant_tabs")
+        "Outlier",
+        h3("Resumen de valores atípicos (Grubbs)"),
+        p("Tabla resumen de la prueba de Grubbs para la detección de valores atípicos en los datos de los participantes."),
+        dataTableOutput("grubbs_summary_table")
       ),
       tabPanel(
         "Puntajes PT",
@@ -1027,10 +1070,12 @@ server <- function(input, output, session) {
                   dataTableOutput("global_overview_ref"),
                   hr(),
                   fluidRow(
-                    column(3, plotlyOutput("global_heatmap_z_ref", height = "350px")),
-                    column(3, plotlyOutput("global_heatmap_zprime_ref", height = "350px")),
-                    column(3, plotlyOutput("global_heatmap_zeta_ref", height = "350px")),
-                    column(3, plotlyOutput("global_heatmap_en_ref", height = "350px"))
+                    column(6, plotlyOutput("global_heatmap_z_ref", height = "350px")),
+                    column(6, plotlyOutput("global_heatmap_zprime_ref", height = "350px"))
+                  ),
+                  fluidRow(
+                    column(6, plotlyOutput("global_heatmap_zeta_ref", height = "350px")),
+                    column(6, plotlyOutput("global_heatmap_en_ref", height = "350px"))
                   )
                 )
               ) %>%
@@ -1044,10 +1089,12 @@ server <- function(input, output, session) {
                   dataTableOutput("global_overview_consensus_ma"),
                   hr(),
                   fluidRow(
-                    column(3, plotlyOutput("global_heatmap_z_consensus_ma", height = "350px")),
-                    column(3, plotlyOutput("global_heatmap_zprime_consensus_ma", height = "350px")),
-                    column(3, plotlyOutput("global_heatmap_zeta_consensus_ma", height = "350px")),
-                    column(3, plotlyOutput("global_heatmap_en_consensus_ma", height = "350px"))
+                    column(6, plotlyOutput("global_heatmap_z_consensus_ma", height = "350px")),
+                    column(6, plotlyOutput("global_heatmap_zprime_consensus_ma", height = "350px"))
+                  ),
+                  fluidRow(
+                    column(6, plotlyOutput("global_heatmap_zeta_consensus_ma", height = "350px")),
+                    column(6, plotlyOutput("global_heatmap_en_consensus_ma", height = "350px"))
                   )
                 )
               ) %>%
@@ -1061,10 +1108,12 @@ server <- function(input, output, session) {
                   dataTableOutput("global_overview_consensus_niqr"),
                   hr(),
                   fluidRow(
-                    column(3, plotlyOutput("global_heatmap_z_consensus_niqr", height = "350px")),
-                    column(3, plotlyOutput("global_heatmap_zprime_consensus_niqr", height = "350px")),
-                    column(3, plotlyOutput("global_heatmap_zeta_consensus_niqr", height = "350px")),
-                    column(3, plotlyOutput("global_heatmap_en_consensus_niqr", height = "350px"))
+                    column(6, plotlyOutput("global_heatmap_z_consensus_niqr", height = "350px")),
+                    column(6, plotlyOutput("global_heatmap_zprime_consensus_niqr", height = "350px"))
+                  ),
+                  fluidRow(
+                    column(6, plotlyOutput("global_heatmap_zeta_consensus_niqr", height = "350px")),
+                    column(6, plotlyOutput("global_heatmap_en_consensus_niqr", height = "350px"))
                   )
                 )
               ) %>%
@@ -1078,10 +1127,12 @@ server <- function(input, output, session) {
                   dataTableOutput("global_overview_algo"),
                   hr(),
                   fluidRow(
-                    column(3, plotlyOutput("global_heatmap_z_algo", height = "350px")),
-                    column(3, plotlyOutput("global_heatmap_zprime_algo", height = "350px")),
-                    column(3, plotlyOutput("global_heatmap_zeta_algo", height = "350px")),
-                    column(3, plotlyOutput("global_heatmap_en_algo", height = "350px"))
+                    column(6, plotlyOutput("global_heatmap_z_algo", height = "350px")),
+                    column(6, plotlyOutput("global_heatmap_zprime_algo", height = "350px"))
+                  ),
+                  fluidRow(
+                    column(6, plotlyOutput("global_heatmap_zeta_algo", height = "350px")),
+                    column(6, plotlyOutput("global_heatmap_en_algo", height = "350px"))
                   )
                 )
               )
@@ -1108,18 +1159,61 @@ server <- function(input, output, session) {
         "Generación de informes",
         sidebarLayout(
           sidebarPanel(
-            width = analysis_sidebar_w,
-            h4("1. Configuración del Informe"),
+            width = 3,
+            h4("2. Selección de Datos"),
+            uiOutput("report_n_selector"),
+            uiOutput("report_level_selector"),
+            p(class = "text-info", style = "font-size: 0.9em;", "Nota: Se incluirán todos los analitos disponibles."),
+            hr(),
+            h4("3. Parámetros"),
             selectInput("report_metric", "Métrica:", choices = c("z", "z'", "zeta", "En")),
             selectInput("report_method", "Método:", choices = c("Referencia (1)" = "1", "Consenso MADe (2a)" = "2a", "Consenso nIQR (2b)" = "2b", "Algoritmo A (3)" = "3")),
+            selectInput("report_metrological_compatibility", "Compatibilidad Metrológica (Consenso):", choices = c("Consenso MADe (2a)" = "2a", "Consenso nIQR (2b)" = "2b", "Algoritmo A (3)" = "3"), selected = "2a"),
+            numericInput("report_k", "Factor de cobertura (k):", value = 2, min = 1, max = 3, step = 0.1),
             hr(),
-            radioButtons("report_format", "Formato de salida:", choices = c("Word (DOCX)" = "word", "HTML" = "html"), selected = "word"),
-            downloadButton("download_report", "Descargar informe", class = "btn-success")
+            h4("Datos de Participantes"),
+            fileInput("participants_data_upload", "Tabla de Instrumentación (CSV):", accept = ".csv"),
+            helpText("Formato: Codigo_Lab, Analizador_SO2, Analizador_CO, Analizador_O3, Analizador_NO_NO2"),
+            hr(),
+            h4("Descarga"),
+            radioButtons("report_format", "Formato:", choices = c("Word (DOCX)" = "word", "HTML" = "html"), selected = "word"),
+            downloadButton("download_report", "Descargar informe", class = "btn-success btn-block")
           ),
           mainPanel(
-            width = analysis_main_w,
+            width = 9,
+            h3("Generación de Informe Final"),
+            p("Configure los detalles de identificación y verifique la vista previa."),
             hr(),
-            p("El informe consolida los resultados de homogeneidad, estabilidad y puntajes de desempeño para la combinación seleccionada.")
+            tabsetPanel(
+              tabPanel(
+                "1. Identificación",
+                br(),
+                h4("1. Identificación y Contexto"),
+                fluidRow(
+                  column(
+                    6,
+                    textInput("report_scheme_id", "ID Esquema EA:", value = "EA-202X-XX"),
+                    textInput("report_id", "ID Informe:", value = "INF-202X-XX"),
+                    dateInput("report_date", "Fecha de Emisión:", value = Sys.Date()),
+                    textInput("report_period", "Periodo del Ensayo:", value = "Mes - Mes Año")
+                  ),
+                  column(
+                    6,
+                    textInput("report_coordinator", "Coordinador EA:", value = ""),
+                    textInput("report_quality_pro", "Profesional Calidad Aire:", value = ""),
+                    textInput("report_ops_eng", "Ingeniero Operativo:", value = ""),
+                    textInput("report_quality_manager", "Profesional Gestión Calidad:", value = "")
+                  )
+                )
+              ),
+              tabPanel(
+                "Vista Previa",
+                br(),
+                h4("Vista Previa del Estado"),
+                uiOutput("report_status"),
+                verbatimTextOutput("report_preview_summary")
+              )
+            )
           )
         )
       )
@@ -2350,6 +2444,88 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
       select(-Total)
   })
 
+  metrological_compatibility_data <- eventReactive(input$run_metrological_compatibility, {
+    # 1. Get Reference Values
+    prep_data <- pt_prep_data()
+    if (is.null(prep_data)) return(tibble())
+    
+    ref_data <- prep_data %>%
+      filter(participant_id == "ref") %>%
+      group_by(pollutant, n_lab, level) %>%
+      summarise(x_pt_ref = mean(mean_value, na.rm = TRUE), .groups = "drop") %>%
+      mutate(n_lab = as.character(n_lab))
+    
+    # 2. Get Consensus Values (MADe and nIQR)
+    consensus_cache <- consensus_results_cache()
+    consensus_rows <- list()
+    
+    if (!is.null(consensus_cache)) {
+      purrr::iwalk(consensus_cache, function(res, key) {
+        if (is.null(res$summary)) return()
+        parts <- strsplit(key, "\\|\\|")[[1]]
+        
+        val_row <- res$summary %>% filter(Estadístico == "x_pt(2) - Mediana")
+        if (nrow(val_row) > 0) {
+          consensus_rows[[length(consensus_rows) + 1]] <<- tibble(
+            pollutant = parts[1],
+            n_lab = parts[2],
+            level = parts[3],
+            x_pt_consensus = val_row$Valor
+          )
+        }
+      })
+    }
+    
+    consensus_df <- if (length(consensus_rows) > 0) bind_rows(consensus_rows) else tibble()
+    
+    # 3. Get Algorithm A Values
+    algo_cache <- algoA_results_cache()
+    algo_rows <- list()
+    
+    if (!is.null(algo_cache)) {
+      purrr::iwalk(algo_cache, function(res, key) {
+        if (is.null(res$assigned_value)) return()
+        parts <- strsplit(key, "\\|\\|")[[1]]
+        
+        algo_rows[[length(algo_rows) + 1]] <<- tibble(
+          pollutant = parts[1],
+          n_lab = parts[2],
+          level = parts[3],
+          x_pt_algo = res$assigned_value
+        )
+      })
+    }
+    
+    algo_df <- if (length(algo_rows) > 0) bind_rows(algo_rows) else tibble()
+    
+    # 4. Merge all
+    # Start with all unique combinations found in any source
+    all_combos <- bind_rows(
+      ref_data %>% select(pollutant, n_lab, level),
+      if (nrow(consensus_df) > 0) consensus_df %>% select(pollutant, n_lab, level) else tibble(),
+      if (nrow(algo_df) > 0) algo_df %>% select(pollutant, n_lab, level) else tibble()
+    ) %>% distinct()
+    
+    if (nrow(all_combos) == 0) return(tibble())
+    
+    final_df <- all_combos %>%
+      left_join(ref_data, by = c("pollutant", "n_lab", "level")) %>%
+      left_join(consensus_df, by = c("pollutant", "n_lab", "level")) %>%
+      left_join(algo_df, by = c("pollutant", "n_lab", "level")) %>%
+      mutate(
+        x_pt_2a = x_pt_consensus, # Median is used for both
+        x_pt_2b = x_pt_consensus,
+        x_pt_3 = x_pt_algo,
+        Diff_Ref_2a = x_pt_ref - x_pt_2a,
+        Diff_Ref_2b = x_pt_ref - x_pt_2b,
+        Diff_Ref_3 = x_pt_ref - x_pt_3
+      ) %>%
+      select(pollutant, n_lab, level, x_pt_ref, x_pt_2a, x_pt_2b, x_pt_3, Diff_Ref_2a, Diff_Ref_2b, Diff_Ref_3) %>%
+      arrange(pollutant, n_lab, level)
+      
+    final_df
+  })
+
   global_level_summary_data <- reactive({
     req(pt_prep_data())
     data <- pt_prep_data()
@@ -2884,7 +3060,7 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
         select(
           Combinación = combination,
           Nivel = level,
-          Criterio = Criteria,
+          Criterio,
           Evaluación = evaluation,
           Conteo,
           Porcentaje
@@ -3439,74 +3615,817 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
 
   # --- Generación de informes Module ---
 
-  output$report_pollutant_selector <- renderUI({
-    choices <- sort(unique(hom_data_full()$pollutant))
-    selectInput("report_pollutant", "Seleccionar analito:", choices = choices)
-  })
-
   output$report_n_selector <- renderUI({
-    req(pt_prep_data(), input$report_pollutant)
+    req(pt_prep_data())
     choices <- pt_prep_data() %>%
-      filter(pollutant == input$report_pollutant) %>%
       pull(n_lab) %>%
       unique() %>%
       sort()
     if (length(choices) == 0) {
-      return(helpText("No hay esquemas PT disponibles para este analito."))
+      return(helpText("No hay esquemas PT disponibles."))
     }
     selectInput("report_n_lab", "Seleccionar esquema PT (por n):", choices = choices)
   })
 
   output$report_level_selector <- renderUI({
-    req(pt_prep_data(), input$report_pollutant, input$report_n_lab)
+    req(pt_prep_data(), input$report_n_lab)
     pt_levels <- pt_prep_data() %>%
-      filter(pollutant == input$report_pollutant, n_lab == input$report_n_lab) %>%
+      filter(n_lab == input$report_n_lab) %>%
       pull(level) %>%
       unique()
     hom_levels <- hom_data_full() %>%
-      filter(pollutant == input$report_pollutant) %>%
       pull(level) %>%
       unique()
     stab_levels <- stab_data_full() %>%
-      filter(pollutant == input$report_pollutant) %>%
       pull(level) %>%
       unique()
     common_levels <- sort(Reduce(intersect, list(pt_levels, hom_levels, stab_levels)))
     if (length(common_levels) == 0) {
-      return(helpText("No hay niveles comunes entre los datos disponibles para esta combinación."))
+      return(helpText("No hay niveles comunes entre los datos disponibles."))
     }
     selectInput("report_level", "Seleccionar nivel:", choices = common_levels)
   })
 
+  # Reactive for participants instrumentation data
+  participants_instrumentation <- reactive({
+    req(input$participants_data_upload)
+    tryCatch(
+      {
+        df <- read.csv(input$participants_data_upload$datapath, stringsAsFactors = FALSE)
+        # Validate required columns
+        required_cols <- c("Codigo_Lab", "Analizador_SO2", "Analizador_CO", "Analizador_O3", "Analizador_NO_NO2")
+        if (!all(required_cols %in% names(df))) {
+          return(NULL)
+        }
+        df
+      },
+      error = function(e) {
+        NULL
+      }
+    )
+  })
+
+  # Reactive for Grubbs Summary
+  grubbs_summary <- reactive({
+    req(pt_prep_data())
+    data <- pt_prep_data()
+
+    if (nrow(data) == 0) {
+      return(NULL)
+    }
+
+    # Get all combinations
+    combos <- data %>%
+      distinct(pollutant, n_lab, level)
+
+    results_list <- list()
+
+    for (i in 1:nrow(combos)) {
+      pol <- combos$pollutant[i]
+      n <- combos$n_lab[i]
+      lev <- combos$level[i]
+
+      subset_data <- data %>%
+        filter(pollutant == pol, n_lab == n, level == lev, participant_id != "ref")
+
+      n_eval <- nrow(subset_data)
+      p_val <- NA
+      outliers_detected <- 0
+      outlier_participant <- "NA"
+      outlier_value <- "NA"
+
+      if (n_eval >= 3) {
+        tryCatch(
+          {
+            test_res <- outliers::grubbs.test(subset_data$mean_value)
+            p_val <- test_res$p.value
+
+            if (p_val < 0.05) {
+              outliers_detected <- 1
+              # Identify the outlier value
+              # grubbs.test returns the value in alternative hypothesis string usually,
+              # but we can find it by checking which value maximizes the deviation
+              # For simplicity, we can check min and max
+              vals <- subset_data$mean_value
+              mean_val <- mean(vals)
+              sd_val <- sd(vals)
+              z_vals <- abs(vals - mean_val) / sd_val
+              idx_max <- which.max(z_vals)
+              outlier_val_num <- vals[idx_max]
+              outlier_participant <- subset_data$participant_id[idx_max]
+              outlier_value <- as.character(round(outlier_val_num, 3))
+            }
+          },
+          error = function(e) {
+            # Handle error
+          }
+        )
+      }
+
+      results_list[[i]] <- data.frame(
+        Contaminante = pol,
+        Nivel = lev,
+        Participantes_Evaluados = n_eval,
+        Valor_p = ifelse(is.na(p_val), "NA", sprintf("%.4f", p_val)),
+        Atipicos_detectados = outliers_detected,
+        Participante = outlier_participant,
+        Valor_Atipico = outlier_value,
+        stringsAsFactors = FALSE
+      )
+    }
+
+    do.call(rbind, results_list)
+  })
+
+  # Reactive for Report Xpt Summary (Annex A)
+  report_xpt_summary <- reactive({
+    req(pt_prep_data(), input$report_method)
+    data <- pt_prep_data()
+    method <- input$report_method
+
+    if (nrow(data) == 0) {
+      return(NULL)
+    }
+
+    # Helper functions (replicated from report template/logic)
+    calculate_niqr <- function(x) {
+      x_clean <- x[is.finite(x)]
+      if (length(x_clean) < 2) {
+        return(NA_real_)
+      }
+      quartiles <- stats::quantile(x_clean, probs = c(0.25, 0.75), na.rm = TRUE, type = 7)
+      0.7413 * (quartiles[2] - quartiles[1])
+    }
+
+    # Get all combinations
+    combos <- data %>%
+      distinct(pollutant, n_lab, level)
+
+    results_list <- list()
+
+    for (i in 1:nrow(combos)) {
+      pol <- combos$pollutant[i]
+      n <- combos$n_lab[i]
+      lev <- combos$level[i]
+
+      subset_data <- data %>%
+        filter(pollutant == pol, n_lab == n, level == lev)
+
+      ref_data <- subset_data %>% filter(participant_id == "ref")
+      part_data <- subset_data %>% filter(participant_id != "ref")
+
+      xpt <- NA
+      u_xpt <- NA
+      sigma_pt <- NA
+      source_method <- "Desconocido"
+
+      if (method == "1") { # Referencia
+        if (nrow(ref_data) > 0) {
+          xpt <- mean(ref_data$mean_value, na.rm = TRUE)
+          u_xpt <- mean(ref_data$sd_value, na.rm = TRUE)
+          sigma_pt <- mean(ref_data$sd_value, na.rm = TRUE)
+          source_method <- "Referencia"
+        }
+      } else if (method == "2a") { # Consenso MADe
+        vals <- part_data$mean_value
+        if (length(vals) > 0) {
+          xpt <- median(vals, na.rm = TRUE)
+          made <- 1.483 * median(abs(vals - xpt), na.rm = TRUE)
+          u_xpt <- 1.25 * made / sqrt(length(vals))
+          sigma_pt <- made
+          source_method <- "Consenso MADe"
+        }
+      } else if (method == "2b") { # Consenso nIQR
+        vals <- part_data$mean_value
+        if (length(vals) > 0) {
+          xpt <- median(vals, na.rm = TRUE)
+          niqr <- calculate_niqr(vals)
+          u_xpt <- 1.25 * niqr / sqrt(length(vals))
+          sigma_pt <- niqr
+          source_method <- "Consenso nIQR"
+        }
+      } else if (method == "3") { # Algoritmo A
+        vals <- part_data$mean_value
+        ids <- part_data$participant_id
+        if (length(vals) >= 3) {
+          # We can use the existing run_algorithm_a function in app.R if accessible,
+          # or the one defined inside this reactive scope if we copy it.
+          # Since run_algorithm_a is defined in global scope of server or ui?
+          # It seems to be in server scope. Let's try to use it.
+          # Note: run_algorithm_a in app.R takes (values, ids).
+          res_algo <- run_algorithm_a(vals, ids)
+          if (is.null(res_algo$error)) {
+            xpt <- res_algo$assigned_value
+            sigma_pt <- res_algo$robust_sd
+            u_xpt <- 1.25 * sigma_pt / sqrt(length(vals))
+            source_method <- "Algoritmo A"
+          }
+        }
+      }
+
+      results_list[[i]] <- data.frame(
+        Contaminante = pol,
+        Nivel = lev,
+        Metodo = source_method,
+        x_pt = ifelse(is.na(xpt), NA, xpt),
+        u_xpt = ifelse(is.na(u_xpt), NA, u_xpt),
+        sigma_pt = ifelse(is.na(sigma_pt), NA, sigma_pt),
+        stringsAsFactors = FALSE
+      )
+    }
+
+    do.call(rbind, results_list)
+  })
+
+  # Reactive for Homogeneity Summary (Annex B)
+  report_homogeneity_summary <- reactive({
+    req(hom_data_full())
+    data <- pt_prep_data()
+
+    if (nrow(data) == 0) {
+      return(NULL)
+    }
+
+    # Get all combinations
+    combos <- data %>%
+      distinct(pollutant, level)
+
+    hom_records <- list()
+
+    for (i in 1:nrow(combos)) {
+      pol <- combos$pollutant[i]
+      lev <- combos$level[i]
+
+      hom_res <- tryCatch(
+        {
+          compute_homogeneity_metrics(pol, lev)
+        },
+        error = function(e) {
+          list(error = conditionMessage(e))
+        }
+      )
+
+      if (!is.null(hom_res$error)) next
+
+      hom_records[[i]] <- data.frame(
+        Contaminante = pol,
+        Nivel = lev,
+        Items = hom_res$g,
+        Replicas = hom_res$m,
+        sigma_pt = round(hom_res$sigma_pt, 4),
+        u_xpt = round(hom_res$u_xpt, 4),
+        ss = round(hom_res$ss, 4),
+        sw = round(hom_res$sw, 4),
+        c_criterio = round(hom_res$c_criterion, 4),
+        Cumple_Criterio = ifelse(hom_res$ss <= hom_res$c_criterion, "Sí", "No"),
+        Conclusion = hom_res$conclusion,
+        stringsAsFactors = FALSE
+      )
+    }
+
+    if (length(hom_records) > 0) {
+      do.call(rbind, hom_records)
+    } else {
+      NULL
+    }
+  })
+
+  # Reactive for Stability Summary (Annex B)
+  report_stability_summary <- reactive({
+    req(hom_data_full(), stab_data_full())
+    data <- pt_prep_data()
+
+    if (nrow(data) == 0) {
+      return(NULL)
+    }
+
+    # Get all combinations
+    combos <- data %>%
+      distinct(pollutant, level)
+
+    stab_records <- list()
+
+    for (i in 1:nrow(combos)) {
+      pol <- combos$pollutant[i]
+      lev <- combos$level[i]
+
+      # First get homogeneity results
+      hom_res <- tryCatch(
+        {
+          compute_homogeneity_metrics(pol, lev)
+        },
+        error = function(e) {
+          list(error = conditionMessage(e))
+        }
+      )
+
+      if (!is.null(hom_res$error)) next
+
+      # Then get stability results
+      stab_res <- tryCatch(
+        {
+          compute_stability_metrics(pol, lev, hom_res)
+        },
+        error = function(e) {
+          list(error = conditionMessage(e))
+        }
+      )
+
+      if (!is.null(stab_res$error)) next
+
+      stab_records[[i]] <- data.frame(
+        Contaminante = pol,
+        Nivel = lev,
+        Itms = stab_res$g,
+        Replicas = stab_res$m,
+        sigma_pt = round(stab_res$stab_sigma_pt, 4),
+        u_xpt = round(stab_res$stab_u_xpt, 4),
+        diff_hom_stab = round(stab_res$diff_hom_stab, 4),
+        c_criterio = round(stab_res$stab_c_criterion, 4),
+        Cumple_Criterio = ifelse(stab_res$diff_hom_stab <= stab_res$stab_c_criterion, "Sí", "No"),
+        Conclusion = stab_res$stab_conclusion,
+        stringsAsFactors = FALSE
+      )
+    }
+
+    if (length(stab_records) > 0) {
+      do.call(rbind, stab_records)
+    } else {
+      NULL
+    }
+  })
+
+  # --- Helper functions for Report Score Summaries ---
+
+  calculate_method_scores_df <- function(method_code) {
+    data <- pt_prep_data()
+    if (nrow(data) == 0) {
+      return(NULL)
+    }
+
+    combos <- data %>% distinct(pollutant, level)
+    all_scores <- list()
+
+    for (i in 1:nrow(combos)) {
+      pol <- combos$pollutant[i]
+      lev <- combos$level[i]
+
+      subset_data <- data %>% filter(pollutant == pol, level == lev)
+      ref_data <- subset_data %>% filter(participant_id == "ref")
+      part_data <- subset_data %>% filter(participant_id != "ref")
+
+      # Calculate Assigned Value
+      assigned <- list(xpt = NA, u_xpt = NA, sigma = NA)
+
+      if (method_code == "1") {
+        assigned <- list(
+          xpt = mean(ref_data$mean_value, na.rm = TRUE),
+          u_xpt = mean(ref_data$sd_value, na.rm = TRUE),
+          sigma = mean(ref_data$sd_value, na.rm = TRUE)
+        )
+      } else if (method_code == "2a") {
+        vals <- part_data$mean_value
+        med <- median(vals, na.rm = TRUE)
+        made <- 1.483 * median(abs(vals - med), na.rm = TRUE)
+        assigned <- list(xpt = med, u_xpt = 1.25 * made / sqrt(length(vals)), sigma = made)
+      } else if (method_code == "2b") {
+        vals <- part_data$mean_value
+        med <- median(vals, na.rm = TRUE)
+        niqr <- calculate_niqr(vals)
+        assigned <- list(xpt = med, u_xpt = 1.25 * niqr / sqrt(length(vals)), sigma = niqr)
+      } else if (method_code == "3") {
+        res <- run_algorithm_a(part_data$mean_value, part_data$participant_id)
+        assigned <- list(xpt = res$assigned_value, u_xpt = 1.25 * res$robust_sd / sqrt(nrow(part_data)), sigma = res$robust_sd)
+      }
+
+      # Determine Sigma
+      hom_res <- tryCatch(compute_homogeneity_metrics(pol, lev), error = function(e) NULL)
+      final_sigma <- if (!is.na(assigned$sigma) && !is.null(assigned$sigma)) assigned$sigma else if (!is.null(hom_res)) hom_res$sigma_pt else NA
+
+      if (is.na(final_sigma)) next
+
+      # Calculate Scores
+      # z = (x - Xpt) / sigma_pt
+      # z' = (x - Xpt) / sqrt(sigma_pt^2 + u_Xpt^2)
+      # zeta = (x - Xpt) / sqrt(u_xi^2 + u_Xpt^2)
+      # En = (x - Xpt) / sqrt(U_xi^2 + U_Xpt^2)
+
+      k <- input$report_k
+
+      scores <- part_data %>%
+        mutate(
+          x_pt = assigned$xpt,
+          u_xpt = assigned$u_xpt,
+          sigma_pt = final_sigma,
+          z_score = (mean_value - assigned$xpt) / final_sigma,
+          z_prime_score = (mean_value - assigned$xpt) / sqrt(final_sigma^2 + assigned$u_xpt^2),
+          zeta_score = (mean_value - assigned$xpt) / sqrt(sd_value^2 + assigned$u_xpt^2),
+          En_score = (mean_value - assigned$xpt) / sqrt((k * sd_value)^2 + (k * assigned$u_xpt)^2)
+        ) %>%
+        select(participant_id, pollutant, level, mean_value, sd_value, x_pt, u_xpt, sigma_pt, z_score, z_prime_score, zeta_score, En_score)
+
+      all_scores[[i]] <- scores
+    }
+
+    if (length(all_scores) > 0) do.call(rbind, all_scores) else NULL
+  }
+
+  summarize_scores <- function(df) {
+    if (is.null(df)) {
+      return(NULL)
+    }
+
+    # Define categories
+    df <- df %>%
+      mutate(
+        z_eval = case_when(
+          abs(z_score) <= 2 ~ "Satisfactorio",
+          abs(z_score) < 3 ~ "Cuestionable",
+          TRUE ~ "Insatisfactorio"
+        ),
+        z_prime_eval = case_when(
+          abs(z_prime_score) <= 2 ~ "Satisfactorio",
+          abs(z_prime_score) < 3 ~ "Cuestionable",
+          TRUE ~ "Insatisfactorio"
+        ),
+        zeta_eval = case_when(
+          abs(zeta_score) <= 2 ~ "Satisfactorio",
+          abs(zeta_score) < 3 ~ "Cuestionable",
+          TRUE ~ "Insatisfactorio"
+        ),
+        En_eval = case_when(
+          abs(En_score) <= 1 ~ "Satisfactorio",
+          TRUE ~ "Insatisfactorio"
+        )
+      )
+
+    # Create summary table structure
+    pollutants <- unique(df$pollutant)
+
+    # Helper to count
+    count_eval <- function(eval_col, eval_type) {
+      counts <- sapply(pollutants, function(p) {
+        sum(df$pollutant == p & df[[eval_col]] == eval_type, na.rm = TRUE)
+      })
+      c(counts, sum(counts))
+    }
+
+    # Build rows
+    z_sat <- c("z-score", "Satisfactorio", count_eval("z_eval", "Satisfactorio"))
+    z_quest <- c("z-score", "Cuestionable", count_eval("z_eval", "Cuestionable"))
+    z_unsat <- c("z-score", "Insatisfactorio", count_eval("z_eval", "Insatisfactorio"))
+
+    zp_sat <- c("z'-score", "Satisfactorio", count_eval("z_prime_eval", "Satisfactorio"))
+    zp_quest <- c("z'-score", "Cuestionable", count_eval("z_prime_eval", "Cuestionable"))
+    zp_unsat <- c("z'-score", "Insatisfactorio", count_eval("z_prime_eval", "Insatisfactorio"))
+
+    zeta_sat <- c("zeta-score", "Satisfactorio", count_eval("zeta_eval", "Satisfactorio"))
+    zeta_quest <- c("zeta-score", "Cuestionable", count_eval("zeta_eval", "Cuestionable"))
+    zeta_unsat <- c("zeta-score", "Insatisfactorio", count_eval("zeta_eval", "Insatisfactorio"))
+
+    en_sat <- c("En-score", "Satisfactorio", count_eval("En_eval", "Satisfactorio"))
+    en_unsat <- c("En-score", "Insatisfactorio", count_eval("En_eval", "Insatisfactorio"))
+
+    # Combine
+    summary_df <- rbind(z_sat, z_quest, z_unsat, zp_sat, zp_quest, zp_unsat, zeta_sat, zeta_quest, zeta_unsat, en_sat, en_unsat)
+    colnames(summary_df) <- c("Indicador", "Evaluación", pollutants, "TOTAL")
+
+    # Add Percentage column
+    total_results <- nrow(df)
+
+    summary_df <- as.data.frame(summary_df, stringsAsFactors = FALSE)
+
+    # Convert counts to numeric for percentage calc
+    summary_df$TOTAL <- as.numeric(summary_df$TOTAL)
+
+    summary_df$Percentage <- sprintf("%.2f%%", (summary_df$TOTAL / total_results) * 100)
+    colnames(summary_df)[ncol(summary_df)] <- "TOTAL (%)"
+
+    summary_df
+  }
+
+  # Reactives
+  score_criteria_summary_1 <- reactive({
+    summarize_scores(calculate_method_scores_df("1"))
+  })
+  score_criteria_summary_2a <- reactive({
+    summarize_scores(calculate_method_scores_df("2a"))
+  })
+  score_criteria_summary_2b <- reactive({
+    summarize_scores(calculate_method_scores_df("2b"))
+  })
+  score_criteria_summary_3 <- reactive({
+    summarize_scores(calculate_method_scores_df("3"))
+  })
+
+  report_score_summary <- reactive({
+    res <- switch(input$report_method,
+      "1" = score_criteria_summary_1(),
+      "2a" = score_criteria_summary_2a(),
+      "2b" = score_criteria_summary_2b(),
+      "3" = score_criteria_summary_3()
+    )
+
+    if (is.null(res)) {
+      return(NULL)
+    }
+
+    target_metric <- switch(input$report_metric,
+      "z" = "z-score",
+      "z'" = "z'-score",
+      "zeta" = "zeta-score",
+      "En" = "En-score"
+    )
+
+    res %>% filter(Indicador == target_metric)
+  })
+
+  report_heatmaps <- reactive({
+    data <- pt_prep_data()
+    if (nrow(data) == 0) {
+      return(NULL)
+    }
+
+    scores_df <- calculate_method_scores_df(input$report_method)
+    if (is.null(scores_df)) {
+      return(NULL)
+    }
+
+    pollutants <- unique(scores_df$pollutant)
+    plot_list <- list()
+
+    for (pol in pollutants) {
+      pol_data <- scores_df %>% filter(pollutant == pol)
+
+      metric <- input$report_metric
+
+      if (metric == "En") {
+        pol_data$score_val <- pol_data$En_score
+        pol_data$eval <- case_when(
+          abs(pol_data$En_score) <= 1 ~ "Satisfactorio",
+          TRUE ~ "Insatisfactorio"
+        )
+      } else {
+        # Select score based on metric
+        pol_data$score_val <- switch(metric,
+          "z" = pol_data$z_score,
+          "z'" = pol_data$z_prime_score,
+          "zeta" = pol_data$zeta_score
+        )
+
+        pol_data$eval <- case_when(
+          abs(pol_data$score_val) <= 2 ~ "Satisfactorio",
+          abs(pol_data$score_val) < 3 ~ "Cuestionable",
+          TRUE ~ "Insatisfactorio"
+        )
+      }
+
+      p <- ggplot(pol_data, aes(x = level, y = participant_id, fill = eval)) +
+        geom_tile(color = "white") +
+        geom_text(aes(label = round(score_val, 2)), color = "white", size = 3) +
+        scale_fill_manual(values = c("Satisfactorio" = "#2E7D32", "Cuestionable" = "#F9A825", "Insatisfactorio" = "#C62828")) +
+        labs(title = paste("Mapa de Calor -", toupper(pol)), x = "Nivel", y = "Participante", fill = "Evaluación") +
+        theme_minimal()
+
+      plot_list[[pol]] <- p
+    }
+    plot_list
+    plot_list
+  })
+
+  report_participant_data <- reactive({
+    data <- pt_prep_data()
+    if (nrow(data) == 0) {
+      return(NULL)
+    }
+
+    scores_df <- calculate_method_scores_df(input$report_method)
+    if (is.null(scores_df)) {
+      return(NULL)
+    }
+
+    # Helper function to create combo plot
+    create_combo_plot <- function(df, score_col, title_suffix, limit_lines = c(2, 3), limit_colors = c("orange", "red")) {
+      # Ensure level ordering
+      df <- df %>%
+        mutate(level_numeric = readr::parse_number(as.character(level))) %>%
+        arrange(level_numeric, level) %>%
+        mutate(level_factor = factor(level, levels = unique(level)))
+
+      # Top Plot: Ref vs Participant
+      p_val <- ggplot(df, aes(x = level_factor)) +
+        geom_point(aes(y = mean_value, color = "Participante"), size = 2) +
+        geom_line(aes(y = mean_value, group = 1, color = "Participante")) +
+        geom_point(aes(y = x_pt, color = "Referencia"), size = 2) +
+        geom_line(aes(y = x_pt, group = 1, color = "Referencia"), linetype = "dashed") +
+        scale_color_manual(values = c("Participante" = "blue", "Referencia" = "red")) +
+        labs(title = paste("Valores -", title_suffix), x = NULL, y = "Valor", color = NULL) +
+        theme_minimal() +
+        theme(legend.position = "top", axis.text.x = element_blank())
+
+      # Bottom Plot: Score
+      p_score <- ggplot(df, aes(x = level_factor, y = .data[[score_col]], group = 1)) +
+        geom_hline(yintercept = 0, color = "grey") +
+        geom_line(color = "black") +
+        geom_point(color = "black", size = 2) +
+        labs(title = paste("Score -", title_suffix), x = "Nivel", y = "Score") +
+        theme_minimal() +
+        theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+      if (!is.null(limit_lines)) {
+        p_score <- p_score +
+          geom_hline(yintercept = c(-limit_lines[1], limit_lines[1]), linetype = "dashed", color = limit_colors[1]) +
+          geom_hline(yintercept = c(-limit_lines[2], limit_lines[2]), linetype = "dashed", color = limit_colors[2])
+      }
+
+      # Combine plots
+      p_val / p_score + plot_layout(heights = c(1, 1))
+    }
+
+    # Get all participants (excluding ref)
+    participants <- unique(scores_df$participant_id)
+    participants <- participants[participants != "ref"]
+
+    part_list <- list()
+
+    for (pid in participants) {
+      p_data <- scores_df %>% filter(participant_id == pid)
+
+      # 1. Summary Table (Reconstruct)
+      table_rows <- list()
+      for (i in 1:nrow(p_data)) {
+        pol <- p_data$pollutant[i]
+        lev <- p_data$level[i]
+
+        # Determine evaluation based on selected metric for the table
+        # Determine evaluation based on selected metric for the table
+        metric <- input$report_metric
+        score_val <- switch(metric,
+          "z" = p_data$z_score[i],
+          "z'" = p_data$z_prime_score[i],
+          "zeta" = p_data$zeta_score[i],
+          "En" = p_data$En_score[i]
+        )
+
+        eval_val <- if (metric == "En") {
+          case_when(abs(score_val) <= 1 ~ "Satisfactorio", TRUE ~ "Insatisfactorio")
+        } else {
+          case_when(abs(score_val) <= 2 ~ "Satisfactorio", abs(score_val) < 3 ~ "Cuestionable", TRUE ~ "Insatisfactorio")
+        }
+
+        table_rows[[i]] <- data.frame(
+          Contaminante = pol,
+          Nivel = lev,
+          Resultado = p_data$mean_value[i],
+          Incertidumbre = p_data$sd_value[i],
+          Valor_Asignado = p_data$x_pt[i],
+          Incertidumbre_VA = p_data$u_xpt[i],
+          Score = score_val,
+          Evaluacion = eval_val,
+          stringsAsFactors = FALSE
+        )
+      }
+      summary_table <- do.call(rbind, table_rows)
+
+      # 2. Combo Plot (Single Metric)
+      # User requested: "only include the ref vs participand AND the score that is selected"
+
+      pollutants <- unique(p_data$pollutant)
+      combined_plots_list <- list()
+
+      metric <- input$report_metric
+      score_col <- switch(metric,
+        "z" = "z_score",
+        "z'" = "z_prime_score",
+        "zeta" = "zeta_score",
+        "En" = "En_score"
+      )
+
+      limit_lines <- if (metric == "En") c(1, 1) else c(2, 3)
+      limit_colors <- if (metric == "En") c("red", "red") else c("orange", "red")
+
+      for (pol in pollutants) {
+        pol_data <- p_data %>% filter(pollutant == pol)
+
+        # Create single combo plot for the selected metric
+        p_combo <- create_combo_plot(
+          pol_data,
+          score_col,
+          paste(metric, "-score", toupper(pol)),
+          limit_lines = limit_lines,
+          limit_colors = limit_colors
+        )
+
+        # Add title for the individual pollutant panel if needed, or rely on the axis labels
+        # The user's image shows titles like "CO - Values" and "CO - Z-Score" inside the plots.
+        # create_combo_plot already adds titles.
+
+        combined_plots_list[[pol]] <- p_combo
+      }
+
+      # Combine plots horizontally (Pollutants Across Columns)
+      # Use patchwork to arrange them in 1 row
+      final_plot <- wrap_plots(combined_plots_list, nrow = 1) +
+        plot_annotation(
+          title = paste("Performance Summary (Pollutants Across Columns) - Participant:", pid),
+          theme = theme(plot.title = element_text(size = 14, face = "bold", hjust = 0.5))
+        )
+
+      part_list[[pid]] <- list(
+        summary_table = summary_table,
+        matrix_plot = final_plot
+      )
+    }
+    part_list
+  })
   report_preview <- reactive({
     req(
-      input$report_pollutant, input$report_n_lab, input$report_level,
-      input$report_sigma_pt, input$report_u_xpt, input$report_k
+      input$report_n_lab, input$report_level,
+      input$report_method, input$report_k
     )
     summary_df <- pt_prep_data()
     if (is.null(summary_df)) {
       return(list(error = "No se encontraron datos resumidos de PT (summary_n*.csv)."))
     }
 
-    hom_res <- compute_homogeneity_metrics(input$report_pollutant, input$report_level)
-    if (!is.null(hom_res$error)) {
-      return(list(error = hom_res$error))
+    # For preview, we'll just check the first pollutant
+    first_pollutant <- unique(hom_data_full()$pollutant)[1]
+
+    hom_res <- compute_homogeneity_metrics(first_pollutant, input$report_level)
+    # Homogeneity error is not fatal for preview, but we need it for stability
+
+    stab_res <- if (!is.null(hom_res$error)) {
+      list(error = "No se pudo calcular estabilidad debido a error en homogeneidad.")
+    } else {
+      compute_stability_metrics(first_pollutant, input$report_level, hom_res)
     }
 
-    stab_res <- compute_stability_metrics(input$report_pollutant, input$report_level, hom_res)
-    if (!is.null(stab_res$error)) {
-      return(list(error = stab_res$error))
+    # Calculate assigned value and uncertainty based on method
+    target_data <- summary_df %>%
+      filter(
+        n_lab == input$report_n_lab,
+        level == input$report_level
+      )
+
+    if (nrow(target_data) == 0) {
+      return(list(error = "No hay datos para la combinación seleccionada."))
+    }
+
+    ref_data <- target_data %>% filter(participant_id == "ref")
+    part_data <- target_data %>% filter(participant_id != "ref")
+
+    x_pt <- NA_real_
+    u_xpt <- NA_real_
+    sigma_pt <- NA_real_ # This will be the sigma used for scoring
+
+    method <- input$report_method
+
+    if (method == "1") { # Referencia
+      if (nrow(ref_data) > 0) {
+        x_pt <- mean(ref_data$mean_value, na.rm = TRUE)
+        u_xpt <- mean(ref_data$sd_value, na.rm = TRUE) # Assuming sd_value is uncertainty for ref
+        # For sigma_pt in method 1, usually use hom_res$sigma_pt or a fixed value.
+        # Here we default to hom_res$sigma_pt if available, else 0.
+        sigma_pt <- if (!is.null(hom_res$sigma_pt)) hom_res$sigma_pt else 0
+      } else {
+        return(list(error = "No hay datos de referencia para el método seleccionado."))
+      }
+    } else if (method == "2a") { # Consenso MADe
+      vals <- part_data$mean_value
+      x_pt <- median(vals, na.rm = TRUE)
+      made <- 1.483 * median(abs(vals - x_pt), na.rm = TRUE)
+      u_xpt <- 1.25 * made / sqrt(length(vals))
+      sigma_pt <- made
+    } else if (method == "2b") { # Consenso nIQR
+      vals <- part_data$mean_value
+      x_pt <- median(vals, na.rm = TRUE)
+      niqr_val <- calculate_niqr(vals)
+      u_xpt <- 1.25 * niqr_val / sqrt(length(vals))
+      sigma_pt <- niqr_val
+    } else if (method == "3") { # Algoritmo A
+      # We need to run Algo A here or fetch from cache.
+      # For preview simplicity, let's run it on the fly if small data
+      vals <- part_data$mean_value
+      ids <- part_data$participant_id
+      algo_res <- run_algorithm_a(vals, ids)
+      if (!is.null(algo_res$error)) {
+        return(list(error = paste("Error en Algoritmo A:", algo_res$error)))
+      }
+      x_pt <- algo_res$assigned_value
+      sigma_pt <- algo_res$robust_sd
+      u_xpt <- 1.25 * sigma_pt / sqrt(length(vals))
     }
 
     scores_res <- compute_scores_metrics(
       summary_df = summary_df,
-      target_pollutant = input$report_pollutant,
+      target_pollutant = first_pollutant,
       target_n_lab = input$report_n_lab,
       target_level = input$report_level,
-      sigma_pt = input$report_sigma_pt,
-      u_xpt = input$report_u_xpt,
+      sigma_pt = sigma_pt,
+      u_xpt = u_xpt,
       k = input$report_k
     )
+
     if (!is.null(scores_res$error)) {
       return(list(error = scores_res$error))
     }
@@ -3562,7 +4481,18 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
         html = "html",
         word = "docx"
       )
-      paste0("Informe_EA_", Sys.Date(), ".", ext)
+
+      # Construct filename with parameters: n_lab-metric-method-compatibility
+      # Example: Informe_EA_2025-12-02_13-zeta-2a-2a
+      fname <- paste0(
+        "Informe_EA_", Sys.Date(), "_",
+        input$report_n_lab, "-",
+        input$report_metric, "-",
+        input$report_method, "-",
+        input$report_metrological_compatibility
+      )
+
+      paste0(fname, ".", ext)
     },
     content = function(file) {
       if (!requireNamespace("rmarkdown", quietly = TRUE)) {
@@ -3579,6 +4509,7 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
       temp_report <- file.path(temp_dir, "report_template.Rmd")
       file.copy(template_path, temp_report, overwrite = TRUE)
 
+      # Determine output format
       output_format <- switch(input$report_format,
         html = "html_document",
         word = "word_document"
@@ -3589,9 +4520,40 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
         stab_data = stab_data_full(),
         summary_data = pt_prep_data(),
         metric = input$report_metric,
-        method = input$report_method
+        method = input$report_method,
+        pollutant = NULL, # NULL means process all pollutants
+        level = input$report_level,
+        n_lab = input$report_n_lab,
+        k_factor = input$report_k,
+        # Identification params
+        scheme_id = input$report_scheme_id,
+        report_id = input$report_id,
+        issue_date = input$report_date,
+        period = input$report_period,
+        coordinator = input$report_coordinator,
+        quality_pro = input$report_quality_pro,
+        ops_eng = input$report_ops_eng,
+        quality_manager = input$report_quality_manager,
+        # Participants instrumentation data
+        participants_data = participants_instrumentation(),
+        # Grubbs Summary
+        grubbs_summary = grubbs_summary(),
+        # Annex A Summary
+        xpt_summary = report_xpt_summary(),
+        # Annex B Summaries
+        homogeneity_summary = report_homogeneity_summary(),
+        stability_summary = report_stability_summary(),
+        # Section 4 & 5 Data
+        score_summary = report_score_summary(),
+        heatmaps = report_heatmaps(),
+        # Annex C Data
+        participant_data = report_participant_data(),
+        # Metrological Compatibility
+        metrological_compatibility = metrological_compatibility_data(),
+        metrological_compatibility_method = input$report_metrological_compatibility
       )
 
+      # Render directly to the Shiny download file path
       rmarkdown::render(
         temp_report,
         output_format = output_format,
@@ -4072,232 +5034,42 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
 
   # --- Preparación PT Module ---
 
-  output$pt_pollutant_tabs <- renderUI({
-    req(pt_prep_data())
-    # Ensure pt_prep_data is not NULL and has rows
-    if (is.null(pt_prep_data()) || nrow(pt_prep_data()) == 0) {
-      return(p("No se encontraron archivos summary_n*.csv o están vacíos. Por favor, agregue esos archivos."))
+  output$global_overview_algo <- renderDataTable({
+    overview <- get_global_overview_data(global_combo_specs$algo)
+    if (nrow(overview) == 0) {
+      return(datatable(data.frame(Mensaje = "No hay datos disponibles para esta combinación.")))
     }
-    pollutants <- unique(pt_prep_data()$pollutant)
-
-    tabs <- lapply(pollutants, function(p) {
-      tabPanel(
-        toupper(p),
-        sidebarLayout(
-          sidebarPanel(
-            width = 4,
-            h4(paste("Opciones para", toupper(p))),
-            uiOutput(paste0("pt_n_selector_", p)),
-            uiOutput(paste0("pt_level_selector_", p)),
-            hr(),
-            h4("Información resumida"),
-            verbatimTextOutput(paste0("pt_summary_", p))
-          ),
-          mainPanel(
-            width = 8,
-            h4("Gráfico de resultados por participante"),
-            plotlyOutput(paste0("pt_plot_", p)),
-            hr(),
-            h4("Tabla de datos"),
-            dataTableOutput(paste0("pt_table_", p)),
-            hr(),
-            h4("Distribución de resultados"),
-            fluidRow(
-              column(width = 6, plotlyOutput(paste0("pt_histogram_", p))),
-              column(width = 6, plotlyOutput(paste0("pt_boxplot_", p)))
-            ),
-            fluidRow(
-              column(width = 12, plotlyOutput(paste0("pt_density_", p)))
-            ),
-            hr(),
-            h4("Prueba de Grubbs para valores atípicos"),
-            verbatimTextOutput(paste0("pt_grubbs_", p)),
-            hr(),
-            h4("Gráfico de corrida"),
-            plotlyOutput(paste0("pt_runchart_", p))
-          )
-        )
-      )
-    })
-
-    do.call(tabsetPanel, c(list(id = "pt_main_tabs"), tabs))
+    datatable(
+      overview,
+      options = list(scrollX = TRUE, pageLength = 12),
+      rownames = FALSE
+    ) %>%
+      formatRound(columns = c("Resultado", "u(xi)", "Puntaje z", "Puntaje z'", "Puntaje zeta", "Puntaje En"), digits = 3)
   })
 
-  observe({
-    req(pt_prep_data())
-    if (is.null(pt_prep_data()) || nrow(pt_prep_data()) == 0) {
-      return()
+  output$metrological_compatibility_table <- renderDataTable({
+    data <- metrological_compatibility_data()
+    if (nrow(data) == 0) {
+      return(datatable(data.frame(Mensaje = "No hay datos suficientes para calcular la compatibilidad metrológica (se requiere Referencia y al menos un método de Consenso).")))
     }
+    datatable(
+      data,
+      options = list(pageLength = 10, scrollX = TRUE),
+      colnames = c("Contaminante", "N_Lab", "Nivel", "Valor Ref", "Valor Consenso 2a", "Valor Consenso 2b", "Valor Consenso 3 (Alg A)", "Dif (Ref - 2a)", "Dif (Ref - 2b)", "Dif (Ref - 3)"),
+      rownames = FALSE,
+      caption = "Tabla. Compatibilidad Metrológica: Diferencias entre Valor de Referencia y Consenso"
+    ) %>%
+      formatRound(columns = c("x_pt_ref", "x_pt_2a", "x_pt_2b", "x_pt_3", "Diff_Ref_2a", "Diff_Ref_2b", "Diff_Ref_3"), digits = 5)
+  })
 
-    pollutants <- unique(pt_prep_data()$pollutant)
-
-    lapply(pollutants, function(p) {
-      local({
-        # Need a local copy for the reactive expressions
-        pollutant_name <- p
-
-        # N (scheme) selector
-        output[[paste0("pt_n_selector_", pollutant_name)]] <- renderUI({
-          choices <- unique(pt_prep_data()[pt_prep_data()$pollutant == pollutant_name, "n_lab"])
-          selectInput(paste0("n_lab_", pollutant_name), "Seleccionar esquema PT (por n):", choices = sort(choices))
-        })
-
-        # Level selector
-        output[[paste0("pt_level_selector_", pollutant_name)]] <- renderUI({
-          req(input[[paste0("n_lab_", pollutant_name)]])
-          choices <- pt_prep_data() %>%
-            filter(pollutant == pollutant_name, n_lab == input[[paste0("n_lab_", pollutant_name)]]) %>%
-            pull(level) %>%
-            unique()
-          selectInput(paste0("level_", pollutant_name), "Seleccionar nivel:", choices = choices)
-        })
-
-        # Filtered data reactive
-        filtered_data <- reactive({
-          req(pt_prep_data(), input[[paste0("n_lab_", pollutant_name)]], input[[paste0("level_", pollutant_name)]])
-          pt_prep_data() %>%
-            filter(
-              pollutant == pollutant_name,
-              n_lab == input[[paste0("n_lab_", pollutant_name)]],
-              level == input[[paste0("level_", pollutant_name)]]
-            )
-        })
-
-        # Summary info
-        output[[paste0("pt_summary_", pollutant_name)]] <- renderPrint({
-          data <- filtered_data()
-          req(nrow(data) > 0)
-
-          n_participants <- n_distinct(data$participant_id[data$participant_id != "ref"])
-          participants <- unique(data$participant_id[data$participant_id != "ref"])
-
-          cat("Analito:", pollutant_name, "\n")
-          cat("Esquema PT (n_lab):", unique(data$n_lab), "\n")
-          cat("Nivel:", unique(data$level), "\n")
-          cat("Número de participantes:", n_participants, "\n")
-          cat("Participantes:", paste(participants, collapse = ", "))
-        })
-
-        # Plot
-        output[[paste0("pt_plot_", pollutant_name)]] <- renderPlotly({
-          data <- filtered_data()
-          req(nrow(data) > 0)
-
-          pt_plot <- ggplot(data, aes(x = participant_id, y = mean_value, fill = sample_group)) +
-            geom_bar(stat = "identity", position = "dodge") +
-            geom_errorbar(aes(ymin = mean_value - sd_value, ymax = mean_value + sd_value), width = 0.2, position = position_dodge(0.9)) +
-            labs(title = "Valores medios de los participantes con DE", x = "Participante", y = "Valor medio") +
-            theme_minimal() +
-            theme(axis.text.x = element_text(angle = 45, hjust = 1))
-          plotly::ggplotly(pt_plot)
-        })
-
-        # Table
-        output[[paste0("pt_table_", pollutant_name)]] <- renderDataTable({
-          data <- filtered_data()
-          req(nrow(data) > 0)
-          datatable(data, options = list(scrollX = TRUE, pageLength = 5))
-        })
-
-        # Histogram
-        output[[paste0("pt_histogram_", pollutant_name)]] <- renderPlotly({
-          data <- filtered_data()
-          req(nrow(data) > 0)
-
-          participants_data <- data %>% filter(participant_id != "ref")
-          ref_value <- data %>%
-            filter(participant_id == "ref") %>%
-            summarise(mean_ref = mean(mean_value, na.rm = TRUE)) %>%
-            pull(mean_ref)
-
-          hist_plot <- ggplot(participants_data, aes(x = mean_value)) +
-            geom_histogram(aes(y = after_stat(density)), color = "black", fill = "skyblue", bins = 15, boundary = 0) +
-            geom_density(alpha = 0.2, fill = "#FF6666") +
-            geom_vline(xintercept = ref_value, color = "red", linetype = "dashed", size = 1) +
-            labs(title = "Histograma de los resultados de los participantes", subtitle = "frente al valor de referencia (línea punteada)", x = "Valor medio", y = "Densidad") +
-            theme_minimal()
-          plotly::ggplotly(hist_plot)
-        })
-
-        # Boxplot
-        output[[paste0("pt_boxplot_", pollutant_name)]] <- renderPlotly({
-          data <- filtered_data()
-          req(nrow(data) > 0)
-
-          participants_data <- data %>% filter(participant_id != "ref")
-          ref_value <- data %>%
-            filter(participant_id == "ref") %>%
-            summarise(mean_ref = mean(mean_value, na.rm = TRUE)) %>%
-            pull(mean_ref)
-
-          box_plot <- ggplot(participants_data, aes(x = "", y = mean_value)) +
-            geom_boxplot(fill = "lightgreen") +
-            geom_hline(yintercept = ref_value, color = "red", linetype = "dashed", size = 1) +
-            labs(title = "Diagrama de caja de los resultados de los participantes", subtitle = "frente al valor de referencia (línea punteada)", x = "", y = "Valor medio") +
-            theme_minimal()
-          plotly::ggplotly(box_plot)
-        })
-
-        # Densidad Plot
-        output[[paste0("pt_density_", pollutant_name)]] <- renderPlotly({
-          data <- filtered_data()
-          req(nrow(data) > 0)
-
-          participants_data <- data %>% filter(participant_id != "ref")
-          ref_value <- data %>%
-            filter(participant_id == "ref") %>%
-            summarise(mean_ref = mean(mean_value, na.rm = TRUE)) %>%
-            pull(mean_ref)
-
-          density_plot <- ggplot(participants_data, aes(x = mean_value)) +
-            geom_density(fill = "lightblue", alpha = 0.7) +
-            geom_vline(xintercept = ref_value, color = "red", linetype = "dashed", size = 1) +
-            labs(title = "Densidad kernel de los resultados de los participantes", subtitle = "frente al valor de referencia (línea punteada)", x = "Valor medio", y = "Densidad") +
-            theme_minimal()
-          plotly::ggplotly(density_plot)
-        })
-
-        # Prueba de Grubbs para valores atípicos
-        output[[paste0("pt_grubbs_", pollutant_name)]] <- renderPrint({
-          data <- filtered_data()
-          req(nrow(data) > 0)
-
-          participants_data <- data %>% filter(participant_id != "ref")
-
-          if (length(participants_data$mean_value) < 3) {
-            "La prueba de Grubbs requiere al menos 3 datos."
-          } else {
-            grubbs.test(participants_data$mean_value)
-          }
-        })
-
-        # Gráfico de corrida
-        output[[paste0("pt_runchart_", pollutant_name)]] <- renderPlotly({
-          data <- filtered_data()
-          req(nrow(data) > 0)
-
-          participants_data <- data %>%
-            filter(participant_id != "ref")
-
-          center_line <- median(participants_data$mean_value, na.rm = TRUE)
-
-          run_plot <- ggplot(participants_data, aes(x = sample_group, y = mean_value, group = 1)) +
-            geom_point() +
-            geom_line() +
-            geom_hline(yintercept = center_line, color = "red", linetype = "dashed") +
-            facet_wrap(~participant_id) +
-            labs(
-              title = "Gráfico de corrida de valores medios por participante",
-              x = "Grupo de muestra",
-              y = "Valor medio"
-            ) +
-            theme_minimal() +
-            theme(axis.text.x = element_text(angle = 45, hjust = 1))
-          plotly::ggplotly(run_plot)
-        })
-      }) # end local
-    }) # end lapply
-  }) # end observe
+  output$grubbs_summary_table <- renderDataTable({
+    req(grubbs_summary())
+    datatable(
+      grubbs_summary(),
+      options = list(pageLength = 10, scrollX = TRUE),
+      rownames = FALSE
+    )
+  })
 } # end server function
 
 
@@ -4305,3 +5077,4 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
 # III. Run the Application
 # ===================================================================
 shinyApp(ui = ui, server = server, options = list(launch.browser = FALSE))
+
