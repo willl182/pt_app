@@ -119,3 +119,8 @@ The **$E_n$-score** (Error, normalized) is similar to the $\zeta$ score but util
 *   **Purpose:** This score is conventional for proficiency testing in calibration, but applicable elsewhere, and evaluates if the difference between results remains within the participants' claimed expanded uncertainties and the expanded uncertainty of the assigned value.
 *   **Uncertainty Input:** This score requires participants and the PT provider to supply results along with their **expanded measurement uncertainty** ($U$). Expanded uncertainty typically requires multiplying the standard uncertainty ($u$) by a coverage factor ($k$), usually $k=2$ for approximately 95% confidence.
 *   **Assessment Criteria:** The conventional assessment criteria are stringent: results are acceptable if $|\mathbf{E}_{\mathbf{n}}| \le 1.0$. A value exceeding 1.0 indicates that the difference between the results is greater than the combined expanded uncertainty, suggesting a possible issue with the measurement or the uncertainty estimation.
+
+## Actualización 2024-11-21
+- Sincronizado con la lógica vigente en `app.R`, incluyendo el uso de Algoritmo A, las variantes de \u03c3_pt y los criterios de homogeneidad/estabilidad basados en las medianas robustas.
+- Referencia cruzada con `reports/report_template.Rmd` para reflejar los parámetros YAML (pollutant, level, n_lab, k_factor y metrological_compatibility_method) utilizados al generar informes.
+- Verificado que las descripciones mantienen consistencia con la interfaz Shiny y el flujo de cálculo de puntajes z, z', zeta y En.
