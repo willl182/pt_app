@@ -132,6 +132,22 @@ compute_homogeneity <- function(data_full, pol, lev) {
 }
 ```
 
+## Cómo utilizar y parametrizar este informe
+
+1. **Instalación de dependencias.** Desde R (>= 4.2) ejecute `install.packages(c("rmarkdown", "tidyverse", "kableExtra", "outliers"))`.  Asegúrese de tener compiladores disponibles (RTools en Windows o build-essential en Linux) para que `kableExtra` pueda compilar sus extensiones.
+2. **Renderización básica.** Con las dependencias instaladas, sitúese en la raíz del proyecto y ejecute:
+   `rmarkdown::render("reports/report_template.Rmd", params = list(hom_data = hom_df, stab_data = stab_df, summary_data = summary_df, pollutant = "SO2", level = "level_1", n_lab = 7, metric = "z"))`
+   donde `hom_df`, `stab_df` y `summary_df` son `data.frame` que contienen las columnas descritas en la aplicación Shiny (pollutant, level, replicate/value para homogeneidad y estabilidad; participant_id, mean_value y sd_value para los resúmenes de participantes).
+3. **Personalización opcional.** Los parámetros `scheme_id`, `report_id`, `period` y los nombres de responsables permiten adaptar la portada y las secciones de responsabilidad. El método de compatibilidad metrológica (`metrological_compatibility_method`) y el factor de cobertura `k_factor` se ajustan con los argumentos mostrados en el bloque `params` del encabezado YAML.
+
+## Descripción detallada de los cálculos
+
+- **Homogeneidad.** `compute_homogeneity()` reorganiza los datos por analito y nivel, calcula medias y rangos por ítem (g) y replica (m), obtiene `sw` (variación dentro del ítem) y `ss` (variación entre ítems) y los contrasta con `c_crit = 0.3 * sigma_pt`, donde `sigma_pt` se basa en la mediana de las diferencias absolutas (MAD) de la primera réplica (`sample_1`).
+- **Estabilidad.** La estabilidad se evalúa con la misma lógica que la homogeneidad sobre `stab_data`, comparando la media robusta de estabilidad con la media de homogeneidad. La diferencia se valida contra `c_crit` y una versión expandida que incorpora la incertidumbre de `sw`.
+- **Algoritmo A (ISO 13528).** `run_algorithm_a()` itera pesos derivados de `u = (x - x*)/(1.5*s*)` para obtener un valor consensuado robusto (`x*`) y su desviación (`s*`). Converge cuando las variaciones sucesivas de x* y s* son menores a 1e-4 o cuando alcanza `max_iter`.
+- **Valores asignados y puntajes.** A partir de los resultados del Algoritmo A y de los resúmenes de participantes, el informe calcula `xpt`, `spt` y la incertidumbre asociada. Según el parámetro `metric`, se generan puntajes z, zeta o eta y se identifican valores atípicos (p. ej., mediante pruebas de Grubbs cuando corresponden los supuestos).
+- **Compatibilidad metrológica.** Cuando se suministra `metrological_compatibility`, se comparan los resultados de cada laboratorio con el valor de referencia usando el método indicado (p. ej., 2a) y el factor de cobertura `k_factor`.
+
 ## 1.1. Información del Proveedor y del esquema
 
 **Alcance:** Este Ensayo de Aptitud (EA) por comparación interlaboratorio abarca la medición de los gases contaminantes criterio SO₂, CO, O₃, NO y NO₂ en aire cero, según lo definido en el `r params$scheme_id`.

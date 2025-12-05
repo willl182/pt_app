@@ -5,6 +5,40 @@
 # in an interactive web interface using Shiny.
 #
 # Based on the design from ui_test.md.
+#
+# Installation and execution
+# ---------------------------
+# 1) Install R (>= 4.2) and RTools (Windows) or system compilers (Linux/macOS).
+# 2) Install the required packages. From a clean R session run:
+#    install.packages(c(
+#      "shiny", "tidyverse", "vroom", "DT", "rhandsontable", "shinythemes",
+#      "outliers", "patchwork", "bsplus", "plotly", "rmarkdown"
+#    ))
+#    If you are behind a proxy or an offline mirror, set the repository with
+#    options(repos = c(CRAN = "https://cran.r-project.org")) before installing.
+# 3) Place all input CSV files (homogeneity, stability and participant summaries)
+#    in an accessible folder. Launch the app from the project root with:
+#    R -e "shiny::runApp('app.R', host='0.0.0.0', port=3838)"
+#    The UI allows uploading the CSV files; no hard-coded paths are required.
+# 4) To regenerate participant reports locally, ensure rmarkdown is installed and
+#    call rmarkdown::render() with reports/report_template.Rmd and the parameters
+#    listed at the top of that file.
+#
+# Calculation overview
+# --------------------
+# * Homogeneity: reshapes homogeneity.csv into wide form per pollutant/level,
+#   computes per-item means and ranges, derives sw (within-item) and ss
+#   (between-item) components, and checks ss against c_criterion = 0.3*sigma_pt
+#   where sigma_pt is a robust MAD-based dispersion from sample_1.
+# * Stability: mirrors the homogeneity workflow on stability.csv, compares the
+#   stability mean with the homogeneity mean and validates the difference
+#   against the same c_criterion and its expanded variant.
+# * Consensus value (Algorithm A): aggregates participant mean values, runs the
+#   ISO 13528 Algorithm A iterative weighting to obtain x* and s*, and records
+#   convergence diagnostics per pollutant/level/n_lab combination.
+# * Robust statistics for scores: derives xpt, spt and uncertainty terms, then
+#   evaluates participant performance using selected metrics (z, zeta, or
+#   eta), flagging insufficient participants or missing inputs gracefully.
 # ===================================================================
 
 # 1. Load necessary libraries
