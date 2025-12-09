@@ -902,11 +902,11 @@ server <- function(input, output, session) {
               ),
               tabPanel(
                 "Contribuciones a la incertidumbre",
-                h4("Resumen u_hom (hom_ss)"),
+                h4("Resumen Incertidumbre por Homogeneidad"),
                 p("Esta tabla muestra el valor de u_hom (calculado como hom_ss) para todos los analitos y niveles disponibles."),
                 dataTableOutput("u_hom_table"),
                 hr(),
-                h4("Resumen u_stab (Dmax / sqrt(3))"),
+                h4("Resumen Incertidumbre por Estabilidad"),
                 p("Esta tabla muestra el valor de Dmax (diferencia absoluta entre medias de homogeneidad y estabilidad) y u_stab para todos los analitos y niveles disponibles."),
                 dataTableOutput("u_stab_table")
               )
@@ -918,7 +918,20 @@ server <- function(input, output, session) {
         "Valores Atípicos",
         h3("Resumen de valores atípicos (Grubbs)"),
         p("Tabla resumen de la prueba de Grubbs para la detección de valores atípicos en los datos de los participantes."),
-        dataTableOutput("grubbs_summary_table")
+        dataTableOutput("grubbs_summary_table"),
+        hr(),
+        h3("Visualización de Datos de Participantes"),
+        fluidRow(
+          column(
+            width = 4,
+            uiOutput("outliers_pollutant_selector"),
+            uiOutput("outliers_level_selector")
+          )
+        ),
+        fluidRow(
+          column(width = 6, plotlyOutput("outliers_histogram")),
+          column(width = 6, plotlyOutput("outliers_boxplot"))
+        )
       ),
       tabPanel(
         "Valor asignado",
@@ -1540,8 +1553,9 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
       return(NULL)
     }
     raw_data() %>%
-      select(level, starts_with("sample_")) %>%
-      pivot_longer(-level, names_to = "sample", values_to = "result")
+      select(level, matches("^sample_\\d+$")) %>%
+      pivot_longer(-level, names_to = "sample", values_to = "result") %>%
+      filter(!is.na(result))
   })
 
   # Output: Histogram
@@ -5340,6 +5354,70 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
       options = list(pageLength = 10, scrollX = TRUE),
       rownames = FALSE
     )
+  })
+
+  # --- Valores Atípicos: Selectors and Plots ---
+  output$outliers_pollutant_selector <- renderUI({
+    req(pt_prep_data())
+    choices <- sort(unique(pt_prep_data()$pollutant))
+    selectInput("outliers_pollutant", "Seleccionar contaminante:", choices = choices)
+  })
+
+  output$outliers_level_selector <- renderUI({
+    req(pt_prep_data(), input$outliers_pollutant)
+    filtered <- pt_prep_data() %>% filter(pollutant == input$outliers_pollutant)
+    choices <- sort(unique(filtered$level))
+    selectInput("outliers_level", "Seleccionar nivel:", choices = choices)
+  })
+
+  outliers_plot_data <- reactive({
+    req(pt_prep_data(), input$outliers_pollutant, input$outliers_level)
+    pt_prep_data() %>%
+      filter(
+        pollutant == input$outliers_pollutant,
+        level == input$outliers_level,
+        participant_id != "ref"
+      )
+  })
+
+  output$outliers_histogram <- renderPlotly({
+    req(outliers_plot_data())
+    plot_data <- outliers_plot_data()
+    
+    if (nrow(plot_data) == 0) {
+      return(NULL)
+    }
+    
+    hist_plot <- ggplot(plot_data, aes(x = mean_value)) +
+      geom_histogram(aes(y = after_stat(density)), color = "black", fill = "steelblue", bins = 15) +
+      geom_density(alpha = 0.4, fill = "lightblue") +
+      labs(
+        title = paste("Histograma -", input$outliers_pollutant, "-", input$outliers_level),
+        x = "Valor medio", y = "Densidad"
+      ) +
+      theme_minimal()
+    
+    plotly::ggplotly(hist_plot)
+  })
+
+  output$outliers_boxplot <- renderPlotly({
+    req(outliers_plot_data())
+    plot_data <- outliers_plot_data()
+    
+    if (nrow(plot_data) == 0) {
+      return(NULL)
+    }
+    
+    box_plot <- ggplot(plot_data, aes(x = level, y = mean_value)) +
+      geom_boxplot(fill = "lightgreen", outlier.colour = "red") +
+      geom_jitter(width = 0.1, alpha = 0.5, color = "darkblue") +
+      labs(
+        title = paste("Boxplot -", input$outliers_pollutant, "-", input$outliers_level),
+        x = "Nivel", y = "Valor medio"
+      ) +
+      theme_minimal()
+    
+    plotly::ggplotly(box_plot)
   })
 } # end server function
 
