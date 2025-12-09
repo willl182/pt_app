@@ -1,10 +1,8 @@
 # ===================================================================
-# Shiny App for PT Data Analysis (Homogeneity and Stability)
+# Shiny App for Proficiency Testing Analysis
 #
-# This app implements the procedures from test_homog.R and pt_analysis.R
-# in an interactive web interface using Shiny.
+# This app implements the procedures from ISO 17043 and ISO 13528 in an interactive web interface using Shiny.
 #
-# Based on the design from ui_test.md.
 # ===================================================================
 
 # 1. Load necessary libraries
@@ -36,6 +34,7 @@ calculate_niqr <- function(x) {
 # I. User Interface (UI)
 # ===================================================================
 ui <- fluidPage(
+  theme = shinytheme("cyborg"),
 
   # 1. Application Title
   titlePanel("Aplicación de análisis de datos PT"),
@@ -477,7 +476,25 @@ server <- function(input, output, session) {
     stab_sigma_pt <- mad_e
     stab_c_criterion <- 0.3 * hom_results$sigma_pt
     stab_sigma_allowed_sq <- stab_c_criterion^2
-    stab_c_criterion_expanded <- sqrt(stab_sigma_allowed_sq * 1.88 + (stab_sw^2) * 1.01)
+    
+    # Calculate u_hom_mean
+    hom_values <- hom_results$data_wide %>%
+      select(starts_with("sample_")) %>%
+      unlist() %>%
+      as.numeric()
+    hom_values <- hom_values[!is.na(hom_values)]
+    sd_hom_mean <- sd(hom_values)
+    n_hom <- length(hom_values)
+    u_hom_mean <- sd_hom_mean / sqrt(n_hom)
+    
+    # Calculate u_stab_mean
+    stab_values <- stab_data$Resultado
+    stab_values <- stab_values[!is.na(stab_values)]
+    sd_stab_mean <- sd(stab_values)
+    n_stab <- length(stab_values)
+    u_stab_mean <- sd_stab_mean / sqrt(n_stab)
+    
+    stab_c_criterion_expanded <- stab_c_criterion + 2 * sqrt(u_hom_mean^2 + u_stab_mean^2)
 
     if (diff_hom_stab <= stab_c_criterion) {
       stab_conclusion1 <- sprintf("ss (%.4f) <= c_criterion (%.4f): CUMPLE CRITERIO ESTABILIDAD", diff_hom_stab, stab_c_criterion)
@@ -487,11 +504,19 @@ server <- function(input, output, session) {
       stab_conclusion_class <- "alert alert-warning"
     }
 
+    if (diff_hom_stab <= stab_c_criterion_expanded) {
+      stab_conclusion2 <- sprintf("ss (%.4f) <= c_expanded (%.4f): CUMPLE CRITERIO EXP ESTABILIDAD", diff_hom_stab, stab_c_criterion_expanded)
+    } else {
+      stab_conclusion2 <- sprintf("ss (%.4f) > c_expanded (%.4f): NO CUMPLE CRITERIO EXP ESTABILIDAD", diff_hom_stab, stab_c_criterion_expanded)
+    }
+
+    stab_conclusion <- paste(stab_conclusion1, stab_conclusion2, sep = "<br>")
+
     list(
       stab_summary = stab_anova_summary,
       stab_ss = stab_ss,
       stab_sw = stab_sw,
-      stab_conclusion = stab_conclusion1,
+      stab_conclusion = stab_conclusion,
       stab_conclusion_class = stab_conclusion_class,
       g = g,
       m = m,
@@ -518,7 +543,7 @@ server <- function(input, output, session) {
     )
   }
 
-  compute_scores_metrics <- function(summary_df, target_pollutant, target_n_lab, target_level, sigma_pt, u_xpt, k) {
+  compute_scores_metrics <- function(summary_df, target_pollutant, target_n_lab, target_level, sigma_pt, u_xpt, k, m = NULL) {
     if (is.null(summary_df) || nrow(summary_df) == 0) {
       return(list(error = "No hay datos resumen disponibles para los puntajes PT."))
     }
@@ -543,8 +568,10 @@ server <- function(input, output, session) {
     x_pt <- mean(ref_data$mean_value, na.rm = TRUE)
     participant_data <- data
 
+
     participant_data <- participant_data %>%
-      rename(result = mean_value, uncertainty_std = sd_value)
+      rename(result = mean_value) %>%
+      mutate(uncertainty_std = if (!is.null(m) && m > 0) sd_value / sqrt(m) else sd_value)
 
     final_scores <- participant_data %>%
       mutate(
@@ -872,10 +899,26 @@ server <- function(input, output, session) {
                 h4("Estadísticos resumidos"),
                 p("Esta tabla muestra los estadísticos generales para el conjunto de estabilidad."),
                 tableOutput("details_summary_stats_table_stability")
+              ),
+              tabPanel(
+                "Contribuciones a la incertidumbre",
+                h4("Resumen u_hom (hom_ss)"),
+                p("Esta tabla muestra el valor de u_hom (calculado como hom_ss) para todos los analitos y niveles disponibles."),
+                dataTableOutput("u_hom_table"),
+                hr(),
+                h4("Resumen u_stab (Dmax / sqrt(3))"),
+                p("Esta tabla muestra el valor de Dmax (diferencia absoluta entre medias de homogeneidad y estabilidad) y u_stab para todos los analitos y niveles disponibles."),
+                dataTableOutput("u_stab_table")
               )
             )
           )
         )
+      ),
+      tabPanel(
+        "Valores Atípicos",
+        h3("Resumen de valores atípicos (Grubbs)"),
+        p("Tabla resumen de la prueba de Grubbs para la detección de valores atípicos en los datos de los participantes."),
+        dataTableOutput("grubbs_summary_table")
       ),
       tabPanel(
         "Valor asignado",
@@ -985,12 +1028,6 @@ server <- function(input, output, session) {
               )
           )
         )
-      ),
-      tabPanel(
-        "Outlier",
-        h3("Resumen de valores atípicos (Grubbs)"),
-        p("Tabla resumen de la prueba de Grubbs para la detección de valores atípicos en los datos de los participantes."),
-        dataTableOutput("grubbs_summary_table")
       ),
       tabPanel(
         "Puntajes PT",
@@ -1342,6 +1379,106 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
       ttest_conclusion = ttest_conclusion,
       error = NULL
     )
+  })
+
+  u_hom_data <- reactive({
+    req(hom_data_full())
+    data <- hom_data_full()
+    
+    combos <- data %>%
+      distinct(pollutant, level)
+    
+    if (nrow(combos) == 0) return(tibble())
+    
+    results <- list()
+    
+    for (i in seq_len(nrow(combos))) {
+      p_val <- combos$pollutant[i]
+      l_val <- combos$level[i]
+      
+      # We use tryCatch to avoid crashing if one combination fails
+      res <- tryCatch({
+        compute_homogeneity_metrics(p_val, l_val)
+      }, error = function(e) list(error = e$message))
+      
+      if (is.null(res$error)) {
+        results[[length(results) + 1]] <- tibble(
+          Pollutant = p_val,
+          Level = l_val,
+          u_hom = res$ss
+        )
+      } else {
+        results[[length(results) + 1]] <- tibble(
+          Pollutant = p_val,
+          Level = l_val,
+          u_hom = NA_real_ # Or some indicator of error
+        )
+      }
+    }
+    
+    bind_rows(results)
+  })
+
+  output$u_hom_table <- renderDataTable({
+    req(u_hom_data())
+    datatable(u_hom_data(), options = list(pageLength = 10), rownames = FALSE) %>%
+      formatRound(columns = "u_hom", digits = 5)
+  })
+
+  u_stab_data <- reactive({
+    req(hom_data_full(), stab_data_full())
+    h_data <- hom_data_full()
+    s_data <- stab_data_full()
+    
+    # Get common combinations
+    combos <- h_data %>%
+      distinct(pollutant, level) %>%
+      inner_join(s_data %>% distinct(pollutant, level), by = c("pollutant", "level"))
+    
+    if (nrow(combos) == 0) return(tibble())
+    
+    results <- list()
+    
+    for (i in seq_len(nrow(combos))) {
+      p_val <- combos$pollutant[i]
+      l_val <- combos$level[i]
+      
+      res <- tryCatch({
+        hom_res <- compute_homogeneity_metrics(p_val, l_val)
+        stab_res <- compute_stability_metrics(p_val, l_val, hom_res)
+        
+        y1 <- hom_res$general_mean
+        y2 <- stab_res$stab_general_mean
+        d_max <- abs(y1 - y2)
+        u_stab <- d_max / sqrt(3)
+        
+        list(d_max = d_max, u_stab = u_stab)
+      }, error = function(e) list(error = e$message))
+      
+      if (is.null(res$error)) {
+        results[[length(results) + 1]] <- tibble(
+          Pollutant = p_val,
+          Level = l_val,
+          Dmax = res$d_max,
+          u_stab = res$u_stab
+        )
+      } else {
+        results[[length(results) + 1]] <- tibble(
+          Pollutant = p_val,
+          Level = l_val,
+          Dmax = NA_real_,
+          u_stab = NA_real_
+        )
+      }
+    }
+    
+    bind_rows(results)
+  })
+
+  output$u_stab_table <- renderDataTable({
+    req(u_stab_data())
+    datatable(u_stab_data(), options = list(pageLength = 10), rownames = FALSE) %>%
+      formatRound(columns = c("Dmax", "u_stab"), digits = 5)
   })
 
   # --- Outputs ---
@@ -1804,19 +1941,21 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
     list(code = code, label = pt_en_class_labels[[code]])
   }
 
-  compute_combo_scores <- function(participants_df, x_pt, sigma_pt, u_xpt, combo_meta, k = 2) {
-    if (!is.finite(x_pt)) {
+  compute_combo_scores <- function(participants_df, x_pt, sigma_pt, u_xpt, combo_meta, k = 2, u_hom = 0, u_stab = 0) {
+    x_pt_def <- x_pt
+    u_xpt_def <- sqrt(u_xpt^2 + u_hom^2 + u_stab^2)
+    if (!is.finite(x_pt_def)) {
       return(list(
         error = sprintf("Valor asignado no disponible para %s.", combo_meta$title)
       ))
     }
-    if (!is.finite(sigma_pt) || sigma_pt <= 0) {
-      return(list(
-        error = sprintf("sigma_pt no válido para %s.", combo_meta$title)
-      ))
-    }
-    if (!is.finite(u_xpt) || u_xpt < 0) {
-      u_xpt <- 0
+#    if (!is.finite(sigma_pt) || sigma_pt <= 0) {
+#      return(list(
+#        error = sprintf("sigma_pt no válido para %s.", combo_meta$title)
+#      ))
+#    }
+    if (!is.finite(u_xpt_def) || u_xpt_def < 0) {
+      u_xpt_def <- 0
     }
     participants_df <- participants_df %>%
       mutate(
@@ -1824,27 +1963,30 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
         uncertainty_std = ifelse(uncertainty_std_missing, NA_real_, uncertainty_std)
       )
 
-    z_values <- (participants_df$result - x_pt) / sigma_pt
-    zprime_den <- sqrt(sigma_pt^2 + u_xpt^2)
+    z_values <- (participants_df$result - x_pt_def) / sigma_pt
+    zprime_den <- sqrt(sigma_pt^2 + u_xpt_def^2)
     z_prime_values <- if (zprime_den > 0) {
-      (participants_df$result - x_pt) / zprime_den
+      (participants_df$result - x_pt_def) / zprime_den
     } else {
       NA_real_
     }
-    zeta_den <- sqrt(participants_df$uncertainty_std^2 + u_xpt^2)
-    zeta_values <- ifelse(zeta_den > 0, (participants_df$result - x_pt) / zeta_den, NA_real_)
+    zeta_den <- sqrt(participants_df$uncertainty_std^2 + u_xpt_def^2)
+    zeta_values <- ifelse(zeta_den > 0, (participants_df$result - x_pt_def) / zeta_den, NA_real_)
     U_xi <- k * participants_df$uncertainty_std
-    U_xpt <- k * u_xpt
+    U_xpt <- k * u_xpt_def
     en_den <- sqrt(U_xi^2 + U_xpt^2)
-    en_values <- ifelse(en_den > 0, (participants_df$result - x_pt) / en_den, NA_real_)
+    en_values <- ifelse(en_den > 0, (participants_df$result - x_pt_def) / en_den, NA_real_)
 
     data <- participants_df %>%
       mutate(
         combination = combo_meta$title,
         combination_label = combo_meta$label,
-        x_pt = x_pt,
+        x_pt = x_pt_def,
         sigma_pt = sigma_pt,
         u_xpt = u_xpt,
+        u_xpt_def = u_xpt_def,
+        u_hom = u_hom,
+        u_stab = u_stab,
         k_factor = k,
         z_score = z_values,
         z_score_eval = score_eval_z(z_score),
@@ -1877,9 +2019,13 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
       error = NULL,
       title = combo_meta$title,
       label = combo_meta$label,
-      x_pt = x_pt,
+      x_pt = x_pt_def,
+      x_pt_def = x_pt_def,
       sigma_pt = sigma_pt,
       u_xpt = u_xpt,
+      u_xpt_def = u_xpt_def,
+      u_hom = u_hom,
+      u_stab = u_stab,
       data = data
     )
   }
@@ -1927,18 +2073,29 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
       return(list(error = "No se encontraron datos para la combinación seleccionada."))
     }
 
+    hom_res <- tryCatch(
+      compute_homogeneity_metrics(target_pollutant, target_level),
+      error = function(e) list(error = conditionMessage(e))
+    )
+    if (!is.null(hom_res$error)) {
+      return(list(error = paste("Error obteniendo parámetros de homogeneidad:", hom_res$error)))
+    }
+    sigma_pt1 <- hom_res$sigma_pt
+    u_xpt1 <- hom_res$u_xpt
+
     participant_data <- subset_data %>%
       filter(participant_id != "ref") %>%
       group_by(participant_id) %>%
       summarise(
         result = mean(mean_value, na.rm = TRUE),
-        uncertainty_std = mean(sd_value, na.rm = TRUE),
+        sd_value = mean(sd_value, na.rm = TRUE),
         .groups = "drop"
       ) %>%
       mutate(
         pollutant = target_pollutant,
         n_lab = target_n_lab,
-        level = target_level
+        level = target_level,
+        uncertainty_std = if (!is.null(hom_res$m) && hom_res$m > 0) sd_value / sqrt(hom_res$m) else sd_value
       )
 
     if (nrow(participant_data) == 0) {
@@ -1951,15 +2108,24 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
     }
     x_pt1 <- mean(ref_data$mean_value, na.rm = TRUE)
 
-    hom_res <- tryCatch(
-      compute_homogeneity_metrics(target_pollutant, target_level),
+    x_pt1 <- mean(ref_data$mean_value, na.rm = TRUE)
+
+    # Calculate u_hom
+    u_hom_val <- hom_res$ss
+    
+    # Calculate u_stab
+    stab_res <- tryCatch(
+      compute_stability_metrics(target_pollutant, target_level, hom_res),
       error = function(e) list(error = conditionMessage(e))
     )
-    if (!is.null(hom_res$error)) {
-      return(list(error = paste("Error obteniendo parámetros de homogeneidad:", hom_res$error)))
+    
+    u_stab_val <- 0
+    if (is.null(stab_res$error)) {
+      y1 <- hom_res$general_mean
+      y2 <- stab_res$stab_general_mean
+      d_max <- abs(y1 - y2)
+      u_stab_val <- d_max / sqrt(3)
     }
-    sigma_pt1 <- hom_res$sigma_pt
-    u_xpt1 <- hom_res$u_xpt
 
     values <- participant_data$result
     n_part <- length(values)
@@ -1978,13 +2144,13 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
     }
 
     combos <- list()
-    combos$ref <- compute_combo_scores(participant_data, x_pt1, sigma_pt1, u_xpt1, score_combo_info$ref, k = k_factor)
-    combos$consensus_ma <- compute_combo_scores(participant_data, median_val, sigma_pt_2a, u_xpt2a, score_combo_info$consensus_ma, k = k_factor)
-    combos$consensus_niqr <- compute_combo_scores(participant_data, median_val, sigma_pt_2b, u_xpt2b, score_combo_info$consensus_niqr, k = k_factor)
+    combos$ref <- compute_combo_scores(participant_data, x_pt1, sigma_pt1, u_xpt1, score_combo_info$ref, k = k_factor, u_hom = u_hom_val, u_stab = u_stab_val)
+    combos$consensus_ma <- compute_combo_scores(participant_data, median_val, sigma_pt_2a, u_xpt2a, score_combo_info$consensus_ma, k = k_factor, u_hom = u_hom_val, u_stab = u_stab_val)
+    combos$consensus_niqr <- compute_combo_scores(participant_data, median_val, sigma_pt_2b, u_xpt2b, score_combo_info$consensus_niqr, k = k_factor, u_hom = u_hom_val, u_stab = u_stab_val)
 
     if (is.null(algo_res$error)) {
       u_xpt3 <- 1.25 * algo_res$robust_sd / sqrt(n_part)
-      combos$algo <- compute_combo_scores(participant_data, algo_res$assigned_value, algo_res$robust_sd, u_xpt3, score_combo_info$algo, k = k_factor)
+      combos$algo <- compute_combo_scores(participant_data, algo_res$assigned_value, algo_res$robust_sd, u_xpt3, score_combo_info$algo, k = k_factor, u_hom = u_hom_val, u_stab = u_stab_val)
     } else {
       combos$algo <- list(error = algo_res$error, title = score_combo_info$algo$title, label = score_combo_info$algo$label)
     }
@@ -2000,8 +2166,10 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
           Combinación = meta$title,
           Etiqueta = meta$label,
           `x_pt` = NA_real_,
+          `x_pt_def` = NA_real_,
           `sigma_pt` = NA_real_,
           `u(x_pt)` = NA_real_,
+          `u(x_pt)_def` = NA_real_,
           Nota = combo$error
         )
       } else {
@@ -2009,8 +2177,10 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
           Combinación = combo$title,
           Etiqueta = combo$label,
           `x_pt` = combo$x_pt,
+          `x_pt_def` = combo$x_pt_def,
           `sigma_pt` = combo$sigma_pt,
           `u(x_pt)` = combo$u_xpt,
+          `u(x_pt)_def` = combo$u_xpt_def,
           Nota = ""
         )
       }
@@ -2329,12 +2499,13 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
       summarise(
         x_pt = dplyr::first(x_pt),
         u_xpt = dplyr::first(u_xpt),
+        u_xpt_def = dplyr::first(u_xpt_def),
         sigma_pt = dplyr::first(sigma_pt),
         k_factor = dplyr::first(k_factor),
         .groups = "drop"
       ) %>%
       mutate(
-        expanded_uncertainty = k_factor * u_xpt
+        expanded_uncertainty = k_factor * u_xpt_def
       )
   })
 
@@ -2449,10 +2620,16 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
     prep_data <- pt_prep_data()
     if (is.null(prep_data)) return(tibble())
     
-    ref_data <- prep_data %>%
-      filter(participant_id == "ref") %>%
+    ref_data_full <- prep_data %>%
+      filter(participant_id == "ref")
+      
+    ref_data <- ref_data_full %>%
       group_by(pollutant, n_lab, level) %>%
-      summarise(x_pt_ref = mean(mean_value, na.rm = TRUE), .groups = "drop") %>%
+      summarise(
+        x_pt_ref = mean(mean_value, na.rm = TRUE), 
+        sd_ref = mean(sd_value, na.rm = TRUE),
+        .groups = "drop"
+      ) %>%
       mutate(n_lab = as.character(n_lab))
     
     # 2. Get Consensus Values (MADe and nIQR)
@@ -2465,12 +2642,19 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
         parts <- strsplit(key, "\\|\\|")[[1]]
         
         val_row <- res$summary %>% filter(Estadístico == "x_pt(2) - Mediana")
+        sigma_2a_row <- res$summary %>% filter(Estadístico == "sigma_pt_2a (MADe)")
+        sigma_2b_row <- res$summary %>% filter(Estadístico == "sigma_pt_2b (nIQR)")
+        n_row <- res$summary %>% filter(Estadístico == "Participantes")
+        
         if (nrow(val_row) > 0) {
           consensus_rows[[length(consensus_rows) + 1]] <<- tibble(
             pollutant = parts[1],
             n_lab = parts[2],
             level = parts[3],
-            x_pt_consensus = val_row$Valor
+            x_pt_consensus = val_row$Valor,
+            sigma_pt_2a = if(nrow(sigma_2a_row) > 0) sigma_2a_row$Valor else NA_real_,
+            sigma_pt_2b = if(nrow(sigma_2b_row) > 0) sigma_2b_row$Valor else NA_real_,
+            n_participants = if(nrow(n_row) > 0) n_row$Valor else NA_real_
           )
         }
       })
@@ -2487,11 +2671,15 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
         if (is.null(res$assigned_value)) return()
         parts <- strsplit(key, "\\|\\|")[[1]]
         
+        n_part <- if(!is.null(res$input_data)) nrow(res$input_data) else NA_real_
+        
         algo_rows[[length(algo_rows) + 1]] <<- tibble(
           pollutant = parts[1],
           n_lab = parts[2],
           level = parts[3],
-          x_pt_algo = res$assigned_value
+          x_pt_algo = res$assigned_value,
+          sigma_pt_algo = res$robust_sd,
+          n_participants_algo = n_part
         )
       })
     }
@@ -2499,7 +2687,6 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
     algo_df <- if (length(algo_rows) > 0) bind_rows(algo_rows) else tibble()
     
     # 4. Merge all
-    # Start with all unique combinations found in any source
     all_combos <- bind_rows(
       ref_data %>% select(pollutant, n_lab, level),
       if (nrow(consensus_df) > 0) consensus_df %>% select(pollutant, n_lab, level) else tibble(),
@@ -2511,16 +2698,98 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
     final_df <- all_combos %>%
       left_join(ref_data, by = c("pollutant", "n_lab", "level")) %>%
       left_join(consensus_df, by = c("pollutant", "n_lab", "level")) %>%
-      left_join(algo_df, by = c("pollutant", "n_lab", "level")) %>%
-      mutate(
-        x_pt_2a = x_pt_consensus, # Median is used for both
-        x_pt_2b = x_pt_consensus,
-        x_pt_3 = x_pt_algo,
-        Diff_Ref_2a = x_pt_ref - x_pt_2a,
-        Diff_Ref_2b = x_pt_ref - x_pt_2b,
-        Diff_Ref_3 = x_pt_ref - x_pt_3
-      ) %>%
-      select(pollutant, n_lab, level, x_pt_ref, x_pt_2a, x_pt_2b, x_pt_3, Diff_Ref_2a, Diff_Ref_2b, Diff_Ref_3) %>%
+      left_join(algo_df, by = c("pollutant", "n_lab", "level"))
+      
+    # 5. Calculate Criteria per row
+    results_list <- list()
+    
+    for(i in seq_len(nrow(final_df))) {
+      row <- final_df[i, ]
+      p <- row$pollutant
+      l <- row$level
+      
+      # Homogeneity & Stability
+      hom_res <- tryCatch(compute_homogeneity_metrics(p, l), error = function(e) list(error=e$message))
+      u_hom <- if(is.null(hom_res$error)) hom_res$ss else 0
+      m <- if(is.null(hom_res$error) && !is.null(hom_res$m)) hom_res$m else 1
+      
+      stab_res <- tryCatch(compute_stability_metrics(p, l, hom_res), error = function(e) list(error=e$message))
+      u_stab <- 0
+      if(is.null(stab_res$error) && is.null(hom_res$error)) {
+        d_max <- abs(hom_res$general_mean - stab_res$stab_general_mean)
+        u_stab <- d_max / sqrt(3)
+      }
+      
+      # u_ref calculation
+      # u_ref = u_xi of reference = k * (sd_ref / sqrt(m))
+      # We use input$report_k for consistency with other reports.
+      k_val <- if(!is.null(input$report_k)) input$report_k else 2
+      
+      u_ref <- if(!is.na(row$sd_ref)) k_val * (row$sd_ref / sqrt(m)) else NA_real_
+      
+      # Calculate u_xpt_def for each method
+      
+      # Method 2a
+      u_xpt_2a <- NA_real_
+      u_xpt_def_2a <- NA_real_
+      crit_2a <- NA_real_
+      if(!is.na(row$x_pt_consensus) && !is.na(row$sigma_pt_2a) && !is.na(row$n_participants)) {
+        u_xpt_2a <- 1.25 * row$sigma_pt_2a / sqrt(row$n_participants)
+        u_xpt_def_2a <- sqrt(u_xpt_2a^2 + u_hom^2 + u_stab^2)
+        if(!is.na(u_ref)) crit_2a <- sqrt(u_xpt_def_2a^2 + u_ref^2)
+      }
+      
+      # Method 2b
+      u_xpt_2b <- NA_real_
+      u_xpt_def_2b <- NA_real_
+      crit_2b <- NA_real_
+      if(!is.na(row$x_pt_consensus) && !is.na(row$sigma_pt_2b) && !is.na(row$n_participants)) {
+        u_xpt_2b <- 1.25 * row$sigma_pt_2b / sqrt(row$n_participants)
+        u_xpt_def_2b <- sqrt(u_xpt_2b^2 + u_hom^2 + u_stab^2)
+        if(!is.na(u_ref)) crit_2b <- sqrt(u_xpt_def_2b^2 + u_ref^2)
+      }
+      
+      # Method 3
+      u_xpt_3 <- NA_real_
+      u_xpt_def_3 <- NA_real_
+      crit_3 <- NA_real_
+      if(!is.na(row$x_pt_algo) && !is.na(row$sigma_pt_algo) && !is.na(row$n_participants_algo)) {
+        u_xpt_3 <- 1.25 * row$sigma_pt_algo / sqrt(row$n_participants_algo)
+        u_xpt_def_3 <- sqrt(u_xpt_3^2 + u_hom^2 + u_stab^2)
+        if(!is.na(u_ref)) crit_3 <- sqrt(u_xpt_def_3^2 + u_ref^2)
+      }
+      
+      row$x_pt_2a <- row$x_pt_consensus
+      row$x_pt_2b <- row$x_pt_consensus
+      row$x_pt_3 <- row$x_pt_algo
+      
+      row$Diff_Ref_2a <- if(!is.na(row$x_pt_ref) && !is.na(row$x_pt_2a)) abs(row$x_pt_ref - row$x_pt_2a) else NA_real_
+      row$Diff_Ref_2b <- if(!is.na(row$x_pt_ref) && !is.na(row$x_pt_2b)) abs(row$x_pt_ref - row$x_pt_2b) else NA_real_
+      row$Diff_Ref_3 <- if(!is.na(row$x_pt_ref) && !is.na(row$x_pt_3)) abs(row$x_pt_ref - row$x_pt_3) else NA_real_
+      
+      row$Eval_Ref_2a <- if(!is.na(row$Diff_Ref_2a) && !is.na(crit_2a)) {
+        if(row$Diff_Ref_2a <= crit_2a) "Compatible" else "No Compatible"
+      } else NA_character_
+      
+      row$Eval_Ref_2b <- if(!is.na(row$Diff_Ref_2b) && !is.na(crit_2b)) {
+        if(row$Diff_Ref_2b <= crit_2b) "Compatible" else "No Compatible"
+      } else NA_character_
+      
+      row$Eval_Ref_3 <- if(!is.na(row$Diff_Ref_3) && !is.na(crit_3)) {
+        if(row$Diff_Ref_3 <= crit_3) "Compatible" else "No Compatible"
+      } else NA_character_
+      
+      row$Crit_Ref_2a <- crit_2a
+      row$Crit_Ref_2b <- crit_2b
+      row$Crit_Ref_3 <- crit_3
+      
+      row$u_ref <- u_ref
+      
+      results_list[[i]] <- row
+    }
+    
+    final_df <- bind_rows(results_list) %>%
+      select(pollutant, n_lab, level, x_pt_ref, u_ref, x_pt_2a, Diff_Ref_2a, Crit_Ref_2a, Eval_Ref_2a, x_pt_2b, Diff_Ref_2b, Crit_Ref_2b, Eval_Ref_2b, x_pt_3, Diff_Ref_3, Crit_Ref_3, Eval_Ref_3) %>%
       arrange(pollutant, n_lab, level)
       
     final_df
@@ -3006,14 +3275,14 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
           `Etiqueta de combinación` = combination_label,
           Nivel = level,
           `x_pt`,
-          `u(x_pt)` = u_xpt,
+          `u(x_pt_def)` = u_xpt_def,
           `Incertidumbre expandida` = expanded_uncertainty,
           `sigma_pt`
         ),
       options = list(pageLength = 10, scrollX = TRUE),
       rownames = FALSE
     ) %>%
-      formatRound(columns = c("x_pt", "u(x_pt)", "Incertidumbre expandida", "sigma_pt"), digits = 5)
+      formatRound(columns = c("x_pt", "u(x_pt_def)", "Incertidumbre expandida", "sigma_pt"), digits = 5)
   })
 
   output$global_level_summary_table <- renderTable(
@@ -3519,6 +3788,7 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
             `x_pt` = x_pt,
             `sigma_pt` = sigma_pt,
             `u(x_pt)` = u_xpt,
+            `u(x_pt_def)` = u_xpt_def,
             `Puntaje z` = z_score,
             `Evaluación z` = z_score_eval,
             `Puntaje z'` = z_prime_score,
@@ -3529,7 +3799,7 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
             `Puntaje En Eval` = En_score_eval
           )
         datatable(table_df, options = list(scrollX = TRUE, pageLength = 10), rownames = FALSE) %>%
-          formatRound(columns = c("Resultado", "x_pt", "sigma_pt", "u(x_pt)", "Puntaje z", "Puntaje z'", "Puntaje zeta", "Puntaje En"), digits = 3)
+          formatRound(columns = c("Resultado", "x_pt", "sigma_pt", "u(x_pt)", "u(x_pt_def)", "Puntaje z", "Puntaje z'", "Puntaje zeta", "Puntaje En"), digits = 3)
       })
 
       output[[plot_id]] <- renderPlotly({
@@ -4423,7 +4693,8 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
       target_level = input$report_level,
       sigma_pt = sigma_pt,
       u_xpt = u_xpt,
-      k = input$report_k
+      k = input$report_k,
+      m = if (!is.null(hom_res$m)) hom_res$m else NULL
     )
 
     if (!is.null(scores_res$error)) {
@@ -5055,11 +5326,11 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
     datatable(
       data,
       options = list(pageLength = 10, scrollX = TRUE),
-      colnames = c("Contaminante", "N_Lab", "Nivel", "Valor Ref", "Valor Consenso 2a", "Valor Consenso 2b", "Valor Consenso 3 (Alg A)", "Dif (Ref - 2a)", "Dif (Ref - 2b)", "Dif (Ref - 3)"),
+      colnames = c("Contaminante", "N_Lab", "Nivel", "Valor Ref", "u_ref", "Valor 2a", "Dif 2a", "Crit 2a", "Eval 2a", "Valor 2b", "Dif 2b", "Crit 2b", "Eval 2b", "Valor 3", "Dif 3", "Crit 3", "Eval 3"),
       rownames = FALSE,
       caption = "Tabla. Compatibilidad Metrológica: Diferencias entre Valor de Referencia y Consenso"
     ) %>%
-      formatRound(columns = c("x_pt_ref", "x_pt_2a", "x_pt_2b", "x_pt_3", "Diff_Ref_2a", "Diff_Ref_2b", "Diff_Ref_3"), digits = 5)
+      formatRound(columns = c("x_pt_ref", "u_ref", "x_pt_2a", "Diff_Ref_2a", "Crit_Ref_2a", "x_pt_2b", "Diff_Ref_2b", "Crit_Ref_2b", "x_pt_3", "Diff_Ref_3", "Crit_Ref_3"), digits = 5)
   })
 
   output$grubbs_summary_table <- renderDataTable({
