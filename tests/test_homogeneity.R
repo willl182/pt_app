@@ -8,8 +8,8 @@ hom_data <- read_csv("data/homogeneity.csv", show_col_types = FALSE)
 stab_data <- read_csv("data/stability.csv", show_col_types = FALSE)
 
 # Parameters for test
-target_pollutant <- "CO"
-target_level <- "level_1"
+target_pollutant <- "co"
+target_level <- "40-ppb"
 
 cat(sprintf("Testing homogeneity for %s - %s...\n", target_pollutant, target_level))
 hom_res <- compute_homogeneity_metrics(hom_data, target_pollutant, target_level)
