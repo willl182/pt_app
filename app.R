@@ -37,7 +37,8 @@ ui <- fluidPage(
   theme = shinytheme("cyborg"),
 
   # 1. Application Title
-  titlePanel("Aplicación de análisis de datos PT"),
+  titlePanel("Aplicativo para Evaluación de Ensayos de Aptitud"),
+  h3("Gases Contaminantes Criterio"),
   h4("Laboratorio Calaire"),
 
   # Collapsible panel for layout options
@@ -808,7 +809,7 @@ server <- function(input, output, session) {
           column(
             width = 4,
             wellPanel(
-              h4("3. Datos resumen de participantes"),
+              h4("3. Datos Consolidados de participantes"),
               fileInput("summary_files", "Cargar summary_n*.csv", accept = ".csv", multiple = TRUE)
             )
           )
