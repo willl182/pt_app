@@ -34,7 +34,7 @@ calculate_niqr <- function(x) {
 # I. User Interface (UI)
 # ===================================================================
 ui <- fluidPage(
-  theme = shinytheme("cyborg"),
+  theme = shinytheme("cerulean"),
 
   # 1. Application Title
   titlePanel("Aplicativo para Evaluación de Ensayos de Aptitud"),
