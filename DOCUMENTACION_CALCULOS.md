@@ -27,6 +27,7 @@ Se definen al inicio del script o dentro del servidor:
 *   **`run_algorithm_a(values, ids, max_iter)`**: Implementa el Algoritmo A robusto (ISO 13528, Anexo C).
     *   Calcula la media robusta ($x^*$) y la desviación estándar robusta ($s^*$).
     *   Itera hasta que la convergencia es menor a $10^{-3}$ o se alcanza `max_iter`.
+    *   **Nota Técnica**: La implementación actual en `app.R` omite el factor de corrección de 1.134 en la actualización de $s^*$, resultando en un cálculo de desviación cuadrática media ponderada.
     *   Uso: Cálculo del valor asignado y $\sigma_{pt}$ para el consenso tipo 3.
 
 ### 2.2. Evaluación de Homogeneidad (`compute_homogeneity_metrics`)
