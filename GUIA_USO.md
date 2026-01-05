@@ -28,7 +28,8 @@ install.packages(c(
   "patchwork",
   "bsplus",
   "plotly",
-  "rmarkdown"
+  "rmarkdown",
+  "bslib"
 ))
 ```
 
@@ -115,10 +116,12 @@ Este módulo evalúa si los ítems de ensayo son adecuados para el PT.
         *   Valide el *p-valor* en la salida de la consola mostrada en la interfaz ("Prueba t").
         *   Verifique si se cumple la condición: $| \bar{y}_{hom} - \bar{y}_{stab} | \le 0.3 \sigma_{pt}$.
 
-### Paso 3: Valores Atípicos (Outliers)
-Implementa la prueba de **Grubbs** para detectar valores anómalos en los resultados de los participantes.
+### Paso 3: PT Preparation (Valores Atípicos y Distribución)
+Este módulo analiza los resultados de los participantes.
 
-*   Revise la tabla resumen. Si $p < 0.05$, se indica la presencia de un valor atípico. Esto es informativo y ayuda a decidir si excluir participantes en cálculos posteriores (aunque el Algoritmo A es robusto a esto).
+1.  **Exploración:** Navegue por las pestañas de cada contaminante.
+2.  **Validación de Atípicos (Outliers):** Use la sub-pestaña **"Grubbs' Test"** para detectar valores anómalos en los resultados de los participantes.
+    *   Revise la tabla resumen. Si $p < 0.05$, se indica la presencia de un valor atípico.
 
 ### Paso 4: Valor Asignado
 Aquí se define el valor verdadero ($x_{pt}$) y la desviación estándar para la evaluación ($\sigma_{pt}$). El aplicativo soporta tres enfoques:
@@ -126,25 +129,17 @@ Aquí se define el valor verdadero ($x_{pt}$) y la desviación estándar para la
 1.  **Algoritmo A (ISO 13528 Anexo C):**
     *   Calcula media y desviación robusta iterativamente.
     *   **Validación:** Vaya a la sub-pestaña "Algoritmo A", configure las iteraciones y ejecute.
-    *   **Punto de control:** Revise la tabla **"Iteraciones"** para ver la convergencia de $x^*$ y $s^*$ paso a paso. Verifique la tabla **"Pesos Finales"** para ver qué participantes tuvieron reducción de peso (posibles outliers).
+    *   **Punto de control:** Revise la tabla **"Iteraciones"** y **"Pesos Finales"**.
 2.  **Valor Consenso:**
     *   Calcula la mediana y dos medidas de dispersión: MADe y nIQR.
-    *   **Validación:** Compare estos valores robustos con los obtenidos por métodos clásicos para asegurar coherencia.
 3.  **Referencia:**
-    *   Toma directamente los valores del participante identificado como `"ref"` en el archivo `summary_n*.csv`.
+    *   Toma directamente los valores del participante identificado como `"ref"`.
 
 ### Paso 5: Puntajes PT (Scoring)
 Calcula los indicadores de desempeño para cada participante.
 
-1.  Haga clic en **"Calcular puntajes"**.
-2.  El sistema calcula simultáneamente:
-    *   **z-score**: Usando $\sigma_{pt}$.
-    *   **z'-score**: Incluye la incertidumbre del valor asignado $u(x_{pt})$.
-    *   **zeta-score**: Incluye la incertidumbre del participante $u(x_i)$.
-    *   **En-score**: Indicador de error normalizado (usa incertidumbre expandida $U$).
-3.  **Validación:**
-    *   Exporte los resultados o revise la tabla **"Resumen de puntajes por participante"**.
-    *   Verifique manualmente un caso aleatorio usando la fórmula estándar: $z = (x_i - x_{pt}) / \sigma_{pt}$.
+1.  Configure los parámetros ($\sigma_{pt}$, $u(x_{pt})$, $k$) y haga clic en **"Calcular puntajes"**.
+2.  El sistema calcula: **z-score**, **z'-score**, **zeta-score** y **En-score**.
 
 ### Paso 6: Informe Global
 Esta pestaña agrega todos los resultados anteriores en una vista matricial (Heatmaps).

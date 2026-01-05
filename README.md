@@ -4,7 +4,7 @@ This Shiny application provides a comprehensive toolkit for analyzing data from 
 
 ## User Guide
 
-For a step-by-step installation walkthrough and a deeper explanation of how the app and report template calculate homogeneity, stability, and participant scores, see `documentacion/app_and_report_documentation.md`.
+For a step-by-step installation walkthrough and a deeper explanation of how the app and report template calculate homogeneity, stability, and participant scores, see `DOCUMENTACION_CALCULOS.md` and `TECHNICAL_DOCUMENTATION.md`.
 
 ### Getting Started
 
@@ -13,54 +13,50 @@ To run the application, you need to have R and the required packages installed.
 1.  **Install R:** Download and install R from the [Comprehensive R Archive Network (CRAN)](https://cran.r-project.org/).
 2.  **Install Packages:** Open an R console and run the following command to install the necessary packages:
     ```r
-    install.packages(c("shiny", "tidyverse", "vroom", "DT", "rhandsontable", "shinythemes", "outliers"))
+    install.packages(c("shiny", "tidyverse", "vroom", "DT", "rhandsontable", "shinythemes", "outliers", "patchwork", "bsplus", "plotly", "rmarkdown", "bslib"))
     ```
 3.  **Run the Application:** Open a terminal or command prompt, navigate to the directory containing the application files, and run the following command:
     ```bash
-    Rscript run_app.R
+    Rscript app.R
     ```
     The application will start and can be accessed in your web browser, typically at `http://127.0.0.1:XXXX` (the port `XXXX` will be displayed in the console).
 
 ### Application Modules
 
-The application is organized into three main modules, accessible from the navigation panel on the left.
+#### 1. Carga de datos
 
-#### 1. Homogeneity & Stability Analysis
+This module handles the initial loading of CSV files for analysis.
+
+*   **Inputs:** `homogeneity.csv`, `stability.csv`, and `summary_n*.csv` files.
+
+#### 2. Homogeneity & Stability Analysis
 
 This module is used to assess whether the proficiency test items are sufficiently homogeneous and stable for the PT scheme.
 
 *   **Inputs:**
-    *   **Select Pollutant:** Choose the pollutant to analyze (`co`, `no`, `no2`, `o3`, `so2`). The application will load the corresponding data from `homogeneity.csv` and `stability.csv`.
-    *   **Select PT Level:** Choose the concentration level of the pollutant to analyze.
-*   **Outputs:**
-    *   **Data Preview:** Shows a preview of the raw homogeneity and stability data, along with distribution plots (histogram and boxplot).
-    *   **Homogeneity Assessment:** Provides a conclusion on whether the items meet the homogeneity criteria based on ISO 13528:2022. It displays detailed statistical tables, including robust statistics, variance components, and per-item calculations.
-    *   **Stability Assessment:** Provides a conclusion on the stability of the items by comparing data from two different time points. It includes variance components and detailed statistical tables for the stability data.
+    *   **Select Pollutant:** Choose the pollutant to analyze (`co`, `no`, `no2`, `o3`, `so2`).
+    *   **Select PT Level:** Choose the concentration level to analyze.
+*   **Outputs:** Data preview, ANOVA summary, homogeneity and stability assessments.
 
-#### 2. PT Preparation
+#### 3. PT Preparation
 
-This module provides an analysis of participant results from different PT schemes. The data is loaded from `summary_n*.csv` files.
+Analyzes participant results from different rounds.
+
+*   **Functionality:** Dynamically creates tabs for each pollutant.
+*   **Outputs:** Bar charts, distributions, and Grubbs' test for outliers.
+
+#### 4. Valor Asignado / PT Scores
+
+Calculates reference values and participant performance scores.
 
 *   **Functionality:**
-    *   The module dynamically creates tabs for each pollutant found in the summary files.
-    *   Within each pollutant tab, you can select the PT scheme (by the number of participants `n`) and the concentration level.
-*   **Outputs:**
-    *   **Participant Results Plot:** A bar chart showing the mean values and standard deviations for each participant.
-    *   **Data Table:** A table of the summary data for the selected scheme.
-    *   **Results Distribution:** Histogram, boxplot, and density plots to visualize the distribution of participant results.
-    *   **Grubbs' Test for Outliers:** A statistical test to identify potential outliers in the data.
-    *   **Run Chart:** A chart showing the mean values for each participant across different sample groups.
+    *   **Value Assignment:** Supports Algorithm A, Consensus (MADe/nIQR), or Reference laboratory.
+    *   **Scoring:** Calculates z, z', zeta, and En scores.
 
-#### 3. PT Scores
+#### 5. Informe Global & Generación de Informes
 
-This module calculates various performance scores for participants based on their results.
-
-*   **Inputs:**
-    *   **Select Data:** Choose the pollutant, PT scheme (`n`), and concentration level.
-    *   **Set Parameters:** Adjust the parameters used for score calculation, such as the standard deviation for proficiency assessment (`sigma_pt`), the standard uncertainty of the assigned value (`u_xpt`), and the coverage factor (`k`).
-*   **Outputs:**
-    *   **Scores Table:** A detailed table showing the calculated z-scores, z'-scores, zeta-scores, and En-scores for each participant, along with a "Satisfactory," "Questionable," or "Unsatisfactory" evaluation.
-    *   **Score Plots:** A series of plots visualizing each of the calculated scores for all participants, with warning and action limits clearly marked.
+*   **Informe Global:** Heatmap visualization of results across all levels and pollutants.
+*   **Generación de informes:** Interface to configure and download the RMarkdown final report.
 
 ## Developer Documentation
 

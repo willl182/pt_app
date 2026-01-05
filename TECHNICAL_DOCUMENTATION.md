@@ -53,7 +53,8 @@ install.packages(c(
   "plotly",       # Interactive plotting
   "rmarkdown",    # Report generation
   "knitr",        # Dynamic report generation
-  "kableExtra"    # Enhanced tables for reports
+  "kableExtra",   # Enhanced tables for reports
+  "bslib"         # Modern Bootstrap themes
 ))
 ```
 
@@ -62,7 +63,7 @@ install.packages(c(
 1.  **Standard Execution**:
     Navigate to the project directory in your terminal and run:
     ```bash
-    Rscript run_app.R
+    Rscript app.R
     ```
     Or from within an R console:
     ```r
@@ -87,7 +88,9 @@ The application follows the standard Shiny **UI/Server** architecture but is str
 The UI is built using `fluidPage` with a `navlistPanel` layout, dividing the app into three main operational modules:
 -   **Carga de datos**: Handles file uploads (`homogeneity.csv`, `stability.csv`, `summary_n*.csv`).
 -   **Análisis de homogeneidad y estabilidad**: Workflows for checking sample quality.
+-   **PT Preparation**: Analysis of participant distributions and Grubbs' test.
 -   **Valor asignado / Puntajes**: Workflows for determining reference values ($x_{pt}$) and evaluating participant performance.
+-   **Informe Global**: Comprehensive Heatmap overview of all results.
 -   **Generación de informes**: Configuration interface for the RMarkdown report.
 
 #### 2. Server Logic (`server`)

@@ -17,6 +17,7 @@ library(patchwork)
 library(bsplus)
 library(plotly)
 library(rmarkdown)
+library(bslib)
 
 # -------------------------------------------------------------------
 # Helper Functions
@@ -34,7 +35,16 @@ calculate_niqr <- function(x) {
 # I. User Interface (UI)
 # ===================================================================
 ui <- fluidPage(
-  theme = shinytheme("cerulean"),
+  theme = bs_theme(
+    version = 5,
+    bg = "#FFFFFF",
+    fg = "#212529",
+    primary = "#FDB913",
+    secondary = "#333333",
+    success = "#4DB848",
+    base_font = font_google("Droid Sans"),
+    code_font = font_google("JetBrains Mono")
+  ),
 
   # 1. Application Title
   titlePanel("Aplicativo para Evaluación de Ensayos de Aptitud"),
@@ -939,107 +949,68 @@ server <- function(input, output, session) {
         sidebarLayout(
           sidebarPanel(
             width = analysis_sidebar_w,
-            h4("Selector de datos"),
+            h4("1. Ejecutar Análisis"),
+            actionButton("algoA_run", "Calcular Algoritmo A", class = "btn-primary btn-block"),
+            br(),
+            actionButton("consensus_run", "Calcular valores consenso", class = "btn-primary btn-block"),
+            br(),
+            actionButton("run_metrological_compatibility", "Calcular Compatibilidad", class = "btn-primary btn-block"),
+            hr(),
+            h4("2. Selector de datos"),
             uiOutput("assigned_pollutant_selector"),
             uiOutput("assigned_n_selector"),
             uiOutput("assigned_level_selector"),
+            hr(),
+            h4("3. Parámetros"),
+            numericInput("algoA_max_iter", "Iteraciones máx Algo A:", value = 50, min = 5, max = 500, step = 5),
             hr(),
             helpText("La combinación seleccionada se utiliza en todas las secciones de la derecha.")
           ),
           mainPanel(
             width = 12 - analysis_sidebar_w,
-            bsplus::bs_accordion(id = "assigned_value_section") %>%
-              bsplus::bs_set_opts(use_heading_link = TRUE) %>%
-              bsplus::bs_append(
-                title = "Algoritmo A",
-                content = sidebarLayout(
-                  sidebarPanel(
-                    width = analysis_sidebar_w,
-                    h4("1. Ejecutar Análisis"),
-                    actionButton("algoA_run", "Calcular Algoritmo A", class = "btn-primary btn-block"),
-                    hr(),
-                    h4("2. Parámetros del Algoritmo"),
-                    numericInput("algoA_max_iter", "Iteraciones máximas:", value = 50, min = 5, max = 500, step = 5),
-                    hr(),
-                    helpText("Utilice el selector de la izquierda para elegir analito, esquema PT y nivel.")
-                  ),
-                  mainPanel(
-                    width = analysis_main_w,
-                    h4("Resultados del Algoritmo A"),
-                    uiOutput("algoA_result_summary"),
-                    hr(),
-                    h4("Datos de Entrada"),
-                    dataTableOutput("algoA_input_table"),
-                    hr(),
-                    h4("Histograma de Resultados"),
-                    plotlyOutput("algoA_histogram"),
-                    hr(),
-                    h4("Iteraciones"),
-                    dataTableOutput("algoA_iterations_table"),
-                    hr(),
-                    h4("Pesos Finales por Participante"),
-                    dataTableOutput("algoA_weights_table")
-                  )
-                )
-              ) %>%
-              bsplus::bs_append(
-                title = "Valor consenso",
-                content = sidebarLayout(
-                  sidebarPanel(
-                    width = analysis_sidebar_w,
-                    h4("Ejecutar Cálculo"),
-                    actionButton("consensus_run", "Calcular valores consenso", class = "btn-primary btn-block"),
-                    hr(),
-                    helpText("Se utiliza la misma selección de datos definida en la izquierda."),
-                    hr(),
-                    p("Calcula el valor consenso x_pt(2) y las desviaciones robustas sigma_pt_2a (MADe) y sigma_pt_2b (nIQR) para cada combinación disponible.")
-                  ),
-                  mainPanel(
-                    width = analysis_main_w,
-                    h4("Resumen del Valor Consenso"),
-                    tableOutput("consensus_summary_table"),
-                    hr(),
-                    h4("Datos de participantes"),
-                    dataTableOutput("consensus_input_table")
-                  )
-                )
-              ) %>%
-              bsplus::bs_append(
-                title = "Valor de referencia",
-                content = sidebarLayout(
-                  sidebarPanel(
-                    width = analysis_sidebar_w,
-                    h4("Datos de Referencia"),
-                    helpText("Se muestran los resultados declarados como referencia para la selección actual."),
-                    hr(),
-                    p("Visualiza los resultados declarados como referencia en los archivos summary_n*.csv.")
-                  ),
-                  mainPanel(
-                    width = analysis_main_w,
-                    h4("Resultados de Referencia"),
-                    dataTableOutput("reference_table")
-                  )
-                )
-              ) %>%
-              bsplus::bs_append(
-                title = "Compatibilidad Metrológica",
-                content = sidebarLayout(
-                  sidebarPanel(
-                    width = analysis_sidebar_w,
-                    h4("Ejecutar Cálculo"),
-                    actionButton("run_metrological_compatibility", "Calcular Compatibilidad", class = "btn-primary btn-block"),
-                    hr(),
-                    helpText("Calcula las diferencias entre el valor de referencia y los valores de consenso (2a y 2b).")
-                  ),
-                  mainPanel(
-                    width = analysis_main_w,
-                    h4("Diferencias entre Valor de Referencia y Consenso"),
-                    p("Esta tabla muestra la compatibilidad metrológica entre el valor de referencia y los valores de consenso calculados."),
-                    dataTableOutput("metrological_compatibility_table"),
-                    p(class = "text-muted", "Nota: D_2a = x_pt(Ref) - x_pt(2a); D_2b = x_pt(Ref) - x_pt(2b)")
-                  )
-                )
+            tabsetPanel(
+              id = "assigned_value_tabs",
+              tabPanel(
+                "Algoritmo A",
+                h4("Resultados del Algoritmo A"),
+                uiOutput("algoA_result_summary"),
+                hr(),
+                h4("Datos de Entrada"),
+                dataTableOutput("algoA_input_table"),
+                hr(),
+                h4("Histograma de Resultados"),
+                plotlyOutput("algoA_histogram"),
+                hr(),
+                h4("Iteraciones"),
+                dataTableOutput("algoA_iterations_table"),
+                hr(),
+                h4("Pesos Finales por Participante"),
+                dataTableOutput("algoA_weights_table")
+              ),
+              tabPanel(
+                "Valor consenso",
+                h4("Resumen del Valor Consenso"),
+                tableOutput("consensus_summary_table"),
+                hr(),
+                p("Calcula el valor consenso x_pt(2) y las desviaciones robustas sigma_pt_2a (MADe) y sigma_pt_2b (nIQR) para cada combinación disponible."),
+                hr(),
+                h4("Datos de participantes"),
+                dataTableOutput("consensus_input_table")
+              ),
+              tabPanel(
+                "Valor de referencia",
+                h4("Resultados de Referencia"),
+                p("Visualiza los resultados declarados como referencia en los archivos summary_n*.csv."),
+                dataTableOutput("reference_table")
+              ),
+              tabPanel(
+                "Compatibilidad Metrológica",
+                h4("Diferencias entre Valor de Referencia y Consenso"),
+                p("Esta tabla muestra la compatibilidad metrológica entre el valor de referencia y los valores de consenso calculados."),
+                dataTableOutput("metrological_compatibility_table"),
+                p(class = "text-muted", "Nota: D_2a = x_pt(Ref) - x_pt(2a); D_2b = x_pt(Ref) - x_pt(2b)")
               )
+            )
           )
         )
       ),
@@ -1096,97 +1067,88 @@ server <- function(input, output, session) {
           ),
           mainPanel(
             width = analysis_main_w,
-            bsplus::bs_accordion(id = "global_report_sections") %>%
-              bsplus::bs_set_opts(use_heading_link = TRUE) %>%
-              bsplus::bs_append(
-                title = "Resumen global",
-                content = tagList(
-                  h4("Resumen x_pt"),
-                  dataTableOutput("global_xpt_summary_table"),
-                  hr(),
-                  h4("Resumen de niveles"),
-                  tableOutput("global_level_summary_table"),
-                  hr(),
-                  h4("Resumen de evaluaciones"),
-                  dataTableOutput("global_evaluation_summary_table")
+            tabsetPanel(
+              id = "global_report_tabs",
+              tabPanel(
+                 "Resumen global",
+                 h4("Resumen x_pt"),
+                 dataTableOutput("global_xpt_summary_table"),
+                 hr(),
+                 h4("Resumen de niveles"),
+                 tableOutput("global_level_summary_table"),
+                 hr(),
+                 h4("Resumen de evaluaciones"),
+                 dataTableOutput("global_evaluation_summary_table")
+              ),
+              tabPanel(
+                "Referencia (1)",
+                h4("Parámetros principales"),
+                tableOutput("global_params_ref"),
+                hr(),
+                h4("Resultados por participante"),
+                dataTableOutput("global_overview_ref"),
+                hr(),
+                fluidRow(
+                  column(6, plotlyOutput("global_heatmap_z_ref", height = "350px")),
+                  column(6, plotlyOutput("global_heatmap_zprime_ref", height = "350px"))
+                ),
+                fluidRow(
+                  column(6, plotlyOutput("global_heatmap_zeta_ref", height = "350px")),
+                  column(6, plotlyOutput("global_heatmap_en_ref", height = "350px"))
                 )
-              ) %>%
-              bsplus::bs_append(
-                title = "Referencia (1)",
-                content = tagList(
-                  h4("Parámetros principales"),
-                  tableOutput("global_params_ref"),
-                  hr(),
-                  h4("Resultados por participante"),
-                  dataTableOutput("global_overview_ref"),
-                  hr(),
-                  fluidRow(
-                    column(6, plotlyOutput("global_heatmap_z_ref", height = "350px")),
-                    column(6, plotlyOutput("global_heatmap_zprime_ref", height = "350px"))
-                  ),
-                  fluidRow(
-                    column(6, plotlyOutput("global_heatmap_zeta_ref", height = "350px")),
-                    column(6, plotlyOutput("global_heatmap_en_ref", height = "350px"))
-                  )
+              ),
+              tabPanel(
+                "Consenso MADe (2a)",
+                h4("Parámetros principales"),
+                tableOutput("global_params_consensus_ma"),
+                hr(),
+                h4("Resultados por participante"),
+                dataTableOutput("global_overview_consensus_ma"),
+                hr(),
+                fluidRow(
+                  column(6, plotlyOutput("global_heatmap_z_consensus_ma", height = "350px")),
+                  column(6, plotlyOutput("global_heatmap_zprime_consensus_ma", height = "350px"))
+                ),
+                fluidRow(
+                  column(6, plotlyOutput("global_heatmap_zeta_consensus_ma", height = "350px")),
+                  column(6, plotlyOutput("global_heatmap_en_consensus_ma", height = "350px"))
                 )
-              ) %>%
-              bsplus::bs_append(
-                title = "Consenso MADe (2a)",
-                content = tagList(
-                  h4("Parámetros principales"),
-                  tableOutput("global_params_consensus_ma"),
-                  hr(),
-                  h4("Resultados por participante"),
-                  dataTableOutput("global_overview_consensus_ma"),
-                  hr(),
-                  fluidRow(
-                    column(6, plotlyOutput("global_heatmap_z_consensus_ma", height = "350px")),
-                    column(6, plotlyOutput("global_heatmap_zprime_consensus_ma", height = "350px"))
-                  ),
-                  fluidRow(
-                    column(6, plotlyOutput("global_heatmap_zeta_consensus_ma", height = "350px")),
-                    column(6, plotlyOutput("global_heatmap_en_consensus_ma", height = "350px"))
-                  )
+              ),
+              tabPanel(
+                "Consenso nIQR (2b)",
+                h4("Parámetros principales"),
+                tableOutput("global_params_consensus_niqr"),
+                hr(),
+                h4("Resultados por participante"),
+                dataTableOutput("global_overview_consensus_niqr"),
+                hr(),
+                fluidRow(
+                  column(6, plotlyOutput("global_heatmap_z_consensus_niqr", height = "350px")),
+                  column(6, plotlyOutput("global_heatmap_zprime_consensus_niqr", height = "350px"))
+                ),
+                fluidRow(
+                  column(6, plotlyOutput("global_heatmap_zeta_consensus_niqr", height = "350px")),
+                  column(6, plotlyOutput("global_heatmap_en_consensus_niqr", height = "350px"))
                 )
-              ) %>%
-              bsplus::bs_append(
-                title = "Consenso nIQR (2b)",
-                content = tagList(
-                  h4("Parámetros principales"),
-                  tableOutput("global_params_consensus_niqr"),
-                  hr(),
-                  h4("Resultados por participante"),
-                  dataTableOutput("global_overview_consensus_niqr"),
-                  hr(),
-                  fluidRow(
-                    column(6, plotlyOutput("global_heatmap_z_consensus_niqr", height = "350px")),
-                    column(6, plotlyOutput("global_heatmap_zprime_consensus_niqr", height = "350px"))
-                  ),
-                  fluidRow(
-                    column(6, plotlyOutput("global_heatmap_zeta_consensus_niqr", height = "350px")),
-                    column(6, plotlyOutput("global_heatmap_en_consensus_niqr", height = "350px"))
-                  )
-                )
-              ) %>%
-              bsplus::bs_append(
-                title = "Algoritmo A (3)",
-                content = tagList(
-                  h4("Parámetros principales"),
-                  tableOutput("global_params_algo"),
-                  hr(),
-                  h4("Resultados por participante"),
-                  dataTableOutput("global_overview_algo"),
-                  hr(),
-                  fluidRow(
-                    column(6, plotlyOutput("global_heatmap_z_algo", height = "350px")),
-                    column(6, plotlyOutput("global_heatmap_zprime_algo", height = "350px"))
-                  ),
-                  fluidRow(
-                    column(6, plotlyOutput("global_heatmap_zeta_algo", height = "350px")),
-                    column(6, plotlyOutput("global_heatmap_en_algo", height = "350px"))
-                  )
+              ),
+              tabPanel(
+                "Algoritmo A (3)",
+                h4("Parámetros principales"),
+                tableOutput("global_params_algo"),
+                hr(),
+                h4("Resultados por participante"),
+                dataTableOutput("global_overview_algo"),
+                hr(),
+                fluidRow(
+                  column(6, plotlyOutput("global_heatmap_z_algo", height = "350px")),
+                  column(6, plotlyOutput("global_heatmap_zprime_algo", height = "350px"))
+                ),
+                fluidRow(
+                  column(6, plotlyOutput("global_heatmap_zeta_algo", height = "350px")),
+                  column(6, plotlyOutput("global_heatmap_en_algo", height = "350px"))
                 )
               )
+            )
           )
         )
       ),
