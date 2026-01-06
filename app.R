@@ -983,9 +983,10 @@ server <- function(input, output, session) {
                 hr(),
                 h4("Iteraciones"),
                 dataTableOutput("algoA_iterations_table"),
-                hr(),
-                h4("Pesos Finales por Participante"),
-                dataTableOutput("algoA_weights_table")
+                # Sección de pesos oculta por solicitud del usuario
+                # hr(),
+                # h4("Pesos Finales por Participante"),
+                # dataTableOutput("algoA_weights_table")
               ),
               tabPanel(
                 "Valor consenso",
