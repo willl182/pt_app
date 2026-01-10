@@ -47,89 +47,13 @@ library(knitr)
 library(kableExtra)
 library(outliers)
 
-# Helper: nIQR
-calculate_niqr <- function(x) {
-  x_clean <- x[is.finite(x)]
-  if (length(x_clean) < 2) return(NA_real_)
-  quartiles <- stats::quantile(x_clean, probs = c(0.25, 0.75), na.rm = TRUE, type = 7)
-  0.7413 * (quartiles[2] - quartiles[1])
-}
+# Source shared logic
+source("../R/core_statistics.R")
+source("../R/data_prep.R")
+source("../R/homogeneity_stability.R")
+source("../R/scores.R")
 
-# Helper: Prepare Wide Data
-get_wide_data <- function(df, target_pollutant) {
-  filtered <- df %>% filter(pollutant == target_pollutant)
-  if (nrow(filtered) == 0) return(NULL)
-  filtered %>%
-    select(-pollutant) %>%
-    pivot_wider(names_from = replicate, values_from = value, names_prefix = "sample_")
-}
-
-# Lógica: Algoritmo A (ISO 13528)
-run_algorithm_a <- function(values, max_iter = 50) {
-  values <- values[is.finite(values)]
-  n <- length(values)
-  if (n < 3) return(list(mean = NA, sd = NA, error = "N<3"))
-  
-  x_star <- median(values, na.rm = TRUE)
-  s_star <- 1.483 * median(abs(values - x_star), na.rm = TRUE)
-  
-  # Handle zero s_star
-  if (s_star < 1e-9) s_star <- sd(values, na.rm = TRUE)
-  if (s_star < 1e-9) return(list(mean = x_star, sd = 0, error = "Zero dispersion"))
-
-  for (i in 1:max_iter) {
-    u_val <- (values - x_star) / (1.5 * s_star)
-    w <- ifelse(abs(u_val) <= 1, 1, 1/u_val^2)
-    
-    sum_w <- sum(w)
-    if (sum_w == 0) break
-    
-    x_new <- sum(w * values) / sum_w
-    
-    # Avoid negative in sqrt
-    var_w <- sum(w * (values - x_new)^2) / sum_w
-    if (var_w < 0) var_w <- 0
-    s_new <- sqrt(var_w)
-    
-    if (abs(x_new - x_star) < 1e-4 && abs(s_new - s_star) < 1e-4) break
-    x_star <- x_new
-    s_star <- s_new
-  }
-  list(mean = x_star, sd = s_star, error = NULL)
-}
-
-# Lógica: Cálculo de Homogeneidad
-compute_homogeneity <- function(data_full, pol, lev) {
-  wide <- get_wide_data(data_full, pol) %>% filter(level == lev)
-  if(nrow(wide) == 0) return(NULL)
-  
-  cols_sample <- grep("sample_", names(wide), value = TRUE)
-  m <- length(cols_sample)
-  g <- nrow(wide)
-  
-  long_data <- wide %>%
-    mutate(Item = row_number()) %>%
-    pivot_longer(cols = all_of(cols_sample), values_to = "Result")
-  
-  item_stats <- long_data %>%
-    group_by(Item) %>%
-    summarise(mean = mean(Result, na.rm = TRUE), diff = max(Result, na.rm = TRUE) - min(Result, na.rm = TRUE), .groups = "drop")
-  
-  general_mean <- mean(item_stats$mean, na.rm = TRUE)
-  s_x_bar_sq <- var(item_stats$mean, na.rm = TRUE)
-  
-  sw <- sqrt(sum(item_stats$diff^2) / (2 * g))
-  ss <- sqrt(max(0, s_x_bar_sq - (sw^2 / m)))
-  
-  sample1 <- wide$sample_1
-  sigma_pt <- 1.483 * median(abs(sample1 - median(sample1, na.rm = TRUE)), na.rm = TRUE)
-  c_crit <- 0.3 * sigma_pt
-  
-  list(
-    ss = ss, sw = sw, sigma_pt = sigma_pt, c_crit = c_crit, 
-    mean = general_mean, passed = ss <= c_crit
-  )
-}
+# No local function definitions needed anymore!
 ```
 
 ## 1.1. Información del Proveedor y del esquema
