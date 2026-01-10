@@ -13,7 +13,7 @@
 
 ## Phase 3: Merging - Core Calculations (02-05)
 - [x] Task: Merge `02_ptcalc_package.md` and `02a_ptcalc_api.md`. [af54515]
-- [~] Task: Merge `03_pt_robust_stats.md`.
+- [x] Task: Merge `03_pt_robust_stats.md`. [8153ebd]
 - [ ] Task: Merge `04_pt_homogeneity.md`.
 - [ ] Task: Merge `05_pt_scores.md`.
 - [ ] Task: Conductor - User Manual Verification 'Merging - Core Calculations' (Protocol in workflow.md)
