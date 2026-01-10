@@ -11,7 +11,7 @@
 - [x] Task: Merge `01_carga_datos.md` and `01a_data_formats.md`. [a86e8e8]
 - [ ] Task: Conductor - User Manual Verification 'Merging - Introductory and Data Loading' (Protocol in workflow.md)
 
-## Phase 3: Merging - Core Calculations (02-05)
+## Phase 3: Merging - Core Calculations (02-05) [checkpoint: 8e34127]
 - [x] Task: Merge `02_ptcalc_package.md` and `02a_ptcalc_api.md`. [af54515]
 - [x] Task: Merge `03_pt_robust_stats.md`. [8153ebd]
 - [x] Task: Merge `04_pt_homogeneity.md`. [7347d5f]
