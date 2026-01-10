@@ -5,7 +5,7 @@
 - [x] Task: Analyze source directories (`gem_docs/`, `claude_docs/`, `glm_docs/`) and generate a file inventory. [8c4d2e4]
 - [ ] Task: Conductor - User Manual Verification 'Setup and Analysis' (Protocol in workflow.md)
 
-## Phase 2: Merging - Introductory and Data Loading (00-01)
+## Phase 2: Merging - Introductory and Data Loading (00-01) [checkpoint: d73900c]
 - [x] Task: Merge `00_glossary.md` (Glossary). [e6fe883]
 - [x] Task: Merge `00_quickstart.md` (Quickstart). [f706f68]
 - [x] Task: Merge `01_carga_datos.md` and `01a_data_formats.md`. [a86e8e8]
