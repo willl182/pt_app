@@ -51,23 +51,7 @@ Esta incertidumbre combinada es la que entra en el denominador de $z'$.
 
 ---
 
-## 5. Lógica de Clasificación
-
-La aplicación asigna un código de clasificación (`a1` a `a7`) a cada participante basado en una evaluación combinada de su puntaje de desempeño (usualmente $z'$) y su evaluación de incertidumbre ($E_n$).
-
-### 5.1 Tabla de Códigos de Clasificación
-
-| Código | Evaluación | Condición $z'$ | Condición $E_n$ | Interpretación |
-|:---:|:---|:---|:---|:---|
-| **a1** | **Excelente** | $|z'| \le 2$ | $|E_n| \le 1$ | Resultado exacto e incertidumbre reportada válida. |
-| **a2** | Bueno | $|z'| \le 2$ | $|E_n| > 1$ | Resultado exacto, pero la incertidumbre reportada es probablemente muy pequeña (subestimada). |
-| **a3** | Aceptable | $|z'| \le 2$ | N/A | Resultado exacto (sin información de incertidumbre). |
-| **a4** | **Advertencia** | $2 < |z'| < 3$ | $|E_n| \le 1$ | Resultado muestra sesgo, pero está cubierto por la incertidumbre reportada. |
-| **a5** | Advertencia | $2 < |z'| < 3$ | $|E_n| > 1$ | Resultado muestra sesgo y la incertidumbre no está bien estimada. |
-| **a6** | **Acción** | $|z'| \ge 3$ | $|E_n| \le 1$ | Resultado es un valor atípico, pero la gran incertidumbre del laboratorio lo cubre (poco común). |
-| **a7** | **Acción** | $|z'| \ge 3$ | $|E_n| > 1$ | Resultado es un valor atípico y la incertidumbre no explica la desviación. Falla crítica. |
-
-### 5.2 Referencia de Paleta de Colores
+## 5. Referencia de Paleta de Colores
 
 Estos colores se utilizan en los mapas de calor y tablas de resultados.
 
@@ -85,8 +69,4 @@ graph LR
     Z -- "|z| <= 2" --> Green[Verde: Satisfactorio]
     Z -- "2 < |z| < 3" --> Yellow[Amarillo: Advertencia]
     Z -- "|z| >= 3" --> Red[Rojo: Señal de Acción]
-
-    Green --> E{Verificar En}
-    E -- "|En| <= 1" --> A1[Código a1]
-    E -- "|En| > 1" --> A2[Código a2]
 ```

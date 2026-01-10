@@ -83,8 +83,6 @@ graph LR
         D --> M[calculate_z_prime_score]
         L --> N[evaluate_z_score]
         O[calculate_en_score] --> P[evaluate_en_score]
-        L --> Q[classify_with_en]
-        O --> Q
     end
 ```
 
@@ -120,7 +118,6 @@ graph LR
 | `calculate_zeta_score()` | $\zeta = (x - x_{pt}) / \sqrt{u_x^2 + u_{xpt}^2}$ | 13528:2022 S10.4 |
 | `calculate_en_score()` | $E_n = (x - x_{pt}) / \sqrt{U_x^2 + U_{xpt}^2}$ | 13528:2022 S10.5 |
 | `evaluate_z_score()` | Evalúa z/z'/zeta (Satisfactorio, Cuestionable, No sat.) | 13528:2022 S10.6 |
-| `classify_with_en()` | Clasificación combinada (códigos a1-a7) | 13528:2022 S10.7 |
 
 ---
 

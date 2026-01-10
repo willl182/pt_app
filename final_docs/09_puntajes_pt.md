@@ -14,8 +14,7 @@ Esta es una función contenedora masiva que:
 1.  **Agrega Entradas:** Recolecta $x_{pt}$, $\sigma_{pt}$, $u(x_{pt})$ de módulos anteriores.
 2.  **Itera:** Recorre cada participante en el conjunto de datos seleccionado.
 3.  **Calcula:** Llama a `ptcalc::calculate_*_score` para cada métrica.
-4.  **Clasifica:** Aplica la lógica de clasificación `a1-a7`.
-5.  **Retorna:** Un dataframe estandarizado listo para graficar.
+4.  **Retorna:** Un dataframe estandarizado listo para graficar.
 
 ### 2.2 Comportamiento de Cambio de Pestaña
 La UI utiliza un `tabsetPanel` para mostrar diferentes puntajes.

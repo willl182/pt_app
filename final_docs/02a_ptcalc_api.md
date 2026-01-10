@@ -19,7 +19,6 @@
 4.  [Incertidumbres](#4-incertidumbres)
 5.  [Puntajes](#5-puntajes)
 6.  [Evaluación de Puntajes](#6-evaluación-de-puntajes)
-7.  [Constantes](#7-constantes)
 
 ---
 
@@ -244,25 +243,3 @@ evaluate_en_score(en)
 -   **Retorna**:
     -   "Satisfactorio" si $|E_n| \leq 1$
     -   "No satisfactorio" si $|E_n| > 1$
-
-### `classify_with_en`
-
-Realiza una clasificación combinada utilizando el puntaje de desempeño (z o z') y el puntaje En.
-
-**Referencia:** ISO 13528:2022, Sección 10.7
-
-```r
-classify_with_en(score_val, en_val, U_xi, sigma_pt, mu_missing, score_label)
-```
-
--   **Retorna**: Lista con `code` (ej: "a1") y `label` (descripción).
-
----
-
-## 7. Constantes
-
-### `PT_EN_CLASS_LABELS`
-Vector nombrado con las etiquetas descriptivas para las clasificaciones a1-a7.
-
-### `PT_EN_CLASS_COLORS`
-Vector nombrado con códigos de color Hex para visualización (mapas de calor).
