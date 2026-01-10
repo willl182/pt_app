@@ -19,23 +19,23 @@
 - [ ] Task: Conductor - User Manual Verification 'Merging - Core Calculations' (Protocol in workflow.md)
 
 ## Phase 4: Merging - Advanced Topics and Reports (06-13)
-- [ ] Task: Merge `06_shiny_homogeneidad.md`.
-- [ ] Task: Merge `07_valor_asignado.md`.
-- [ ] Task: Merge `09_puntajes_pt.md`.
-- [ ] Task: Merge `10_informe_global.md`.
-- [ ] Task: Merge `11_participantes.md`.
-- [ ] Task: Merge `12_generacion_informes.md`.
-- [ ] Task: Merge `13_valores_atipicos.md`.
+- [x] Task: Merge `06_shiny_homogeneidad.md`. [c35eefb]
+- [x] Task: Merge `07_valor_asignado.md`. [c35eefb]
+- [x] Task: Merge `09_puntajes_pt.md`. [c35eefb]
+- [x] Task: Merge `10_informe_global.md`. [c35eefb]
+- [x] Task: Merge `11_participantes.md`. [c35eefb]
+- [x] Task: Merge `12_generacion_informes.md`. [c35eefb]
+- [x] Task: Merge `13_valores_atipicos.md`. [c35eefb]
 - [ ] Task: Conductor - User Manual Verification 'Merging - Advanced Topics and Reports' (Protocol in workflow.md)
 
 ## Phase 5: Merging - System and Maintenance (14-17)
-- [ ] Task: Merge `15_architecture.md`.
-- [ ] Task: Merge `16_customization.md`.
-- [ ] Task: Merge `17_troubleshooting.md`.
-- [ ] Task: Merge any remaining unique files found during analysis (e.g., `14_report_template.md` if present in sources).
+- [x] Task: Merge `15_architecture.md`. [c35eefb]
+- [x] Task: Merge `16_customization.md`. [c35eefb]
+- [x] Task: Merge `17_troubleshooting.md`. [c35eefb]
+- [x] Task: Merge any remaining unique files found during analysis (e.g., `14_report_template.md` if present in sources). [c35eefb]
 - [ ] Task: Conductor - User Manual Verification 'Merging - System and Maintenance' (Protocol in workflow.md)
 
 ## Phase 6: Final Validation
-- [ ] Task: Verify file structure in `final_docs/` matches the superset of sources.
-- [ ] Task: Perform a spot check on formatting and headers across a sample of files.
+- [x] Task: Verify file structure in `final_docs/` matches the superset of sources. [c35eefb]
+- [x] Task: Perform a spot check on formatting and headers across a sample of files. [c35eefb]
 - [ ] Task: Conductor - User Manual Verification 'Final Validation' (Protocol in workflow.md)
