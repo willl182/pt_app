@@ -4,5 +4,5 @@ This file tracks all major tracks for the project. Each track has its own detail
 
 ---
 
-## [ ] Track: Comprehensive Statistical Engine Refactoring & Integration
-*Link: [./conductor/tracks/refactor_stats_20251224/](./conductor/tracks/refactor_stats_20251224/)*
+## [~] Track: Documentation Consolidation
+*Link: [./conductor/tracks/doc_consolidation_20260110/](./conductor/tracks/doc_consolidation_20260110/)*

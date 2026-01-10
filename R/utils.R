@@ -1,30 +1,39 @@
 # ===================================================================
 # Utility Functions for PT Data Analysis
+# DEPRECATED: Use R/pt_robust_stats.R instead
 #
-# This script contains centralized, reusable functions for the
-# app_gem.R Shiny application, including robust statistical
-# estimators as described in ISO 13528:2022.
+# This file is maintained for backward compatibility only.
+# New code should use the functions from pt_robust_stats.R:
+# - algorithm_A -> run_algorithm_a (more features, better error handling)
+# - mad_e_manual -> calculate_mad_e
+# - nIQR_manual -> calculate_niqr
 #
-# Functions:
-# - algorithm_A: Implements ISO 13528:2022 Algorithm A for robust mean/SD.
-# - mad_e_manual: Calculates the scaled Median Absolute Deviation (MADe).
-# - nIQR_manual: Calculates the normalized Interquartile Range (nIQR).
-#
+# Reference: ISO 13528:2022
 # ===================================================================
 
-#' Applies ISO 13528:2022 Algorithm A to a numeric vector.
+#' Applies ISO 13528:2022 Algorithm A to a numeric vector
 #'
+#' @description
+#' `r lifecycle::badge("deprecated")`
+#'
+#' This function is deprecated. Please use \code{\link{run_algorithm_a}} instead,
+#' which provides more detailed output including iteration history and weights.
+#'
+#' @details
 #' This function calculates robust estimates of the mean and standard deviation
 #' for a dataset, handling outliers by iteratively down-weighting extreme values.
 #'
 #' @param x A numeric vector of data.
 #' @param max_iter An integer specifying the maximum number of iterations.
 #' @return A named list containing `robust_mean` and `robust_sd`.
+#'
+#' @seealso \code{\link{run_algorithm_a}} for the recommended replacement.
+#' @export
 algorithm_A <- function(x, max_iter = 100) {
   x <- x[!is.na(x)]
 
-  x_star <- median(x)
-  s_star <- mad(x, constant = 1.4826)
+  x_star <- stats::median(x)
+  s_star <- stats::mad(x, constant = 1.4826)
 
   x_star_prev <- -Inf
   s_star_prev <- -Inf
@@ -46,8 +55,8 @@ algorithm_A <- function(x, max_iter = 100) {
 
     x_prime <- pmin(pmax(x, x_star - delta), x_star + delta)
 
-    x_star <- mean(x_prime)
-    s_star <- 1.134 * sd(x_prime)
+    x_star <- base::mean(x_prime)
+    s_star <- 1.134 * stats::sd(x_prime)
   }
 
   warning("Algorithm did not converge within the maximum number of iterations.")
@@ -56,34 +65,52 @@ algorithm_A <- function(x, max_iter = 100) {
 
 #' Manual Scaled MAD (MADe) Calculation
 #'
+#' @description
+#' `r lifecycle::badge("deprecated")`
+#'
+#' This function is deprecated. Please use \code{\link{calculate_mad_e}} instead.
+#'
+#' @details
 #' Calculates the Median Absolute Deviation (MAD) and scales it by 1.4826
 #' to provide a robust estimate of the standard deviation.
 #'
 #' @param x A numeric vector.
 #' @return The scaled MAD (MADe).
+#'
+#' @seealso \code{\link{calculate_mad_e}} for the recommended replacement.
+#' @export
 mad_e_manual <- function(x) {
   x_clean <- x[!is.na(x)]
   if (length(x_clean) == 0) return(NA)
 
-  data_median <- median(x_clean, na.rm = TRUE)
+  data_median <- stats::median(x_clean, na.rm = TRUE)
   abs_deviations <- abs(x_clean - data_median)
-  mad_value <- median(abs_deviations, na.rm = TRUE)
+  mad_value <- stats::median(abs_deviations, na.rm = TRUE)
 
   return(1.4826 * mad_value)
 }
 
 #' Manual Normalized IQR (nIQR) Calculation
 #'
+#' @description
+#' `r lifecycle::badge("deprecated")`
+#'
+#' This function is deprecated. Please use \code{\link{calculate_niqr}} instead.
+#'
+#' @details
 #' Calculates the Interquartile Range (IQR) and normalizes it by 0.7413
 #' to provide a robust estimate of the standard deviation.
 #'
 #' @param x A numeric vector.
 #' @return The normalized IQR (nIQR).
+#'
+#' @seealso \code{\link{calculate_niqr}} for the recommended replacement.
+#' @export
 nIQR_manual <- function(x) {
   x_clean <- x[!is.na(x)]
   if (length(x_clean) < 2) return(NA)
 
-  q <- quantile(x_clean, probs = c(0.25, 0.75), na.rm = TRUE, type = 7)
+  q <- stats::quantile(x_clean, probs = c(0.25, 0.75), na.rm = TRUE, type = 7)
   iqr_value <- q[2] - q[1]
 
   return(0.7413 * iqr_value)
