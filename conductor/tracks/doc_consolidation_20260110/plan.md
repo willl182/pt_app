@@ -1,6 +1,6 @@
 # Plan: Documentation Consolidation
 
-## Phase 1: Setup and Analysis
+## Phase 1: Setup and Analysis [checkpoint: 12ace38]
 - [x] Task: Create `final_docs/` directory and ensure it is empty. [c8a7049]
 - [x] Task: Analyze source directories (`gem_docs/`, `claude_docs/`, `glm_docs/`) and generate a file inventory. [8c4d2e4]
 - [ ] Task: Conductor - User Manual Verification 'Setup and Analysis' (Protocol in workflow.md)
