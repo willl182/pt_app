@@ -6,7 +6,7 @@
 - [ ] Task: Conductor - User Manual Verification 'Setup and Analysis' (Protocol in workflow.md)
 
 ## Phase 2: Merging - Introductory and Data Loading (00-01)
-- [ ] Task: Merge `00_glossary.md` (Glossary).
+- [x] Task: Merge `00_glossary.md` (Glossary). [e6fe883]
 - [ ] Task: Merge `00_quickstart.md` (Quickstart).
 - [ ] Task: Merge `01_carga_datos.md` and `01a_data_formats.md`.
 - [ ] Task: Conductor - User Manual Verification 'Merging - Introductory and Data Loading' (Protocol in workflow.md)
