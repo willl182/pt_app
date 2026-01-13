@@ -1,19 +1,11 @@
 # ===================================================================
-# Aplicación Shiny para Análisis de Ensayos de Aptitud
-# Implementación ISO 17043:2024 / ISO 13528:2022
+# Shiny App for Proficiency Testing Analysis
 #
-# Esta aplicación implementa procedimientos de ensayos de aptitud en una
-# interfaz web Shiny interactiva.
+# This app implements the procedures from ISO 17043 and ISO 13528 in an interactive web interface using Shiny.
 #
-# Las funciones matemáticas se obtienen del paquete ptcalc:
-#   - Algoritmo A, nIQR, MADe (estadísticos robustos)
-#   - Puntajes z, z', zeta, En (cálculos de puntajes)
-#   - Homogeneidad/estabilidad (cálculos ISO 13528)
-#
-# Autor: UNAL/INM - Laboratorio CALAIRE
 # ===================================================================
 
-# 1. Cargar librerías necesarias
+# 1. Load necessary libraries
 library(shiny)
 library(tidyverse)
 library(vroom)
@@ -28,14 +20,19 @@ library(rmarkdown)
 library(bslib)
 
 # -------------------------------------------------------------------
-# Cargar paquete ptcalc (cálculos ISO 13528/17043)
-# Para desarrollo: usar devtools::load_all()
-# Para producción: instalar con devtools::install() y usar library(ptcalc)
+# Helper Functions
 # -------------------------------------------------------------------
-devtools::load_all("ptcalc")
+calculate_niqr <- function(x) {
+  x_clean <- x[is.finite(x)]
+  if (length(x_clean) < 2) {
+    return(NA_real_)
+  }
+  quartiles <- stats::quantile(x_clean, probs = c(0.25, 0.75), na.rm = TRUE, type = 7)
+  0.7413 * (quartiles[2] - quartiles[1])
+}
 
 # ===================================================================
-# I. Interfaz de Usuario (UI)
+# I. User Interface (UI)
 # ===================================================================
 ui <- fluidPage(
   theme = bs_theme(
@@ -49,12 +46,12 @@ ui <- fluidPage(
     code_font = font_google("JetBrains Mono")
   ),
 
-  # 1. Título de la aplicación
+  # 1. Application Title
   titlePanel("Aplicativo para Evaluación de Ensayos de Aptitud"),
   h3("Gases Contaminantes Criterio"),
   h4("Laboratorio Calaire"),
 
-  # Panel desplegable para opciones de diseño
+  # Collapsible panel for layout options
   checkboxInput("show_layout_options", "Mostrar opciones de diseño", value = FALSE),
   conditionalPanel(
     condition = "input.show_layout_options == true",
@@ -67,19 +64,19 @@ ui <- fluidPage(
   ),
   hr(),
 
-  # UI dinámica para el diseño principal
+  # Dynamic UI for the main layout
   uiOutput("main_layout"),
   hr(),
   p(em("Este aplicativo fue desarrollado en el marco del proyecto «Implementación de Ensayos de Aptitud en la Matriz Aire. Caso Gases Contaminantes Criterio», ejecutado por el Laboratorio CALAIRE de la Universidad Nacional de Colombia en alianza con el Instituto Nacional de Metrología (INM)."), style = "text-align:center; font-size:small;")
 )
 
 # ===================================================================
-# II. Lógica del Servidor
+# II. Server Logic
 # ===================================================================
 server <- function(input, output, session) {
-  # --- Carga de datos y Procesamiento ---
-  # Esta sección maneja la carga inicial de datos desde archivos subidos por el usuario.
-  # Estos reactivos son la base para todos los análisis posteriores.
+  # --- Carga de datos and Processing ---
+  # This section handles the initial loading of data from user-uploaded files.
+  # These reactives are the foundation for all subsequent analyses.
 
   hom_data_full <- reactive({
     req(input$hom_file)
@@ -105,7 +102,7 @@ server <- function(input, output, session) {
     df
   })
 
-  # Datos de preparación PT
+  # PT Prep data
   pt_prep_data <- reactive({
     req(input$summary_files)
 
@@ -132,16 +129,16 @@ server <- function(input, output, session) {
       )
     )
 
-    # Almacenar datos crudos en un valor reactivo para uso en cálculo de sigma_pt_1
+    # Store raw data in a reactive value for use in sigma_pt_1 calculation
     rv$raw_summary_data <- raw_data
 
-    # También almacenar la lista de archivos para cálculos de consenso
+    # Also store the list of files for consensus calculations
     data_list <- lapply(seq_len(nrow(input$summary_files)), function(i) {
       vroom::vroom(input$summary_files$datapath[i], show_col_types = FALSE)
     })
     rv$raw_summary_data_list <- data_list
 
-    # Agregar los datos crudos para obtener un único valor medio por participante/nivel
+    # Aggregate the raw data to get a single mean value per participant/level
     raw_data %>%
       group_by(participant_id, pollutant, level, n_lab) %>%
       summarise(
@@ -151,14 +148,14 @@ server <- function(input, output, session) {
       )
   })
 
-  # Valores reactivos para almacenar datos crudos para cálculos específicos
+  # Reactive values to store raw data for specific calculations
   rv <- reactiveValues(raw_summary_data = NULL, raw_summary_data_list = NULL)
 
   format_num <- function(x) {
     ifelse(is.na(x), NA_character_, sprintf("%.5f", x))
   }
 
-  # Rastrear cuándo el análisis ha sido ejecutado explícitamente
+  # Track when the analysis has been explicitly executed
   analysis_trigger <- reactiveVal(NULL)
   algoA_results_cache <- reactiveVal(NULL)
   algoA_trigger <- reactiveVal(NULL)
@@ -223,7 +220,7 @@ server <- function(input, output, session) {
     ignoreNULL = FALSE
   )
 
-  # --- Funciones auxiliares de cálculo compartidas ---
+  # --- Shared computation helpers ---
   get_wide_data <- function(df, target_pollutant) {
     filtered <- df %>% filter(pollutant == target_pollutant)
     if (is.null(filtered) || nrow(filtered) == 0) {
@@ -491,7 +488,7 @@ server <- function(input, output, session) {
     stab_c_criterion <- 0.3 * hom_results$sigma_pt
     stab_sigma_allowed_sq <- stab_c_criterion^2
     
-    # Calcular u_hom_mean
+    # Calculate u_hom_mean
     hom_values <- hom_results$data_wide %>%
       select(starts_with("sample_")) %>%
       unlist() %>%
@@ -501,7 +498,7 @@ server <- function(input, output, session) {
     n_hom <- length(hom_values)
     u_hom_mean <- sd_hom_mean / sqrt(n_hom)
     
-    # Calcular u_stab_mean
+    # Calculate u_stab_mean
     stab_values <- stab_data$Resultado
     stab_values <- stab_values[!is.na(stab_values)]
     sd_stab_mean <- sd(stab_values)
@@ -637,7 +634,80 @@ server <- function(input, output, session) {
     )
   }
 
-  # Nota: run_algorithm_a ahora se obtiene de R/pt_robust_stats.R
+  run_algorithm_a <- function(values, ids, max_iter = 50) {
+    mask <- is.finite(values)
+    values <- values[mask]
+    ids <- ids[mask]
+
+    n <- length(values)
+    if (n < 3) {
+      return(list(error = "El Algoritmo A requiere al menos 3 resultados válidos."))
+    }
+
+    x_star <- median(values, na.rm = TRUE)
+    s_star <- 1.483 * median(abs(values - x_star), na.rm = TRUE)
+
+    if (!is.finite(s_star) || s_star < .Machine$double.eps) {
+      s_star <- sd(values, na.rm = TRUE)
+    }
+
+    if (!is.finite(s_star) || s_star < .Machine$double.eps) {
+      return(list(error = "La dispersión de los datos es insuficiente para ejecutar el Algoritmo A."))
+    }
+
+    iteration_records <- list()
+    converged <- FALSE
+
+    for (iter in seq_len(max_iter)) {
+      u_values <- (values - x_star) / (1.5 * s_star)
+      weights <- ifelse(abs(u_values) <= 1, 1, 1 / (u_values^2))
+
+      weight_sum <- sum(weights)
+      if (!is.finite(weight_sum) || weight_sum <= 0) {
+        return(list(error = "Los pesos calculados no son válidos para el Algoritmo A."))
+      }
+
+      x_new <- sum(weights * values) / weight_sum
+      s_new <- sqrt(sum(weights * (values - x_new)^2) / weight_sum)
+
+      if (!is.finite(s_new) || s_new < .Machine$double.eps) {
+        return(list(error = "El Algoritmo A colapsó debido a una desviación estándar nula."))
+      }
+
+      delta_x <- abs(x_new - x_star)
+      delta_s <- abs(s_new - s_star)
+      delta <- max(delta_x, delta_s)
+      iteration_records[[iter]] <- data.frame(
+        Iteración = iter,
+        `Valor asignado (x*)` = x_new,
+        `Desviación robusta (s*)` = s_new,
+        Cambio = delta,
+        check.names = FALSE
+      )
+
+      x_star <- x_new
+      s_star <- s_new
+
+      if (delta_x < 1e-03 && delta_s < 1e-03) {
+        converged <- TRUE
+        break
+      }
+    }
+
+    iteration_df <- if (length(iteration_records) > 0) {
+      bind_rows(iteration_records)
+    } else {
+      tibble()
+    }
+    u_final <- (values - x_star) / (1.5 * s_star)
+    weights_final <- ifelse(abs(u_final) <= 1, 1, 1 / (u_final^2))
+    weights_df <- tibble(Participante = ids, Resultado = values, Peso = weights_final, `Residuo estandarizado` = u_final)
+
+    list(
+      assigned_value = x_star, robust_sd = s_star, iterations = iteration_df, weights = weights_df,
+      converged = converged, effective_weight = sum(weights_final), error = NULL
+    )
+  }
 
   observeEvent(input$algoA_run, {
     req(pt_prep_data())
@@ -714,7 +784,7 @@ server <- function(input, output, session) {
     algoA_trigger(Sys.time())
   })
 
-  # R0: Diseño Principal Dinámico
+  # R0: Dynamic Main Layout
   output$main_layout <- renderUI({
     req(input$nav_width, input$analysis_sidebar_width)
     nav_width <- input$nav_width
@@ -1165,22 +1235,22 @@ server <- function(input, output, session) {
   })
 
   # ===================================================================
-  # III. Módulo de Homogeneidad y Estabilidad
+  # III. Homogeneity & Stability Module
   # ===================================================================
 
-  # R1: Reactivo para Datos de homogeneidad
+  # R1: Reactive for Datos de homogeneidad
   raw_data <- reactive({
     req(hom_data_full(), input$pollutant_analysis)
     get_wide_data(hom_data_full(), input$pollutant_analysis)
   })
 
-  # R1.6: Reactivo para Datos de estabilidad
+  # R1.6: Reactive for Datos de estabilidad
   stability_data_raw <- reactive({
     req(stab_data_full(), input$pollutant_analysis)
     get_wide_data(stab_data_full(), input$pollutant_analysis)
   })
 
-  # R2: Generación Dinámica del Selector de Nivel
+  # R2: Dynamic Generation of the Level Selector
   output$level_selector <- renderUI({
     data <- raw_data()
     if ("level" %in% names(data)) {
@@ -1197,14 +1267,14 @@ server <- function(input, output, session) {
     selectInput("pollutant_analysis", "Seleccionar analito:", choices = choices)
   })
 
-  # R3: Ejecución de Homogeneidad (Habilitada después de usar el botón ejecutar)
+  # R3: Homogeneity Execution (Enabled after run button is used)
   homogeneity_run <- reactive({
     req(analysis_trigger())
     req(input$pollutant_analysis, input$target_level)
     compute_homogeneity_metrics(input$pollutant_analysis, input$target_level)
   })
 
-  # R3.5: Ejecución de Homogeneidad de Datos de estabilidad (Habilitada después de usar el botón ejecutar)
+  # R3.5: Datos de estabilidad Homogeneity Execution (Enabled after run button is used)
   homogeneity_run_stability <- reactive({
     req(analysis_trigger())
     req(input$pollutant_analysis, input$target_level)
@@ -1212,13 +1282,13 @@ server <- function(input, output, session) {
     compute_stability_metrics(input$pollutant_analysis, input$target_level, hom_results)
   })
 
-  # R4: Ejecución de Estabilidad (Habilitada después de usar el botón ejecutar)
+  # R4: Stability Execution (Enabled after run button is used)
   stability_run <- reactive({
     req(analysis_trigger())
     hom_results <- homogeneity_run()
     stab_hom_results <- homogeneity_run_stability()
 
-    # Verificar errores de los reactivos anteriores
+    # Check for errors from the upstream reactives
     if (!is.null(hom_results$error)) {
       return(list(error = hom_results$error))
     }
@@ -1226,16 +1296,16 @@ server <- function(input, output, session) {
       return(list(error = stab_hom_results$error))
     }
 
-    # Obtener las medias de los resultados de las dos ejecuciones de homogeneidad
+    # Get the means from the results of the two homogeneity runs
     y1 <- hom_results$general_mean
     y2 <- stab_hom_results$stab_general_mean
     diff_observed <- abs(y1 - y2)
 
-    # Usar sigma_pt de la ejecución principal de homogeneidad
+    # Use sigma_pt from the primary homogeneity run
     sigma_pt <- hom_results$sigma_pt
     stab_criterion_value <- 0.3 * sigma_pt
 
-    # Formato dinámico para decimales
+    # Dynamic format for decimal places
     fmt <- "%.5f"
 
     details_text <- sprintf(
@@ -1254,7 +1324,7 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
       conclusion_class <- "alert alert-warning"
     }
 
-    # Para la prueba t, necesitamos los resultados crudos de ambos conjuntos de datos para el nivel seleccionado
+    # For the t-test, we need the raw results from both datasets for the selected level
     target_level <- input$target_level
 
     data_t1_results <- raw_data() %>%
@@ -1269,7 +1339,7 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
       pivot_longer(everything(), values_to = "Resultado") %>%
       pull(Resultado)
 
-    # Prueba t
+    # T-test
     t_test_result <- t.test(data_t1_results, data_t2_results)
 
     if (t_test_result$p.value > 0.05) {
@@ -1303,7 +1373,7 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
       p_val <- combos$pollutant[i]
       l_val <- combos$level[i]
       
-      # Usamos tryCatch para evitar que falle si una combinación tiene error
+      # We use tryCatch to avoid crashing if one combination fails
       res <- tryCatch({
         compute_homogeneity_metrics(p_val, l_val)
       }, error = function(e) list(error = e$message))
@@ -1337,7 +1407,7 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
     h_data <- hom_data_full()
     s_data <- stab_data_full()
     
-    # Obtener combinaciones comunes
+    # Get common combinations
     combos <- h_data %>%
       distinct(pollutant, level) %>%
       inner_join(s_data %>% distinct(pollutant, level), by = c("pollutant", "level"))
@@ -1388,9 +1458,9 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
       formatRound(columns = c("Dmax", "u_stab"), digits = 5)
   })
 
-  # --- Salidas ---
+  # --- Outputs ---
 
-  # Salida: Vista previa de datos
+  # Output: Vista previa de datos
   output$raw_data_preview <- renderDataTable({
     req(raw_data())
     df <- head(raw_data(), 10)
@@ -1412,7 +1482,7 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
   })
 
 
-  # Salida: Mensaje de Validación
+  # Output: Validation Message
   output$validation_message <- renderPrint({
     data <- raw_data()
     cat("Datos cargados correctamente.
@@ -1440,7 +1510,7 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
     }
   })
 
-  # Expresión reactiva para datos de gráficos
+  # Reactive expression for plotting data
   plot_data_long <- reactive({
     req(raw_data())
     if (!"level" %in% names(raw_data())) {
@@ -1452,7 +1522,7 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
       filter(!is.na(result))
   })
 
-  # Salida: Histograma
+  # Output: Histogram
   output$results_histogram <- renderPlotly({
     plot_data <- plot_data_long()
     req(plot_data)
@@ -1468,7 +1538,7 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
     plotly::ggplotly(hist_plot)
   })
 
-  # Salida: Diagrama de caja
+  # Output: Boxplot
   output$results_boxplot <- renderPlotly({
     plot_data <- plot_data_long()
     req(plot_data)
@@ -1483,11 +1553,11 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
     plotly::ggplotly(box_plot)
   })
 
-  # Salida: Vista previa de datos de homogeneidad
+  # Output: Homogeneity Vista previa de datos
   output$homogeneity_preview_table <- renderDataTable({
     req(raw_data(), input$target_level)
     homogeneity_data <- raw_data()
-    # Encontrar la primera columna que empieza con "sample_"
+    # Find the first column that starts with "sample_"
     first_sample_col <- names(homogeneity_data)[grep("sample_", names(homogeneity_data))][1]
     homogeneity_data %>%
       filter(level == input$target_level) %>%
@@ -1495,7 +1565,7 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
       select(level, all_of(first_sample_col))
   })
 
-  # Salida: Tabla de Estadísticos Robustos
+  # Output: Robust Stats Table
   output$robust_stats_table <- renderTable(
     {
       res <- homogeneity_run()
@@ -1509,7 +1579,7 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
     spacing = "l"
   )
 
-  # Salida: Resumen de Estadísticos Robustos
+  # Output: Robust Stats Summary
   output$robust_stats_summary <- renderPrint({
     res <- homogeneity_run()
     if (is.null(res$error)) {
@@ -1520,7 +1590,7 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
     }
   })
 
-  # Salida: Conclusión de Homogeneidad
+  # Output: Homogeneity Conclusión
   output$homog_conclusion <- renderUI({
     res <- homogeneity_run()
     if (!is.null(res$error)) {
@@ -1530,7 +1600,7 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
     }
   })
 
-  # Salida: Componentes de varianza
+  # Output: Componentes de varianza
   output$variance_components <- renderTable({
     res <- homogeneity_run()
     if (is.null(res$error)) {
@@ -1555,7 +1625,7 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
     }
   })
 
-  # Salida: Conclusión de Estabilidad
+  # Output: Stability Conclusión
   output$stability_conclusion <- renderUI({
     res <- stability_run()
     if (!is.null(res$error)) {
@@ -1565,7 +1635,7 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
     }
   })
 
-  # Salida: Detalles de Estabilidad
+  # Output: Stability Details
   output$stability_details <- renderPrint({
     res <- stability_run()
     if (is.null(res$error)) {
@@ -1573,7 +1643,7 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
     }
   })
 
-  # Salida: Prueba t de Estabilidad
+  # Output: Stability T-test
   output$stability_ttest <- renderPrint({
     res <- stability_run()
     if (is.null(res$error)) {
@@ -1584,7 +1654,7 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
     }
   })
 
-  # Salida: Tabla de detalles por ítem
+  # Output: Details per item table
   output$details_per_item_table <- renderTable(
     {
       res <- homogeneity_run()
@@ -1596,7 +1666,7 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
     digits = 5
   )
 
-  # Salida: Tabla de estadísticos resumidos
+  # Output: Details summary stats table
   output$details_summary_stats_table <- renderTable(
     {
       res <- homogeneity_run()
@@ -1634,9 +1704,9 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
     spacing = "l"
   )
 
-  # --- Salidas para Pestaña de Análisis de Datos de estabilidad ---
+  # --- Outputs for Datos de estabilidad Analysis Tab ---
 
-  # Salida: Conclusión de Homogeneidad para Datos de estabilidad
+  # Output: Homogeneity Conclusión for Datos de estabilidad
   output$homog_conclusion_stability <- renderUI({
     res <- homogeneity_run_stability()
     if (!is.null(res$error)) {
@@ -1646,7 +1716,7 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
     }
   })
 
-  # Salida: Componentes de varianza para Datos de estabilidad
+  # Output: Componentes de varianza for Datos de estabilidad
   output$variance_components_stability <- renderTable({
     res <- homogeneity_run_stability()
     if (is.null(res$error)) {
@@ -1666,7 +1736,7 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
     }
   })
 
-  # Salida: Tabla de detalles por ítem para Datos de estabilidad
+  # Output: Details per item table for Datos de estabilidad
   output$details_per_item_table_stability <- renderTable(
     {
       res <- homogeneity_run_stability()
@@ -1678,7 +1748,7 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
     digits = 5
   )
 
-  # Salida: Tabla de estadísticos resumidos para Datos de estabilidad
+  # Output: Details summary stats table for Datos de estabilidad
   output$details_summary_stats_table_stability <- renderTable(
     {
       res <- homogeneity_run_stability()
@@ -1717,9 +1787,9 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
     spacing = "l"
   )
 
-  # --- Módulo de Puntajes PT ---
+  # --- Puntajes PT Module ---
 
-  # UI Dinámica para selectores de Puntajes PT
+  # Dynamic UI for Puntajes PT selectors
   output$scores_pollutant_selector <- renderUI({
     req(pt_prep_data())
     choices <- unique(pt_prep_data()$pollutant)
@@ -1799,9 +1869,55 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
     mu_missing_zprime = "#78909C"
   )
 
-  # Nota: score_eval_z y classify_with_en ahora se obtienen de R/pt_scores.R
-  # Usando evaluate_z_score_vec() para evaluación vectorizada de puntaje z
-  # Usando classify_with_en() para clasificación con puntaje En
+  score_eval_z <- function(z) {
+    case_when(
+      !is.finite(z) ~ "N/A",
+      abs(z) <= 2 ~ "Satisfactorio",
+      abs(z) > 2 & abs(z) < 3 ~ "Cuestionable",
+      abs(z) >= 3 ~ "No satisfactorio"
+    )
+  }
+
+  classify_with_en <- function(score_val, en_val, U_xi, sigma_pt, mu_missing, score_label) {
+    if (!is.finite(score_val)) {
+      return(list(code = NA_character_, label = "N/A"))
+    }
+
+    if (isTRUE(mu_missing)) {
+      base_eval <- score_eval_z(score_val)
+      if (base_eval == "N/A") {
+        return(list(code = NA_character_, label = "N/A"))
+      }
+      label_key <- tolower(score_label)
+      label_key <- gsub("'", "prime", label_key)
+      label_key <- gsub("[^a-z0-9]+", "", label_key)
+      code <- paste0("mu_missing_", label_key)
+      label <- sprintf("MU ausente - solo %s: %s", score_label, base_eval)
+      return(list(code = code, label = label))
+    }
+
+    if (!is.finite(en_val) || !is.finite(sigma_pt) || sigma_pt <= 0 || !is.finite(U_xi)) {
+      return(list(code = NA_character_, label = "N/A"))
+    }
+
+    abs_score <- abs(score_val)
+    abs_en <- abs(en_val)
+    u_is_conservative <- U_xi >= (2 * sigma_pt)
+
+    if (abs_score <= 2) {
+      if (abs_en < 1) {
+        code <- if (u_is_conservative) "a2" else "a1"
+      } else {
+        code <- "a3"
+      }
+    } else if (abs_score < 3) {
+      code <- if (abs_en < 1) "a4" else "a5"
+    } else {
+      code <- if (abs_en < 1) "a6" else "a7"
+    }
+
+    list(code = code, label = pt_en_class_labels[[code]])
+  }
 
   compute_combo_scores <- function(participants_df, x_pt, sigma_pt, u_xpt, combo_meta, k = 2, u_hom = 0, u_stab = 0) {
     x_pt_def <- x_pt
@@ -1851,11 +1967,11 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
         u_stab = u_stab,
         k_factor = k,
         z_score = z_values,
-        z_score_eval = evaluate_z_score_vec(z_score),
+        z_score_eval = score_eval_z(z_score),
         z_prime_score = z_prime_values,
-        z_prime_score_eval = evaluate_z_score_vec(z_prime_score),
+        z_prime_score_eval = score_eval_z(z_prime_score),
         zeta_score = zeta_values,
-        zeta_score_eval = evaluate_z_score_vec(zeta_score),
+        zeta_score_eval = score_eval_z(zeta_score),
         En_score = en_values,
         En_score_eval = case_when(
           !is.finite(En_score) ~ "N/A",
@@ -1972,10 +2088,10 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
 
     x_pt1 <- mean(ref_data$mean_value, na.rm = TRUE)
 
-    # Calcular u_hom
+    # Calculate u_hom
     u_hom_val <- hom_res$ss
     
-    # Calcular u_stab
+    # Calculate u_stab
     stab_res <- tryCatch(
       compute_stability_metrics(target_pollutant, target_level, hom_res),
       error = function(e) list(error = conditionMessage(e))
@@ -2253,7 +2369,7 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
     combine_scores_result(scores_results_selected())
   })
 
-  # --- Módulo de Informe global ---
+  # --- Informe global Module ---
   score_heatmap_palettes <- list(
     z = c(
       "Satisfactorio" = "#00B050",
@@ -2478,7 +2594,7 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
   })
 
   metrological_compatibility_data <- eventReactive(input$run_metrological_compatibility, {
-    # 1. Obtener Valores de Referencia
+    # 1. Get Reference Values
     prep_data <- pt_prep_data()
     if (is.null(prep_data)) return(tibble())
     
@@ -2494,7 +2610,7 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
       ) %>%
       mutate(n_lab = as.character(n_lab))
     
-    # 2. Obtener Valores de Consenso (MADe y nIQR)
+    # 2. Get Consensus Values (MADe and nIQR)
     consensus_cache <- consensus_results_cache()
     consensus_rows <- list()
     
@@ -2524,7 +2640,7 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
     
     consensus_df <- if (length(consensus_rows) > 0) bind_rows(consensus_rows) else tibble()
     
-    # 3. Obtener Valores del Algoritmo A
+    # 3. Get Algorithm A Values
     algo_cache <- algoA_results_cache()
     algo_rows <- list()
     
@@ -2548,7 +2664,7 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
     
     algo_df <- if (length(algo_rows) > 0) bind_rows(algo_rows) else tibble()
     
-    # 4. Combinar todo
+    # 4. Merge all
     all_combos <- bind_rows(
       ref_data %>% select(pollutant, n_lab, level),
       if (nrow(consensus_df) > 0) consensus_df %>% select(pollutant, n_lab, level) else tibble(),
@@ -2562,7 +2678,7 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
       left_join(consensus_df, by = c("pollutant", "n_lab", "level")) %>%
       left_join(algo_df, by = c("pollutant", "n_lab", "level"))
       
-    # 5. Calcular Criterios por fila
+    # 5. Calculate Criteria per row
     results_list <- list()
     
     for(i in seq_len(nrow(final_df))) {
@@ -2570,7 +2686,7 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
       p <- row$pollutant
       l <- row$level
       
-      # Homogeneidad y Estabilidad
+      # Homogeneity & Stability
       hom_res <- tryCatch(compute_homogeneity_metrics(p, l), error = function(e) list(error=e$message))
       u_hom <- if(is.null(hom_res$error)) hom_res$ss else 0
       m <- if(is.null(hom_res$error) && !is.null(hom_res$m)) hom_res$m else 1
@@ -2582,16 +2698,16 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
         u_stab <- d_max / sqrt(3)
       }
       
-      # cálculo de u_ref
-      # u_ref = u_xi de referencia = k * (sd_ref / sqrt(m))
-      # Usamos input$report_k para consistencia con otros informes.
+      # u_ref calculation
+      # u_ref = u_xi of reference = k * (sd_ref / sqrt(m))
+      # We use input$report_k for consistency with other reports.
       k_val <- if(!is.null(input$report_k)) input$report_k else 2
       
       u_ref <- if(!is.na(row$sd_ref)) k_val * (row$sd_ref / sqrt(m)) else NA_real_
       
-      # Calcular u_xpt_def para cada método
+      # Calculate u_xpt_def for each method
       
-      # Método 2a
+      # Method 2a
       u_xpt_2a <- NA_real_
       u_xpt_def_2a <- NA_real_
       crit_2a <- NA_real_
@@ -2601,7 +2717,7 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
         if(!is.na(u_ref)) crit_2a <- sqrt(u_xpt_def_2a^2 + u_ref^2)
       }
       
-      # Método 2b
+      # Method 2b
       u_xpt_2b <- NA_real_
       u_xpt_def_2b <- NA_real_
       crit_2b <- NA_real_
@@ -2611,7 +2727,7 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
         if(!is.na(u_ref)) crit_2b <- sqrt(u_xpt_def_2b^2 + u_ref^2)
       }
       
-      # Método 3
+      # Method 3
       u_xpt_3 <- NA_real_
       u_xpt_def_3 <- NA_real_
       crit_3 <- NA_real_
@@ -3745,7 +3861,7 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
     do.call(tabsetPanel, c(list(id = "scores_participants_tabs"), tab_panels))
   })
 
-  # --- Módulo de Generación de informes ---
+  # --- Generación de informes Module ---
 
   output$report_n_selector <- renderUI({
     req(pt_prep_data())
@@ -3778,7 +3894,7 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
     selectInput("report_level", "Seleccionar nivel:", choices = common_levels)
   })
 
-  # Reactivo para datos de instrumentación de participantes
+  # Reactive for participants instrumentation data
   participants_instrumentation <- reactive({
     req(input$participants_data_upload)
     tryCatch(
@@ -3797,7 +3913,7 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
     )
   })
 
-  # Reactivo para Resumen de Grubbs
+  # Reactive for Grubbs Summary
   grubbs_summary <- reactive({
     req(pt_prep_data())
     data <- pt_prep_data()
@@ -3806,7 +3922,7 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
       return(NULL)
     }
 
-    # Obtener todas las combinaciones
+    # Get all combinations
     combos <- data %>%
       distinct(pollutant, n_lab, level)
 
@@ -3834,10 +3950,10 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
 
             if (p_val < 0.05) {
               outliers_detected <- 1
-              # Identificar el valor atípico
-               # grubbs.test devuelve el valor en la cadena de hipótesis alternativa usualmente,
-               # pero podemos encontrarlo verificando qué valor maximiza la desviación
-               # Por simplicidad, podemos verificar mínimo y máximo
+              # Identify the outlier value
+              # grubbs.test returns the value in alternative hypothesis string usually,
+              # but we can find it by checking which value maximizes the deviation
+              # For simplicity, we can check min and max
               vals <- subset_data$mean_value
               mean_val <- mean(vals)
               sd_val <- sd(vals)
@@ -3849,7 +3965,7 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
             }
           },
           error = function(e) {
-            # Manejar error
+            # Handle error
           }
         )
       }
@@ -3869,7 +3985,7 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
     do.call(rbind, results_list)
   })
 
-  # Reactivo para Resumen Xpt del Informe (Anexo A)
+  # Reactive for Report Xpt Summary (Annex A)
   report_xpt_summary <- reactive({
     req(pt_prep_data(), input$report_method)
     data <- pt_prep_data()
@@ -3879,9 +3995,17 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
       return(NULL)
     }
 
-    # Nota: calculate_niqr ahora se obtiene de R/pt_robust_stats.R
+    # Helper functions (replicated from report template/logic)
+    calculate_niqr <- function(x) {
+      x_clean <- x[is.finite(x)]
+      if (length(x_clean) < 2) {
+        return(NA_real_)
+      }
+      quartiles <- stats::quantile(x_clean, probs = c(0.25, 0.75), na.rm = TRUE, type = 7)
+      0.7413 * (quartiles[2] - quartiles[1])
+    }
 
-    # Obtener todas las combinaciones
+    # Get all combinations
     combos <- data %>%
       distinct(pollutant, n_lab, level)
 
@@ -3932,11 +4056,11 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
         vals <- part_data$mean_value
         ids <- part_data$participant_id
         if (length(vals) >= 3) {
-          # Podemos usar la función run_algorithm_a existente en app.R si es accesible,
-          # o la definida dentro del ámbito de este reactivo si la copiamos.
-          # Como run_algorithm_a está definida en el ámbito global de server o ui?
-          # Parece estar en el ámbito de server. Intentemos usarla.
-          # Nota: run_algorithm_a en app.R toma (values, ids).
+          # We can use the existing run_algorithm_a function in app.R if accessible,
+          # or the one defined inside this reactive scope if we copy it.
+          # Since run_algorithm_a is defined in global scope of server or ui?
+          # It seems to be in server scope. Let's try to use it.
+          # Note: run_algorithm_a in app.R takes (values, ids).
           res_algo <- run_algorithm_a(vals, ids)
           if (is.null(res_algo$error)) {
             xpt <- res_algo$assigned_value
@@ -3961,7 +4085,7 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
     do.call(rbind, results_list)
   })
 
-  # Reactivo para Resumen de Homogeneidad (Anexo B)
+  # Reactive for Homogeneity Summary (Annex B)
   report_homogeneity_summary <- reactive({
     req(hom_data_full())
     data <- pt_prep_data()
@@ -3970,7 +4094,7 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
       return(NULL)
     }
 
-    # Obtener todas las combinaciones
+    # Get all combinations
     combos <- data %>%
       distinct(pollutant, level)
 
@@ -4014,7 +4138,7 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
     }
   })
 
-  # Reactivo para Resumen de Estabilidad (Anexo B)
+  # Reactive for Stability Summary (Annex B)
   report_stability_summary <- reactive({
     req(hom_data_full(), stab_data_full())
     data <- pt_prep_data()
@@ -4023,7 +4147,7 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
       return(NULL)
     }
 
-    # Obtener todas las combinaciones
+    # Get all combinations
     combos <- data %>%
       distinct(pollutant, level)
 
@@ -4033,7 +4157,7 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
       pol <- combos$pollutant[i]
       lev <- combos$level[i]
 
-      # Primero obtener resultados de homogeneidad
+      # First get homogeneity results
       hom_res <- tryCatch(
         {
           compute_homogeneity_metrics(pol, lev)
@@ -4045,7 +4169,7 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
 
       if (!is.null(hom_res$error)) next
 
-      # Luego obtener resultados de estabilidad
+      # Then get stability results
       stab_res <- tryCatch(
         {
           compute_stability_metrics(pol, lev, hom_res)
@@ -4079,7 +4203,7 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
     }
   })
 
-  # --- Funciones auxiliares para Resúmenes de Puntajes del Informe ---
+  # --- Helper functions for Report Score Summaries ---
 
   calculate_method_scores_df <- function(method_code) {
     data <- pt_prep_data()
@@ -4098,7 +4222,7 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
       ref_data <- subset_data %>% filter(participant_id == "ref")
       part_data <- subset_data %>% filter(participant_id != "ref")
 
-      # Calcular Valor Asignado
+      # Calculate Assigned Value
       assigned <- list(xpt = NA, u_xpt = NA, sigma = NA)
 
       if (method_code == "1") {
@@ -4122,13 +4246,13 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
         assigned <- list(xpt = res$assigned_value, u_xpt = 1.25 * res$robust_sd / sqrt(nrow(part_data)), sigma = res$robust_sd)
       }
 
-      # Determinar Sigma
+      # Determine Sigma
       hom_res <- tryCatch(compute_homogeneity_metrics(pol, lev), error = function(e) NULL)
       final_sigma <- if (!is.na(assigned$sigma) && !is.null(assigned$sigma)) assigned$sigma else if (!is.null(hom_res)) hom_res$sigma_pt else NA
 
       if (is.na(final_sigma)) next
 
-      # Calcular Puntajes
+      # Calculate Scores
       # z = (x - Xpt) / sigma_pt
       # z' = (x - Xpt) / sqrt(sigma_pt^2 + u_Xpt^2)
       # zeta = (x - Xpt) / sqrt(u_xi^2 + u_Xpt^2)
@@ -4159,7 +4283,7 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
       return(NULL)
     }
 
-    # Definir categorías
+    # Define categories
     df <- df %>%
       mutate(
         z_eval = case_when(
@@ -4183,10 +4307,10 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
         )
       )
 
-    # Crear estructura de tabla resumen
+    # Create summary table structure
     pollutants <- unique(df$pollutant)
 
-    # Función auxiliar para contar
+    # Helper to count
     count_eval <- function(eval_col, eval_type) {
       counts <- sapply(pollutants, function(p) {
         sum(df$pollutant == p & df[[eval_col]] == eval_type, na.rm = TRUE)
@@ -4194,7 +4318,7 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
       c(counts, sum(counts))
     }
 
-    # Construir filas
+    # Build rows
     z_sat <- c("z-score", "Satisfactorio", count_eval("z_eval", "Satisfactorio"))
     z_quest <- c("z-score", "Cuestionable", count_eval("z_eval", "Cuestionable"))
     z_unsat <- c("z-score", "Insatisfactorio", count_eval("z_eval", "Insatisfactorio"))
@@ -4210,16 +4334,16 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
     en_sat <- c("En-score", "Satisfactorio", count_eval("En_eval", "Satisfactorio"))
     en_unsat <- c("En-score", "Insatisfactorio", count_eval("En_eval", "Insatisfactorio"))
 
-    # Combinar
+    # Combine
     summary_df <- rbind(z_sat, z_quest, z_unsat, zp_sat, zp_quest, zp_unsat, zeta_sat, zeta_quest, zeta_unsat, en_sat, en_unsat)
     colnames(summary_df) <- c("Indicador", "Evaluación", pollutants, "TOTAL")
 
-    # Agregar columna de Porcentaje
+    # Add Percentage column
     total_results <- nrow(df)
 
     summary_df <- as.data.frame(summary_df, stringsAsFactors = FALSE)
 
-    # Convertir conteos a numérico para cálculo de porcentaje
+    # Convert counts to numeric for percentage calc
     summary_df$TOTAL <- as.numeric(summary_df$TOTAL)
 
     summary_df$Percentage <- sprintf("%.2f%%", (summary_df$TOTAL / total_results) * 100)
@@ -4228,7 +4352,7 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
     summary_df
   }
 
-  # Reactivos
+  # Reactives
   score_criteria_summary_1 <- reactive({
     summarize_scores(calculate_method_scores_df("1"))
   })
@@ -4328,15 +4452,15 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
       return(NULL)
     }
 
-    # Función auxiliar para crear gráfico combinado
+    # Helper function to create combo plot
     create_combo_plot <- function(df, score_col, title_suffix, limit_lines = c(2, 3), limit_colors = c("orange", "red")) {
-      # Asegurar ordenamiento de niveles
+      # Ensure level ordering
       df <- df %>%
         mutate(level_numeric = readr::parse_number(as.character(level))) %>%
         arrange(level_numeric, level) %>%
         mutate(level_factor = factor(level, levels = unique(level)))
 
-      # Gráfico Superior: Ref vs Participante
+      # Top Plot: Ref vs Participant
       p_val <- ggplot(df, aes(x = level_factor)) +
         geom_point(aes(y = mean_value, color = "Participante"), size = 2) +
         geom_line(aes(y = mean_value, group = 1, color = "Participante")) +
@@ -4347,7 +4471,7 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
         theme_minimal() +
         theme(legend.position = "top", axis.text.x = element_blank())
 
-      # Gráfico Inferior: Puntaje
+      # Bottom Plot: Score
       p_score <- ggplot(df, aes(x = level_factor, y = .data[[score_col]], group = 1)) +
         geom_hline(yintercept = 0, color = "grey") +
         geom_line(color = "black") +
@@ -4362,11 +4486,11 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
           geom_hline(yintercept = c(-limit_lines[2], limit_lines[2]), linetype = "dashed", color = limit_colors[2])
       }
 
-      # Combinar gráficos
+      # Combine plots
       p_val / p_score + plot_layout(heights = c(1, 1))
     }
 
-    # Obtener todos los participantes (excluyendo ref)
+    # Get all participants (excluding ref)
     participants <- unique(scores_df$participant_id)
     participants <- participants[participants != "ref"]
 
@@ -4375,14 +4499,14 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
     for (pid in participants) {
       p_data <- scores_df %>% filter(participant_id == pid)
 
-      # 1. Tabla Resumen (Reconstruir)
+      # 1. Summary Table (Reconstruct)
       table_rows <- list()
       for (i in 1:nrow(p_data)) {
         pol <- p_data$pollutant[i]
         lev <- p_data$level[i]
 
-        # Determinar evaluación basada en la métrica seleccionada para la tabla
-        # Determinar evaluación basada en la métrica seleccionada para la tabla
+        # Determine evaluation based on selected metric for the table
+        # Determine evaluation based on selected metric for the table
         metric <- input$report_metric
         score_val <- switch(metric,
           "z" = p_data$z_score[i],
@@ -4411,8 +4535,8 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
       }
       summary_table <- do.call(rbind, table_rows)
 
-      # 2. Gráfico Combinado (Métrica única)
-      # El usuario solicitó: "solo incluir ref vs participante Y el puntaje seleccionado"
+      # 2. Combo Plot (Single Metric)
+      # User requested: "only include the ref vs participand AND the score that is selected"
 
       pollutants <- unique(p_data$pollutant)
       combined_plots_list <- list()
@@ -4431,7 +4555,7 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
       for (pol in pollutants) {
         pol_data <- p_data %>% filter(pollutant == pol)
 
-        # Crear gráfico combinado único para la métrica seleccionada
+        # Create single combo plot for the selected metric
         p_combo <- create_combo_plot(
           pol_data,
           score_col,
@@ -4440,15 +4564,15 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
           limit_colors = limit_colors
         )
 
-        # Agregar título para el panel individual del contaminante si es necesario, o confiar en las etiquetas de los ejes
-        # La imagen del usuario muestra títulos como "CO - Values" y "CO - Z-Score" dentro de los gráficos.
-        # create_combo_plot ya agrega títulos.
+        # Add title for the individual pollutant panel if needed, or rely on the axis labels
+        # The user's image shows titles like "CO - Values" and "CO - Z-Score" inside the plots.
+        # create_combo_plot already adds titles.
 
         combined_plots_list[[pol]] <- p_combo
       }
 
-      # Combinar gráficos horizontalmente (Contaminantes a través de Columnas)
-      # Usar patchwork para organizarlos en 1 fila
+      # Combine plots horizontally (Pollutants Across Columns)
+      # Use patchwork to arrange them in 1 row
       final_plot <- wrap_plots(combined_plots_list, nrow = 1) +
         plot_annotation(
           title = paste("Performance Summary (Pollutants Across Columns) - Participant:", pid),
@@ -4472,11 +4596,11 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
       return(list(error = "No se encontraron datos resumidos de PT (summary_n*.csv)."))
     }
 
-    # Para vista previa, solo verificamos el primer contaminante
+    # For preview, we'll just check the first pollutant
     first_pollutant <- unique(hom_data_full()$pollutant)[1]
 
     hom_res <- compute_homogeneity_metrics(first_pollutant, input$report_level)
-    # El error de homogeneidad no es fatal para la vista previa, pero lo necesitamos para estabilidad
+    # Homogeneity error is not fatal for preview, but we need it for stability
 
     stab_res <- if (!is.null(hom_res$error)) {
       list(error = "No se pudo calcular estabilidad debido a error en homogeneidad.")
@@ -4484,7 +4608,7 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
       compute_stability_metrics(first_pollutant, input$report_level, hom_res)
     }
 
-    # Calcular valor asignado e incertidumbre basado en el método
+    # Calculate assigned value and uncertainty based on method
     target_data <- summary_df %>%
       filter(
         n_lab == input$report_n_lab,
@@ -4500,16 +4624,16 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
 
     x_pt <- NA_real_
     u_xpt <- NA_real_
-    sigma_pt <- NA_real_ # Este será el sigma usado para puntuación
+    sigma_pt <- NA_real_ # This will be the sigma used for scoring
 
     method <- input$report_method
 
     if (method == "1") { # Referencia
       if (nrow(ref_data) > 0) {
         x_pt <- mean(ref_data$mean_value, na.rm = TRUE)
-        u_xpt <- mean(ref_data$sd_value, na.rm = TRUE) # Asumiendo que sd_value es la incertidumbre para ref
-        # Para sigma_pt en método 1, usualmente usar hom_res$sigma_pt o un valor fijo.
-        # Aquí por defecto usamos hom_res$sigma_pt si está disponible, sino 0.
+        u_xpt <- mean(ref_data$sd_value, na.rm = TRUE) # Assuming sd_value is uncertainty for ref
+        # For sigma_pt in method 1, usually use hom_res$sigma_pt or a fixed value.
+        # Here we default to hom_res$sigma_pt if available, else 0.
         sigma_pt <- if (!is.null(hom_res$sigma_pt)) hom_res$sigma_pt else 0
       } else {
         return(list(error = "No hay datos de referencia para el método seleccionado."))
@@ -4527,8 +4651,8 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
       u_xpt <- 1.25 * niqr_val / sqrt(length(vals))
       sigma_pt <- niqr_val
     } else if (method == "3") { # Algoritmo A
-      # Necesitamos ejecutar Algo A aquí o traerlo del caché.
-      # Para simplicidad de vista previa, ejecutémoslo al vuelo si los datos son pequeños
+      # We need to run Algo A here or fetch from cache.
+      # For preview simplicity, let's run it on the fly if small data
       vals <- part_data$mean_value
       ids <- part_data$participant_id
       algo_res <- run_algorithm_a(vals, ids)
@@ -4624,7 +4748,7 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
         stop("El paquete 'rmarkdown' es requerido para generar el informe.")
       }
 
-      # Usar la nueva plantilla
+      # Use the new template
       template_path <- file.path("reports", "report_template.Rmd")
       if (!file.exists(template_path)) {
         stop("No se encontró la plantilla en 'reports/report_template.Rmd'.")
@@ -4659,21 +4783,21 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
         quality_pro = input$report_quality_pro,
         ops_eng = input$report_ops_eng,
         quality_manager = input$report_quality_manager,
-        # Datos de instrumentaci\u00f3n de participantes
+        # Participants instrumentation data
         participants_data = participants_instrumentation(),
-        # Resumen de Grubbs
+        # Grubbs Summary
         grubbs_summary = grubbs_summary(),
-        # Resumen Anexo A
+        # Annex A Summary
         xpt_summary = report_xpt_summary(),
-        # Resúmenes Anexo B
+        # Annex B Summaries
         homogeneity_summary = report_homogeneity_summary(),
         stability_summary = report_stability_summary(),
-        # Datos Sección 4 y 5
+        # Section 4 & 5 Data
         score_summary = report_score_summary(),
         heatmaps = report_heatmaps(),
-        # Datos Anexo C
+        # Annex C Data
         participant_data = report_participant_data(),
-        # Compatibilidad Metrológica
+        # Metrological Compatibility
         metrological_compatibility = metrological_compatibility_data(),
         metrological_compatibility_method = input$report_metrological_compatibility
       )
@@ -4689,7 +4813,7 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
     }
   )
 
-  # --- Estado de Carga de datos ---
+  # --- Carga de datos Status ---
   output$data_upload_status <- renderPrint({
     cat("Estado de los archivos:\n")
 
@@ -4712,7 +4836,7 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
     }
   })
 
-  # --- Módulo de Algoritmo A ---
+  # --- Algoritmo A Module ---
 
   output$assigned_pollutant_selector <- renderUI({
     data <- pt_prep_data()
@@ -4757,7 +4881,92 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
 
   algo_key <- function(pollutant, n_lab, level) paste(pollutant, n_lab, level, sep = "||")
 
-  # Nota: run_algorithm_a ahora se obtiene de R/pt_robust_stats.R
+  run_algorithm_a <- function(values, ids, max_iter = 50) {
+    mask <- is.finite(values)
+    values <- values[mask]
+    ids <- ids[mask]
+
+    n <- length(values)
+    if (n < 3) {
+      return(list(error = "El Algoritmo A requiere al menos 3 resultados válidos."))
+    }
+
+    x_star <- median(values, na.rm = TRUE)
+    s_star <- 1.483 * median(abs(values - x_star), na.rm = TRUE)
+
+    if (!is.finite(s_star) || s_star < .Machine$double.eps) {
+      s_star <- sd(values, na.rm = TRUE)
+    }
+
+    if (!is.finite(s_star) || s_star < .Machine$double.eps) {
+      return(list(error = "La dispersión de los datos es insuficiente para ejecutar el Algoritmo A."))
+    }
+
+    iteration_records <- list()
+    converged <- FALSE
+
+    for (iter in seq_len(max_iter)) {
+      u_values <- (values - x_star) / (1.5 * s_star)
+      weights <- ifelse(abs(u_values) <= 1, 1, 1 / (u_values^2))
+
+      weight_sum <- sum(weights)
+      if (!is.finite(weight_sum) || weight_sum <= 0) {
+        return(list(error = "Los pesos calculados no son válidos para el Algoritmo A."))
+      }
+
+      x_new <- sum(weights * values) / weight_sum
+      s_new <- sqrt(sum(weights * (values - x_new)^2) / weight_sum)
+
+      if (!is.finite(s_new) || s_new < .Machine$double.eps) {
+        return(list(error = "El Algoritmo A colapsó debido a una desviación estándar nula."))
+      }
+
+      delta_x <- abs(x_new - x_star)
+      delta_s <- abs(s_new - s_star)
+      delta <- max(delta_x, delta_s)
+      iteration_records[[iter]] <- data.frame(
+        Iteración = iter,
+        `Valor asignado (x*)` = x_new,
+        `Desviación robusta (s*)` = s_new,
+        Cambio = delta,
+        check.names = FALSE
+      )
+
+      x_star <- x_new
+      s_star <- s_new
+
+      if (delta_x < 1e-03 && delta_s < 1e-03) {
+        converged <- TRUE
+        break
+      }
+    }
+
+    iteration_df <- if (length(iteration_records) > 0) {
+      bind_rows(iteration_records)
+    } else {
+      tibble()
+    }
+
+    u_final <- (values - x_star) / (1.5 * s_star)
+    weights_final <- ifelse(abs(u_final) <= 1, 1, 1 / (u_final^2))
+
+    weights_df <- tibble(
+      Participante = ids,
+      Resultado = values,
+      Peso = weights_final,
+      `Residuo estandarizado` = u_final
+    )
+
+    list(
+      assigned_value = x_star,
+      robust_sd = s_star,
+      iterations = iteration_df,
+      weights = weights_df,
+      converged = converged,
+      effective_weight = sum(weights_final),
+      error = NULL
+    )
+  }
 
   algorithm_a_selected <- reactive({
     req(algoA_trigger())
@@ -4885,7 +5094,7 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
       options = list(pageLength = 10, scrollX = TRUE),
       rownames = FALSE
     ) %>%
-      formatRound(columns = c("x_star", "s_star", "delta"), digits = 9)
+      formatRound(columns = c("Valor asignado (x*)", "Desviación robusta (s*)", "Cambio"), digits = 9)
   })
 
   output$algoA_weights_table <- renderDataTable({
@@ -4903,7 +5112,7 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
       formatRound(columns = c("Resultado", "Peso", "Residuo estandarizado"), digits = 6)
   })
 
-  # --- Módulo de Valor consenso ---
+  # --- Valor consenso Module ---
 
   observeEvent(input$consensus_run, {
     req(pt_prep_data())
@@ -5040,7 +5249,7 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
       formatRound(columns = "Resultado", digits = 6)
   })
 
-  # --- Módulo de Valor de referencia ---
+  # --- Valor de referencia Module ---
 
   reference_table_data <- reactive({
     req(pt_prep_data(), input$assigned_pollutant, input$assigned_n_lab, input$assigned_level)
@@ -5072,7 +5281,7 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
       formatRound(columns = c("Valor medio", "Desviación estándar declarada"), digits = 6)
   })
 
-  # --- Módulo de Preparación PT ---
+  # --- Preparación PT Module ---
 
   output$global_overview_algo <- renderDataTable({
     overview <- get_global_overview_data(global_combo_specs$algo)
@@ -5111,7 +5320,7 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
     )
   })
 
-  # --- Valores Atípicos: Selectores y Gráficos ---
+  # --- Valores Atípicos: Selectors and Plots ---
   output$outliers_pollutant_selector <- renderUI({
     req(pt_prep_data())
     choices <- sort(unique(pt_prep_data()$pollutant))
@@ -5174,10 +5383,10 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
     
     plotly::ggplotly(box_plot)
   })
-} # fin de la función servidor
+} # end server function
 
 
 # ===================================================================
-# III. Ejecutar la Aplicación
+# III. Run the Application
 # ===================================================================
 shinyApp(ui = ui, server = server, options = list(launch.browser = FALSE))
