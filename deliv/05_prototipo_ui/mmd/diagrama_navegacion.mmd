@@ -1,0 +1,11 @@
+flowchart TD
+    A[Inicio] --> B[Carga de Datos]
+    B --> C{Datos válidos?}
+    C -->|Sí| D[Homogeneidad/Estabilidad]
+    C -->|No| E[Error: verificar formato]
+    D --> F[Valores Atípicos]
+    F --> G[Valor Asignado]
+    G --> H[Puntajes PT]
+    H --> I[Informe Global]
+    I --> J[Participantes]
+    J --> K[Generación Informes]

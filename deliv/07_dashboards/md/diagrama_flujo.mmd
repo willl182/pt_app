@@ -1,0 +1,26 @@
+flowchart LR
+    subgraph Datos_Fijos
+        A[homogeneity.csv]
+        B[stability.csv]
+        C[summary_n4.csv]
+        D[participants_data4.csv]
+    end
+    
+    subgraph Procesamiento
+        E[Homogeneidad]
+        F[Estabilidad]
+        G[Valor Asignado]
+        H[Puntajes]
+    end
+    
+    subgraph Visualización
+        I[Tablas DT]
+        J[Histogramas]
+        K[Boxplots]
+        L[Heatmaps]
+    end
+    
+    A --> E
+    B --> F
+    C --> G & H
+    E & F & G & H --> I & J & K & L

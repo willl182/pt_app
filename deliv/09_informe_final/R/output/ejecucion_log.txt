@@ -1,0 +1,8 @@
+[2026-01-11 20:03:28] Inicio de generación de anexos
+[2026-01-11 20:03:28] Directorio de datos: /home/w182/w421/pt_app/data
+[2026-01-11 20:03:28] Datos cargados correctamente
+[2026-01-11 20:03:28] Homogeneidad calculada y exportada
+[2026-01-11 20:03:28] Estabilidad calculada y exportada
+[2026-01-11 20:03:28] Puntajes calculados y exportados
+[2026-01-11 20:03:28] Resumen de pruebas generado
+[2026-01-11 20:03:28] Finalización de la generación de anexos

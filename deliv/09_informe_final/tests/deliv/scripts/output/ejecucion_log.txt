@@ -1,0 +1,2 @@
+[2026-01-11 18:03:21] Inicio de generación de anexos
+[2026-01-11 18:03:21] Directorio de datos: deliv/../../data
