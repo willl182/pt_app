@@ -1,197 +1,352 @@
 # Prototipo de Interfaz de Usuario - Wireframes
 
-Este documento describe la estructura de la interfaz de usuario del aplicativo para la evaluación de ensayos de aptitud, siguiendo los lineamientos de la norma ISO 13528:2022. El prototipo está implementado en `R/prototipo_ui.R` y es una copia fiel de la UI definida en `app.R`.
+Este documento describe la estructura de la interfaz de usuario del aplicativo para la evaluación de ensayos de aptitud, siguiendo los lineamientos de las normas ISO 13528:2022 e ISO 17043:2024.
 
-## 1. Carga de datos
+---
 
-- **Propósito**: Permitir al usuario cargar los archivos base necesarios para todos los cálculos del sistema.
-- **Elementos de entrada (inputs)**:
-  - `fileInput("hom_file")`: Cargar archivo homogeneity.csv
-  - `fileInput("stab_file")`: Cargar archivo stability.csv
-  - `fileInput("summary_files")`: Cargar múltiples archivos summary_n*.csv
-- **Elementos de salida (outputs)**:
-  - `verbatimTextOutput("data_upload_status")`: Estado de carga de los datos
-- **Formato de archivos esperados**:
-  - **homogeneity.csv**: columnas `pollutant, level, replicate, sample_id, value`
-  - **stability.csv**: columnas `pollutant, level, replicate, sample_id, value`
-  - **summary_n*.csv**: columnas `pollutant, level, participant_id, replicate, sample_group, mean_value, sd_value`
-- **Contaminantes disponibles**: co, no, no2, o3, so2
-- **Niveles disponibles (ejemplos)**:
-  - co: 0-μmol/mol, 2-μmol/mol, 4-μmol/mol, 6-μmol/mol, 8-μmol/mol
-  - no: 0-nmol/mol, 50-nmol/mol, 100-nmol/mol, 150-nmol/mol
-  - no2: 0-nmol/mol, 50-nmol/mol, 100-nmol/mol, 150-nmol/mol
-  - o3: 0-nmol/mol, 50-nmol/mol, 80-nmol/mol, 120-nmol/mol
-  - so2: 0-nmol/mol, 50-nmol/mol, 100-nmol/mol, 150-nmol/mol
+## Índice
 
-## 2. Análisis de homogeneidad y estabilidad
+1. [Arquitectura CSS](#1-arquitectura-css)
+2. [Paleta de Colores](#2-paleta-de-colores)
+3. [Componentes de UI](#3-componentes-de-ui)
+4. [Módulos de la Aplicación](#4-módulos-de-la-aplicación)
+5. [Estructura General](#5-estructura-general)
+6. [Diseño Responsivo](#6-diseño-responsivo)
+7. [Accesibilidad](#7-accesibilidad)
 
-- **Propósito**: Evaluar si los ítems del ensayo de aptitud son suficientemente homogéneos y estables según los criterios de la norma ISO 13528:2022.
-- **Elementos de entrada (inputs)**:
-  - `actionButton("run_analysis")`: Ejecutar análisis
-  - `uiOutput("pollutant_selector_analysis")`: Selector de contaminante
-  - `uiOutput("level_selector")`: Selector de nivel
-- **Pestañas de análisis**:
-  1. **Vista previa de datos**:
-     - `dataTableOutput("raw_data_preview")`: Datos de homogeneidad
-     - `dataTableOutput("stability_data_preview")`: Datos de estabilidad
-     - `plotlyOutput("results_histogram")`: Histograma
-     - `plotlyOutput("results_boxplot")`: Boxplot
-     - `verbatimTextOutput("validation_message")`: Mensaje de validación
-  2. **Evaluación de homogeneidad**:
-     - `uiOutput("homog_conclusion")`: Conclusión del criterio
-     - `dataTableOutput("homogeneity_preview_table")`: Tabla de vista previa
-     - `tableOutput("robust_stats_table")`: Estadísticos robustos
-     - `verbatimTextOutput("robust_stats_summary")`: Resumen
-     - `tableOutput("variance_components")`: Componentes de varianza
-     - `tableOutput("details_per_item_table")`: Cálculos por ítem
-     - `tableOutput("details_summary_stats_table")`: Estadísticos resumidos
-  3. **Evaluación de estabilidad**:
-     - `uiOutput("homog_conclusion_stability")`: Conclusión del criterio
-     - `tableOutput("variance_components_stability")`: Componentes de varianza
-     - `tableOutput("details_per_item_table_stability")`: Cálculos por ítem
-     - `tableOutput("details_summary_stats_table_stability")`: Estadísticos resumidos
-  4. **Contribuciones a la incertidumbre**:
-     - `dataTableOutput("u_hom_table")`: Resumen u_hom por analito/nivel
-     - `dataTableOutput("u_stab_table")`: Resumen u_stab por analito/nivel
-- **Flujo de navegación**: Ubicado en el panel lateral principal. Los resultados se organizan en pestañas horizontales.
+---
 
-## 3. Valores atípicos
+## 1. Arquitectura CSS
 
-- **Propósito**: Identificar y visualizar resultados de participantes que se alejan significativamente del conjunto de datos mediante pruebas estadísticas.
-- **Elementos de entrada (inputs)**:
-  - `uiOutput("outliers_pollutant_selector")`: Selector de contaminante
-  - `uiOutput("outliers_level_selector")`: Selector de nivel
-- **Elementos de salida (outputs)**:
-  - `dataTableOutput("grubbs_summary_table")`: Tabla resumen de la prueba de Grubbs
-  - `plotlyOutput("outliers_histogram")`: Histograma con identificación de atípicos
-  - `plotlyOutput("outliers_boxplot")`: Boxplot con identificación de atípicos
-- **Flujo de navegación**: Módulo de consulta directa después de cargar los datos de participantes. Permite una revisión visual antes de proceder al cálculo del valor asignado.
+### 1.1 Estructura de Archivos
 
-## 4. Valor asignado
+```
+pt_app/
+└── www/
+    └── appR.css    # Hoja de estilos principal (913 líneas)
+```
 
-- **Propósito**: Determinar el valor de referencia y su incertidumbre utilizando diferentes métodos estadísticos.
-- **Elementos de entrada (inputs)**:
-  - `actionButton("algoA_run")`: Calcular Algoritmo A
-  - `actionButton("consensus_run")`: Calcular valores consenso
-  - `actionButton("run_metrological_compatibility")`: Calcular compatibilidad
-  - `uiOutput("assigned_pollutant_selector")`: Selector de contaminante
-  - `uiOutput("assigned_n_selector")`: Selector de esquema (n_lab)
-  - `uiOutput("assigned_level_selector")`: Selector de nivel
-  - `numericInput("algoA_max_iter")`: Iteraciones máximas para Algoritmo A
-- **Pestañas de análisis**:
-  1. **Algoritmo A**:
-     - `uiOutput("algoA_result_summary")`: Resumen de resultados
-     - `dataTableOutput("algoA_input_table")`: Datos de entrada
-     - `plotlyOutput("algoA_histogram")`: Histograma de resultados
-     - `dataTableOutput("algoA_iterations_table")`: Tabla de iteraciones
-  2. **Valor consenso**:
-     - `tableOutput("consensus_summary_table")`: Resumen del valor consenso
-     - `dataTableOutput("consensus_input_table")`: Datos de participantes
-  3. **Valor de referencia**:
-     - `dataTableOutput("reference_table")`: Resultados de referencia
-  4. **Compatibilidad Metrológica**:
-     - `dataTableOutput("metrological_compatibility_table")`: Tabla de compatibilidad
-- **Flujo de navegación**: Dividido en pestañas internas para cada método de asignación.
+### 1.2 Secciones del CSS
 
-## 5. Puntajes PT
+| Sección | Propósito |
+|---------|-----------|
+| **Variables CSS** | Propiedades personalizadas para temas |
+| **Estilos Base** | Body, contenedor por defecto |
+| **Tipografía** | Encabezados, párrafos, enlaces |
+| **Tarjetas y Paneles** | Well, card, panel |
+| **Barra Lateral** | Navegación lateral |
+| **Pestañas de Navegación** | Tabs, pills, navlist |
+| **Controles de Formulario** | Inputs, selects, sliders |
+| **Botones** | Action buttons, variantes |
+| **Tablas** | DataTables, estilos de tabla |
+| **Alertas** | Notificaciones Shiny |
+| **Badges de Puntaje** | Indicadores de estado PT |
+| **Gráficos** | Contenedores Shiny/Plotly |
+| **Diseño Responsivo** | Breakpoints móviles |
+| **Estilos de Impresión** | Overrides para impresión |
+| **Accesibilidad** | Focus, contraste, lectores de pantalla |
 
-- **Propósito**: Calcular y mostrar los puntajes de desempeño de cada laboratorio participante.
-- **Elementos de entrada (inputs)**:
-  - `actionButton("scores_run")`: Calcular puntajes
-  - `uiOutput("scores_pollutant_selector")`: Selector de contaminante
-  - `uiOutput("scores_n_selector")`: Selector de esquema (n_lab)
-  - `uiOutput("scores_level_selector")`: Selector de nivel
-- **Elementos de salida (outputs)**:
-  - `tableOutput("scores_parameter_table")`: Resumen de parámetros
-  - `dataTableOutput("scores_overview_table")`: Tabla resumen de puntajes
-  - `tableOutput("scores_evaluation_summary")`: Resumen de evaluaciones
-- **Pestañas de análisis**:
-  - "Resultados de puntajes"
-  - "Puntajes Z": `uiOutput("z_scores_panel")`
-  - "Puntajes Z'": `uiOutput("zprime_scores_panel")`
-  - "Puntajes Zeta": `uiOutput("zeta_scores_panel")`
-  - "Puntajes En": `uiOutput("en_scores_panel")`
+### 1.3 Carga en Shiny
+
+```r
+fluidPage(
+  theme = bs_theme(...),        # Tema base bslib
+  includeCSS("www/appR.css"),   # Overrides personalizados
+  ...
+)
+```
+
+---
+
+## 2. Paleta de Colores
+
+### 2.1 Colores Primarios (Marca Amarilla)
+
+| Variable CSS | Hex | Uso |
+|--------------|-----|-----|
+| `--pt-primary` | `#FDB913` | Color principal de marca |
+| `--pt-primary-light` | `#FFD54F` | Estados hover |
+| `--pt-primary-dark` | `#E5A610` | Estados active |
+| `--pt-primary-subtle` | `#F5F5F0` | Fondos sutiles |
+
+### 2.2 Colores Neutros
+
+| Variable CSS | Hex | Uso |
+|--------------|-----|-----|
+| `--pt-bg` | `#ECEEF0` | Fondo de página |
+| `--pt-bg-card` | `#F7F8F9` | Fondo de tarjetas |
+| `--pt-fg` | `#2D3748` | Texto principal |
+| `--pt-fg-muted` | `#718096` | Texto secundario |
+| `--pt-border` | `#CBD5E0` | Color de borde |
+| `--pt-border-focus` | `#FDB913` | Borde de focus |
+
+### 2.3 Colores Semánticos
+
+| Variable CSS | Hex | Uso |
+|--------------|-----|-----|
+| `--pt-success` | `#38A169` | Estados de éxito |
+| `--pt-warning` | `#ECC94B` | Estados de advertencia |
+| `--pt-danger` | `#E53E3E` | Estados de error |
+| `--pt-info` | `#3182CE` | Estados informativos |
+
+### 2.4 Colores de Puntajes (ISO 13528)
+
+| Estado | Hex | Criterio |
+|--------|-----|----------|
+| **Satisfactorio** | `#00B050` | \|z\| ≤ 2.0 |
+| **Cuestionable** | `#FFEB3B` | 2.0 < \|z\| < 3.0 |
+| **No satisfactorio** | `#D32F2F` | \|z\| ≥ 3.0 |
+
+### 2.5 Colores de Clasificación Combinada (a1-a7)
+
+| Código | Hex | Descripción |
+|--------|-----|-------------|
+| **a1** | `#2E7D32` | Verde oscuro (Excelente) |
+| **a2** | `#66BB6A` | Verde medio (Conservador) |
+| **a3** | `#9CCC65` | Verde claro (MU subestimada) |
+| **a4** | `#FFF59D` | Amarillo claro (Cuestionable OK) |
+| **a5** | `#FBC02D` | Naranja (Cuestionable mal) |
+| **a6** | `#EF9A9A` | Rosa (No satisf. cubierto) |
+| **a7** | `#C62828` | Rojo oscuro (Crítico) |
+
+### 2.6 Diagrama de Paleta
+
+```mermaid
+graph LR
+    subgraph Primary["Paleta Primaria"]
+        P1["#FDB913<br/>--pt-primary"]
+        P2["#FFD54F<br/>--pt-primary-light"]
+        P3["#E5A610<br/>--pt-primary-dark"]
+    end
+    
+    subgraph Neutral["Paleta Neutra"]
+        N1["#ECEEF0<br/>--pt-bg"]
+        N2["#F7F8F9<br/>--pt-bg-card"]
+        N3["#2D3748<br/>--pt-fg"]
+    end
+    
+    subgraph Scores["Colores de Puntaje"]
+        SC1["#00B050<br/>Satisfactorio"]
+        SC2["#FFEB3B<br/>Cuestionable"]
+        SC3["#D32F2F<br/>No satisfactorio"]
+    end
+```
+
+---
+
+## 3. Componentes de UI
+
+### 3.1 Tarjetas y Paneles
+
+```css
+.well, .card, .panel {
+  background-color: var(--pt-bg-card);
+  border: 1px solid var(--pt-border);
+  border-radius: var(--radius-lg);  /* 12px */
+  box-shadow: var(--shadow-sm);
+  padding: var(--space-lg);         /* 24px */
+}
+```
+
+### 3.2 Barra Lateral
+
+Borde izquierdo amarillo distintivo:
+
+```css
+.sidebar .well {
+  background: linear-gradient(180deg, 
+    var(--pt-bg-card) 0%, 
+    var(--pt-primary-subtle) 100%);
+  border-left: 4px solid var(--pt-primary);
+}
+```
+
+### 3.3 Pestañas de Navegación
+
+Subrayado amarillo animado para el estado activo:
+
+```css
+.nav-tabs .nav-link.active::after {
+  content: '';
+  position: absolute;
+  bottom: -2px;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: var(--pt-primary);
+}
+```
+
+### 3.4 Botones
+
+Gradientes para profundidad con efectos hover:
+
+```css
+.btn-primary {
+  background: linear-gradient(135deg, 
+    var(--pt-primary) 0%, 
+    var(--pt-primary-dark) 100%);
+  color: var(--pt-secondary);
+}
+
+.btn-primary:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
+}
+```
+
+### 3.5 Controles de Formulario
+
+```css
+.form-control:focus {
+  border-color: var(--pt-primary);
+  box-shadow: 0 0 0 3px rgba(253, 185, 19, 0.3);
+}
+
+input[type="file"] {
+  border: 2px dashed var(--pt-primary);
+  background-color: var(--pt-primary-subtle);
+}
+```
+
+### 3.6 Tablas
+
+Cabeceras con acento amarillo:
+
+```css
+.table thead th {
+  background: linear-gradient(180deg, 
+    var(--pt-primary-subtle) 0%, 
+    var(--pt-bg-card) 100%);
+  border-bottom: 2px solid var(--pt-primary);
+  text-transform: uppercase;
+}
+```
+
+### 3.7 Badges de Puntaje
+
+```css
+.badge-satisfactory {
+  background-color: #00B050;
+  color: white;
+}
+
+.badge-questionable {
+  background-color: #FFEB3B;
+  color: #2D3748;
+}
+
+.badge-unsatisfactory {
+  background-color: #D32F2F;
+  color: white;
+}
+```
+
+---
+
+## 4. Módulos de la Aplicación
+
+### 4.1 Carga de Datos
+
+- **Propósito**: Cargar los archivos base para todos los cálculos.
+- **Inputs**:
+  - `fileInput("hom_file")`: homogeneity.csv
+  - `fileInput("stab_file")`: stability.csv
+  - `fileInput("summary_files")`: summary_n*.csv
+- **Formato de archivos**:
+  - **homogeneity.csv**: `pollutant, level, replicate, sample_id, value`
+  - **stability.csv**: `pollutant, level, replicate, sample_id, value`
+  - **summary_n*.csv**: `pollutant, level, participant_id, replicate, sample_group, mean_value, sd_value`
+- **Contaminantes**: co, no, no2, o3, so2
+
+### 4.2 Análisis de Homogeneidad y Estabilidad
+
+- **Propósito**: Evaluar criterios ISO 13528:2022.
+- **Pestañas**:
+  1. Vista previa de datos
+  2. Evaluación de homogeneidad (ss, sw, criterio)
+  3. Evaluación de estabilidad (diferencia de medias)
+  4. Contribuciones a la incertidumbre (u_hom, u_stab)
+- **Outputs**:
+  - Tablas de componentes de varianza
+  - Conclusiones del criterio con indicadores de color
+  - Histogramas y boxplots interactivos (Plotly)
+
+### 4.3 Valores Atípicos
+
+- **Propósito**: Identificar outliers mediante prueba de Grubbs.
+- **Outputs**:
+  - Tabla resumen de la prueba de Grubbs
+  - Histograma con identificación de atípicos
+  - Boxplot con identificación de atípicos
+
+### 4.4 Valor Asignado
+
+- **Propósito**: Determinar valor de referencia y su incertidumbre.
+- **Métodos**:
+  1. **Algoritmo A** (ISO 13528 Anexo C)
+  2. **Consenso MADe/nIQR**
+  3. **Valor de Referencia**
+  4. **Compatibilidad Metrológica**
+- **Outputs**:
+  - Tabla de iteraciones del Algoritmo A
+  - Histograma de resultados
+  - Tabla de compatibilidad metrológica
+
+### 4.5 Puntajes PT
+
+- **Propósito**: Calcular puntajes de desempeño.
 - **Tipos de puntajes**:
   - z = (x - x_pt) / σ_pt
   - z' = (x - x_pt) / √(σ_pt² + u_xpt²)
   - ζ = (x - x_pt) / √(u_x² + u_xpt²)
-  - E_n = (x - x_pt) / √(U_x² + U_xpt²)
-- **Criterios de evaluación**:
-  - z, z', ζ: |valor| ≤ 2 → Satisfactorio; 2 < |valor| < 3 → Cuestionable; |valor| ≥ 3 → No satisfactorio
-  - E_n: |valor| ≤ 1 → Satisfactorio; |valor| > 1 → No satisfactorio
-- **Flujo de navegación**: Requiere que se hayan ejecutado los cálculos de valor asignado previamente.
+  - En = (x - x_pt) / √(U_x² + U_xpt²)
+- **Criterios**:
+  - z, z', ζ: \|valor\| ≤ 2 → Satisfactorio; 2 < \|valor\| < 3 → Cuestionable; \|valor\| ≥ 3 → No satisfactorio
+  - En: \|valor\| ≤ 1 → Satisfactorio; \|valor\| > 1 → No satisfactorio
 
-## 6. Informe global
+### 4.6 Informe Global
 
-- **Propósito**: Proporcionar una visión integral de los resultados de todos los analitos y niveles en una sola interfaz.
-- **Elementos de entrada (inputs)**:
-  - `uiOutput("global_report_pollutant_selector")`: Selector de contaminante
-  - `uiOutput("global_report_n_selector")`: Selector de esquema
-  - `uiOutput("global_report_level_selector")`: Selector de nivel
-- **Pestañas de análisis**:
-  1. **Resumen global**:
-     - `dataTableOutput("global_xpt_summary_table")`: Resumen x_pt
-     - `tableOutput("global_level_summary_table")`: Resumen de niveles
-     - `dataTableOutput("global_evaluation_summary_table")`: Resumen de evaluaciones
-  2. **Referencia (1)**:
-     - `tableOutput("global_params_ref")`: Parámetros principales
-     - `dataTableOutput("global_overview_ref")`: Resultados por participante
-     - `plotlyOutput("global_heatmap_z_ref")`: Heatmap de puntajes Z
-     - `plotlyOutput("global_heatmap_zprime_ref")`: Heatmap de puntajes Z'
-     - `plotlyOutput("global_heatmap_zeta_ref")`: Heatmap de puntajes Zeta
-     - `plotlyOutput("global_heatmap_en_ref")`: Heatmap de puntajes En
-  3. **Consenso MADe (2a)**:
-     - Similar estructura con datos de consenso MADe
-  4. **Consenso nIQR (2b)**:
-     - Similar estructura con datos de consenso nIQR
-  5. **Algoritmo A (3)**:
-     - Similar estructura con datos de Algoritmo A
-- **Flujo de navegación**: Centraliza la información de múltiples niveles y métodos (Referencia, Consenso MADe/nIQR, Algoritmo A).
-
-## 7. Participantes
-
-- **Propósito**: Mostrar el detalle individual de cada laboratorio y su desempeño específico.
-- **Elementos de entrada (inputs)**:
-  - `uiOutput("participants_pollutant_selector")`: Selector de contaminante
-  - `uiOutput("participants_level_selector")`: Selector de nivel
-- **Elementos de salida (outputs)**:
-  - `uiOutput("scores_participant_tabs")`: Pestañas dinámicas para cada participante con:
-    - Tabla de resultados detallados
-    - Puntajes obtenidos
-    - Información de instrumentación
-- **Flujo de navegación**: Permite un análisis profundo por laboratorio, facilitando la identificación de causas raíz en caso de desempeños no satisfactorios.
-
-## 8. Generación de informes
-
-- **Propósito**: Configurar y exportar el informe final del ensayo de aptitud en formatos estandarizados.
-- **Elementos de entrada (inputs)**:
-  - `uiOutput("report_n_selector")`: Selector de esquema
-  - `uiOutput("report_level_selector")`: Selector de nivel
-  - `selectInput("report_metric")`: Métrica (z, z', zeta, En)
-  - `selectInput("report_method")`: Método (Referencia, Consenso MADe/nIQR, Algoritmo A)
-  - `selectInput("report_metrological_compatibility")`: Compatibilidad metrológica
-  - `numericInput("report_k")`: Factor de cobertura (k)
-  - `fileInput("participants_data_upload")`: CSV de instrumentación (Codigo_Lab, Analizador_SO2, Analizador_CO, Analizador_O3, Analizador_NO_NO2)
-  - `radioButtons("report_format")`: Formato (Word, HTML)
-  - `downloadButton("download_report")`: Descargar informe
-- **Campos de identificación**:
-  - `textInput("report_scheme_id")`: ID Esquema EA
-  - `textInput("report_id")`: ID Informe
-  - `dateInput("report_date")`: Fecha de Emisión
-  - `textInput("report_period")`: Periodo del Ensayo
-  - `textInput("report_coordinator")`: Coordinador EA
-  - `textInput("report_quality_pro")`: Profesional Calidad Aire
-  - `textInput("report_ops_eng")`: Ingeniero Operativo
-  - `textInput("report_quality_manager")`: Profesional Gestión Calidad
-- **Elementos de salida (outputs)**:
-  - `uiOutput("report_status")`: Estado del informe
-  - `verbatimTextOutput("report_preview_summary")`: Vista previa del resumen
+- **Propósito**: Visión integral de todos los resultados.
 - **Pestañas**:
-  - "1. Identificación": Campos de texto para identificación
-  - "Vista Previa": Estado y resumen del informe
-- **Flujo de navegación**: Es el paso final del proceso. Permite consolidar todos los análisis realizados en un documento oficial descargable.
+  1. Resumen global
+  2. Referencia (1)
+  3. Consenso MADe (2a)
+  4. Consenso nIQR (2b)
+  5. Algoritmo A (3)
+- **Outputs**:
+  - Heatmaps de puntajes z, z', zeta, En (Plotly)
+  - Tablas resumen por nivel y contaminante
 
-## Estructura General de la UI
+### 4.7 Participantes
+
+- **Propósito**: Detalle individual por laboratorio.
+- **Outputs**:
+  - Pestañas dinámicas por participante
+  - Tabla de resultados detallados
+  - Información de instrumentación
+
+### 4.8 Generación de Informes
+
+- **Propósito**: Exportar informe final en Word/HTML.
+- **Configuración**:
+  - Métrica (z, z', zeta, En)
+  - Método (Referencia, Consenso, Algoritmo A)
+  - Factor de cobertura (k)
+  - Datos de identificación del esquema
+- **Campos de identificación**:
+  - ID Esquema EA
+  - ID Informe
+  - Fecha de Emisión
+  - Periodo del Ensayo
+  - Coordinador EA
+  - Personal técnico
+
+---
+
+## 5. Estructura General
+
+### 5.1 Layout Principal
 
 ```
 fluidPage(
@@ -214,6 +369,163 @@ main_layout = navlistPanel(
 )
 ```
 
+### 5.2 Diagrama de Jerarquía de Componentes
+
+```mermaid
+flowchart TD
+    ROOT[":root Variables CSS"] --> BASE["Estilos Base<br/>body, container"]
+    BASE --> LAYOUT["Componentes Layout<br/>cards, sidebar, tabs"]
+    LAYOUT --> FORMS["Controles de Formulario<br/>inputs, buttons, sliders"]
+    LAYOUT --> DATA["Visualización de Datos<br/>tables, plots, badges"]
+    DATA --> FEEDBACK["Feedback<br/>alerts, progress, modals"]
+    
+    ROOT --> RESP["Responsivo<br/>@media queries"]
+    ROOT --> A11Y["Accesibilidad<br/>contraste, motion, focus"]
+    ROOT --> PRINT["Estilos de Impresión<br/>@media print"]
+```
+
+---
+
+## 6. Diseño Responsivo
+
+### 6.1 Breakpoint Móvil (≤768px)
+
+```css
+@media (max-width: 768px) {
+  .container-fluid {
+    padding: var(--space-md);
+  }
+  
+  .well, .card {
+    padding: var(--space-md);
+  }
+  
+  .nav-tabs .nav-link {
+    padding: var(--space-xs) var(--space-md);
+    font-size: 0.875rem;
+  }
+  
+  .table thead th,
+  .table tbody td {
+    padding: var(--space-sm);
+    font-size: 0.875rem;
+  }
+}
+```
+
+### 6.2 Estilos de Impresión
+
+```css
+@media print {
+  body {
+    background: white;
+  }
+  
+  /* Ocultar elementos interactivos */
+  .btn, .nav-tabs, .dataTables_filter,
+  .dataTables_length, .dataTables_paginate {
+    display: none !important;
+  }
+  
+  /* Remover sombras para impresión limpia */
+  .well, .card, .table {
+    box-shadow: none;
+    border: 1px solid #ddd;
+  }
+}
+```
+
+---
+
+## 7. Accesibilidad
+
+### 7.1 Indicadores de Focus
+
+```css
+:focus-visible {
+  outline: 2px solid var(--pt-primary);
+  outline-offset: 2px;
+}
+```
+
+### 7.2 Soporte para Lectores de Pantalla
+
+```css
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+```
+
+### 7.3 Modo de Alto Contraste
+
+```css
+@media (prefers-contrast: high) {
+  :root {
+    --pt-border: #333;
+    --shadow-sm: none;
+  }
+  
+  .btn, .form-control, .well, .card {
+    border: 2px solid currentColor;
+  }
+}
+```
+
+### 7.4 Movimiento Reducido
+
+```css
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+```
+
+---
+
+## Variables CSS de Espaciado
+
+```css
+:root {
+  --space-xs: 0.25rem;   /* 4px */
+  --space-sm: 0.5rem;    /* 8px */
+  --space-md: 1rem;      /* 16px */
+  --space-lg: 1.5rem;    /* 24px */
+  --space-xl: 2rem;      /* 32px */
+  --space-xxl: 3rem;     /* 48px */
+}
+```
+
+## Variables CSS de Bordes y Sombras
+
+```css
+:root {
+  /* Sombras - Niveles de profundidad */
+  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.06);
+  --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.08);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.10);
+  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.14);
+  --shadow-focus: 0 0 0 3px rgba(253, 185, 19, 0.3);
+  
+  /* Radio de borde */
+  --radius-sm: 6px;   /* Elementos pequeños */
+  --radius-md: 8px;   /* Botones, inputs */
+  --radius-lg: 12px;  /* Cards, paneles */
+  --radius-xl: 16px;  /* Contenedores grandes */
+}
+```
+
+---
+
 ## Referencia
 
-El prototipo se basa en la implementación completa en `app.R` del proyecto PT App. Para la implementación funcional, consulte el código fuente completo en el archivo `app.R`.
+El prototipo se basa en la implementación completa en `app.R` del proyecto PT App. Para la implementación funcional, consulte el código fuente en `app.R` y los estilos en `www/appR.css`.

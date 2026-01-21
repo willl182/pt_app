@@ -49,6 +49,10 @@ ui <- fluidPage(
     code_font = font_google("JetBrains Mono")
   ),
 
+  tags$head(
+    tags$link(rel = "stylesheet", type = "text/css", href = "appR.css")
+  ),
+
   # 1. Título de la aplicación
   titlePanel("Aplicativo para Evaluación de Ensayos de Aptitud"),
   h3("Gases Contaminantes Criterio"),
@@ -949,7 +953,7 @@ server <- function(input, output, session) {
         "Puntajes PT",
         sidebarLayout(
           sidebarPanel(
-            width = 4,
+            width = analysis_sidebar_w,
             h4("1. Ejecutar Cálculo"),
             actionButton("scores_run", "Calcular puntajes", class = "btn-primary btn-block"),
             hr(),
@@ -959,7 +963,7 @@ server <- function(input, output, session) {
             uiOutput("scores_level_selector")
           ),
           mainPanel(
-            width = 8,
+            width = analysis_main_w,
             tabsetPanel(
               id = "scores_tabs",
               tabPanel(
