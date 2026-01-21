@@ -318,6 +318,225 @@ create_robust_stats_sheet <- function(wb, summary_data) {
   setColWidths(wb, ws, cols = 1:3, widths = "auto")
 }
 
+create_algorithm_a_sheet <- function(wb, summary_data) {
+  addWorksheet(wb, "Algorithm_A")
+  ws <- "Algorithm_A"
+  
+  # Use SO2 60-nmol/mol example
+  example <- summary_data[summary_data$pollutant == "so2" & summary_data$level == "60-nmol/mol", ]
+  values <- example$mean_value[!is.na(example$mean_value)]
+  n <- length(values)
+  
+  writeData(wb, ws, "ALGORITHM A VALIDATION - SO2 60-nmol/mol", startRow = 1, startCol = 1)
+  addStyle(wb, ws, createStyle(fontSize = 14, textDecoration = "bold"), rows = 1, cols = 1)
+  mergeCells(wb, ws, cols = 1:12, rows = 1)
+  
+  writeData(wb, ws, "ISO 13528:2022 Annex C - Iterative Robust Estimation (Algorithm A)", startRow = 2, startCol = 1)
+  mergeCells(wb, ws, cols = 1:12, rows = 2)
+  
+  # Parameters section
+  writeData(wb, ws, "ALGORITHM PARAMETERS", startRow = 4, startCol = 1)
+  addStyle(wb, ws, createStyle(textDecoration = "bold"), rows = 4, cols = 1)
+  
+  writeData(wb, ws, "Huber constant (c)", startRow = 5, startCol = 1)
+  writeData(wb, ws, 1.5, startRow = 5, startCol = 2)
+  addStyle(wb, ws, input_style, rows = 5, cols = 2)
+  writeData(wb, ws, "← Weight cutoff: |u| <= 1", startRow = 5, startCol = 3)
+  
+  writeData(wb, ws, "MAD scale factor", startRow = 6, startCol = 1)
+  writeData(wb, ws, 1.483, startRow = 6, startCol = 2)
+  addStyle(wb, ws, input_style, rows = 6, cols = 2)
+  writeData(wb, ws, "← Makes MAD consistent for normal distribution", startRow = 6, startCol = 3)
+  
+  writeData(wb, ws, "Tolerance", startRow = 7, startCol = 1)
+  writeData(wb, ws, 0.001, startRow = 7, startCol = 2)
+  addStyle(wb, ws, input_style, rows = 7, cols = 2)
+  
+  # Input data section
+  writeData(wb, ws, "INPUT DATA (xi)", startRow = 9, startCol = 1)
+  addStyle(wb, ws, createStyle(textDecoration = "bold"), rows = 9, cols = 1)
+  
+  headers <- c("i", "xi", "|xi - median|")
+  writeData(wb, ws, t(headers), startRow = 10, startCol = 1, colNames = FALSE)
+  addStyle(wb, ws, header_style, rows = 10, cols = 1:3, gridExpand = TRUE)
+  
+  for (i in seq_along(values)) {
+    r <- 10 + i
+    writeData(wb, ws, i, startRow = r, startCol = 1)
+    writeData(wb, ws, values[i], startRow = r, startCol = 2)
+  }
+  
+  data_end <- 10 + n
+  
+  # Initial estimates
+  init_row <- data_end + 2
+  writeData(wb, ws, "INITIAL ESTIMATES (Iteration 0)", startRow = init_row, startCol = 1)
+  addStyle(wb, ws, createStyle(textDecoration = "bold"), rows = init_row, cols = 1)
+  
+  writeData(wb, ws, "Median", startRow = init_row + 1, startCol = 1)
+  writeFormula(wb, ws, sprintf("MEDIAN(B11:B%d)", data_end), startRow = init_row + 1, startCol = 2)
+  addStyle(wb, ws, result_style, rows = init_row + 1, cols = 2)
+  median_cell <- sprintf("B%d", init_row + 1)
+  
+  # Compute |xi - median| column
+  for (i in seq_along(values)) {
+    r <- 10 + i
+    writeFormula(wb, ws, sprintf("ABS(B%d-%s)", r, median_cell), startRow = r, startCol = 3)
+    addStyle(wb, ws, formula_style, rows = r, cols = 3)
+  }
+  
+  writeData(wb, ws, "MAD (median of |xi - median|)", startRow = init_row + 2, startCol = 1)
+  writeFormula(wb, ws, sprintf("MEDIAN(C11:C%d)", data_end), startRow = init_row + 2, startCol = 2)
+  
+  writeData(wb, ws, "x*₀ = median", startRow = init_row + 3, startCol = 1)
+  writeFormula(wb, ws, sprintf("=%s", median_cell), startRow = init_row + 3, startCol = 2)
+  addStyle(wb, ws, result_style, rows = init_row + 3, cols = 2)
+  x0_cell <- sprintf("B%d", init_row + 3)
+  
+  writeData(wb, ws, "s*₀ = 1.483 × MAD", startRow = init_row + 4, startCol = 1)
+  writeFormula(wb, ws, sprintf("B6*B%d", init_row + 2), startRow = init_row + 4, startCol = 2)
+  addStyle(wb, ws, result_style, rows = init_row + 4, cols = 2)
+  s0_cell <- sprintf("B%d", init_row + 4)
+  
+  # Iteration 1 detail
+  iter1_row <- init_row + 7
+  writeData(wb, ws, "ITERATION 1 DETAIL", startRow = iter1_row, startCol = 1)
+  addStyle(wb, ws, createStyle(textDecoration = "bold"), rows = iter1_row, cols = 1)
+  
+  iter1_headers <- c("i", "xi", "ui = (xi-x*₀)/(1.5×s*₀)", "|ui|", "wi", "wi×xi", "wi×(xi-x*₁)²")
+  writeData(wb, ws, t(iter1_headers), startRow = iter1_row + 1, startCol = 1, colNames = FALSE)
+  addStyle(wb, ws, header_style, rows = iter1_row + 1, cols = 1:7, gridExpand = TRUE)
+  
+  for (i in seq_along(values)) {
+    r <- iter1_row + 1 + i
+    writeData(wb, ws, i, startRow = r, startCol = 1)
+    writeData(wb, ws, values[i], startRow = r, startCol = 2)
+    # ui = (xi - x*0) / (1.5 * s*0)
+    writeFormula(wb, ws, sprintf("(B%d-%s)/(B5*%s)", r, x0_cell, s0_cell), startRow = r, startCol = 3)
+    addStyle(wb, ws, formula_style, rows = r, cols = 3)
+    # |ui|
+    writeFormula(wb, ws, sprintf("ABS(C%d)", r), startRow = r, startCol = 4)
+    addStyle(wb, ws, formula_style, rows = r, cols = 4)
+    # wi = IF(|ui|<=1, 1, 1/ui^2)
+    writeFormula(wb, ws, sprintf("IF(D%d<=1,1,1/(C%d^2))", r, r), startRow = r, startCol = 5)
+    addStyle(wb, ws, formula_style, rows = r, cols = 5)
+    # wi * xi
+    writeFormula(wb, ws, sprintf("E%d*B%d", r, r), startRow = r, startCol = 6)
+    addStyle(wb, ws, formula_style, rows = r, cols = 6)
+  }
+  
+  iter1_data_end <- iter1_row + 1 + n
+  
+  # Sums for iteration 1
+  sum1_row <- iter1_data_end + 1
+  writeData(wb, ws, "Σ", startRow = sum1_row, startCol = 1)
+  addStyle(wb, ws, createStyle(textDecoration = "bold"), rows = sum1_row, cols = 1)
+  writeFormula(wb, ws, sprintf("SUM(E%d:E%d)", iter1_row + 2, iter1_data_end), startRow = sum1_row, startCol = 5)
+  addStyle(wb, ws, result_style, rows = sum1_row, cols = 5)
+  writeFormula(wb, ws, sprintf("SUM(F%d:F%d)", iter1_row + 2, iter1_data_end), startRow = sum1_row, startCol = 6)
+  addStyle(wb, ws, result_style, rows = sum1_row, cols = 6)
+  
+  # x*1 calculation
+  result1_row <- sum1_row + 2
+  writeData(wb, ws, "x*₁ = Σ(wi×xi) / Σwi", startRow = result1_row, startCol = 1)
+  writeFormula(wb, ws, sprintf("F%d/E%d", sum1_row, sum1_row), startRow = result1_row, startCol = 2)
+  addStyle(wb, ws, result_style, rows = result1_row, cols = 2)
+  x1_cell <- sprintf("B%d", result1_row)
+  
+  # Now fill in column G (wi×(xi-x*1)²) using x*1
+  for (i in seq_along(values)) {
+    r <- iter1_row + 1 + i
+    writeFormula(wb, ws, sprintf("E%d*(B%d-%s)^2", r, r, x1_cell), startRow = r, startCol = 7)
+    addStyle(wb, ws, formula_style, rows = r, cols = 7)
+  }
+  
+  # Sum of column G
+  writeFormula(wb, ws, sprintf("SUM(G%d:G%d)", iter1_row + 2, iter1_data_end), startRow = sum1_row, startCol = 7)
+  addStyle(wb, ws, result_style, rows = sum1_row, cols = 7)
+  
+  # s*1 calculation
+  writeData(wb, ws, "s*₁ = √(Σ(wi×(xi-x*₁)²) / Σwi)", startRow = result1_row + 1, startCol = 1)
+  writeFormula(wb, ws, sprintf("SQRT(G%d/E%d)", sum1_row, sum1_row), startRow = result1_row + 1, startCol = 2)
+  addStyle(wb, ws, result_style, rows = result1_row + 1, cols = 2)
+  s1_cell <- sprintf("B%d", result1_row + 1)
+  
+  # Convergence check
+  writeData(wb, ws, "Δx* = |x*₁ - x*₀|", startRow = result1_row + 3, startCol = 1)
+  writeFormula(wb, ws, sprintf("ABS(%s-%s)", x1_cell, x0_cell), startRow = result1_row + 3, startCol = 2)
+  
+  writeData(wb, ws, "Δs* = |s*₁ - s*₀|", startRow = result1_row + 4, startCol = 1)
+  writeFormula(wb, ws, sprintf("ABS(%s-%s)", s1_cell, s0_cell), startRow = result1_row + 4, startCol = 2)
+  
+  writeData(wb, ws, "Converged? (Δ < tol)", startRow = result1_row + 5, startCol = 1)
+  writeFormula(wb, ws, sprintf('IF(AND(B%d<B7,B%d<B7),"YES","NO")', result1_row + 3, result1_row + 4), 
+               startRow = result1_row + 5, startCol = 2)
+  addStyle(wb, ws, result_style, rows = result1_row + 5, cols = 2)
+  
+  # Summary section
+  summary_row <- result1_row + 8
+  writeData(wb, ws, "ITERATION SUMMARY", startRow = summary_row, startCol = 1)
+  addStyle(wb, ws, createStyle(textDecoration = "bold"), rows = summary_row, cols = 1)
+  
+  summary_headers <- c("Iteration", "x*", "s*", "Δx*", "Δs*", "Converged")
+  writeData(wb, ws, t(summary_headers), startRow = summary_row + 1, startCol = 1, colNames = FALSE)
+  addStyle(wb, ws, header_style, rows = summary_row + 1, cols = 1:6, gridExpand = TRUE)
+  
+  writeData(wb, ws, 0, startRow = summary_row + 2, startCol = 1)
+  writeFormula(wb, ws, sprintf("=%s", x0_cell), startRow = summary_row + 2, startCol = 2)
+  writeFormula(wb, ws, sprintf("=%s", s0_cell), startRow = summary_row + 2, startCol = 3)
+  writeData(wb, ws, "-", startRow = summary_row + 2, startCol = 4)
+  writeData(wb, ws, "-", startRow = summary_row + 2, startCol = 5)
+  writeData(wb, ws, "-", startRow = summary_row + 2, startCol = 6)
+  
+  writeData(wb, ws, 1, startRow = summary_row + 3, startCol = 1)
+  writeFormula(wb, ws, sprintf("=%s", x1_cell), startRow = summary_row + 3, startCol = 2)
+  writeFormula(wb, ws, sprintf("=%s", s1_cell), startRow = summary_row + 3, startCol = 3)
+  writeFormula(wb, ws, sprintf("=B%d", result1_row + 3), startRow = summary_row + 3, startCol = 4)
+  writeFormula(wb, ws, sprintf("=B%d", result1_row + 4), startRow = summary_row + 3, startCol = 5)
+  writeFormula(wb, ws, sprintf("=B%d", result1_row + 5), startRow = summary_row + 3, startCol = 6)
+  addStyle(wb, ws, result_style, rows = summary_row + 3, cols = 2:6, gridExpand = TRUE)
+  
+  # Final results
+  final_row <- summary_row + 6
+  writeData(wb, ws, "FINAL RESULTS (after convergence)", startRow = final_row, startCol = 1)
+  addStyle(wb, ws, createStyle(textDecoration = "bold"), rows = final_row, cols = 1)
+  
+  writeData(wb, ws, "x* (Robust Mean / Assigned Value)", startRow = final_row + 1, startCol = 1)
+  writeFormula(wb, ws, sprintf("=%s", x1_cell), startRow = final_row + 1, startCol = 2)
+  addStyle(wb, ws, result_style, rows = final_row + 1, cols = 2)
+  
+  writeData(wb, ws, "s* (Robust SD)", startRow = final_row + 2, startCol = 1)
+  writeFormula(wb, ws, sprintf("=%s", s1_cell), startRow = final_row + 2, startCol = 2)
+  addStyle(wb, ws, result_style, rows = final_row + 2, cols = 2)
+  
+  writeData(wb, ws, "Effective n (Σwi)", startRow = final_row + 3, startCol = 1)
+  writeFormula(wb, ws, sprintf("=E%d", sum1_row), startRow = final_row + 3, startCol = 2)
+  addStyle(wb, ws, result_style, rows = final_row + 3, cols = 2)
+  
+  # Formula reference
+  ref_row <- final_row + 6
+  writeData(wb, ws, "FORMULA REFERENCE (ISO 13528:2022 Annex C)", startRow = ref_row, startCol = 1)
+  addStyle(wb, ws, createStyle(textDecoration = "bold"), rows = ref_row, cols = 1)
+  
+  formulas <- data.frame(
+    step = c("Initial x*", "Initial s*", "Standardized residual", "Weights", "Updated x*", "Updated s*"),
+    formula = c("x*₀ = median(xi)", 
+                "s*₀ = 1.483 × median(|xi - median|)",
+                "ui = (xi - x*) / (1.5 × s*)",
+                "wi = 1 if |ui| ≤ 1, else wi = 1/ui²",
+                "x* = Σ(wi × xi) / Σwi",
+                "s* = √(Σ(wi × (xi - x*)²) / Σwi)"),
+    stringsAsFactors = FALSE
+  )
+  
+  for (i in seq_len(nrow(formulas))) {
+    writeData(wb, ws, formulas$step[i], startRow = ref_row + i, startCol = 1)
+    writeData(wb, ws, formulas$formula[i], startRow = ref_row + i, startCol = 2)
+  }
+  
+  setColWidths(wb, ws, cols = 1:7, widths = "auto")
+}
+
 create_pt_scores_sheet <- function(wb) {
   addWorksheet(wb, "PT_Scores")
   ws <- "PT_Scores"
@@ -422,6 +641,134 @@ create_pt_scores_sheet <- function(wb) {
   setColWidths(wb, ws, cols = 1:10, widths = "auto")
 }
 
+create_multi_pollutant_sheet <- function(wb, summary_data, hom_data) {
+  addWorksheet(wb, "Multi_Pollutant")
+  ws <- "Multi_Pollutant"
+  
+  writeData(wb, ws, "MULTI-POLLUTANT ROBUST STATISTICS COMPARISON", startRow = 1, startCol = 1)
+  addStyle(wb, ws, createStyle(fontSize = 14, textDecoration = "bold"), rows = 1, cols = 1)
+  mergeCells(wb, ws, cols = 1:10, rows = 1)
+  
+  writeData(wb, ws, "ISO 13528:2022 - Robust estimates for all pollutants at selected levels", startRow = 2, startCol = 1)
+  mergeCells(wb, ws, cols = 1:10, rows = 2)
+  
+  # Define pollutant/level combinations to showcase
+  examples <- data.frame(
+    pollutant = c("co", "no", "no2", "o3", "so2"),
+    level = c("4-μmol/mol", "121-nmol/mol", "60-nmol/mol", "80-nmol/mol", "60-nmol/mol"),
+    stringsAsFactors = FALSE
+  )
+  
+  current_row <- 4
+  
+  for (ex_idx in seq_len(nrow(examples))) {
+    poll <- examples$pollutant[ex_idx]
+    lev <- examples$level[ex_idx]
+    
+    # Get data for this pollutant/level
+    example_data <- summary_data[summary_data$pollutant == poll & summary_data$level == lev, ]
+    values <- example_data$mean_value[!is.na(example_data$mean_value)]
+    n <- length(values)
+    
+    if (n < 3) next  # Skip if not enough data
+    
+    # Section header
+    writeData(wb, ws, sprintf("%s %s (n=%d)", toupper(poll), lev, n), 
+              startRow = current_row, startCol = 1)
+    addStyle(wb, ws, createStyle(textDecoration = "bold", fgFill = "#D9E1F2"), 
+             rows = current_row, cols = 1:6, gridExpand = TRUE)
+    mergeCells(wb, ws, cols = 1:6, rows = current_row)
+    
+    # Data column header
+    writeData(wb, ws, "Values (xi)", startRow = current_row + 1, startCol = 1)
+    addStyle(wb, ws, header_style, rows = current_row + 1, cols = 1)
+    
+    # Write values
+    data_start <- current_row + 2
+    for (i in seq_along(values)) {
+      writeData(wb, ws, values[i], startRow = data_start + i - 1, startCol = 1)
+    }
+    data_end <- data_start + n - 1
+    
+    # Statistics on the right
+    stats_col <- 3
+    writeData(wb, ws, "Statistic", startRow = current_row + 1, startCol = stats_col)
+    writeData(wb, ws, "Value", startRow = current_row + 1, startCol = stats_col + 1)
+    writeData(wb, ws, "Formula", startRow = current_row + 1, startCol = stats_col + 2)
+    addStyle(wb, ws, header_style, rows = current_row + 1, cols = stats_col:(stats_col + 2), gridExpand = TRUE)
+    
+    stats_row <- current_row + 2
+    
+    writeData(wb, ws, "n", startRow = stats_row, startCol = stats_col)
+    writeFormula(wb, ws, sprintf("COUNT(A%d:A%d)", data_start, data_end), startRow = stats_row, startCol = stats_col + 1)
+    
+    writeData(wb, ws, "Median", startRow = stats_row + 1, startCol = stats_col)
+    writeFormula(wb, ws, sprintf("MEDIAN(A%d:A%d)", data_start, data_end), startRow = stats_row + 1, startCol = stats_col + 1)
+    addStyle(wb, ws, result_style, rows = stats_row + 1, cols = stats_col + 1)
+    writeData(wb, ws, "MEDIAN(xi)", startRow = stats_row + 1, startCol = stats_col + 2)
+    
+    writeData(wb, ws, "Mean", startRow = stats_row + 2, startCol = stats_col)
+    writeFormula(wb, ws, sprintf("AVERAGE(A%d:A%d)", data_start, data_end), startRow = stats_row + 2, startCol = stats_col + 1)
+    writeData(wb, ws, "AVERAGE(xi)", startRow = stats_row + 2, startCol = stats_col + 2)
+    
+    writeData(wb, ws, "SD", startRow = stats_row + 3, startCol = stats_col)
+    writeFormula(wb, ws, sprintf("STDEV.S(A%d:A%d)", data_start, data_end), startRow = stats_row + 3, startCol = stats_col + 1)
+    writeData(wb, ws, "STDEV.S(xi)", startRow = stats_row + 3, startCol = stats_col + 2)
+    
+    writeData(wb, ws, "Q1", startRow = stats_row + 4, startCol = stats_col)
+    writeFormula(wb, ws, sprintf("QUARTILE.INC(A%d:A%d,1)", data_start, data_end), startRow = stats_row + 4, startCol = stats_col + 1)
+    
+    writeData(wb, ws, "Q3", startRow = stats_row + 5, startCol = stats_col)
+    writeFormula(wb, ws, sprintf("QUARTILE.INC(A%d:A%d,3)", data_start, data_end), startRow = stats_row + 5, startCol = stats_col + 1)
+    
+    writeData(wb, ws, "IQR", startRow = stats_row + 6, startCol = stats_col)
+    writeFormula(wb, ws, sprintf("D%d-D%d", stats_row + 5, stats_row + 4), startRow = stats_row + 6, startCol = stats_col + 1)
+    writeData(wb, ws, "Q3 - Q1", startRow = stats_row + 6, startCol = stats_col + 2)
+    
+    writeData(wb, ws, "nIQR", startRow = stats_row + 7, startCol = stats_col)
+    writeFormula(wb, ws, sprintf("0.7413*D%d", stats_row + 6), startRow = stats_row + 7, startCol = stats_col + 1)
+    addStyle(wb, ws, result_style, rows = stats_row + 7, cols = stats_col + 1)
+    writeData(wb, ws, "0.7413 × IQR", startRow = stats_row + 7, startCol = stats_col + 2)
+    
+    writeData(wb, ws, "MADe", startRow = stats_row + 8, startCol = stats_col)
+    # MAD calculation requires computing |xi - median| first, approximate with formula
+    writeData(wb, ws, "(computed)", startRow = stats_row + 8, startCol = stats_col + 1)
+    writeData(wb, ws, "1.483 × median(|xi-median|)", startRow = stats_row + 8, startCol = stats_col + 2)
+    
+    current_row <- max(data_end, stats_row + 9) + 3
+  }
+  
+  # Summary comparison table
+  writeData(wb, ws, "SUMMARY COMPARISON TABLE", startRow = current_row, startCol = 1)
+  addStyle(wb, ws, createStyle(textDecoration = "bold"), rows = current_row, cols = 1)
+  
+  sum_headers <- c("Pollutant", "Level", "n", "Median", "Mean", "SD", "nIQR")
+  writeData(wb, ws, t(sum_headers), startRow = current_row + 1, startCol = 1, colNames = FALSE)
+  addStyle(wb, ws, header_style, rows = current_row + 1, cols = 1:7, gridExpand = TRUE)
+  
+  for (ex_idx in seq_len(nrow(examples))) {
+    poll <- examples$pollutant[ex_idx]
+    lev <- examples$level[ex_idx]
+    example_data <- summary_data[summary_data$pollutant == poll & summary_data$level == lev, ]
+    values <- example_data$mean_value[!is.na(example_data$mean_value)]
+    n <- length(values)
+    
+    if (n >= 3) {
+      r <- current_row + 1 + ex_idx
+      writeData(wb, ws, toupper(poll), startRow = r, startCol = 1)
+      writeData(wb, ws, lev, startRow = r, startCol = 2)
+      writeData(wb, ws, n, startRow = r, startCol = 3)
+      writeData(wb, ws, round(median(values), 4), startRow = r, startCol = 4)
+      writeData(wb, ws, round(mean(values), 4), startRow = r, startCol = 5)
+      writeData(wb, ws, round(sd(values), 4), startRow = r, startCol = 6)
+      iqr_val <- IQR(values)
+      writeData(wb, ws, round(0.7413 * iqr_val, 4), startRow = r, startCol = 7)
+    }
+  }
+  
+  setColWidths(wb, ws, cols = 1:6, widths = "auto")
+}
+
 main <- function() {
   message("Loading data files...")
   
@@ -443,6 +790,12 @@ main <- function() {
   
   message("Creating Robust Stats sheet...")
   create_robust_stats_sheet(wb, summary_data)
+  
+  message("Creating Algorithm A sheet...")
+  create_algorithm_a_sheet(wb, summary_data)
+  
+  message("Creating Multi-Pollutant sheet...")
+  create_multi_pollutant_sheet(wb, summary_data, hom_data)
   
   message("Creating PT Scores sheet...")
   create_pt_scores_sheet(wb)
