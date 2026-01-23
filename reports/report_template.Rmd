@@ -178,6 +178,10 @@ compute_homogeneity <- function(data_full, pol, lev) {
 }
 ```
 
+## 1. Introduccion
+
+Este informe presenta los resultados del Ensayo de Aptitud (EA) para la medicion de gases contaminantes criterio en aire cero, conforme a la norma ISO/IEC 17043:2023 y los metodos estadisticos de la norma ISO 13528:2022. El documento resume la informacion del esquema, la participacion, la metodologia y los resultados obtenidos.
+
 ## 1.1. Información del Proveedor y del esquema
 
 **Alcance:** Este Ensayo de Aptitud (EA) por comparación interlaboratorio abarca la medición de los gases contaminantes criterio SO₂, CO, O₃, NO y NO₂ en aire cero, según lo definido en el `r params$scheme_id`.
