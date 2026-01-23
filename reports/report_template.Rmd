@@ -178,7 +178,7 @@ compute_homogeneity <- function(data_full, pol, lev) {
 }
 ```
 
-## 1. Introduccion
+# 1. Introduccion
 
 Este informe presenta los resultados del Ensayo de Aptitud (EA) para la medicion de gases contaminantes criterio en aire cero, conforme a la norma ISO/IEC 17043:2023 y los metodos estadisticos de la norma ISO 13528:2022. El documento resume la informacion del esquema, la participacion, la metodologia y los resultados obtenidos.
 
@@ -188,11 +188,11 @@ Este informe presenta los resultados del Ensayo de Aptitud (EA) para la medicion
 
 **Objetivo Principal:** Evaluar el desempeño de los laboratorios participantes en la medición de los gases contaminantes criterio, conforme a los requisitos de la norma ISO/IEC 17043:2023 y utilizando los métodos estadísticos de la norma ISO 13528:2022.
 
-## 1.3. Confidencialidad y Uso del Informe
+## 1.2. Confidencialidad y Uso del Informe
 
 La identidad de los participantes es confidencial y solo conocida por el personal autorizado de CALAIRE involucrado en la operación del esquema de EA. Se utilizan códigos de laboratorio anonimizados en este informe para asegurar la confidencialidad, según lo estipulado en la política de confidencialidad del laboratorio. Este informe es para uso de los participantes y, cuando aplique, de sus organismos de acreditación o autoridades regulatorias. Cualquier otro uso debe ser autorizado por CALAIRE.
 
-## 1.4. Roles de Autorización y Personal Clave
+## 1.3. Roles de Autorización y Personal Clave
 
 La organización, ejecución y evaluación de este EA se realizó bajo la responsabilidad del Laboratorio CALAIRE. Los roles clave involucrados fueron:
 
@@ -201,7 +201,7 @@ La organización, ejecución y evaluación de este EA se realizó bajo la respon
 **Ingeniero Operativo:** `r params$ops_eng`  
 **Profesional de Gestión de Calidad:** `r params$quality_manager`
 
-## 1.5. Participantes e Instrumentación
+## 1.4. Participantes e Instrumentación
 
 En esta ronda del EA participaron `r length(unique(params$summary_data$participant_id)) - 1` laboratorios. A continuación, se lista a los participantes (mediante código asignado).
 
