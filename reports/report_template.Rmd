@@ -263,9 +263,9 @@ kable(final_part_df, caption = "Tabla 2. Participantes del Ensayo de Aptitud")
 if (!is.null(params$summary_data)) {
   levels_data <- params$summary_data %>%
     filter(participant_id == "ref", n_lab == params$n_lab) %>%
-    select(level, pollutant, mean_value) %>%
+    select(run, pollutant, mean_value) %>%
     pivot_wider(names_from = pollutant, values_from = mean_value) %>%
-    arrange(level)
+    arrange(run)
   
   # Rename columns for display
   colnames(levels_data)[1] <- "Corrida"
@@ -528,7 +528,7 @@ if (!is.null(params$stability_summary) && is.data.frame(params$stability_summary
 
 A continuación se presentan los resultados detallados para cada participante.
 
-```{r participant_results_loop, echo=FALSE, results='asis', fig.height=4, fig.width=8}
+```{r participant_results_loop, echo=FALSE, results='asis', fig.height=10, fig.width=8}
 if (!is.null(params$participant_data) && length(params$participant_data) > 0) {
   for (pid in names(params$participant_data)) {
     p_info <- params$participant_data[[pid]]

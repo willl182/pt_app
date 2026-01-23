@@ -184,7 +184,7 @@ server <- function(input, output, session) {
 
     # Agregar los datos crudos para obtener un único valor medio por participante/nivel
     raw_data %>%
-      group_by(participant_id, pollutant, level, n_lab) %>%
+      group_by(participant_id, pollutant, level, run, n_lab) %>%
       summarise(
         mean_value = mean(mean_value, na.rm = TRUE),
         sd_value = mean(sd_value, na.rm = TRUE),
@@ -4401,7 +4401,7 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
     }
 
     # Función auxiliar para crear gráfico combinado
-    create_combo_plot <- function(df, score_col, title_suffix, limit_lines = c(2, 3), limit_colors = c("orange", "red")) {
+    create_combo_plot <- function(df, score_col, title_suffix, limit_lines = c(2, 3), limit_colors = c("orange", "red"), show_legend = TRUE) {
       # Asegurar ordenamiento de niveles
       df <- df %>%
         mutate(level_numeric = readr::parse_number(as.character(level))) %>%
@@ -4415,9 +4415,8 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
         geom_point(aes(y = x_pt, color = "Referencia"), size = 2) +
         geom_line(aes(y = x_pt, group = 1, color = "Referencia"), linetype = "dashed") +
         scale_color_manual(values = c("Participante" = "blue", "Referencia" = "red")) +
-        labs(title = paste("Valores -", title_suffix), x = NULL, y = "Valor", color = NULL) +
-        theme_minimal() +
-        theme(legend.position = "top", axis.text.x = element_blank())
+        labs(title = paste("Valores -", title_suffix), x = "Nivel", y = "Valor", color = NULL) +
+        theme_minimal()
 
       # Gráfico Inferior: Puntaje
       p_score <- ggplot(df, aes(x = level_factor, y = .data[[score_col]], group = 1)) +
@@ -4425,8 +4424,7 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
         geom_line(color = "black") +
         geom_point(color = "black", size = 2) +
         labs(title = paste("Score -", title_suffix), x = "Nivel", y = "Score") +
-        theme_minimal() +
-        theme(axis.text.x = element_text(angle = 45, hjust = 1))
+        theme_minimal()
 
       if (!is.null(limit_lines)) {
         p_score <- p_score +
@@ -4434,8 +4432,17 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
           geom_hline(yintercept = c(-limit_lines[2], limit_lines[2]), linetype = "dashed", color = limit_colors[2])
       }
 
-      # Combinar gráficos
-      p_val / p_score + plot_layout(heights = c(1, 1))
+      # Combinar gráficos en dos columnas (Valores | Score)
+      (p_val | p_score) +
+        plot_layout(guides = "collect", widths = c(1, 1)) &
+        theme(
+          legend.position = if (show_legend) "bottom" else "none",
+          legend.margin = margin(t = 0, b = 0),
+          legend.box.spacing = unit(0.2, "cm"),
+          axis.text.x = element_text(angle = 45, hjust = 1, size = 8),
+          plot.margin = margin(t = 2, r = 5, b = 5, l = 5),
+          strip.background = element_blank()
+        )
     }
 
     # Obtener todos los participantes (excluyendo ref)
@@ -4500,8 +4507,10 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
       limit_lines <- if (metric == "En") c(1, 1) else c(2, 3)
       limit_colors <- if (metric == "En") c("red", "red") else c("orange", "red")
 
-      for (pol in pollutants) {
+      for (i in seq_along(pollutants)) {
+        pol <- pollutants[i]
         pol_data <- p_data %>% filter(pollutant == pol)
+        is_last <- i == length(pollutants)
 
         # Crear gráfico combinado único para la métrica seleccionada
         p_combo <- create_combo_plot(
@@ -4509,7 +4518,8 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
           score_col,
           paste(metric, "-score", toupper(pol)),
           limit_lines = limit_lines,
-          limit_colors = limit_colors
+          limit_colors = limit_colors,
+          show_legend = is_last
         )
 
         # Agregar título para el panel individual del contaminante si es necesario, o confiar en las etiquetas de los ejes
@@ -4519,11 +4529,11 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
         combined_plots_list[[pol]] <- p_combo
       }
 
-      # Combinar gráficos horizontalmente (Contaminantes a través de Columnas)
-      # Usar patchwork para organizarlos en 1 fila
-      final_plot <- wrap_plots(combined_plots_list, nrow = 1) +
+      # Combinar gráficos verticalmente (un contaminante por fila)
+      # Usar patchwork para organizarlos en 1 columna
+      final_plot <- wrap_plots(combined_plots_list, ncol = 1) +
         plot_annotation(
-          title = paste("Performance Summary (Pollutants Across Columns) - Participant:", pid),
+          title = paste("Performance Summary (Pollutants by Row) - Participant:", pid),
           theme = theme(plot.title = element_text(size = 14, face = "bold", hjust = 0.5))
         )
 
