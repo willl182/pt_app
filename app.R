@@ -53,10 +53,23 @@ ui <- fluidPage(
     tags$link(rel = "stylesheet", type = "text/css", href = "appR.css")
   ),
 
-  # 1. Título de la aplicación
-  titlePanel("Aplicativo para Evaluación de Ensayos de Aptitud"),
-  h3("Gases Contaminantes Criterio"),
-  h4("Laboratorio Calaire"),
+  # 1. Enhanced header with logo
+  div(class = "app-header",
+    div(class = "header-content",
+      div(class = "logo-container",
+        tags$img(src = "logo.png", class = "unal-logo", alt = "Universidad Nacional de Colombia")
+      ),
+      div(class = "title-container",
+        h1(class = "app-title", "Aplicativo para Evaluación de Ensayos de Aptitud"),
+        h3(class = "app-subtitle", "Gases Contaminantes Criterio"),
+        p(class = "app-institution",
+          "Laboratorio CALAIRE | Universidad Nacional de Colombia - Sede Medellín",
+          tags$br(),
+          "Instituto Nacional de Metrología (INM)"
+        )
+      )
+    )
+  ),
 
   # Panel desplegable para opciones de diseño
   checkboxInput("show_layout_options", "Mostrar opciones de diseño", value = FALSE),
@@ -73,8 +86,31 @@ ui <- fluidPage(
 
   # UI dinámica para el diseño principal
   uiOutput("main_layout"),
-  hr(),
-  p(em("Este aplicativo fue desarrollado en el marco del proyecto «Implementación de Ensayos de Aptitud en la Matriz Aire. Caso Gases Contaminantes Criterio», ejecutado por el Laboratorio CALAIRE de la Universidad Nacional de Colombia en alianza con el Instituto Nacional de Metrología (INM)."), style = "text-align:center; font-size:small;")
+  
+  # Enhanced footer
+  tags$footer(class = "app-footer-modern",
+    div(class = "footer-content",
+      div(class = "footer-section",
+        h4("Proyecto"),
+        p(em("Este aplicativo fue desarrollado en el marco del proyecto «Implementación de Ensayos de Aptitud en la Matriz Aire. Caso Gases Contaminantes Criterio»"))
+      ),
+      div(class = "footer-section",
+        h4("Instituciones"),
+        p("Laboratorio CALAIRE"),
+        p("Universidad Nacional de Colombia - Sede Medellín"),
+        p("Instituto Nacional de Metrología (INM)")
+      ),
+      div(class = "footer-section",
+        h4("Contacto"),
+        p(tags$a(href = "mailto:calaire_med@unal.edu.co", "calaire_med@unal.edu.co")),
+        p(tags$a(href = "https://minas.medellin.unal.edu.co/laboratorios/calaire/", 
+                 target = "_blank", "minas.medellin.unal.edu.co/laboratorios/calaire"))
+      )
+    ),
+    div(class = "footer-bottom",
+      p("© 2026 Universidad Nacional de Colombia. Todos los derechos reservados.")
+    )
+  )
 )
 
 # ===================================================================
@@ -732,38 +768,57 @@ server <- function(input, output, session) {
       widths = c(nav_width, content_width),
       "Módulos de análisis",
       tabPanel(
-        "Carga de datos",
-        h3("Carga Manual de Archivos de Datos"),
-        p("Por favor, cargue los archivos CSV necesarios para el análisis. Asegúrese de que los archivos tengan el formato correcto."),
-        fluidRow(
-          column(
-            width = 4,
-            wellPanel(
-              h4("1. Datos de Homogeneidad"),
-              fileInput("hom_file", "Cargar homogeneity.csv", accept = ".csv")
+        title = tagList(icon("upload"), "Carga de datos"),
+        value = "carga_datos",
+        div(class = "shadcn-card",
+          div(class = "shadcn-card-header",
+            h3(class = "shadcn-card-title", 
+               icon("upload"), " Carga Manual de Archivos de Datos"
+            ),
+            p(class = "shadcn-card-description",
+              "Por favor, cargue los archivos CSV necesarios para el análisis. Asegúrese de que los archivos tengan el formato correcto."
             )
           ),
-          column(
-            width = 4,
-            wellPanel(
-              h4("2. Datos de Estabilidad"),
-              fileInput("stab_file", "Cargar stability.csv", accept = ".csv")
-            )
-          ),
-          column(
-            width = 4,
-            wellPanel(
-              h4("3. Datos Consolidados de participantes"),
-              fileInput("summary_files", "Cargar summary_n*.csv", accept = ".csv", multiple = TRUE)
+          div(class = "shadcn-card-content",
+            div(class = "upload-grid",
+              div(class = "upload-item",
+                div(class = "upload-label",
+                  icon("file-csv"),
+                  span("1. Datos de Homogeneidad")
+                ),
+                fileInput("hom_file", NULL, accept = ".csv", placeholder = "homogeneity.csv")
+              ),
+              div(class = "upload-item",
+                div(class = "upload-label",
+                  icon("file-csv"),
+                  span("2. Datos de Estabilidad")
+                ),
+                fileInput("stab_file", NULL, accept = ".csv", placeholder = "stability.csv")
+              ),
+              div(class = "upload-item",
+                div(class = "upload-label",
+                  icon("file-csv"),
+                  span("3. Datos Consolidados de participantes")
+                ),
+                fileInput("summary_files", NULL, accept = ".csv", multiple = TRUE, placeholder = "summary_n*.csv")
+              )
             )
           )
         ),
-        hr(),
-        h4("Estado de los Datos Cargados"),
-        verbatimTextOutput("data_upload_status")
+        div(class = "shadcn-card",
+          div(class = "shadcn-card-header",
+            h4(class = "shadcn-card-title",
+               icon("check-circle"), " Estado de los Datos Cargados"
+            )
+          ),
+          div(class = "shadcn-card-content",
+            verbatimTextOutput("data_upload_status")
+          )
+        )
       ),
       tabPanel(
-        "Análisis de homogeneidad y estabilidad",
+        title = tagList(icon("flask"), "Análisis de homogeneidad y estabilidad"),
+        value = "analisis_hom_estab",
         sidebarLayout(
           sidebarPanel(
             width = analysis_sidebar_w,
@@ -860,7 +915,8 @@ server <- function(input, output, session) {
         )
       ),
       tabPanel(
-        "Valores Atípicos",
+        title = tagList(icon("chart-bar"), "Valores Atípicos"),
+        value = "valores_atipicos",
         h3("Resumen de valores atípicos (Grubbs)"),
         p("Tabla resumen de la prueba de Grubbs para la detección de valores atípicos en los datos de los participantes."),
         dataTableOutput("grubbs_summary_table"),
@@ -879,7 +935,8 @@ server <- function(input, output, session) {
         )
       ),
       tabPanel(
-        "Valor asignado",
+        title = tagList(icon("calculator"), "Valor asignado"),
+        value = "valor_asignado",
         sidebarLayout(
           sidebarPanel(
             width = analysis_sidebar_w,
@@ -950,7 +1007,8 @@ server <- function(input, output, session) {
         )
       ),
       tabPanel(
-        "Puntajes PT",
+        title = tagList(icon("star"), "Puntajes PT"),
+        value = "puntajes_pt",
         sidebarLayout(
           sidebarPanel(
             width = analysis_sidebar_w,
@@ -986,7 +1044,8 @@ server <- function(input, output, session) {
         )
       ),
       tabPanel(
-        "Informe global",
+        title = tagList(icon("table"), "Informe global"),
+        value = "informe_global",
         sidebarLayout(
           sidebarPanel(
             width = analysis_sidebar_w,
@@ -1104,7 +1163,8 @@ server <- function(input, output, session) {
         )
       ),
       tabPanel(
-        "Generación de informes",
+        title = tagList(icon("file-pdf"), "Generación de informes"),
+        value = "generacion_informes",
         sidebarLayout(
           sidebarPanel(
             width = 3,
@@ -3737,7 +3797,8 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
       })
 
       tabPanel(
-        pid,
+        title = tagList(icon("user"), pid),
+        value = paste0("participant_", safe_id),
         h4("Resumen"),
         dataTableOutput(table_id),
         hr(),
