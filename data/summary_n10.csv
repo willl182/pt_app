@@ -1,4 +1,4 @@
-pollutant,level,concentration,participant_id,replicate,sample_group,mean_value,sd_value
+pollutant,run,level,participant_id,replicate,sample_group,mean_value,sd_value
 co,corrida_1,0-μmol/mol,part_1,2,1-10,-0.01176346849,0.0269861272
 co,corrida_1,0-μmol/mol,part_1,2,11-20,-0.03322167804,0.02648450906
 co,corrida_1,0-μmol/mol,part_1,2,21-30,-0.02855283019,0.02784318375
