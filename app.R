@@ -71,6 +71,10 @@ ui <- fluidPage(
     )
   ),
 
+
+  # UI dinámica para el diseño principal
+  uiOutput("main_layout"),
+
   # Panel desplegable para opciones de diseño
   checkboxInput("show_layout_options", "Mostrar opciones de diseño", value = FALSE),
   conditionalPanel(
@@ -83,9 +87,6 @@ ui <- fluidPage(
     )
   ),
   hr(),
-
-  # UI dinámica para el diseño principal
-  uiOutput("main_layout"),
   
   # Enhanced footer
   tags$footer(class = "app-footer-modern",
@@ -1147,7 +1148,8 @@ server <- function(input, output, session) {
         )
       ),
       tabPanel(
-        "Participantes",
+        title = tagList(tags$i(class = "fa-regular fa-user"), "Participantes"),
+        value = "participantes",
         sidebarLayout(
           sidebarPanel(
             width = analysis_sidebar_w,
@@ -1184,7 +1186,7 @@ server <- function(input, output, session) {
             helpText("Formato: Codigo_Lab, Analizador_SO2, Analizador_CO, Analizador_O3, Analizador_NO_NO2"),
             hr(),
             h4("Descarga"),
-            radioButtons("report_format", "Formato:", choices = c("Word (DOCX)" = "word", "HTML" = "html"), selected = "word"),
+            radioButtons("report_format", "Formato:", choices = c("Word (DOCX)" = "word"), selected = "word"),
             downloadButton("download_report", "Descargar informe", class = "btn-success btn-block")
           ),
           mainPanel(
@@ -1215,11 +1217,16 @@ server <- function(input, output, session) {
                 )
               ),
               tabPanel(
-                "Vista Previa",
+                "2. Vista Previa",
                 br(),
                 h4("Vista Previa del Estado"),
                 uiOutput("report_status"),
-                verbatimTextOutput("report_preview_summary")
+                verbatimTextOutput("report_preview_summary"),
+                hr(),
+                h4("Vista Previa del Informe"),
+                actionButton("generate_preview", "Generar Vista Previa", class = "btn-primary"),
+                uiOutput("preview_loading"),
+                uiOutput("pdf_preview_container")
               )
             )
           )
@@ -4665,12 +4672,131 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
     cat(sprintf("Participantes evaluados: %d\n", nrow(scores$scores)))
   })
 
+  # --- Report Preview Logic ---
+  preview_file_path <- reactiveVal(NULL)
+  preview_loading_state <- reactiveVal(FALSE)
+
+  observeEvent(input$generate_preview, {
+    preview_loading_state(TRUE)
+    preview_file_path(NULL)
+    
+    
+    tryCatch({
+      if (!requireNamespace("rmarkdown", quietly = TRUE)) {
+        showNotification("El paquete 'rmarkdown' es requerido.", type = "error")
+        preview_loading_state(FALSE)
+        return()
+      }
+      
+      template_path <- file.path("reports", "report_template.Rmd")
+      if (!file.exists(template_path)) {
+        showNotification("No se encontró la plantilla del informe.", type = "error")
+        preview_loading_state(FALSE)
+        return()
+      }
+      
+      # Create output directory in www for serving - use absolute path
+      app_dir <- getwd()
+      preview_dir <- file.path(app_dir, "www", "preview")
+      if (!dir.exists(preview_dir)) {
+        dir.create(preview_dir, recursive = TRUE, showWarnings = FALSE)
+      }
+      
+      # Generate unique filename based on HTML preview
+      file_ext <- "html"
+      preview_filename <- paste0("preview_", format(Sys.time(), "%Y%m%d_%H%M%S"), ".", file_ext)
+      preview_file_abs <- file.path(preview_dir, preview_filename)
+      
+      temp_dir <- tempdir()
+      temp_report <- file.path(temp_dir, "report_template.Rmd")
+      file.copy(template_path, temp_report, overwrite = TRUE)
+      
+      params <- list(
+        hom_data = hom_data_full(),
+        stab_data = stab_data_full(),
+        summary_data = pt_prep_data(),
+        metric = input$report_metric,
+        method = input$report_method,
+        pollutant = NULL,
+        level = input$report_level,
+        n_lab = input$report_n_lab,
+        k_factor = input$report_k,
+        scheme_id = input$report_scheme_id,
+        report_id = input$report_id,
+        issue_date = input$report_date,
+        period = input$report_period,
+        coordinator = input$report_coordinator,
+        quality_pro = input$report_quality_pro,
+        ops_eng = input$report_ops_eng,
+        quality_manager = input$report_quality_manager,
+        participants_data = participants_instrumentation(),
+        grubbs_summary = grubbs_summary(),
+        xpt_summary = report_xpt_summary(),
+        homogeneity_summary = report_homogeneity_summary(),
+        stability_summary = report_stability_summary(),
+        score_summary = report_score_summary(),
+        heatmaps = report_heatmaps(),
+        participant_data = report_participant_data(),
+        metrological_compatibility = metrological_compatibility_data(),
+        metrological_compatibility_method = input$report_metrological_compatibility
+      )
+      
+      # Select output format
+      output_format <- "html_document"
+      
+      rmarkdown::render(
+        temp_report,
+        output_format = output_format,
+        output_file = preview_file_abs,
+        params = params,
+        envir = new.env(parent = globalenv())
+      )
+      
+      # Store relative path for browser
+      preview_file_path(paste0("preview/", preview_filename))
+      showNotification("Vista previa HTML generada correctamente.", type = "message")
+      
+    }, error = function(e) {
+      error_msg <- e$message
+      showNotification(paste("Error generando vista previa:", error_msg), type = "error", duration = 10)
+    })
+    
+    preview_loading_state(FALSE)
+  })
+
+  output$preview_loading <- renderUI({
+    if (preview_loading_state()) {
+      format_text <- "HTML"
+      div(class = "alert alert-info", style = "margin-top: 15px;",
+        icon("spinner", class = "fa-spin"), paste0(" Generando vista previa ", format_text, "... Por favor espere.")
+      )
+    }
+  })
+
+  output$pdf_preview_container <- renderUI({
+    file_path <- preview_file_path()
+    if (is.null(file_path)) {
+      return(div(class = "text-muted", style = "margin-top: 15px;", 
+        "Haga clic en 'Generar Vista Previa' para ver el informe."
+      ))
+    }
+    
+    # Embed HTML preview using iframe
+    div(class = "well", style = "margin-top: 15px; padding: 0; overflow: hidden; background: white; border: 2px solid #FDB913;",
+      tags$iframe(
+        src = file_path,
+        style = "width: 100%; height: 800px; border: none; display: block;"
+      ),
+      p(class = "text-muted", style = "margin: 10px;",
+        "Si el documento no se visualiza correctamente, ",
+        tags$a(href = file_path, target = "_blank", "haga clic aquí para abrirlo en una nueva pestaña.")
+      )
+    )
+  })
+
   output$download_report <- downloadHandler(
     filename = function() {
-      ext <- switch(input$report_format,
-        html = "html",
-        word = "docx"
-      )
+      ext <- "docx"
 
       # Construct filename with parameters: n_lab-metric-method-compatibility
       # Example: Informe_EA_2025-12-02_13-zeta-2a-2a
@@ -4700,10 +4826,7 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
       file.copy(template_path, temp_report, overwrite = TRUE)
 
       # Determine output format
-      output_format <- switch(input$report_format,
-        html = "html_document",
-        word = "word_document"
-      )
+      output_format <- "word_document"
 
       params <- list(
         hom_data = hom_data_full(),
