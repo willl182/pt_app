@@ -9,24 +9,23 @@ The application is refactored to implement a **separation of concerns**:
 ![Application Screenshot](docs/images/app_screenshot_placeholder.png)
 *Figure 1: Overview of the PT Data Analysis Application Dashboard*
 
+> **Note**: Screenshots may need to be updated to reflect the current UI design with modern shadcn-inspired components, updated header/footer, and enhanced styling.
+
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│  Aplicativo para Evaluación de Ensayos de Aptitud             │
-│  Gases Contaminantes Criterio                                 │
-│  Laboratorio Calaire                                           │
+│  [Logo] Aplicativo para Evaluación de Ensayos de Aptitud       │
+│         Gases Contaminantes Criterio                           │
+│         Laboratorio Calaire                                     │
 ├─────────────────────────────────────────────────────────────────┤
 │  [☰ Carga de Datos] [Homogeneidad] [Estabilidad] [Valor Asig.] │
 │  [Puntajes PT] [Informe Global] [Participantes] [Informes]    │
 ├─────────────────────────────────────────────────────────────────┤
-│  Sidebar                                                        │
-│  ├── Homogeneity file upload                                   │
-│  ├── Stability file upload                                     │
-│  └── Participant data upload                                   │
+│  Sidebar                      │  Main Content Area              │
+│  ├── shadcn-style cards       │  ├── Enhanced DataTables        │
+│  ├── File upload zones        │  ├── Interactive plots          │
+│  └── Modern form controls     │  └── shadcn-style alerts/badges │
 ├─────────────────────────────────────────────────────────────────┤
-│  Main Content Area                                              │
-│  ├── Data tables                                                │
-│  ├── Interactive plots                                         │
-│  └── Analysis results                                           │
+│  Footer: © 2025 INM / Laboratorio CALAIRE - MIT License        │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
@@ -165,6 +164,22 @@ Calculates reference values and participant performance scores.
 *   **Informe Global:** Heatmap visualization of results across all levels and pollutants.
 *   **Generación de informes:** Interface to configure and download the RMarkdown final report.
 
+### UI Components
+
+The application uses a modern design system with shadcn-inspired components:
+
+| Component | Description | CSS Reference |
+|-----------|-------------|---------------|
+| Header | Logo + title with gradient border | Lines 1253-1316 |
+| Cards | Elevated containers with subtle shadows | Lines 1105-1168 |
+| Alerts | Status messages (info, warning, success, danger) | Lines 1169-1214 |
+| Badges | Inline status indicators | Lines 1215-1252 |
+| Upload zones | Drag-and-drop file upload styling | Lines 1317-1382 |
+| DataTables | Enhanced tables with modern styling | Lines 1383-1430 |
+| Footer | Centered copyright with gradient border | Lines 1431-1458 |
+
+For complete CSS documentation, see [18_ui.md](18_ui.md).
+
 ---
 
 ## Example Data
@@ -205,12 +220,13 @@ Sample data files are provided in the `data/` directory:
 12. [Participant Detail](11_participantes.md) - Individual results
 13. [Report Generation](12_generacion_informes.md) - RMarkdown export
 14. [Outlier Detection](13_valores_atipicos.md) - Grubbs test
-15. [Report Template](14_report_template.md) - RMarkdown structure
+15. [Report Template](14_report_template.md) - RMarkdown structure (metrological compatibility)
 
 ### Advanced Topics
 16. [System Architecture](15_architecture.md) - Reactive dependency graph, performance optimization
 17. [Customization Guide](16_customization.md) - Theme, layout, extending ptcalc
-18. [Troubleshooting & FAQ](17_troubleshooting.md) - Common errors, data format issues
+18. [UI & CSS Reference](18_ui.md) - shadcn components, CSS architecture (1458 lines)
+19. [Troubleshooting & FAQ](17_troubleshooting.md) - Common errors, data format issues
 
 ---
 
@@ -274,7 +290,8 @@ The server function contains the logic for data processing:
 | Version | Date | Changes |
 |---------|------|---------|
 | 0.1.0 | 2024 | Initial refactored release with ptcalc package separation |
-| - | 2025 | Documentation upgrade (Phase 1) |
+| 0.2.0 | 2025 | Documentation upgrade (Phase 1) |
+| 0.3.0 | 2025 | Modern UI redesign (shadcn components, header/footer), metrological compatibility in reports |
 
 ---
 

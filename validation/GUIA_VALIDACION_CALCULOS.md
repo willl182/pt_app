@@ -138,7 +138,7 @@ donde σ_allowed² = c²
 ### Fórmulas Principales
 
 ```
-Diferencia = |media_estabilidad - media_homogeneidad|
+Diferencia (Dmax) = |media_estabilidad - media_homogeneidad|
 c_stab = 0.3 × σ_pt
 
 Criterio: Diferencia ≤ c_stab
@@ -152,15 +152,24 @@ u_stab_mean = SD(datos_stab) / √n_stab
 c_stab_expanded = c_stab + 2 × √(u_hom_mean² + u_stab_mean²)
 ```
 
+#### Incertidumbre por Estabilidad (u_stab)
+
+```
+u_stab = Dmax / √3
+```
+
+donde Dmax = |media_homogeneidad - media_estabilidad|
+
 ### Tabla de Validación Estabilidad
 
 | Parámetro | Símbolo | Fórmula | Valor Esperado |
 |-----------|---------|---------|----------------|
 | Media homogeneidad | ȳ₁ | PROMEDIO(medias_hom) | - |
 | Media estabilidad | ȳ₂ | PROMEDIO(medias_stab) | - |
-| Diferencia | D | ABS(ȳ₁ - ȳ₂) | - |
+| Diferencia (Dmax) | Dmax | ABS(ȳ₁ - ȳ₂) | - |
 | Criterio | c_stab | 0.3 × σ_pt | - |
-| Evaluación | - | D ≤ c_stab ? | CUMPLE/NO CUMPLE |
+| u_stab | u_stab | Dmax / √3 | - |
+| Evaluación | - | Dmax ≤ c_stab ? | CUMPLE/NO CUMPLE |
 
 ---
 
@@ -221,9 +230,12 @@ s*_nuevo = √(Σ(wi × (xi - x*_nuevo)²) / Σwi)
 | x_pt | Valor asignado (del laboratorio de referencia o consenso) |
 | σ_pt | Desviación estándar para la evaluación de aptitud |
 | u_xpt | Incertidumbre estándar del valor asignado |
+| u_xpt_def | Incertidumbre definitiva del valor asignado (incluye u_hom y u_stab) |
+| u_hom | Incertidumbre por homogeneidad (= ss, desviación estándar entre muestras) |
+| u_stab | Incertidumbre por estabilidad (= Dmax / √3) |
 | u_x | Incertidumbre estándar del participante (sd_value/√m) |
 | U_x | Incertidumbre expandida del participante (k × u_x) |
-| U_xpt | Incertidumbre expandida del valor asignado (k × u_xpt) |
+| U_xpt | Incertidumbre expandida del valor asignado (k × u_xpt_def) |
 | k | Factor de cobertura (típicamente 2) |
 
 ### Cálculo de u_xpt
@@ -233,6 +245,17 @@ u_xpt = 1.25 × MADe / √n
 ```
 
 donde n = número de datos usados para calcular MADe.
+
+### Cálculo de u_xpt_def (Incertidumbre Definitiva)
+
+```
+u_xpt_def = √(u_xpt² + u_hom² + u_stab²)
+```
+
+Esta incertidumbre definitiva incorpora las contribuciones de:
+- u_xpt: incertidumbre del valor asignado
+- u_hom: incertidumbre por heterogeneidad (= ss)
+- u_stab: incertidumbre por inestabilidad (= Dmax / √3)
 
 ---
 

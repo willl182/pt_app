@@ -9,24 +9,23 @@ La aplicación ha sido refactorizada para implementar una **separación de respo
 ![Captura de pantalla de la aplicación](../docs/images/app_screenshot_placeholder.png)
 *Figura 1: Vista general del tablero de la aplicación de análisis de datos de PT*
 
+> **Nota**: Las capturas de pantalla pueden necesitar actualización para reflejar el diseño actual de la UI con componentes modernos estilo shadcn, encabezado/pie de página actualizados y estilos mejorados.
+
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│  Aplicativo para Evaluación de Ensayos de Aptitud             │
-│  Gases Contaminantes Criterio                                 │
-│  Laboratorio Calaire                                           │
+│  [Logo] Aplicativo para Evaluación de Ensayos de Aptitud       │
+│         Gases Contaminantes Criterio                           │
+│         Laboratorio Calaire                                     │
 ├─────────────────────────────────────────────────────────────────┤
 │  [☰ Carga de Datos] [Homogeneidad] [Estabilidad] [Valor Asig.] │
 │  [Puntajes PT] [Informe Global] [Participantes] [Informes]    │
 ├─────────────────────────────────────────────────────────────────┤
-│  Panel Lateral                                                  │
-│  ├── Carga de archivo de homogeneidad                          │
-│  ├── Carga de archivo de estabilidad                           │
-│  └── Carga de datos de participantes                           │
+│  Panel Lateral                  │  Área de Contenido Principal  │
+│  ├── Tarjetas estilo shadcn     │  ├── DataTables mejoradas     │
+│  ├── Zonas de carga de archivos │  ├── Gráficos interactivos    │
+│  └── Controles de formulario    │  └── Alertas/badges shadcn    │
 ├─────────────────────────────────────────────────────────────────┤
-│  Área de Contenido Principal                                     │
-│  ├── Tablas de datos                                            │
-│  ├── Gráficos interactivos                                      │
-│  └── Resultados del análisis                                     │
+│  Pie de página: © 2025 INM / Laboratorio CALAIRE - Licencia MIT│
 └─────────────────────────────────────────────────────────────────┘
 ```
 
@@ -165,6 +164,22 @@ Calcula los valores de referencia y los puntajes de desempeño de los participan
 *   **Informe Global:** Visualización de mapa de calor de los resultados en todos los niveles y contaminantes.
 *   **Generación de informes:** Interfaz para configurar y descargar el informe final en RMarkdown.
 
+### Componentes de la UI
+
+La aplicación utiliza un sistema de diseño moderno con componentes inspirados en shadcn:
+
+| Componente | Descripción | Referencia CSS |
+|-----------|-------------|---------------|
+| Encabezado | Logo + título con borde degradado | Líneas 1253-1316 |
+| Tarjetas | Contenedores elevados con sombras sutiles | Líneas 1105-1168 |
+| Alertas | Mensajes de estado (info, warning, success, danger) | Líneas 1169-1214 |
+| Badges | Indicadores de estado en línea | Líneas 1215-1252 |
+| Zonas de carga | Estilo de arrastrar y soltar archivos | Líneas 1317-1382 |
+| DataTables | Tablas mejoradas con estilo moderno | Líneas 1383-1430 |
+| Pie de página | Copyright centrado con borde degradado | Líneas 1431-1458 |
+
+Para la documentación completa de CSS, consulte [18_ui.md](../18_ui.md).
+
 ---
 
 ## Datos de Ejemplo
@@ -205,12 +220,13 @@ Se proporcionan archivos de datos de muestra en el directorio `data/`:
 12. [Detalle del Participante](../11_participantes.md) - Resultados individuales
 13. [Generación de Informes](../12_generacion_informes.md) - Exportación a RMarkdown
 14. [Detección de Valores Atípicos](../13_valores_atipicos.md) - Prueba de Grubbs
-15. [Plantilla de Informe](../14_report_template.md) - Estructura de RMarkdown
+15. [Plantilla de Informe](../14_report_template.md) - Estructura de RMarkdown (compatibilidad metrológica)
 
 ### Temas Avanzados
 16. [Arquitectura del Sistema](../15_architecture.md) - Grafo de dependencias reactivas, optimización del rendimiento
 17. [Guía de Personalización](../16_customization.md) - Tema, diseño, extensión de ptcalc
-18. [Solución de Problemas y Preguntas Frecuentes](../17_troubleshooting.md) - Errores comunes, problemas de formato de datos
+18. [Referencia de UI y CSS](../18_ui.md) - Componentes shadcn, arquitectura CSS (1458 líneas)
+19. [Solución de Problemas y Preguntas Frecuentes](../17_troubleshooting.md) - Errores comunes, problemas de formato de datos
 
 ---
 
@@ -274,7 +290,8 @@ La función del servidor contiene la lógica para el procesamiento de datos:
 | Versión | Fecha | Cambios |
 |---------|------|---------|
 | 0.1.0 | 2024 | Versión refactorizada inicial con separación del paquete ptcalc |
-| - | 2025 | Actualización de documentación (Fase 1) |
+| 0.2.0 | 2025 | Actualización de documentación (Fase 1) |
+| 0.3.0 | 2025 | Rediseño de UI moderno (componentes shadcn, encabezado/pie de página), compatibilidad metrológica en informes |
 
 ---
 

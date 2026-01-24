@@ -73,7 +73,7 @@ pt_app/
 │   └── man/              # Documentación .Rd
 ├── data/                 # Archivos CSV de ejemplo
 ├── www/                  # Recursos estáticos
-│   └── appR.css          # Hoja de estilos (913 líneas)
+│   └── appR.css          # Hoja de estilos (1458 líneas, incluye shadcn)
 └── reports/              # Plantillas RMarkdown
 ```
 

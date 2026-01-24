@@ -56,8 +56,8 @@ Este glosario proporciona definiciones y traducciones (español/inglés) para lo
 | Algoritmo A | Algorithm A | - | Método de estimación robusto iterativo descrito en el Anexo C de la norma ISO 13528. |
 | Media robusta | Robust mean | $x^*$ | Media calculada utilizando estadísticos robustos (por ejemplo, Algoritmo A) para minimizar la influencia de los valores atípicos. |
 | Desviación estándar robusta | Robust standard deviation | $s^*$ | Desviación estándar calculada utilizando estadísticos robustos. |
-| nIQR | Normalized IQR | nIQR | `$0.7413 \times IQR$` , una estimación robusta de la desviación estándar. |
-| MADe | Scaled MAD | MADe | `$1.483 \times MAD$`, una estimación robusta de la desviación estándar. |
+| nIQR | Normalized IQR | nIQR | $0.7413 \times IQR$ , una estimación robusta de la desviación estándar. |
+| MADe | Scaled MAD | MADe | $1.483 \times MAD$, una estimación robusta de la desviación estándar. |
 | Rango intercuartílico | Interquartile range | IQR | Diferencia entre el tercer y primer cuartil ($Q_3 - Q_1$). |
 | Desviación absoluta mediana | Median absolute deviation | MAD | Mediana de las desviaciones absolutas respecto a la mediana: $\text{median}(|x_i - \text{median}|)$. |
 | Peso | Weight | w | Factor de influencia asignado a cada observación en el Algoritmo A. |

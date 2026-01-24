@@ -60,7 +60,7 @@ flowchart LR
 
 | Archivo | Descripción | Líneas |
 |---------|-------------|--------|
-| `app_original.R` | Copia exacta del archivo `app.R` original | ~5,000 |
+| `app_original.R` | Copia exacta del archivo `app.R` original | 5,381 |
 | `R/pt_homogeneity.R` | Funciones para análisis de homogeneidad y estabilidad | ~290 |
 | `R/pt_robust_stats.R` | Estimadores robustos (nIQR, MADe, Algoritmo A) | ~247 |
 | `R/pt_scores.R` | Cálculo de puntajes (z, z', ζ, En) | ~275 |

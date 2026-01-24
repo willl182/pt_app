@@ -49,10 +49,31 @@ ui <- fluidPage(
     code_font = font_google("JetBrains Mono")
   ),
 
-  # 1. Título de la aplicación
-  titlePanel("Aplicativo para Evaluación de Ensayos de Aptitud"),
-  h3("Gases Contaminantes Criterio"),
-  h4("Laboratorio Calaire"),
+  tags$head(
+    tags$link(rel = "stylesheet", type = "text/css", href = "appR.css")
+  ),
+
+  # 1. Enhanced header with logo
+  div(class = "app-header",
+    div(class = "header-content",
+      div(class = "logo-container",
+        tags$img(src = "logo.png", class = "unal-logo", alt = "Universidad Nacional de Colombia")
+      ),
+      div(class = "title-container",
+        h1(class = "app-title", "Aplicativo para Evaluación de Ensayos de Aptitud"),
+        h3(class = "app-subtitle", "Gases Contaminantes Criterio"),
+        p(class = "app-institution",
+          "Laboratorio CALAIRE | Universidad Nacional de Colombia - Sede Medellín",
+          tags$br(),
+          "Instituto Nacional de Metrología (INM)"
+        )
+      )
+    )
+  ),
+
+
+  # UI dinámica para el diseño principal
+  uiOutput("main_layout"),
 
   # Panel desplegable para opciones de diseño
   checkboxInput("show_layout_options", "Mostrar opciones de diseño", value = FALSE),
@@ -66,11 +87,31 @@ ui <- fluidPage(
     )
   ),
   hr(),
-
-  # UI dinámica para el diseño principal
-  uiOutput("main_layout"),
-  hr(),
-  p(em("Este aplicativo fue desarrollado en el marco del proyecto «Implementación de Ensayos de Aptitud en la Matriz Aire. Caso Gases Contaminantes Criterio», ejecutado por el Laboratorio CALAIRE de la Universidad Nacional de Colombia en alianza con el Instituto Nacional de Metrología (INM)."), style = "text-align:center; font-size:small;")
+  
+  # Enhanced footer
+  tags$footer(class = "app-footer-modern",
+    div(class = "footer-content",
+      div(class = "footer-section",
+        h4("Proyecto"),
+        p(em("Este aplicativo fue desarrollado en el marco del proyecto «Implementación de Ensayos de Aptitud en la Matriz Aire. Caso Gases Contaminantes Criterio»"))
+      ),
+      div(class = "footer-section",
+        h4("Instituciones"),
+        p("Laboratorio CALAIRE"),
+        p("Universidad Nacional de Colombia - Sede Medellín"),
+        p("Instituto Nacional de Metrología (INM)")
+      ),
+      div(class = "footer-section",
+        h4("Contacto"),
+        p(tags$a(href = "mailto:calaire_med@unal.edu.co", "calaire_med@unal.edu.co")),
+        p(tags$a(href = "https://minas.medellin.unal.edu.co/laboratorios/calaire/", 
+                 target = "_blank", "minas.medellin.unal.edu.co/laboratorios/calaire"))
+      )
+    ),
+    div(class = "footer-bottom",
+      p("© 2026 Universidad Nacional de Colombia. Todos los derechos reservados.")
+    )
+  )
 )
 
 # ===================================================================
@@ -143,7 +184,7 @@ server <- function(input, output, session) {
 
     # Agregar los datos crudos para obtener un único valor medio por participante/nivel
     raw_data %>%
-      group_by(participant_id, pollutant, level, n_lab) %>%
+      group_by(participant_id, pollutant, level, run, n_lab) %>%
       summarise(
         mean_value = mean(mean_value, na.rm = TRUE),
         sd_value = mean(sd_value, na.rm = TRUE),
@@ -728,38 +769,57 @@ server <- function(input, output, session) {
       widths = c(nav_width, content_width),
       "Módulos de análisis",
       tabPanel(
-        "Carga de datos",
-        h3("Carga Manual de Archivos de Datos"),
-        p("Por favor, cargue los archivos CSV necesarios para el análisis. Asegúrese de que los archivos tengan el formato correcto."),
-        fluidRow(
-          column(
-            width = 4,
-            wellPanel(
-              h4("1. Datos de Homogeneidad"),
-              fileInput("hom_file", "Cargar homogeneity.csv", accept = ".csv")
+        title = tagList(icon("upload"), "Carga de datos"),
+        value = "carga_datos",
+        div(class = "shadcn-card",
+          div(class = "shadcn-card-header",
+            h3(class = "shadcn-card-title", 
+               icon("upload"), " Carga Manual de Archivos de Datos"
+            ),
+            p(class = "shadcn-card-description",
+              "Por favor, cargue los archivos CSV necesarios para el análisis. Asegúrese de que los archivos tengan el formato correcto."
             )
           ),
-          column(
-            width = 4,
-            wellPanel(
-              h4("2. Datos de Estabilidad"),
-              fileInput("stab_file", "Cargar stability.csv", accept = ".csv")
-            )
-          ),
-          column(
-            width = 4,
-            wellPanel(
-              h4("3. Datos Consolidados de participantes"),
-              fileInput("summary_files", "Cargar summary_n*.csv", accept = ".csv", multiple = TRUE)
+          div(class = "shadcn-card-content",
+            div(class = "upload-grid",
+              div(class = "upload-item",
+                div(class = "upload-label",
+                  icon("file-csv"),
+                  span("1. Datos de Homogeneidad")
+                ),
+                fileInput("hom_file", NULL, accept = ".csv", placeholder = "homogeneity.csv")
+              ),
+              div(class = "upload-item",
+                div(class = "upload-label",
+                  icon("file-csv"),
+                  span("2. Datos de Estabilidad")
+                ),
+                fileInput("stab_file", NULL, accept = ".csv", placeholder = "stability.csv")
+              ),
+              div(class = "upload-item",
+                div(class = "upload-label",
+                  icon("file-csv"),
+                  span("3. Datos Consolidados de participantes")
+                ),
+                fileInput("summary_files", NULL, accept = ".csv", multiple = TRUE, placeholder = "summary_n*.csv")
+              )
             )
           )
         ),
-        hr(),
-        h4("Estado de los Datos Cargados"),
-        verbatimTextOutput("data_upload_status")
+        div(class = "shadcn-card",
+          div(class = "shadcn-card-header",
+            h4(class = "shadcn-card-title",
+               icon("check-circle"), " Estado de los Datos Cargados"
+            )
+          ),
+          div(class = "shadcn-card-content",
+            verbatimTextOutput("data_upload_status")
+          )
+        )
       ),
       tabPanel(
-        "Análisis de homogeneidad y estabilidad",
+        title = tagList(icon("flask"), "Análisis de homogeneidad y estabilidad"),
+        value = "analisis_hom_estab",
         sidebarLayout(
           sidebarPanel(
             width = analysis_sidebar_w,
@@ -856,7 +916,8 @@ server <- function(input, output, session) {
         )
       ),
       tabPanel(
-        "Valores Atípicos",
+        title = tagList(icon("chart-bar"), "Valores Atípicos"),
+        value = "valores_atipicos",
         h3("Resumen de valores atípicos (Grubbs)"),
         p("Tabla resumen de la prueba de Grubbs para la detección de valores atípicos en los datos de los participantes."),
         dataTableOutput("grubbs_summary_table"),
@@ -875,7 +936,8 @@ server <- function(input, output, session) {
         )
       ),
       tabPanel(
-        "Valor asignado",
+        title = tagList(icon("calculator"), "Valor asignado"),
+        value = "valor_asignado",
         sidebarLayout(
           sidebarPanel(
             width = analysis_sidebar_w,
@@ -946,10 +1008,11 @@ server <- function(input, output, session) {
         )
       ),
       tabPanel(
-        "Puntajes PT",
+        title = tagList(icon("star"), "Puntajes PT"),
+        value = "puntajes_pt",
         sidebarLayout(
           sidebarPanel(
-            width = 4,
+            width = analysis_sidebar_w,
             h4("1. Ejecutar Cálculo"),
             actionButton("scores_run", "Calcular puntajes", class = "btn-primary btn-block"),
             hr(),
@@ -959,7 +1022,7 @@ server <- function(input, output, session) {
             uiOutput("scores_level_selector")
           ),
           mainPanel(
-            width = 8,
+            width = analysis_main_w,
             tabsetPanel(
               id = "scores_tabs",
               tabPanel(
@@ -982,7 +1045,8 @@ server <- function(input, output, session) {
         )
       ),
       tabPanel(
-        "Informe global",
+        title = tagList(icon("table"), "Informe global"),
+        value = "informe_global",
         sidebarLayout(
           sidebarPanel(
             width = analysis_sidebar_w,
@@ -1084,7 +1148,8 @@ server <- function(input, output, session) {
         )
       ),
       tabPanel(
-        "Participantes",
+        title = tagList(tags$i(class = "fa-regular fa-user"), "Participantes"),
+        value = "participantes",
         sidebarLayout(
           sidebarPanel(
             width = analysis_sidebar_w,
@@ -1100,7 +1165,8 @@ server <- function(input, output, session) {
         )
       ),
       tabPanel(
-        "Generación de informes",
+        title = tagList(icon("file-pdf"), "Generación de informes"),
+        value = "generacion_informes",
         sidebarLayout(
           sidebarPanel(
             width = 3,
@@ -1120,7 +1186,7 @@ server <- function(input, output, session) {
             helpText("Formato: Codigo_Lab, Analizador_SO2, Analizador_CO, Analizador_O3, Analizador_NO_NO2"),
             hr(),
             h4("Descarga"),
-            radioButtons("report_format", "Formato:", choices = c("Word (DOCX)" = "word", "HTML" = "html"), selected = "word"),
+            radioButtons("report_format", "Formato:", choices = c("Word (DOCX)" = "word"), selected = "word"),
             downloadButton("download_report", "Descargar informe", class = "btn-success btn-block")
           ),
           mainPanel(
@@ -1151,11 +1217,16 @@ server <- function(input, output, session) {
                 )
               ),
               tabPanel(
-                "Vista Previa",
+                "2. Vista Previa",
                 br(),
                 h4("Vista Previa del Estado"),
                 uiOutput("report_status"),
-                verbatimTextOutput("report_preview_summary")
+                verbatimTextOutput("report_preview_summary"),
+                hr(),
+                h4("Vista Previa del Informe"),
+                actionButton("generate_preview", "Generar Vista Previa", class = "btn-primary"),
+                uiOutput("preview_loading"),
+                uiOutput("pdf_preview_container")
               )
             )
           )
@@ -3733,7 +3804,8 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
       })
 
       tabPanel(
-        pid,
+        title = tagList(icon("user"), pid),
+        value = paste0("participant_", safe_id),
         h4("Resumen"),
         dataTableOutput(table_id),
         hr(),
@@ -4329,7 +4401,7 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
     }
 
     # Función auxiliar para crear gráfico combinado
-    create_combo_plot <- function(df, score_col, title_suffix, limit_lines = c(2, 3), limit_colors = c("orange", "red")) {
+    create_combo_plot <- function(df, score_col, title_suffix, limit_lines = c(2, 3), limit_colors = c("orange", "red"), show_legend = TRUE) {
       # Asegurar ordenamiento de niveles
       df <- df %>%
         mutate(level_numeric = readr::parse_number(as.character(level))) %>%
@@ -4343,9 +4415,8 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
         geom_point(aes(y = x_pt, color = "Referencia"), size = 2) +
         geom_line(aes(y = x_pt, group = 1, color = "Referencia"), linetype = "dashed") +
         scale_color_manual(values = c("Participante" = "blue", "Referencia" = "red")) +
-        labs(title = paste("Valores -", title_suffix), x = NULL, y = "Valor", color = NULL) +
-        theme_minimal() +
-        theme(legend.position = "top", axis.text.x = element_blank())
+        labs(title = paste("Valores -", title_suffix), x = "Nivel", y = "Valor", color = NULL) +
+        theme_minimal()
 
       # Gráfico Inferior: Puntaje
       p_score <- ggplot(df, aes(x = level_factor, y = .data[[score_col]], group = 1)) +
@@ -4353,8 +4424,7 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
         geom_line(color = "black") +
         geom_point(color = "black", size = 2) +
         labs(title = paste("Score -", title_suffix), x = "Nivel", y = "Score") +
-        theme_minimal() +
-        theme(axis.text.x = element_text(angle = 45, hjust = 1))
+        theme_minimal()
 
       if (!is.null(limit_lines)) {
         p_score <- p_score +
@@ -4362,8 +4432,17 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
           geom_hline(yintercept = c(-limit_lines[2], limit_lines[2]), linetype = "dashed", color = limit_colors[2])
       }
 
-      # Combinar gráficos
-      p_val / p_score + plot_layout(heights = c(1, 1))
+      # Combinar gráficos en dos columnas (Valores | Score)
+      (p_val | p_score) +
+        plot_layout(guides = "collect", widths = c(1, 1)) &
+        theme(
+          legend.position = if (show_legend) "bottom" else "none",
+          legend.margin = margin(t = 0, b = 0),
+          legend.box.spacing = unit(0.2, "cm"),
+          axis.text.x = element_text(angle = 45, hjust = 1, size = 8),
+          plot.margin = margin(t = 2, r = 5, b = 5, l = 5),
+          strip.background = element_blank()
+        )
     }
 
     # Obtener todos los participantes (excluyendo ref)
@@ -4428,8 +4507,10 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
       limit_lines <- if (metric == "En") c(1, 1) else c(2, 3)
       limit_colors <- if (metric == "En") c("red", "red") else c("orange", "red")
 
-      for (pol in pollutants) {
+      for (i in seq_along(pollutants)) {
+        pol <- pollutants[i]
         pol_data <- p_data %>% filter(pollutant == pol)
+        is_last <- i == length(pollutants)
 
         # Crear gráfico combinado único para la métrica seleccionada
         p_combo <- create_combo_plot(
@@ -4437,7 +4518,8 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
           score_col,
           paste(metric, "-score", toupper(pol)),
           limit_lines = limit_lines,
-          limit_colors = limit_colors
+          limit_colors = limit_colors,
+          show_legend = is_last
         )
 
         # Agregar título para el panel individual del contaminante si es necesario, o confiar en las etiquetas de los ejes
@@ -4447,11 +4529,11 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
         combined_plots_list[[pol]] <- p_combo
       }
 
-      # Combinar gráficos horizontalmente (Contaminantes a través de Columnas)
-      # Usar patchwork para organizarlos en 1 fila
-      final_plot <- wrap_plots(combined_plots_list, nrow = 1) +
+      # Combinar gráficos verticalmente (un contaminante por fila)
+      # Usar patchwork para organizarlos en 1 columna
+      final_plot <- wrap_plots(combined_plots_list, ncol = 1) +
         plot_annotation(
-          title = paste("Performance Summary (Pollutants Across Columns) - Participant:", pid),
+          title = paste("Performance Summary (Pollutants by Row) - Participant:", pid),
           theme = theme(plot.title = element_text(size = 14, face = "bold", hjust = 0.5))
         )
 
@@ -4600,12 +4682,131 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
     cat(sprintf("Participantes evaluados: %d\n", nrow(scores$scores)))
   })
 
+  # --- Report Preview Logic ---
+  preview_file_path <- reactiveVal(NULL)
+  preview_loading_state <- reactiveVal(FALSE)
+
+  observeEvent(input$generate_preview, {
+    preview_loading_state(TRUE)
+    preview_file_path(NULL)
+    
+    
+    tryCatch({
+      if (!requireNamespace("rmarkdown", quietly = TRUE)) {
+        showNotification("El paquete 'rmarkdown' es requerido.", type = "error")
+        preview_loading_state(FALSE)
+        return()
+      }
+      
+      template_path <- file.path("reports", "report_template.Rmd")
+      if (!file.exists(template_path)) {
+        showNotification("No se encontró la plantilla del informe.", type = "error")
+        preview_loading_state(FALSE)
+        return()
+      }
+      
+      # Create output directory in www for serving - use absolute path
+      app_dir <- getwd()
+      preview_dir <- file.path(app_dir, "www", "preview")
+      if (!dir.exists(preview_dir)) {
+        dir.create(preview_dir, recursive = TRUE, showWarnings = FALSE)
+      }
+      
+      # Generate unique filename based on HTML preview
+      file_ext <- "html"
+      preview_filename <- paste0("preview_", format(Sys.time(), "%Y%m%d_%H%M%S"), ".", file_ext)
+      preview_file_abs <- file.path(preview_dir, preview_filename)
+      
+      temp_dir <- tempdir()
+      temp_report <- file.path(temp_dir, "report_template.Rmd")
+      file.copy(template_path, temp_report, overwrite = TRUE)
+      
+      params <- list(
+        hom_data = hom_data_full(),
+        stab_data = stab_data_full(),
+        summary_data = pt_prep_data(),
+        metric = input$report_metric,
+        method = input$report_method,
+        pollutant = NULL,
+        level = input$report_level,
+        n_lab = input$report_n_lab,
+        k_factor = input$report_k,
+        scheme_id = input$report_scheme_id,
+        report_id = input$report_id,
+        issue_date = input$report_date,
+        period = input$report_period,
+        coordinator = input$report_coordinator,
+        quality_pro = input$report_quality_pro,
+        ops_eng = input$report_ops_eng,
+        quality_manager = input$report_quality_manager,
+        participants_data = participants_instrumentation(),
+        grubbs_summary = grubbs_summary(),
+        xpt_summary = report_xpt_summary(),
+        homogeneity_summary = report_homogeneity_summary(),
+        stability_summary = report_stability_summary(),
+        score_summary = report_score_summary(),
+        heatmaps = report_heatmaps(),
+        participant_data = report_participant_data(),
+        metrological_compatibility = metrological_compatibility_data(),
+        metrological_compatibility_method = input$report_metrological_compatibility
+      )
+      
+      # Select output format
+      output_format <- "html_document"
+      
+      rmarkdown::render(
+        temp_report,
+        output_format = output_format,
+        output_file = preview_file_abs,
+        params = params,
+        envir = new.env(parent = globalenv())
+      )
+      
+      # Store relative path for browser
+      preview_file_path(paste0("preview/", preview_filename))
+      showNotification("Vista previa HTML generada correctamente.", type = "message")
+      
+    }, error = function(e) {
+      error_msg <- e$message
+      showNotification(paste("Error generando vista previa:", error_msg), type = "error", duration = 10)
+    })
+    
+    preview_loading_state(FALSE)
+  })
+
+  output$preview_loading <- renderUI({
+    if (preview_loading_state()) {
+      format_text <- "HTML"
+      div(class = "alert alert-info", style = "margin-top: 15px;",
+        icon("spinner", class = "fa-spin"), paste0(" Generando vista previa ", format_text, "... Por favor espere.")
+      )
+    }
+  })
+
+  output$pdf_preview_container <- renderUI({
+    file_path <- preview_file_path()
+    if (is.null(file_path)) {
+      return(div(class = "text-muted", style = "margin-top: 15px;", 
+        "Haga clic en 'Generar Vista Previa' para ver el informe."
+      ))
+    }
+    
+    # Embed HTML preview using iframe
+    div(class = "well", style = "margin-top: 15px; padding: 0; overflow: hidden; background: white; border: 2px solid #FDB913;",
+      tags$iframe(
+        src = file_path,
+        style = "width: 100%; height: 800px; border: none; display: block;"
+      ),
+      p(class = "text-muted", style = "margin: 10px;",
+        "Si el documento no se visualiza correctamente, ",
+        tags$a(href = file_path, target = "_blank", "haga clic aquí para abrirlo en una nueva pestaña.")
+      )
+    )
+  })
+
   output$download_report <- downloadHandler(
     filename = function() {
-      ext <- switch(input$report_format,
-        html = "html",
-        word = "docx"
-      )
+      ext <- "docx"
 
       # Construct filename with parameters: n_lab-metric-method-compatibility
       # Example: Informe_EA_2025-12-02_13-zeta-2a-2a
@@ -4635,10 +4836,7 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
       file.copy(template_path, temp_report, overwrite = TRUE)
 
       # Determine output format
-      output_format <- switch(input$report_format,
-        html = "html_document",
-        word = "word_document"
-      )
+      output_format <- "word_document"
 
       params <- list(
         hom_data = hom_data_full(),

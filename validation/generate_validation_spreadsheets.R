@@ -238,6 +238,51 @@ create_stability_sheet <- function(wb, hom_data, stab_data) {
   writeFormula(wb, ws, sprintf('IF(B%d<=B%d,"PASS","FAIL")', assess_row + 1, assess_row + 2), startRow = assess_row + 3, startCol = 2)
   addStyle(wb, ws, result_style, rows = assess_row + 3, cols = 2)
   
+  # Additional stability uncertainty calculations (new in app.R)
+  writeData(wb, ws, "ADDITIONAL STABILITY CALCULATIONS", startRow = assess_row + 5, startCol = 1)
+  addStyle(wb, ws, createStyle(textDecoration = "bold"), rows = assess_row + 5, cols = 1)
+  
+  # u_stab = Dmax / sqrt(3)
+  writeData(wb, ws, "u_stab = Dmax / √3", startRow = assess_row + 6, startCol = 1)
+  writeFormula(wb, ws, sprintf("B%d/SQRT(3)", assess_row + 1), startRow = assess_row + 6, startCol = 2)
+  addStyle(wb, ws, result_style, rows = assess_row + 6, cols = 2)
+  writeData(wb, ws, "← Uncertainty due to instability", startRow = assess_row + 6, startCol = 3)
+  
+  # Expanded criterion (from app.R compute_stability_metrics)
+  writeData(wb, ws, "EXPANDED CRITERION", startRow = assess_row + 8, startCol = 1)
+  addStyle(wb, ws, createStyle(textDecoration = "bold"), rows = assess_row + 8, cols = 1)
+  
+  writeData(wb, ws, "SD(hom data)", startRow = assess_row + 9, startCol = 1)
+  # Get all hom values for SD calculation
+  all_hom_values <- c(hom_pivot$rep1, hom_pivot$rep2)
+  writeData(wb, ws, sd(all_hom_values), startRow = assess_row + 9, startCol = 2)
+  
+  writeData(wb, ws, "n_hom", startRow = assess_row + 10, startCol = 1)
+  writeData(wb, ws, length(all_hom_values), startRow = assess_row + 10, startCol = 2)
+  
+  writeData(wb, ws, "u_hom_mean = SD/√n_hom", startRow = assess_row + 11, startCol = 1)
+  writeFormula(wb, ws, sprintf("B%d/SQRT(B%d)", assess_row + 9, assess_row + 10), startRow = assess_row + 11, startCol = 2)
+  addStyle(wb, ws, formula_style, rows = assess_row + 11, cols = 2)
+  
+  writeData(wb, ws, "SD(stab data)", startRow = assess_row + 12, startCol = 1)
+  all_stab_values <- c(stab_pivot$rep1, stab_pivot$rep2)
+  writeData(wb, ws, sd(all_stab_values), startRow = assess_row + 12, startCol = 2)
+  
+  writeData(wb, ws, "n_stab", startRow = assess_row + 13, startCol = 1)
+  writeData(wb, ws, length(all_stab_values), startRow = assess_row + 13, startCol = 2)
+  
+  writeData(wb, ws, "u_stab_mean = SD/√n_stab", startRow = assess_row + 14, startCol = 1)
+  writeFormula(wb, ws, sprintf("B%d/SQRT(B%d)", assess_row + 12, assess_row + 13), startRow = assess_row + 14, startCol = 2)
+  addStyle(wb, ws, formula_style, rows = assess_row + 14, cols = 2)
+  
+  writeData(wb, ws, "c_expanded = c + 2×√(u_hom_mean² + u_stab_mean²)", startRow = assess_row + 15, startCol = 1)
+  writeFormula(wb, ws, sprintf("B%d+2*SQRT(B%d^2+B%d^2)", assess_row + 2, assess_row + 11, assess_row + 14), startRow = assess_row + 15, startCol = 2)
+  addStyle(wb, ws, result_style, rows = assess_row + 15, cols = 2)
+  
+  writeData(wb, ws, "diff ≤ c_expanded ?", startRow = assess_row + 16, startCol = 1)
+  writeFormula(wb, ws, sprintf('IF(B%d<=B%d,"PASS","FAIL")', assess_row + 1, assess_row + 15), startRow = assess_row + 16, startCol = 2)
+  addStyle(wb, ws, result_style, rows = assess_row + 16, cols = 2)
+  
   setColWidths(wb, ws, cols = 1:4, widths = "auto")
 }
 
@@ -552,23 +597,36 @@ create_pt_scores_sheet <- function(wb) {
   addStyle(wb, ws, createStyle(textDecoration = "bold"), rows = 4, cols = 1)
   
   params <- data.frame(
-    name = c("x_pt (assigned value)", "σ_pt (std dev for PT)", "u_xpt (std uncertainty of x_pt)", "U_xpt (expanded uncertainty, k=2)"),
-    value = c(59.9, 0.6, 0.1, 0.2)
+    name = c("x_pt (assigned value)", "σ_pt (std dev for PT)", "u_xpt (std uncertainty of x_pt)", 
+             "u_hom (uncertainty from homogeneity)", "u_stab (uncertainty from stability)",
+             "u_xpt_def (definitive uncertainty)", "U_xpt (expanded uncertainty, k=2)"),
+    value = c(59.9, 0.6, 0.1, 0.05, 0.03, NA, NA)
   )
   
   for (i in seq_len(nrow(params))) {
     writeData(wb, ws, params$name[i], startRow = 4 + i, startCol = 1)
-    writeData(wb, ws, params$value[i], startRow = 4 + i, startCol = 2)
-    addStyle(wb, ws, input_style, rows = 4 + i, cols = 2)
+    if (i <= 5) {
+      writeData(wb, ws, params$value[i], startRow = 4 + i, startCol = 2)
+      addStyle(wb, ws, input_style, rows = 4 + i, cols = 2)
+    }
   }
   
-  writeData(wb, ws, "PARTICIPANT RESULTS", startRow = 10, startCol = 1)
-  addStyle(wb, ws, createStyle(textDecoration = "bold"), rows = 10, cols = 1)
+  # u_xpt_def = sqrt(u_xpt^2 + u_hom^2 + u_stab^2)
+  writeFormula(wb, ws, "SQRT(B7^2+B8^2+B9^2)", startRow = 10, startCol = 2)
+  addStyle(wb, ws, result_style, rows = 10, cols = 2)
+  writeData(wb, ws, "← √(u_xpt² + u_hom² + u_stab²)", startRow = 10, startCol = 3)
+  
+  # U_xpt = k * u_xpt_def (k=2)
+  writeFormula(wb, ws, "2*B10", startRow = 11, startCol = 2)
+  addStyle(wb, ws, result_style, rows = 11, cols = 2)
+  
+  writeData(wb, ws, "PARTICIPANT RESULTS", startRow = 13, startCol = 1)
+  addStyle(wb, ws, createStyle(textDecoration = "bold"), rows = 13, cols = 1)
   
   headers <- c("Participant", "x (result)", "u_x (std unc)", "U_x (exp unc)", 
                "z-score", "z'-score", "ζ-score", "En-score", "z Eval", "En Eval")
-  writeData(wb, ws, t(headers), startRow = 11, startCol = 1, colNames = FALSE)
-  addStyle(wb, ws, header_style, rows = 11, cols = 1:10, gridExpand = TRUE)
+  writeData(wb, ws, t(headers), startRow = 14, startCol = 1, colNames = FALSE)
+  addStyle(wb, ws, header_style, rows = 14, cols = 1:10, gridExpand = TRUE)
   
   participants <- data.frame(
     name = c("Lab A", "Lab B", "Lab C", "Lab D", "Lab E"),
@@ -578,7 +636,7 @@ create_pt_scores_sheet <- function(wb) {
   )
   
   for (i in seq_len(nrow(participants))) {
-    r <- 11 + i
+    r <- 14 + i
     writeData(wb, ws, participants$name[i], startRow = r, startCol = 1)
     writeData(wb, ws, participants$x[i], startRow = r, startCol = 2)
     addStyle(wb, ws, input_style, rows = r, cols = 2)
@@ -590,13 +648,16 @@ create_pt_scores_sheet <- function(wb) {
     writeFormula(wb, ws, sprintf("(B%d-$B$5)/$B$6", r), startRow = r, startCol = 5)
     addStyle(wb, ws, formula_style, rows = r, cols = 5)
     
-    writeFormula(wb, ws, sprintf("(B%d-$B$5)/SQRT($B$6^2+$B$7^2)", r), startRow = r, startCol = 6)
+    # z'-score uses u_xpt_def (B10) instead of u_xpt (B7)
+    writeFormula(wb, ws, sprintf("(B%d-$B$5)/SQRT($B$6^2+$B$10^2)", r), startRow = r, startCol = 6)
     addStyle(wb, ws, formula_style, rows = r, cols = 6)
     
-    writeFormula(wb, ws, sprintf("(B%d-$B$5)/SQRT(C%d^2+$B$7^2)", r, r), startRow = r, startCol = 7)
+    # zeta-score uses u_xpt_def (B10)
+    writeFormula(wb, ws, sprintf("(B%d-$B$5)/SQRT(C%d^2+$B$10^2)", r, r), startRow = r, startCol = 7)
     addStyle(wb, ws, formula_style, rows = r, cols = 7)
     
-    writeFormula(wb, ws, sprintf("(B%d-$B$5)/SQRT(D%d^2+$B$8^2)", r, r), startRow = r, startCol = 8)
+    # En-score uses U_xpt (B11 = k*u_xpt_def)
+    writeFormula(wb, ws, sprintf("(B%d-$B$5)/SQRT(D%d^2+$B$11^2)", r, r), startRow = r, startCol = 8)
     addStyle(wb, ws, formula_style, rows = r, cols = 8)
     
     writeFormula(wb, ws, sprintf('IF(ABS(E%d)<=2,"Satisfactorio",IF(ABS(E%d)<3,"Cuestionable","No satisfactorio"))', r, r), startRow = r, startCol = 9)
@@ -606,16 +667,17 @@ create_pt_scores_sheet <- function(wb) {
     addStyle(wb, ws, formula_style, rows = r, cols = 10)
   }
   
-  ref_row <- 12 + nrow(participants) + 1
+  ref_row <- 15 + nrow(participants) + 1
   writeData(wb, ws, "FORMULA REFERENCE", startRow = ref_row, startCol = 1)
   addStyle(wb, ws, createStyle(textDecoration = "bold"), rows = ref_row, cols = 1)
   
   formulas <- data.frame(
-    name = c("z-score", "z'-score", "ζ-score (zeta)", "En-score"),
+    name = c("z-score", "z'-score", "ζ-score (zeta)", "En-score", "u_xpt_def"),
     formula = c("z = (x - x_pt) / σ_pt", 
-                "z' = (x - x_pt) / √(σ_pt² + u_xpt²)",
-                "ζ = (x - x_pt) / √(u_x² + u_xpt²)", 
-                "En = (x - x_pt) / √(U_x² + U_xpt²)")
+                "z' = (x - x_pt) / √(σ_pt² + u_xpt_def²)",
+                "ζ = (x - x_pt) / √(u_x² + u_xpt_def²)", 
+                "En = (x - x_pt) / √(U_x² + U_xpt²)",
+                "u_xpt_def = √(u_xpt² + u_hom² + u_stab²)")
   )
   
   for (i in seq_len(nrow(formulas))) {

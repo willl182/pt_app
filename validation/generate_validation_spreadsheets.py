@@ -339,6 +339,59 @@ def create_stability_sheet(wb, hom_data, stab_data):
     ws.cell(row=assess_row+3, column=2).font = FORMULA_FONT
     ws.cell(row=assess_row+3, column=2).fill = RESULT_FILL
     
+    # Additional stability uncertainty calculations (new in app.R)
+    ws.cell(row=assess_row+5, column=1, value="ADDITIONAL STABILITY CALCULATIONS")
+    ws.cell(row=assess_row+5, column=1).font = Font(bold=True)
+    
+    # u_stab = Dmax / sqrt(3)
+    ws.cell(row=assess_row+6, column=1, value="u_stab = Dmax / √3")
+    ws.cell(row=assess_row+6, column=2, value=f'=B{assess_row+1}/SQRT(3)')
+    ws.cell(row=assess_row+6, column=2).font = FORMULA_FONT
+    ws.cell(row=assess_row+6, column=2).fill = RESULT_FILL
+    ws.cell(row=assess_row+6, column=3, value="← Uncertainty due to instability")
+    
+    # Expanded criterion (from app.R compute_stability_metrics)
+    ws.cell(row=assess_row+8, column=1, value="EXPANDED CRITERION")
+    ws.cell(row=assess_row+8, column=1).font = Font(bold=True)
+    
+    # Calculate SD of all hom and stab values
+    all_hom_values = [r['rep1'] for r in hom_pivot] + [r['rep2'] for r in hom_pivot]
+    all_stab_values = [r['rep1'] for r in stab_pivot] + [r['rep2'] for r in stab_pivot]
+    
+    import statistics
+    sd_hom = statistics.stdev(all_hom_values) if len(all_hom_values) > 1 else 0
+    sd_stab = statistics.stdev(all_stab_values) if len(all_stab_values) > 1 else 0
+    
+    ws.cell(row=assess_row+9, column=1, value="SD(hom data)")
+    ws.cell(row=assess_row+9, column=2, value=sd_hom)
+    
+    ws.cell(row=assess_row+10, column=1, value="n_hom")
+    ws.cell(row=assess_row+10, column=2, value=len(all_hom_values))
+    
+    ws.cell(row=assess_row+11, column=1, value="u_hom_mean = SD/√n_hom")
+    ws.cell(row=assess_row+11, column=2, value=f'=B{assess_row+9}/SQRT(B{assess_row+10})')
+    ws.cell(row=assess_row+11, column=2).font = FORMULA_FONT
+    
+    ws.cell(row=assess_row+12, column=1, value="SD(stab data)")
+    ws.cell(row=assess_row+12, column=2, value=sd_stab)
+    
+    ws.cell(row=assess_row+13, column=1, value="n_stab")
+    ws.cell(row=assess_row+13, column=2, value=len(all_stab_values))
+    
+    ws.cell(row=assess_row+14, column=1, value="u_stab_mean = SD/√n_stab")
+    ws.cell(row=assess_row+14, column=2, value=f'=B{assess_row+12}/SQRT(B{assess_row+13})')
+    ws.cell(row=assess_row+14, column=2).font = FORMULA_FONT
+    
+    ws.cell(row=assess_row+15, column=1, value="c_expanded = c + 2×√(u_hom_mean² + u_stab_mean²)")
+    ws.cell(row=assess_row+15, column=2, value=f'=B{assess_row+2}+2*SQRT(B{assess_row+11}^2+B{assess_row+14}^2)')
+    ws.cell(row=assess_row+15, column=2).font = FORMULA_FONT
+    ws.cell(row=assess_row+15, column=2).fill = RESULT_FILL
+    
+    ws.cell(row=assess_row+16, column=1, value="diff ≤ c_expanded ?")
+    ws.cell(row=assess_row+16, column=2, value=f'=IF(B{assess_row+1}<=B{assess_row+15},"PASS","FAIL")')
+    ws.cell(row=assess_row+16, column=2).font = FORMULA_FONT
+    ws.cell(row=assess_row+16, column=2).fill = RESULT_FILL
+    
     auto_width(ws)
     return ws
 
@@ -576,9 +629,10 @@ def create_pt_scores_sheet(wb):
     
     Formulas (ISO 13528:2022 Section 10):
     - z = (x - x_pt) / σ_pt
-    - z' = (x - x_pt) / √(σ_pt² + u_xpt²)
-    - ζ = (x - x_pt) / √(u_x² + u_xpt²)
+    - z' = (x - x_pt) / √(σ_pt² + u_xpt_def²)
+    - ζ = (x - x_pt) / √(u_x² + u_xpt_def²)
     - En = (x - x_pt) / √(U_x² + U_xpt²)
+    - u_xpt_def = √(u_xpt² + u_hom² + u_stab²)
     """
     ws = wb.create_sheet("PT_Scores")
     
@@ -598,23 +652,38 @@ def create_pt_scores_sheet(wb):
         ('x_pt (assigned value)', 59.9),
         ('σ_pt (std dev for PT)', 0.6),
         ('u_xpt (std uncertainty of x_pt)', 0.1),
-        ('U_xpt (expanded uncertainty, k=2)', 0.2),
+        ('u_hom (uncertainty from homogeneity)', 0.05),
+        ('u_stab (uncertainty from stability)', 0.03),
+        ('u_xpt_def (definitive uncertainty)', None),
+        ('U_xpt (expanded uncertainty, k=2)', None),
     ]
     
     for i, (name, val) in enumerate(params, start=5):
         ws.cell(row=i, column=1, value=name)
-        ws.cell(row=i, column=2, value=val)
-        ws.cell(row=i, column=2).fill = INPUT_FILL
+        if val is not None:
+            ws.cell(row=i, column=2, value=val)
+            ws.cell(row=i, column=2).fill = INPUT_FILL
+    
+    # u_xpt_def = sqrt(u_xpt^2 + u_hom^2 + u_stab^2)
+    ws.cell(row=10, column=2, value='=SQRT(B7^2+B8^2+B9^2)')
+    ws.cell(row=10, column=2).font = FORMULA_FONT
+    ws.cell(row=10, column=2).fill = RESULT_FILL
+    ws.cell(row=10, column=3, value="← √(u_xpt² + u_hom² + u_stab²)")
+    
+    # U_xpt = k * u_xpt_def (k=2)
+    ws.cell(row=11, column=2, value='=2*B10')
+    ws.cell(row=11, column=2).font = FORMULA_FONT
+    ws.cell(row=11, column=2).fill = RESULT_FILL
     
     # Example participants
-    ws['A10'] = "PARTICIPANT RESULTS"
-    ws['A10'].font = Font(bold=True)
+    ws['A13'] = "PARTICIPANT RESULTS"
+    ws['A13'].font = Font(bold=True)
     
     headers = ['Participant', 'x (result)', 'u_x (std unc)', 'U_x (exp unc)', 
                'z-score', 'z\'-score', 'ζ-score', 'En-score', 'z Eval', 'En Eval']
     for col, h in enumerate(headers, 1):
-        ws.cell(row=11, column=col, value=h)
-    style_header_row(ws, 11, len(headers))
+        ws.cell(row=14, column=col, value=h)
+    style_header_row(ws, 14, len(headers))
     
     # Sample participant data (realistic values for SO2 ~60 nmol/mol)
     participants = [
@@ -625,7 +694,7 @@ def create_pt_scores_sheet(wb):
         ('Lab E', 58.50, 0.30, 0.60),
     ]
     
-    for i, (name, x, u_x, U_x) in enumerate(participants, start=12):
+    for i, (name, x, u_x, U_x) in enumerate(participants, start=15):
         ws.cell(row=i, column=1, value=name)
         ws.cell(row=i, column=2, value=x)
         ws.cell(row=i, column=2).fill = INPUT_FILL
@@ -638,16 +707,16 @@ def create_pt_scores_sheet(wb):
         ws.cell(row=i, column=5, value=f'=(B{i}-$B$5)/$B$6')
         ws.cell(row=i, column=5).font = FORMULA_FONT
         
-        # z'-score: (x - x_pt) / √(σ_pt² + u_xpt²)
-        ws.cell(row=i, column=6, value=f'=(B{i}-$B$5)/SQRT($B$6^2+$B$7^2)')
+        # z'-score: (x - x_pt) / √(σ_pt² + u_xpt_def²) - uses B10 for u_xpt_def
+        ws.cell(row=i, column=6, value=f'=(B{i}-$B$5)/SQRT($B$6^2+$B$10^2)')
         ws.cell(row=i, column=6).font = FORMULA_FONT
         
-        # ζ-score: (x - x_pt) / √(u_x² + u_xpt²)
-        ws.cell(row=i, column=7, value=f'=(B{i}-$B$5)/SQRT(C{i}^2+$B$7^2)')
+        # ζ-score: (x - x_pt) / √(u_x² + u_xpt_def²) - uses B10 for u_xpt_def
+        ws.cell(row=i, column=7, value=f'=(B{i}-$B$5)/SQRT(C{i}^2+$B$10^2)')
         ws.cell(row=i, column=7).font = FORMULA_FONT
         
-        # En-score: (x - x_pt) / √(U_x² + U_xpt²)
-        ws.cell(row=i, column=8, value=f'=(B{i}-$B$5)/SQRT(D{i}^2+$B$8^2)')
+        # En-score: (x - x_pt) / √(U_x² + U_xpt²) - uses B11 for U_xpt
+        ws.cell(row=i, column=8, value=f'=(B{i}-$B$5)/SQRT(D{i}^2+$B$11^2)')
         ws.cell(row=i, column=8).font = FORMULA_FONT
         
         # z evaluation
@@ -659,15 +728,16 @@ def create_pt_scores_sheet(wb):
         ws.cell(row=i, column=10).font = FORMULA_FONT
     
     # Formula reference section
-    ref_row = 12 + len(participants) + 2
+    ref_row = 15 + len(participants) + 2
     ws.cell(row=ref_row, column=1, value="FORMULA REFERENCE")
     ws.cell(row=ref_row, column=1).font = Font(bold=True)
     
     formulas = [
         ('z-score', 'z = (x - x_pt) / σ_pt'),
-        ('z\'-score', 'z\' = (x - x_pt) / √(σ_pt² + u_xpt²)'),
-        ('ζ-score (zeta)', 'ζ = (x - x_pt) / √(u_x² + u_xpt²)'),
+        ('z\'-score', 'z\' = (x - x_pt) / √(σ_pt² + u_xpt_def²)'),
+        ('ζ-score (zeta)', 'ζ = (x - x_pt) / √(u_x² + u_xpt_def²)'),
         ('En-score', 'En = (x - x_pt) / √(U_x² + U_xpt²)'),
+        ('u_xpt_def', 'u_xpt_def = √(u_xpt² + u_hom² + u_stab²)'),
     ]
     
     for i, (name, formula) in enumerate(formulas, start=ref_row+1):
