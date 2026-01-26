@@ -1,5 +1,10 @@
-"Metrica","Valor"
-"hom_ss",2.02287110993027
-"stab_diff",1.33632152733004
-"xpt_ref",2.01319093774626
-"z_part1",-0.240408332656701
+"test","resultado","valor_esperado","status"
+"calculate_z_score","1.000000","1.000000","PASS"
+"calculate_z_prime_score","0.980581","0.980581","PASS"
+"evaluate_z_score (1.5)","Satisfactorio","Satisfactorio","PASS"
+"evaluate_z_score (2.5)","Cuestionable","Cuestionable","PASS"
+"evaluate_z_score (3.5)","No satisfactorio","No satisfactorio","PASS"
+"calculate_niqr","0.148260","> 0","PASS"
+"calculate_mad_e","0.148300","> 0","PASS"
+"run_algorithm_a (convergencia)","TRUE","TRUE","PASS"
+"calculate_homogeneity_criterion","0.150000","0.150000","PASS"

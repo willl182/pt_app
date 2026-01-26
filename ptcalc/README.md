@@ -20,7 +20,7 @@ devtools::install("ptcalc")
 |---------|-------------|
 | `calculate_niqr(x)` | nIQR = 0.7413 × IQR |
 | `calculate_mad_e(x)` | MADe = 1.483 × MAD |
-| `run_algorithm_a(values, ids)` | Algoritmo A ISO 13528 |
+| `run_algorithm_a(values, ids, max_iter)` | Algoritmo A ISO 13528 (Winsorización) |
 
 ### Cálculo de Puntajes
 
@@ -37,7 +37,6 @@ devtools::install("ptcalc")
 |---------|-------------|
 | `evaluate_z_score(z)` | Clasifica: Satisfactorio / Cuestionable / No satisfactorio |
 | `evaluate_en_score(en)` | Clasifica: Satisfactorio / No satisfactorio |
-| `classify_with_en(...)` | Clasificación combinada a1-a7 |
 
 ### Homogeneidad y Estabilidad
 
@@ -56,7 +55,11 @@ library(ptcalc)
 # Algoritmo A
 valores <- c(10.1, 10.2, 9.9, 10.0, 10.3, 50.0)
 resultado <- run_algorithm_a(valores)
-cat("Media robusta:", resultado$assigned_value)
+cat("Media robusta:", resultado$assigned_value, "\n")
+cat("Desviación robusta:", resultado$robust_sd, "\n")
+
+# Ver valores winsorizados
+head(resultado$winsorized_values)
 
 # Puntaje z
 z <- calculate_z_score(x = 10.5, x_pt = 10.0, sigma_pt = 0.5)

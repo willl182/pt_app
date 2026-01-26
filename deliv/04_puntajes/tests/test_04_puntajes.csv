@@ -1,4 +1,0 @@
-case_id,x,x_pt,sigma_pt,u_xpt,u_x,U_x,U_xpt,z_expected,z_prime_expected,zeta_expected,en_expected,z_eval_expected,z_prime_eval_expected,zeta_eval_expected,en_eval_expected
-caso_1,10.5,10,0.5,0.1,0.2,0.4,0.2,1,0.980580675,2.236067978,1.118033989,Satisfactorio,Satisfactorio,Cuestionable,No satisfactorio
-caso_2,9,10,0.25,0.05,0.1,0.2,0.1,-4,-3.922322703,-8.94427191,-4.472135955,No satisfactorio,No satisfactorio,No satisfactorio,No satisfactorio
-caso_3,10.4,10,0.2,0.15,0.05,0.1,0.3,2,1.6,2.529822128,1.264911064,Cuestionable,Satisfactorio,Cuestionable,No satisfactorio

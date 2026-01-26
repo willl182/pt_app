@@ -1,8 +1,0 @@
-"prueba","valor","criterio","resultado"
-"Homogeneidad",0,"0.000157629","Cumple"
-"Estabilidad",-0.005640447,"0.000157629","No cumple"
-"z",-2.89423,"|z| ≤ 2","Alerta"
-"z'",-1.091507,"|z'| ≤ 2","Satisfactorio"
-"ζ",-0.884051,"|ζ| ≤ 2","Satisfactorio"
-"En",-0.442026,"|En| ≤ 1","Satisfactorio"
-"Participantes",4,"número de laboratorios","Informativo"

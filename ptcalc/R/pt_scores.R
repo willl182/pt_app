@@ -101,7 +101,7 @@ calculate_zeta_score <- function(x, x_pt, u_x, u_xpt) {
 #' en <- calculate_en_score(x = 10.5, x_pt = 10.0, U_x = 0.4, U_xpt = 0.2)
 #' cat("En-score:", en, "Eval:", evaluate_en_score(en))
 #'
-#' @seealso \code{\link{evaluate_en_score}}, \code{\link{classify_with_en}}
+#' @seealso \code{\link{evaluate_en_score}}
 #' @export
 calculate_en_score <- function(x, x_pt, U_x, U_xpt) {
   denominator <- sqrt(U_x^2 + U_xpt^2)
@@ -181,94 +181,4 @@ evaluate_en_score_vec <- function(en) {
   )
 }
 
-# ===================================================================
-# Combined z/En Classification (a1-a7 categories)
-# ===================================================================
 
-#' Classification labels for combined z/En evaluation
-#' @export
-PT_EN_CLASS_LABELS <- c(
-  a1 = "a1 - Totalmente satisfactorio",
-  a2 = "a2 - Satisfactorio pero conservador",
-  a3 = "a3 - Satisfactorio con MU subestimada",
-  a4 = "a4 - Cuestionable pero aceptable",
-  a5 = "a5 - Cuestionable e inconsistente",
-  a6 = "a6 - No satisfactorio pero la MU cubre la desviación",
-  a7 = "a7 - No satisfactorio (crítico)"
-)
-
-#' Classification colors for combined z/En evaluation
-#' @export
-PT_EN_CLASS_COLORS <- c(
-  a1 = "#2E7D32",
-  a2 = "#66BB6A",
-  a3 = "#9CCC65",
-  a4 = "#FFF59D",
-  a5 = "#FBC02D",
-  a6 = "#EF9A9A",
-  a7 = "#C62828",
-  mu_missing_z = "#90A4AE",
-  mu_missing_zprime = "#78909C"
-)
-
-#' Classify result using combined z-score and En-score
-#'
-#' Returns a classification code (a1-a7) based on the combination of
-#' z-score (or z'-score) and En-score, considering measurement uncertainty.
-#'
-#' @param score_val z-score or z'-score value
-#' @param en_val En-score value
-#' @param U_xi Expanded uncertainty of participant's result
-#' @param sigma_pt Standard deviation for proficiency assessment
-#' @param mu_missing Logical, TRUE if measurement uncertainty is missing
-#' @param score_label Label for the score type ("z" or "z'")
-#' @return A list with:
-#'   - code: Classification code (a1-a7 or mu_missing_*)
-#'   - label: Human-readable classification label
-#' @export
-classify_with_en <- function(score_val, en_val, U_xi, sigma_pt, mu_missing, score_label) {
-  if (!is.finite(score_val)) {
-    return(list(code = NA_character_, label = "N/A"))
-  }
-  
-  # Handle missing measurement uncertainty
-  if (isTRUE(mu_missing)) {
-    base_eval <- evaluate_z_score(score_val)
-    if (base_eval == "N/A") {
-      return(list(code = NA_character_, label = "N/A"))
-    }
-    label_key <- tolower(score_label)
-    label_key <- gsub("'", "prime", label_key)
-    label_key <- gsub("[^a-z0-9]+", "", label_key)
-    code <- paste0("mu_missing_", label_key)
-    label <- sprintf("MU ausente - solo %s: %s", score_label, base_eval)
-    return(list(code = code, label = label))
-  }
-  
-  # Validate inputs
-  if (!is.finite(en_val) || !is.finite(sigma_pt) || sigma_pt <= 0 || !is.finite(U_xi)) {
-    return(list(code = NA_character_, label = "N/A"))
-  }
-  
-  abs_score <- abs(score_val)
-  abs_en <- abs(en_val)
-  u_is_conservative <- U_xi >= (2 * sigma_pt)
-  
-  # Classification logic based on z-score and En-score combination
-  if (abs_score <= 2) {
-    # Satisfactory z-score
-    if (abs_en < 1) {
-      code <- if (u_is_conservative) "a2" else "a1"
-    } else {
-      code <- "a3"
-    }
-  } else if (abs_score < 3) {
-    # Questionable z-score
-    code <- if (abs_en < 1) "a4" else "a5"
-  } else {
-    # Unsatisfactory z-score
-    code <- if (abs_en < 1) "a6" else "a7"
-  }
-  
-  list(code = code, label = PT_EN_CLASS_LABELS[[code]])
-}

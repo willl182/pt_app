@@ -26,7 +26,6 @@ Functions for proficiency testing analysis per ISO 13528:2022 and ISO 17043:2024
 \item \code{\link{calculate_en_score}} - En-score
 \item \code{\link{evaluate_z_score}} - Evaluate z-type scores
 \item \code{\link{evaluate_en_score}} - Evaluate En-scores
-\item \code{\link{classify_with_en}} - Combined z/En classification
 }
 }
 
@@ -41,6 +40,12 @@ Functions for proficiency testing analysis per ISO 13528:2022 and ISO 17043:2024
 }
 
 \author{
-\strong{Maintainer}: CALAIRE Lab \email{calaire@unal.edu.co}
+\strong{Maintainer}: Wilson Rafael Salas Chavez \email{wrsalasc@unal.edu.co} (\href{https://orcid.org/0000-0003-4757-117X}{ORCID}) (Lead Developer)
+
+Other contributors:
+\itemize{
+  \item Universidad Nacional de Colombia (Laboratorio CALAIRE - Titular de Derechos) [copyright holder, funder]
+  \item Instituto Nacional de Metrología (Entidad Aliada) [funder]
+}
 
 }

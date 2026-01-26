@@ -305,13 +305,13 @@ cat("\n", rep("-", 50), "\n", sep = "")
 cat("Evaluación de Criterios de Estabilidad\n")
 cat(rep("-", 50), "\n", sep = "")
 
-stab_c_criterion <- 0.3 * hom_sigma_pt
+stab_c_criterion <- 0.3 * hom_MADe
 stab_c_criterion_expanded <- stab_c_criterion + 2 * sqrt(u_hom_mean^2 + u_stab_mean^2)
 
-cat(sprintf("\nCriterio básico: D ≤ 0.3 × σ_pt\n"))
-cat(sprintf("  c = 0.3 × %.6f = %.6f\n", hom_sigma_pt, stab_c_criterion))
+cat(sprintf("\nCriterio básico: D ≤ 0.3 × MADe\n"))
+cat(sprintf("  c = 0.3 × %.6f = %.6f\n", hom_MADe, stab_c_criterion))
 cat(sprintf("  D = %.6f\n", diff_hom_stab))
-cat(sprintf("  Evaluación: %.6f %s %.6f → %s\n", 
+cat(sprintf("  Evaluación: %.6f %s %.6f → %s\n",
             diff_hom_stab, ifelse(diff_hom_stab <= stab_c_criterion, "≤", ">"), 
             stab_c_criterion,
             ifelse(diff_hom_stab <= stab_c_criterion, "CUMPLE", "NO CUMPLE")))

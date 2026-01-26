@@ -31,5 +31,5 @@ cat("En-score:", en, "Eval:", evaluate_en_score(en))
 
 }
 \seealso{
-\code{\link{evaluate_en_score}}, \code{\link{classify_with_en}}
+\code{\link{evaluate_en_score}}
 }

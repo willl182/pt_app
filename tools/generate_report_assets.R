@@ -702,6 +702,22 @@ compute_scores_for_selection <- function(summary_data, target_pollutant, target_
   if (!is.null(hom_res$error)) {
     return(list(error = paste("Error obteniendo parámetros de homogeneidad:", hom_res$error)))
   }
+
+  u_hom_val <- hom_res$ss
+
+  stab_res <- tryCatch(
+    compute_stability_metrics(target_pollutant, target_level, hom_res),
+    error = function(e) list(error = conditionMessage(e))
+  )
+
+  u_stab_val <- 0
+  if (is.null(stab_res$error)) {
+    y1 <- hom_res$general_mean
+    y2 <- stab_res$stab_general_mean
+    d_max <- abs(y1 - y2)
+    u_stab_val <- d_max / sqrt(3)
+  }
+
   sigma_pt1 <- mean(ref_data$sd_value, na.rm = TRUE)
   u_xpt1 <- mean(ref_data$sd_value, na.rm = TRUE)
 
@@ -722,13 +738,13 @@ compute_scores_for_selection <- function(summary_data, target_pollutant, target_
   }
 
   combos <- list()
-  combos$ref <- compute_combo_scores(participant_data, x_pt1, sigma_pt1, u_xpt1, score_combo_info$ref, k = k_factor)
-  combos$consensus_ma <- compute_combo_scores(participant_data, median_val, sigma_pt_2a, u_xpt2a, score_combo_info$consensus_ma, k = k_factor)
-  combos$consensus_niqr <- compute_combo_scores(participant_data, median_val, sigma_pt_2b, u_xpt2b, score_combo_info$consensus_niqr, k = k_factor)
+  combos$ref <- compute_combo_scores(participant_data, x_pt1, sigma_pt1, u_xpt1, score_combo_info$ref, k = k_factor, u_hom = u_hom_val, u_stab = u_stab_val)
+  combos$consensus_ma <- compute_combo_scores(participant_data, median_val, sigma_pt_2a, u_xpt2a, score_combo_info$consensus_ma, k = k_factor, u_hom = u_hom_val, u_stab = u_stab_val)
+  combos$consensus_niqr <- compute_combo_scores(participant_data, median_val, sigma_pt_2b, u_xpt2b, score_combo_info$consensus_niqr, k = k_factor, u_hom = u_hom_val, u_stab = u_stab_val)
 
   if (is.null(algo_res$error)) {
     u_xpt3 <- 1.25 * algo_res$robust_sd / sqrt(n_part)
-    combos$algo <- compute_combo_scores(participant_data, algo_res$assigned_value, algo_res$robust_sd, u_xpt3, score_combo_info$algo, k = k_factor)
+    combos$algo <- compute_combo_scores(participant_data, algo_res$assigned_value, algo_res$robust_sd, u_xpt3, score_combo_info$algo, k = k_factor, u_hom = u_hom_val, u_stab = u_stab_val)
   } else {
     combos$algo <- list(error = algo_res$error, title = score_combo_info$algo$title, label = score_combo_info$algo$label)
   }

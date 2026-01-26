@@ -1,8 +1,0 @@
-{
-  "track_id": "doc_consolidation_20260110",
-  "type": "chore",
-  "status": "new",
-  "created_at": "2026-01-10T12:00:00Z",
-  "updated_at": "2026-01-10T12:00:00Z",
-  "description": "plan the creation of a final comprehensive documentation using 3 sources located in @gem_docs/, @claude_docs/ and @glm_docs/. use the 3 'versions' of each file (i.e. 00_glossary.md in the 3 directriess) to create a final md document that has all the features. do it in spanish"
-}

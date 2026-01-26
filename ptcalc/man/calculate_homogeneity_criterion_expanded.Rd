@@ -4,18 +4,18 @@
 \alias{calculate_homogeneity_criterion_expanded}
 \title{Calculate expanded homogeneity criterion}
 \usage{
-calculate_homogeneity_criterion_expanded(sigma_pt, sw_sq)
+calculate_homogeneity_criterion_expanded(sigma_pt, u_sigma_pt)
 }
 \arguments{
-\item{sigma_pt}{Standard deviation for proficiency assessment}
+\item{sigma_pt}{Standard deviation for proficiency assessment (from MADe)}
 
-\item{sw_sq}{Within-sample variance}
+\item{u_sigma_pt}{Uncertainty of sigma_pt}
 }
 \value{
 The expanded criterion value
 }
 \description{
-c_expanded = sqrt(sigma_allowed_sq * 1.88 + sw_sq * 1.01)
+c_expanded = c_criterion * sqrt(1 + (u_sigma_pt/sigma_pt)^2)
 }
 \details{
 Reference: ISO 13528:2022, Section 9.2.4

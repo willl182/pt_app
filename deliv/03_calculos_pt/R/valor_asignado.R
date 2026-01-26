@@ -1,161 +1,251 @@
 # ===================================================================
-# Cálculo de valor asignado (x_pt) y sigma_pt
-# ISO 13528:2022
-# Archivo independiente sin dependencias externas
+# Titulo: valor_asignado.R
+# Entregable: 03
+# Descripcion: Funciones standalone para cálculo de valor asignado según ISO 13528:2022
+# Entrada: data/summary_n4.csv
+# Salida: Valor asignado por cada método (referencia, consenso MADe, consenso nIQR, Algoritmo A)
+# Referencia: ISO 13528:2022, Sección 8
 # ===================================================================
 
-cargar_datos_resumen <- function(ruta_datos = "../../data/summary_n4.csv") {
-  datos <- read.csv(ruta_datos, stringsAsFactors = FALSE)
-  required_cols <- c("pollutant", "level", "participant_id", "mean_value", "sd_value")
-  if (!all(required_cols %in% names(datos))) {
-    stop("El archivo summary_n4.csv no contiene las columnas esperadas.")
-  }
-  datos
-}
+# ===================================================================
+# NOTA: ESTADÍSTICOS ROBUSTOS
+# ===================================================================
+# Las funciones de estadísticas robustas (calcular_niqr, calcular_mad_e,
+# ejecutar_algoritmo_a) están disponibles en robust_stats.R
+# ===================================================================
 
-calcular_niqr_local <- function(x) {
-  x_clean <- x[is.finite(x)]
-  if (length(x_clean) < 2) {
-    return(NA_real_)
-  }
-  quartiles <- stats::quantile(x_clean, probs = c(0.25, 0.75), na.rm = TRUE, type = 7)
-  0.7413 * (quartiles[2] - quartiles[1])
-}
+# ===================================================================
+# MÉTODO 1: VALOR DE REFERENCIA
+# ===================================================================
 
-calcular_made_local <- function(x) {
-  x_clean <- x[is.finite(x)]
-  if (length(x_clean) == 0) {
-    return(NA_real_)
-  }
-  mediana <- stats::median(x_clean, na.rm = TRUE)
-  mad_val <- stats::median(abs(x_clean - mediana), na.rm = TRUE)
-  1.483 * mad_val
-}
+calcular_valor_referencia <- function(datos_participantes, contaminante, nivel) {
+  # Filtrar por contaminante, nivel y participante 'ref'
+  datos_filtrados <- datos_participantes[
+    datos_participantes$pollutant == contaminante &
+    datos_participantes$level == nivel &
+    datos_participantes$participant_id == "ref",
+  ]
 
-run_algorithm_a_local <- function(values, max_iter = 50, tol = 1e-03) {
-  values <- values[is.finite(values)]
-  n <- length(values)
-  if (n < 3) {
-    return(list(error = "El Algoritmo A requiere al menos 3 observaciones."))
+  if (nrow(datos_filtrados) == 0) {
+    return(list(
+      error = "No se encontraron datos de referencia",
+      valor_asignado = NA_real_,
+      metodo = "referencia"
+    ))
   }
 
-  x_star <- stats::median(values, na.rm = TRUE)
-  s_star <- 1.483 * stats::median(abs(values - x_star), na.rm = TRUE)
-
-  if (!is.finite(s_star) || s_star < .Machine$double.eps) {
-    s_star <- stats::sd(values, na.rm = TRUE)
-  }
-
-  if (!is.finite(s_star) || s_star < .Machine$double.eps) {
-    return(list(assigned_value = x_star, robust_sd = 0, converged = TRUE, iterations = data.frame()))
-  }
-
-  iteration_records <- list()
-  converged <- FALSE
-
-  for (iter in seq_len(max_iter)) {
-    u_values <- (values - x_star) / (1.5 * s_star)
-    weights <- ifelse(abs(u_values) <= 1, 1, 1 / (u_values^2))
-    weight_sum <- sum(weights)
-
-    x_new <- sum(weights * values) / weight_sum
-    s_new <- sqrt(sum(weights * (values - x_new)^2) / weight_sum)
-
-    iteration_records[[iter]] <- data.frame(
-      iteration = iter,
-      x_star = x_new,
-      s_star = s_new,
-      delta = max(abs(x_new - x_star), abs(s_new - s_star)),
-      stringsAsFactors = FALSE
-    )
-
-    if (abs(x_new - x_star) < tol && abs(s_new - s_star) < tol) {
-      converged <- TRUE
-      x_star <- x_new
-      s_star <- s_new
-      break
-    }
-
-    x_star <- x_new
-    s_star <- s_new
-  }
+  # Promediar mean_value de todas las réplicas
+  valor_asignado <- mean(datos_filtrados$mean_value, na.rm = TRUE)
 
   list(
-    assigned_value = x_star,
-    robust_sd = s_star,
-    iterations = if (length(iteration_records) > 0) do.call(rbind, iteration_records) else data.frame(),
-    converged = converged
+    contaminante = contaminante,
+    nivel = nivel,
+    valor_asignado = valor_asignado,
+    n_replicas = nrow(datos_filtrados),
+    metodo = "referencia",
+    error = NULL
   )
 }
 
-#' Calcular valor asignado según método
-#'
-#' Métodos disponibles: 1 (referencia), 2a (MADe), 2b (nIQR), 3 (Algoritmo A).
-#'
-#' @param contaminante Nombre del analito.
-#' @param nivel Nivel del analito.
-#' @param metodo Código del método ("1", "2a", "2b", "3").
-#' @param ruta_datos Ruta al archivo `summary_n4.csv`.
-#' @param grupo_muestra Opcional, filtra por `sample_group`.
-#' @return Lista con x_pt, u_xpt, sigma_pt y n.
-calculate_valor_asignado <- function(contaminante,
-                                     nivel,
-                                     metodo = c("1", "2a", "2b", "3"),
-                                     ruta_datos = "../../data/summary_n4.csv",
-                                     grupo_muestra = NULL) {
-  metodo <- match.arg(metodo)
-  datos <- cargar_datos_resumen(ruta_datos)
+# ===================================================================
+# MÉTODO 2a: CONSENSO CON MADe
+# ===================================================================
 
-  if (!is.null(grupo_muestra)) {
-    datos <- datos[datos$sample_group == grupo_muestra, , drop = FALSE]
+calcular_valor_consenso_made <- function(datos_participantes, contaminante, nivel, excluir_ref = TRUE) {
+  # Filtrar por contaminante y nivel
+  datos_filtrados <- datos_participantes[
+    datos_participantes$pollutant == contaminante &
+    datos_participantes$level == nivel,
+  ]
+
+  # Excluir participante de referencia si se solicita
+  if (excluir_ref) {
+    datos_filtrados <- datos_filtrados[datos_filtrados$participant_id != "ref", ]
   }
 
-  subset_datos <- datos[datos$pollutant == contaminante & datos$level == nivel, , drop = FALSE]
-  if (nrow(subset_datos) == 0) {
-    return(list(error = "No hay datos para el contaminante y nivel solicitados."))
+  if (nrow(datos_filtrados) == 0) {
+    return(list(
+      error = "No se encontraron datos de participantes",
+      valor_asignado = NA_real_,
+      metodo = "consenso_made"
+    ))
   }
 
-  ref_data <- subset_datos[subset_datos$participant_id == "ref", , drop = FALSE]
-  part_data <- subset_datos[subset_datos$participant_id != "ref", , drop = FALSE]
+  # Usar mean_value de cada participante
+  valores <- datos_filtrados$mean_value
 
-  if (metodo == "1") {
-    if (nrow(ref_data) == 0) {
-      return(list(error = "No hay datos de referencia para el método 1."))
-    }
-    x_pt <- base::mean(ref_data$mean_value, na.rm = TRUE)
-    u_xpt <- base::mean(ref_data$sd_value, na.rm = TRUE)
-    sigma_pt <- base::mean(ref_data$sd_value, na.rm = TRUE)
-    n_vals <- nrow(ref_data)
-  } else if (metodo == "2a") {
-    valores <- part_data$mean_value
-    x_pt <- stats::median(valores, na.rm = TRUE)
-    sigma_pt <- calcular_made_local(valores)
-    n_vals <- sum(is.finite(valores))
-    u_xpt <- 1.25 * sigma_pt / sqrt(n_vals)
-  } else if (metodo == "2b") {
-    valores <- part_data$mean_value
-    x_pt <- stats::median(valores, na.rm = TRUE)
-    sigma_pt <- calcular_niqr_local(valores)
-    n_vals <- sum(is.finite(valores))
-    u_xpt <- 1.25 * sigma_pt / sqrt(n_vals)
-  } else {
-    valores <- part_data$mean_value
-    n_vals <- sum(is.finite(valores))
-    res_algo <- run_algorithm_a_local(valores)
-    if (!is.null(res_algo$error)) {
-      return(list(error = res_algo$error))
-    }
-    x_pt <- res_algo$assigned_value
-    sigma_pt <- res_algo$robust_sd
-    u_xpt <- 1.25 * sigma_pt / sqrt(n_vals)
+  # Calcular valor asignado como robust mean usando MADe
+  valor_asignado <- median(valores, na.rm = TRUE)
+  sigma_pt <- calcular_mad_e(valores)
+
+  list(
+    contaminante = contaminante,
+    nivel = nivel,
+    valor_asignado = valor_asignado,
+    n_participantes = nrow(datos_filtrados),
+    sigma_pt = sigma_pt,
+    metodo = "consenso_made",
+    error = NULL
+  )
+}
+
+# ===================================================================
+# MÉTODO 2b: CONSENSO CON nIQR
+# ===================================================================
+
+calcular_valor_consenso_niqr <- function(datos_participantes, contaminante, nivel, excluir_ref = TRUE) {
+  # Filtrar por contaminante y nivel
+  datos_filtrados <- datos_participantes[
+    datos_participantes$pollutant == contaminante &
+    datos_participantes$level == nivel,
+  ]
+
+  # Excluir participante de referencia si se solicita
+  if (excluir_ref) {
+    datos_filtrados <- datos_filtrados[datos_filtrados$participant_id != "ref", ]
+  }
+
+  if (nrow(datos_filtrados) == 0) {
+    return(list(
+      error = "No se encontraron datos de participantes",
+      valor_asignado = NA_real_,
+      metodo = "consenso_niqr"
+    ))
+  }
+
+  # Usar mean_value de cada participante
+  valores <- datos_filtrados$mean_value
+
+  # Calcular valor asignado como robust mean usando nIQR
+  valor_asignado <- median(valores, na.rm = TRUE)
+  sigma_pt <- calcular_niqr(valores)
+
+  list(
+    contaminante = contaminante,
+    nivel = nivel,
+    valor_asignado = valor_asignado,
+    n_participantes = nrow(datos_filtrados),
+    sigma_pt = sigma_pt,
+    metodo = "consenso_niqr",
+    error = NULL
+  )
+}
+
+# ===================================================================
+# MÉTODO 3: ALGORITMO A (ISO 13528 ANEXO C)
+# ===================================================================
+
+calcular_valor_algoritmo_a <- function(datos_participantes, contaminante, nivel, excluir_ref = TRUE,
+                                       max_iter = 50, tol = 1e-03) {
+  # Filtrar por contaminante y nivel
+  datos_filtrados <- datos_participantes[
+    datos_participantes$pollutant == contaminante &
+    datos_participantes$level == nivel,
+  ]
+
+  # Excluir participante de referencia si se solicita
+  if (excluir_ref) {
+    datos_filtrados <- datos_filtrados[datos_filtrados$participant_id != "ref", ]
+  }
+
+  if (nrow(datos_filtrados) == 0) {
+    return(list(
+      error = "No se encontraron datos de participantes",
+      valor_asignado = NA_real_,
+      metodo = "algoritmo_a"
+    ))
+  }
+
+  # Usar mean_value de cada participante
+  valores <- datos_filtrados$mean_value
+  ids <- datos_filtrados$participant_id
+
+  # Ejecutar Algoritmo A
+  resultado_algo_a <- ejecutar_algoritmo_a(valores, ids, max_iter, tol)
+
+  if (!is.null(resultado_algo_a$error)) {
+    return(list(
+      error = resultado_algo_a$error,
+      valor_asignado = NA_real_,
+      metodo = "algoritmo_a"
+    ))
   }
 
   list(
-    metodo = metodo,
-    x_pt = x_pt,
-    u_xpt = u_xpt,
-    sigma_pt = sigma_pt,
-    n = n_vals,
+    contaminante = contaminante,
+    nivel = nivel,
+    valor_asignado = resultado_algo_a$valor_asignado,
+    sigma_pt = resultado_algo_a$sigma_pt,
+    n_participantes = length(valores),
+    n_iteraciones = nrow(resultado_algo_a$iteraciones),
+    convergencia = resultado_algo_a$convergencia,
+    metodo = "algoritmo_a",
     error = NULL
+  )
+}
+
+# ===================================================================
+# FUNCIÓN PRINCIPAL: CALCULAR VALOR ASIGNADO (TODOS LOS MÉTODOS)
+# ===================================================================
+
+calcular_valor_asignado <- function(datos_participantes, contaminante, nivel, metodo = "algoritmo_a",
+                                    excluir_ref = TRUE) {
+  if (metodo == "referencia") {
+    return(calcular_valor_referencia(datos_participantes, contaminante, nivel))
+  } else if (metodo == "consenso_made") {
+    return(calcular_valor_consenso_made(datos_participantes, contaminante, nivel, excluir_ref))
+  } else if (metodo == "consenso_niqr") {
+    return(calcular_valor_consenso_niqr(datos_participantes, contaminante, nivel, excluir_ref))
+  } else if (metodo == "algoritmo_a") {
+    return(calcular_valor_algoritmo_a(datos_participantes, contaminante, nivel, excluir_ref))
+  } else {
+    return(list(
+      error = paste("Método no reconocido:", metodo),
+      valor_asignado = NA_real_,
+      metodo = metodo
+    ))
+  }
+}
+
+# ===================================================================
+# FUNCIÓN PARA PROCESAR MÚLTIPLES CONTAMINANTES/NIVELES
+# ===================================================================
+
+calcular_valor_asignado_todos <- function(datos_participantes, metodo = "algoritmo_a", excluir_ref = TRUE) {
+  # Obtener combinaciones únicas de contaminante y nivel
+  combinaciones <- unique(datos_participantes[, c("pollutant", "level")])
+
+  resultados <- list()
+
+  for (i in 1:nrow(combinaciones)) {
+    cont <- combinaciones$pollutant[i]
+    niv <- combinaciones$level[i]
+
+    nombre <- paste(cont, niv, sep = "_")
+    resultado <- calcular_valor_asignado(datos_participantes, cont, niv, metodo, excluir_ref)
+    resultados[[nombre]] <- resultado
+  }
+
+  resultados
+}
+
+# ===================================================================
+# FUNCIÓN PARA COMPARAR MÉTODOS
+# ===================================================================
+
+comparar_metodos_valor_asignado <- function(datos_participantes, contaminante, nivel) {
+  metodos <- c("referencia", "consenso_made", "consenso_niqr", "algoritmo_a")
+
+  resultados <- list()
+
+  for (met in metodos) {
+    resultado <- calcular_valor_asignado(datos_participantes, contaminante, nivel, met, excluir_ref = TRUE)
+    resultados[[met]] <- resultado
+  }
+
+  list(
+    contaminante = contaminante,
+    nivel = nivel,
+    metodos = resultados
   )
 }

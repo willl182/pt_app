@@ -28,11 +28,17 @@ library(rmarkdown)
 library(bslib)
 
 # -------------------------------------------------------------------
-# Cargar paquete ptcalc (cálculos ISO 13528/17043)
-# Para desarrollo: usar devtools::load_all()
-# Para producción: instalar con devtools::install() y usar library(ptcalc)
+# Cargar funciones ptcalc (cálculos ISO 13528/17043)
+# Para desarrollo: usar devtools::load_all() desde dev/load_ptcalc.R
+# Para producción: cargar desde los archivos en ptcalc/R
 # -------------------------------------------------------------------
-devtools::load_all("ptcalc")
+if (interactive()) {
+  source("dev/load_ptcalc.R")
+} else {
+  source("ptcalc/R/pt_robust_stats.R")
+  source("ptcalc/R/pt_scores.R")
+  source("ptcalc/R/pt_homogeneity.R")
+}
 
 # ===================================================================
 # I. Interfaz de Usuario (UI)
@@ -196,6 +202,9 @@ server <- function(input, output, session) {
   rv <- reactiveValues(raw_summary_data = NULL, raw_summary_data_list = NULL)
 
   format_num <- function(x) {
+    if (length(x) == 0) {
+      return(NA_character_)
+    }
     ifelse(is.na(x), NA_character_, sprintf("%.5f", x))
   }
 
@@ -291,13 +300,14 @@ server <- function(input, output, session) {
       return(list(error = sprintf("El nivel '%s' no existe para el analito '%s'.", target_level, target_pollutant)))
     }
 
+    # Filter wide_df by level and select ONLY sample replicate columns (sample_1, sample_2, etc.)
     level_data <- wide_df %>%
       filter(level == target_level) %>%
-      select(starts_with("sample_"))
-
+      select(matches("^sample_\\d+$"))
+    
     g <- nrow(level_data)
     m <- ncol(level_data)
-
+    
     if (m < 2) {
       return(list(error = "No hay suficientes réplicas (se requieren al menos 2) para evaluar la homogeneidad."))
     }
@@ -326,35 +336,46 @@ server <- function(input, output, session) {
     }
 
     if (!"sample_1" %in% names(level_data)) {
-      return(list(error = "No se encontró la columna 'sample_1'. Es obligatoria para calcular sigma_pt."))
+      return(list(error = "No se encontró la columna 'sample_1'. Es obligatoria para calcular x_pt."))
     }
-
-    # Calculate sigma_pt from MADe of first sample column (ISO 13528)
+    
+    # Get only sample columns for statistical calculations
+    sample_data_only <- level_data %>% select(starts_with("sample_"))
+    
+    # Calculate robust stats from first sample column for nIQR display
     first_sample_results <- level_data %>% pull(sample_1)
-    mad_e <- calculate_mad_e(first_sample_results)
-    n_iqr <- calculate_niqr(first_sample_results)
-
-    # Calculate u_xpt (standard uncertainty of assigned value)
-    n_robust <- length(first_sample_results)
-    u_xpt <- 1.25 * mad_e / sqrt(n_robust)
-
+    first_sample_clean <- first_sample_results[is.finite(first_sample_results)]
+    if (length(first_sample_clean) >= 2) {
+      quartiles <- stats::quantile(first_sample_clean, probs = c(0.25, 0.75), na.rm = TRUE, type = 7)
+      q1 <- unname(quartiles[1])
+      q3 <- unname(quartiles[2])
+      iqr_val <- q3 - q1
+      n_iqr <- 0.7413 * iqr_val
+    } else {
+      q1 <- NA_real_
+      q3 <- NA_real_
+      iqr_val <- NA_real_
+      n_iqr <- NA_real_
+    }
+    
+    median_val <- median(first_sample_results, na.rm = TRUE)
+    abs_diff_from_median <- abs(first_sample_results - median_val)
+    median_abs_diff <- median(abs_diff_from_median, na.rm = TRUE)
+    
     # Calculate homogeneity statistics using ptcalc package (ISO 13528 Section 9.2)
-    hom_stats <- calculate_homogeneity_stats(level_data)
+    # IMPORTANT: Pass ONLY sample columns, not level_data with Item/average/range
+    # Convert to matrix to ensure clean structure
+    hom_stats <- calculate_homogeneity_stats(as.matrix(sample_data_only))
     if (!is.null(hom_stats$error)) {
       return(list(error = hom_stats$error))
     }
 
     # Extract stats for ANOVA summary and return values
-    hom_x_t_bar <- hom_stats$grand_mean
+    hom_x_t_bar <- hom_stats$general_mean_homog
     hom_s_x_bar_sq <- hom_stats$s_x_bar_sq
     hom_s_xt <- hom_stats$s_xt
     hom_sw <- hom_stats$sw
     hom_ss <- hom_stats$ss
-
-    # Keep intermediate values for display (MADe components)
-    median_val <- median(first_sample_results, na.rm = TRUE)
-    abs_diff_from_median <- abs(first_sample_results - median_val)
-    median_abs_diff <- median(abs_diff_from_median, na.rm = TRUE)
 
     hom_anova_summary <- data.frame(
       "gl" = c(g - 1, g * (m - 1)),
@@ -364,26 +385,94 @@ server <- function(input, output, session) {
     )
     rownames(hom_anova_summary) <- c("Ítem", "Residuos")
 
-    hom_sigma_pt <- mad_e
-    hom_c_criterion <- calculate_homogeneity_criterion(hom_sigma_pt)
-    hom_sigma_allowed_sq <- hom_c_criterion^2
-    hom_c_criterion_expanded <- calculate_homogeneity_criterion_expanded(hom_sigma_pt, hom_sw^2)
+    # Use calculated sigma_pt and u_sigma_pt from MADe
+    hom_sigma_pt <- hom_stats$sigma_pt
+    hom_u_sigma_pt <- hom_stats$u_sigma_pt
+    hom_c_criterion <- if (length(hom_stats$MADe) > 0) calculate_homogeneity_criterion(hom_stats$MADe) else numeric(0)
+    hom_c_criterion_expanded <- if (length(hom_stats$MADe) > 0) calculate_homogeneity_criterion_expanded(hom_stats$MADe, hom_u_sigma_pt) else numeric(0)
 
-    if (hom_ss <= hom_c_criterion) {
-      hom_conclusion1 <- sprintf("ss (%.4f) <= c_criterion (%.4f): CUMPLE CRITERIO HOMOGENEIDAD", hom_ss, hom_c_criterion)
-      hom_conclusion_class <- "alert alert-success"
+    # Calculate u_sigma_pt for nIQR
+    if (is.finite(n_iqr)) {
+      hom_u_sigma_pt_niqr <- 1.25 * n_iqr / sqrt(g)
     } else {
-      hom_conclusion1 <- sprintf("ss (%.4f) > c_criterion (%.4f): NO CUMPLE CRITERIO HOMOGENEIDAD", hom_ss, hom_c_criterion)
-      hom_conclusion_class <- "alert alert-warning"
+      hom_u_sigma_pt_niqr <- NA_real_
     }
 
-    if (hom_ss <= hom_c_criterion_expanded) {
-      hom_conclusion2 <- sprintf("ss (%.4f) <= c_expanded (%.4f): CUMPLE CRITERIO EXP HOMOGENEIDAD", hom_ss, hom_c_criterion_expanded)
+    # Calculate criteria using nIQR
+    n_iqr_for_criterion <- if (length(n_iqr) > 0 && !is.na(n_iqr)) {
+      n_iqr
     } else {
-      hom_conclusion2 <- sprintf("ss (%.4f) > c_expanded (%.4f): NO CUMPLE CRITERIO EXP HOMOGENEIDAD", hom_ss, hom_c_criterion_expanded)
+      hom_stats$nIQR
+    }
+    hom_c_criterion_niqr <- if (length(n_iqr_for_criterion) > 0) calculate_homogeneity_criterion(n_iqr_for_criterion) else numeric(0)
+    hom_c_criterion_expanded_niqr <- if (length(n_iqr_for_criterion) > 0) {
+      calculate_homogeneity_criterion_expanded(n_iqr_for_criterion, hom_u_sigma_pt_niqr)
+    } else {
+      numeric(0)
     }
 
-    hom_conclusion <- paste(hom_conclusion1, hom_conclusion2, sep = "<br>")
+    # Conclusions for MADe method
+    if (!is.na(hom_ss) && length(hom_c_criterion) > 0 && hom_ss <= hom_c_criterion) {
+      hom_conclusion1_made <- sprintf("ss (%.4f) <= c_MADe (%.4f): CUMPLE CRITERIO HOMOGENEIDAD (MADe)", hom_ss, hom_c_criterion)
+      hom_conclusion_class_made = "alert alert-success"
+    } else if (!is.na(hom_ss) && length(hom_c_criterion) > 0) {
+      hom_conclusion1_made <- sprintf("ss (%.4f) > c_MADe (%.4f): NO CUMPLE CRITERIO HOMOGENEIDAD (MADe)", hom_ss, hom_c_criterion)
+      hom_conclusion_class_made = "alert alert-warning"
+    } else {
+      hom_conclusion1_made <- "MADe no disponible: No se puede evaluar criterio"
+      hom_conclusion_class_made = "alert alert-secondary"
+    }
+
+    if (!is.na(hom_ss) && length(hom_c_criterion_expanded) > 0 && hom_ss <= hom_c_criterion_expanded) {
+      hom_conclusion2_made <- sprintf("ss (%.4f) <= c_MADe_exp (%.4f): CUMPLE CRITERIO EXP HOMOGENEIDAD (MADe)", hom_ss, hom_c_criterion_expanded)
+    } else if (!is.na(hom_ss) && length(hom_c_criterion_expanded) > 0) {
+      hom_conclusion2_made <- sprintf("ss (%.4f) > c_MADe_exp (%.4f): NO CUMPLE CRITERIO EXP HOMOGENEIDAD (MADe)", hom_ss, hom_c_criterion_expanded)
+    } else if (is.na(hom_ss)) {
+      hom_conclusion2_made <- "ss no disponible: No se puede evaluar criterio expandido"
+    } else {
+      hom_conclusion2_made <- "MADe no disponible: No se puede evaluar criterio expandido"
+    }
+
+    hom_conclusion_made <- paste(hom_conclusion1_made, hom_conclusion2_made, sep = "<br>")
+    hom_conclusion_class <- hom_conclusion_class_made
+
+    # Conclusions for nIQR method
+    if (!is.na(hom_ss) && length(hom_c_criterion_niqr) > 0 && !is.na(hom_c_criterion_niqr) && hom_ss <= hom_c_criterion_niqr) {
+      hom_conclusion1_niqr = sprintf("ss (%.4f) <= c_nIQR (%.4f): CUMPLE CRITERIO HOMOGENEIDAD (nIQR)", hom_ss, hom_c_criterion_niqr)
+      hom_conclusion_class_niqr = "alert alert-success"
+    } else if (!is.na(hom_ss) && length(hom_c_criterion_niqr) > 0 && !is.na(hom_c_criterion_niqr)) {
+      hom_conclusion1_niqr = sprintf("ss (%.4f) > c_nIQR (%.4f): NO CUMPLE CRITERIO HOMOGENEIDAD (nIQR)", hom_ss, hom_c_criterion_niqr)
+      hom_conclusion_class_niqr = "alert alert-warning"
+    } else if (is.na(hom_ss)) {
+      hom_conclusion1_niqr = "ss no disponible: No se puede evaluar criterio"
+      hom_conclusion_class_niqr = "alert alert-secondary"
+    } else {
+      hom_conclusion1_niqr = "nIQR no disponible (g < 3): No se puede evaluar criterio"
+      hom_conclusion_class_niqr = "alert alert-secondary"
+    }
+
+    if (!is.na(hom_ss) && length(hom_c_criterion_expanded_niqr) > 0 && !is.na(hom_c_criterion_expanded_niqr) && hom_ss <= hom_c_criterion_expanded_niqr) {
+      hom_conclusion2_niqr = sprintf("ss (%.4f) <= c_nIQR_exp (%.4f): CUMPLE CRITERIO EXP HOMOGENEIDAD (nIQR)", hom_ss, hom_c_criterion_expanded_niqr)
+    } else if (!is.na(hom_ss) && length(hom_c_criterion_expanded_niqr) > 0 && !is.na(hom_c_criterion_expanded_niqr)) {
+      hom_conclusion2_niqr = sprintf("ss (%.4f) > c_nIQR_exp (%.4f): NO CUMPLE CRITERIO EXP HOMOGENEIDAD (nIQR)", hom_ss, hom_c_criterion_expanded_niqr)
+    } else if (is.na(hom_ss)) {
+      hom_conclusion2_niqr = "ss no disponible: No se puede evaluar criterio expandido"
+    } else {
+      hom_conclusion2_niqr = "nIQR expandido no disponible (g < 3): No se puede evaluar criterio expandido"
+    }
+
+    hom_conclusion_niqr = paste(hom_conclusion1_niqr, hom_conclusion2_niqr, sep = "<br>")
+
+    # Keep old conclusion for backward compatibility (MADe method)
+    hom_conclusion <- paste(hom_conclusion1_made, hom_conclusion2_made, sep = "<br>")
+
+    # Calculate u_xpt from sigma_pt (using g as number of samples)
+    u_xpt <- 1.25 * hom_sigma_pt / sqrt(g)
+
+    # Add abs_diff_from_xpt columns to intermediate_df for display
+    intermediate_df_with_abs <- intermediate_df %>%
+      mutate(abs_diff_from_xpt = abs(sample_2 - hom_stats$x_pt)) %>%
+      select(Item, starts_with("sample_"), average, range, abs_diff_from_xpt)
 
     list(
       summary = hom_anova_summary,
@@ -391,25 +480,40 @@ server <- function(input, output, session) {
       sw = hom_sw,
       conclusion = hom_conclusion,
       conclusion_class = hom_conclusion_class,
+      conclusion_made = hom_conclusion_made,
+      conclusion_class_made = hom_conclusion_class_made,
+      conclusion_niqr = hom_conclusion_niqr,
+      conclusion_class_niqr = hom_conclusion_class_niqr,
       g = g,
       m = m,
-      sigma_allowed_sq = hom_sigma_allowed_sq,
       c_criterion = hom_c_criterion,
       c_criterion_expanded = hom_c_criterion_expanded,
+      c_criterion_niqr = hom_c_criterion_niqr,
+      c_criterion_expanded_niqr = hom_c_criterion_expanded_niqr,
       sigma_pt = hom_sigma_pt,
+      u_sigma_pt = hom_u_sigma_pt,
+      u_sigma_pt_niqr = hom_u_sigma_pt_niqr,
+      MADe = hom_stats$MADe,
+      nIQR = n_iqr,
+      q1 = q1,
+      q3 = q3,
+      iqr = iqr_val,
+      x_pt = hom_stats$x_pt,
       median_val = median_val,
       median_abs_diff = median_abs_diff,
       n_iqr = n_iqr,
       u_xpt = u_xpt,
-      n_robust = n_robust,
       item_means = hom_stats$sample_means,
       general_mean = hom_x_t_bar,
       sd_of_means = hom_s_xt,
       s_x_bar_sq = hom_s_x_bar_sq,
       s_w_sq = hom_sw^2,
-      intermediate_df = intermediate_df,
+      intermediate_df = intermediate_df_with_abs,
+      level_data = level_data,
       first_sample_results = first_sample_results,
       abs_diff_from_median = abs_diff_from_median,
+      abs_diff_from_xpt = hom_stats$abs_diff_from_xpt,
+      sigma_pt_median = hom_stats$sigma_pt,
       data_wide = wide_df,
       level = target_level,
       pollutant = target_pollutant,
@@ -435,7 +539,7 @@ server <- function(input, output, session) {
 
     level_data <- wide_df %>%
       filter(level == target_level) %>%
-      select(starts_with("sample_"))
+      select(matches("^sample_\\d+$"))
 
     g <- nrow(level_data)
     m <- ncol(level_data)
@@ -454,7 +558,8 @@ server <- function(input, output, session) {
         mutate(
           Item = row_number(),
           average = (s1 + s2) / 2,
-          range = abs(s1 - s2)
+          range = abs(s1 - s2),
+          abs_diff_from_xpt = abs(s2 - hom_results$x_pt)
         ) %>%
         select(Item, everything())
     } else {
@@ -462,7 +567,8 @@ server <- function(input, output, session) {
         mutate(
           Item = row_number(),
           average = rowMeans(., na.rm = TRUE),
-          range = apply(., 1, function(x) max(x, na.rm = TRUE) - min(x, na.rm = TRUE))
+          range = apply(., 1, function(x) max(x, na.rm = TRUE) - min(x, na.rm = TRUE)),
+          abs_diff_from_xpt = abs(.[[2]] - hom_results$x_pt)
         ) %>%
         select(Item, everything())
     }
@@ -484,29 +590,33 @@ server <- function(input, output, session) {
     mad_e <- calculate_mad_e(first_sample_results)
     stab_n_iqr <- calculate_niqr(first_sample_results)
 
+    median_val <- median(first_sample_results, na.rm = TRUE)
+    abs_diff_from_median <- abs(first_sample_results - median_val)
+    median_abs_diff <- median(abs_diff_from_median, na.rm = TRUE)
+
     # Calculate u_xpt (standard uncertainty of assigned value)
     n_robust <- length(first_sample_results)
     u_xpt <- 1.25 * mad_e / sqrt(n_robust)
 
     # Calculate stability statistics using ptcalc package (ISO 13528 Section 9.3)
-    stab_stats <- calculate_homogeneity_stats(level_data)
+    stab_stats <- calculate_stability_stats(
+      level_data,
+      hom_results$general_mean,
+      hom_results$x_pt,
+      hom_results$sigma_pt
+    )
     if (!is.null(stab_stats$error)) {
       return(list(error = stab_stats$error))
     }
 
     # Extract stats for ANOVA summary and return values
-    stab_x_t_bar <- stab_stats$grand_mean
+    stab_x_t_bar <- stab_stats$general_mean
     diff_hom_stab <- abs(stab_x_t_bar - hom_results$general_mean)
 
     stab_s_x_bar_sq <- stab_stats$s_x_bar_sq
     stab_s_xt <- stab_stats$s_xt
     stab_sw <- stab_stats$sw
     stab_ss <- stab_stats$ss
-
-    # Keep intermediate values for display (MADe components)
-    median_val <- median(first_sample_results, na.rm = TRUE)
-    abs_diff_from_median <- abs(first_sample_results - median_val)
-    median_abs_diff <- median(abs_diff_from_median, na.rm = TRUE)
 
     stab_anova_summary <- data.frame(
       "gl" = c(g - 1, g * (m - 1)),
@@ -516,10 +626,12 @@ server <- function(input, output, session) {
     )
     rownames(stab_anova_summary) <- c("Ítem", "Residuos")
 
-    stab_sigma_pt <- mad_e
-    stab_c_criterion <- calculate_stability_criterion(hom_results$sigma_pt)
-    stab_sigma_allowed_sq <- stab_c_criterion^2
-    
+    # Use MADe from homogeneity study for criterion (same as homogeneity)
+    stab_c_criterion <- if (length(hom_results$MADe) > 0) calculate_stability_criterion(hom_results$MADe) else numeric(0)
+
+    # Use nIQR from homogeneity study for criterion (same as homogeneity)
+    stab_c_criterion_niqr <- if (length(hom_results$nIQR) > 0) calculate_stability_criterion(hom_results$nIQR) else numeric(0)
+
     # Calcular u_hom_mean
     hom_values <- hom_results$data_wide %>%
       select(starts_with("sample_")) %>%
@@ -529,31 +641,79 @@ server <- function(input, output, session) {
     sd_hom_mean <- sd(hom_values)
     n_hom <- length(hom_values)
     u_hom_mean <- sd_hom_mean / sqrt(n_hom)
-    
+
     # Calcular u_stab_mean
     stab_values <- stab_data_long$Resultado
     stab_values <- stab_values[!is.na(stab_values)]
     sd_stab_mean <- sd(stab_values)
     n_stab <- length(stab_values)
     u_stab_mean <- sd_stab_mean / sqrt(n_stab)
-    
-    stab_c_criterion_expanded <- calculate_stability_criterion_expanded(stab_c_criterion, u_hom_mean, u_stab_mean)
 
-    if (diff_hom_stab <= stab_c_criterion) {
-      stab_conclusion1 <- sprintf("ss (%.4f) <= c_criterion (%.4f): CUMPLE CRITERIO ESTABILIDAD", diff_hom_stab, stab_c_criterion)
-      stab_conclusion_class <- "alert alert-success"
+    stab_c_criterion_expanded <- if (length(stab_c_criterion) > 0 && length(u_hom_mean) > 0 && length(u_stab_mean) > 0) {
+      calculate_stability_criterion_expanded(stab_c_criterion, u_hom_mean, u_stab_mean)
     } else {
-      stab_conclusion1 <- sprintf("ss (%.4f) > c_criterion (%.4f): NO CUMPLE CRITERIO ESTABILIDAD", diff_hom_stab, stab_c_criterion)
-      stab_conclusion_class <- "alert alert-warning"
+      numeric(0)
     }
 
-    if (diff_hom_stab <= stab_c_criterion_expanded) {
-      stab_conclusion2 <- sprintf("ss (%.4f) <= c_expanded (%.4f): CUMPLE CRITERIO EXP ESTABILIDAD", diff_hom_stab, stab_c_criterion_expanded)
+    stab_c_criterion_expanded_niqr <- if (length(stab_c_criterion_niqr) > 0 && length(u_hom_mean) > 0 && length(u_stab_mean) > 0) {
+      calculate_stability_criterion_expanded(stab_c_criterion_niqr, u_hom_mean, u_stab_mean)
     } else {
-      stab_conclusion2 <- sprintf("ss (%.4f) > c_expanded (%.4f): NO CUMPLE CRITERIO EXP ESTABILIDAD", diff_hom_stab, stab_c_criterion_expanded)
+      numeric(0)
     }
 
-    stab_conclusion <- paste(stab_conclusion1, stab_conclusion2, sep = "<br>")
+    # Conclusions for MADe method
+    if (!is.na(diff_hom_stab) && length(stab_c_criterion) > 0 && diff_hom_stab <= stab_c_criterion) {
+      stab_conclusion1_made = sprintf("ss (%.4f) <= c_MADe (%.4f): CUMPLE CRITERIO ESTABILIDAD (MADe)", diff_hom_stab, stab_c_criterion)
+      stab_conclusion_class_made = "alert alert-success"
+    } else if (!is.na(diff_hom_stab) && length(stab_c_criterion) > 0) {
+      stab_conclusion1_made = sprintf("ss (%.4f) > c_MADe (%.4f): NO CUMPLE CRITERIO ESTABILIDAD (MADe)", diff_hom_stab, stab_c_criterion)
+      stab_conclusion_class_made = "alert alert-warning"
+    } else if (is.na(diff_hom_stab)) {
+      stab_conclusion1_made = "ss no disponible: No se puede evaluar criterio"
+      stab_conclusion_class_made = "alert alert-secondary"
+    } else {
+      stab_conclusion1_made = "MADe no disponible: No se puede evaluar criterio"
+      stab_conclusion_class_made = "alert alert-secondary"
+    }
+
+    if (!is.na(diff_hom_stab) && length(stab_c_criterion_expanded) > 0 && diff_hom_stab <= stab_c_criterion_expanded) {
+      stab_conclusion2_made = sprintf("ss (%.4f) <= c_MADe_exp (%.4f): CUMPLE CRITERIO EXP ESTABILIDAD (MADe)", diff_hom_stab, stab_c_criterion_expanded)
+    } else if (!is.na(diff_hom_stab) && length(stab_c_criterion_expanded) > 0) {
+      stab_conclusion2_made = sprintf("ss (%.4f) > c_MADe_exp (%.4f): NO CUMPLE CRITERIO EXP ESTABILIDAD (MADe)", diff_hom_stab, stab_c_criterion_expanded)
+    } else {
+      stab_conclusion2_made = "ss no disponible: No se puede evaluar criterio expandido"
+    }
+
+    stab_conclusion_made = paste(stab_conclusion1_made, stab_conclusion2_made, sep = "<br>")
+    stab_conclusion_class = stab_conclusion_class_made
+
+    # Conclusions for nIQR method
+    if (!is.na(diff_hom_stab) && length(stab_c_criterion_niqr) > 0 && !is.na(stab_c_criterion_niqr) && diff_hom_stab <= stab_c_criterion_niqr) {
+      stab_conclusion1_niqr = sprintf("ss (%.4f) <= c_nIQR (%.4f): CUMPLE CRITERIO ESTABILIDAD (nIQR)", diff_hom_stab, stab_c_criterion_niqr)
+      stab_conclusion_class_niqr = "alert alert-success"
+    } else if (!is.na(diff_hom_stab) && length(stab_c_criterion_niqr) > 0 && !is.na(stab_c_criterion_niqr)) {
+      stab_conclusion1_niqr = sprintf("ss (%.4f) > c_nIQR (%.4f): NO CUMPLE CRITERIO ESTABILIDAD (nIQR)", diff_hom_stab, stab_c_criterion_niqr)
+      stab_conclusion_class_niqr = "alert alert-warning"
+    } else if (is.na(diff_hom_stab)) {
+      stab_conclusion1_niqr = "ss no disponible: No se puede evaluar criterio"
+      stab_conclusion_class_niqr = "alert alert-secondary"
+    } else {
+      stab_conclusion1_niqr = "nIQR no disponible (g < 3): No se puede evaluar criterio"
+      stab_conclusion_class_niqr = "alert alert-secondary"
+    }
+
+    if (!is.na(diff_hom_stab) && length(stab_c_criterion_expanded_niqr) > 0 && !is.na(stab_c_criterion_expanded_niqr) && diff_hom_stab <= stab_c_criterion_expanded_niqr) {
+      stab_conclusion2_niqr = sprintf("ss (%.4f) <= c_nIQR_exp (%.4f): CUMPLE CRITERIO EXP ESTABILIDAD (nIQR)", diff_hom_stab, stab_c_criterion_expanded_niqr)
+    } else if (!is.na(diff_hom_stab) && length(stab_c_criterion_expanded_niqr) > 0 && !is.na(stab_c_criterion_expanded_niqr)) {
+      stab_conclusion2_niqr = sprintf("ss (%.4f) > c_nIQR_exp (%.4f): NO CUMPLE CRITERIO EXP ESTABILIDAD (nIQR)", diff_hom_stab, stab_c_criterion_expanded_niqr)
+    } else if (is.na(diff_hom_stab)) {
+      stab_conclusion2_niqr = "ss no disponible: No se puede evaluar criterio expandido"
+    } else {
+      stab_conclusion2_niqr = "nIQR expandido no disponible (g < 3): No se puede evaluar criterio expandido"
+    }
+
+    stab_conclusion_niqr = paste(stab_conclusion1_niqr, stab_conclusion2_niqr, sep = "<br>")
+    stab_conclusion = stab_conclusion_made
 
     list(
       stab_summary = stab_anova_summary,
@@ -561,13 +721,18 @@ server <- function(input, output, session) {
       stab_sw = stab_sw,
       stab_conclusion = stab_conclusion,
       stab_conclusion_class = stab_conclusion_class,
+      stab_conclusion_made = stab_conclusion_made,
+      stab_conclusion_class_made = stab_conclusion_class_made,
+      stab_conclusion_niqr = stab_conclusion_niqr,
+      stab_conclusion_class_niqr = stab_conclusion_class_niqr,
       g = g,
       m = m,
       diff_hom_stab = diff_hom_stab,
-      stab_sigma_allowed_sq = stab_sigma_allowed_sq,
       stab_c_criterion = stab_c_criterion,
       stab_c_criterion_expanded = stab_c_criterion_expanded,
-      stab_sigma_pt = stab_sigma_pt,
+      stab_c_criterion_niqr = stab_c_criterion_niqr,
+      stab_c_criterion_expanded_niqr = stab_c_criterion_expanded_niqr,
+      stab_sigma_pt = hom_results$sigma_pt,
       stab_median_val = median_val,
       stab_median_abs_diff = median_abs_diff,
       stab_n_iqr = stab_n_iqr,
@@ -586,7 +751,7 @@ server <- function(input, output, session) {
     )
   }
 
-  compute_scores_metrics <- function(summary_df, target_pollutant, target_n_lab, target_level, sigma_pt, u_xpt, k, m = NULL) {
+  compute_scores_metrics <- function(summary_df, target_pollutant, target_n_lab, target_level, sigma_pt, u_xpt, k, m = NULL, u_hom = 0, u_stab = 0) {
     if (is.null(summary_df) || nrow(summary_df) == 0) {
       return(list(error = "No hay datos resumen disponibles para los puntajes PT."))
     }
@@ -601,6 +766,8 @@ server <- function(input, output, session) {
     if (nrow(data) == 0) {
       return(list(error = "No se encontraron datos para los criterios seleccionados."))
     }
+
+    u_xpt_def <- sqrt(u_xpt^2 + u_hom^2 + u_stab^2)
 
     ref_data <- data %>% filter(participant_id == "ref")
 
@@ -621,10 +788,10 @@ server <- function(input, output, session) {
         x_pt = x_pt,
         sigma_pt = sigma_pt,
         z_score = (result - x_pt) / sigma_pt,
-        z_prime_score = (result - x_pt) / sqrt(sigma_pt^2 + u_xpt^2),
-        zeta_score = (result - x_pt) / sqrt(uncertainty_std^2 + u_xpt^2),
+        z_prime_score = (result - x_pt) / sqrt(sigma_pt^2 + u_xpt_def^2),
+        zeta_score = (result - x_pt) / sqrt(uncertainty_std^2 + u_xpt_def^2),
         U_xi = k * uncertainty_std,
-        U_xpt = k * u_xpt,
+        U_xpt = k * u_xpt_def,
         En_score = (result - x_pt) / sqrt(U_xi^2 + U_xpt^2)
       ) %>%
       mutate(
@@ -659,6 +826,9 @@ server <- function(input, output, session) {
       x_pt = x_pt,
       sigma_pt = sigma_pt,
       u_xpt = u_xpt,
+      u_xpt_def = u_xpt_def,
+      u_hom = u_hom,
+      u_stab = u_stab,
       k = k,
       pollutant = target_pollutant,
       n_lab = target_n_lab,
@@ -709,9 +879,9 @@ server <- function(input, output, session) {
           error = "Se requieren al menos tres participantes para ejecutar el Algoritmo A.",
           input_data = aggregated,
           iterations = tibble(),
-          weights = tibble(),
+          winsorized_values = tibble(),
           converged = FALSE,
-          effective_weight = NA_real_
+          n_participants = NA_integer_
         )
       } else {
         algo_res <- run_algorithm_a(
@@ -722,9 +892,9 @@ server <- function(input, output, session) {
 
         if (!is.null(algo_res$error)) {
           if (is.null(algo_res$iterations)) algo_res$iterations <- tibble()
-          if (is.null(algo_res$weights)) algo_res$weights <- tibble()
+          if (is.null(algo_res$winsorized_values)) algo_res$winsorized_values <- tibble()
           if (is.null(algo_res$converged)) algo_res$converged <- FALSE
-          if (is.null(algo_res$effective_weight)) algo_res$effective_weight <- NA_real_
+          if (is.null(algo_res$n_participants)) algo_res$n_participants <- NA_integer_
         }
 
         algo_res$input_data <- aggregated
@@ -850,44 +1020,79 @@ server <- function(input, output, session) {
               ),
               tabPanel(
                 "Evaluación de homogeneidad",
-                h4("Conclusión"),
-                uiOutput("homog_conclusion"),
+                h4("Conclusión (Método MADe)"),
+                uiOutput("homog_conclusion_made"),
                 hr(),
-                h4("Vista previa de homogeneidad (nivel y primera muestra)"),
-                dataTableOutput("homogeneity_preview_table"),
+                h4("Conclusión (Método nIQR)"),
+                uiOutput("homog_conclusion_niqr"),
                 hr(),
-                h4("Cálculos de estadísticos robustos"),
-                tableOutput("robust_stats_table"),
-                verbatimTextOutput("robust_stats_summary"),
+                fluidRow(
+                  column(width = 6,
+                    h4("Resumen del Estudio (Método MADe)"),
+                    p("Parámetros clave del estudio de homogeneidad usando MADe."),
+                    tableOutput("hom_summary_table_made")
+                  ),
+                  column(width = 6,
+                    h4("Resumen del Estudio (Método nIQR)"),
+                    p("Parámetros clave del estudio de homogeneidad usando nIQR."),
+                    tableOutput("hom_summary_table_niqr")
+                  )
+                ),
                 hr(),
-                h4("Componentes de varianza"),
-                p("Desviaciones estándar estimadas del cálculo manual."),
-                tableOutput("variance_components"),
+                h4("Datos de Homogeneidad"),
+                p("Muestras, réplicas, media, rango y diferencias absolutas para cada ítem."),
+                DT::DTOutput("hom_data_table"),
                 hr(),
-                h4("Cálculos por ítem"),
-                p("Esta tabla muestra los cálculos para cada ítem del conjunto de datos del nivel seleccionado, incluyendo la media y el rango de las mediciones."),
-                tableOutput("details_per_item_table"),
-                hr(),
-                h4("Estadísticos resumidos"),
-                p("Esta tabla muestra los estadísticos generales de la evaluación de homogeneidad."),
-                tableOutput("details_summary_stats_table")
+                fluidRow(
+                  column(width = 6,
+                    h4("Estadísticas y Criterios (Método MADe)"),
+                    p("Resultados del análisis ANOVA y criterios de homogeneidad según ISO 13528:2022."),
+                    tableOutput("hom_stats_table_made")
+                  ),
+                  column(width = 6,
+                    h4("Estadísticas y Criterios (Método nIQR)"),
+                    p("Resultados del análisis ANOVA y criterios de homogeneidad según ISO 13528:2022."),
+                    tableOutput("hom_stats_table_niqr")
+                  )
+                )
               ),
               tabPanel(
                 "Evaluación de estabilidad",
-                h4("Conclusión"),
-                uiOutput("homog_conclusion_stability"),
+                h4("Conclusión (Método MADe)"),
+                uiOutput("stability_conclusion_made"),
                 hr(),
-                h4("Componentes de varianza"),
-                p("Desviaciones estándar estimadas del cálculo manual para el conjunto de estabilidad."),
-                tableOutput("variance_components_stability"),
+                h4("Conclusión (Método nIQR)"),
+                uiOutput("stability_conclusion_niqr"),
                 hr(),
-                h4("Cálculos por ítem"),
-                p("Esta tabla muestra los cálculos para cada ítem del conjunto de estabilidad."),
-                tableOutput("details_per_item_table_stability"),
+                fluidRow(
+                  column(width = 6,
+                    h4("Resumen del Estudio (Método MADe)"),
+                    p("Parámetros clave del estudio de estabilidad usando MADe."),
+                    tableOutput("stab_summary_table_made")
+                  ),
+                  column(width = 6,
+                    h4("Resumen del Estudio (Método nIQR)"),
+                    p("Parámetros clave del estudio de estabilidad usando nIQR."),
+                    tableOutput("stab_summary_table_niqr")
+                  )
+                ),
                 hr(),
-                h4("Estadísticos resumidos"),
-                p("Esta tabla muestra los estadísticos generales para el conjunto de estabilidad."),
-                tableOutput("details_summary_stats_table_stability")
+                h4("Datos de Estabilidad"),
+                p("Muestras, réplicas, media, rango y diferencias absolutas para cada ítem."),
+                DT::DTOutput("stab_data_table"),
+                hr(),
+                fluidRow(
+                  column(width = 6,
+                    h4("Estadísticas y Criterios (Método MADe)"),
+                    p("Resultados del análisis de estabilidad y criterios según ISO 13528:2022."),
+                    tableOutput("stab_stats_table_made")
+                  ),
+                  column(width = 6,
+                    h4("Estadísticas y Criterios (Método nIQR)"),
+                    p("Resultados del análisis de estabilidad y criterios según ISO 13528:2022."),
+                    tableOutput("stab_stats_table_niqr")
+                  )
+                )
               ),
               tabPanel(
                 "Contribuciones a la incertidumbre",
@@ -996,7 +1201,7 @@ server <- function(input, output, session) {
         )
       ),
       tabPanel(
-        title = tagList(icon("star"), "Puntajes PT"),
+        title = tagList(icon("star"), "Puntajes EA"),
         value = "puntajes_pt",
         sidebarLayout(
           sidebarPanel(
@@ -1256,24 +1461,24 @@ server <- function(input, output, session) {
     selectInput("pollutant_analysis", "Seleccionar analito:", choices = choices)
   })
 
-  # R3: Ejecución de Homogeneidad (Habilitada después de usar el botón ejecutar)
+  # R3: Ejecución de Homogeneidad (Reactiva a cambios en UI)
   homogeneity_run <- reactive({
-    req(analysis_trigger())
+    req(hom_data_full())
     req(input$pollutant_analysis, input$target_level)
     compute_homogeneity_metrics(input$pollutant_analysis, input$target_level)
   })
 
-  # R3.5: Ejecución de Homogeneidad de Datos de estabilidad (Habilitada después de usar el botón ejecutar)
+  # R3.5: Ejecución de Homogeneidad de Datos de estabilidad (Reactiva a cambios en UI)
   homogeneity_run_stability <- reactive({
-    req(analysis_trigger())
+    req(stab_data_full())
     req(input$pollutant_analysis, input$target_level)
     hom_results <- homogeneity_run()
     compute_stability_metrics(input$pollutant_analysis, input$target_level, hom_results)
   })
 
-  # R4: Ejecución de Estabilidad (Habilitada después de usar el botón ejecutar)
+  # R4: Ejecución de Estabilidad (Reactiva a cambios en UI)
   stability_run <- reactive({
-    req(analysis_trigger())
+    req(stab_data_full())
     hom_results <- homogeneity_run()
     stab_hom_results <- homogeneity_run_stability()
 
@@ -1294,6 +1499,14 @@ server <- function(input, output, session) {
     sigma_pt <- hom_results$sigma_pt
     stab_criterion_value <- 0.3 * sigma_pt
 
+    # Criterio de estabilidad con nIQR (si está disponible)
+    n_iqr_val <- hom_results$nIQR
+    if (length(n_iqr_val) > 0 && is.finite(n_iqr_val)) {
+      stab_criterion_value_niqr <- 0.3 * n_iqr_val
+    } else {
+      stab_criterion_value_niqr <- NA_real_
+    }
+
     # Formato dinámico para decimales
     fmt <- "%.5f"
 
@@ -1305,12 +1518,29 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
       y1, y2, diff_observed, stab_criterion_value
     )
 
-    if (diff_observed <= stab_criterion_value) {
-      conclusion <- "Conclusión: el ítem es adecuadamente estable."
+    if (!is.na(diff_observed) && diff_observed <= stab_criterion_value) {
+      conclusion <- sprintf("|y1 - y2| (%.4f) <= c_MADe (%.4f): CUMPLE CRITERIO ESTABILIDAD (MADe)", diff_observed, stab_criterion_value)
       conclusion_class <- "alert alert-success"
-    } else {
-      conclusion <- "Conclusión: ADVERTENCIA: el ítem puede ser inestable."
+    } else if (!is.na(diff_observed)) {
+      conclusion <- sprintf("|y1 - y2| (%.4f) > c_MADe (%.4f): NO CUMPLE CRITERIO ESTABILIDAD (MADe)", diff_observed, stab_criterion_value)
       conclusion_class <- "alert alert-warning"
+    } else {
+      conclusion <- "Conclusión: no se puede evaluar estabilidad (datos insuficientes)."
+      conclusion_class <- "alert alert-secondary"
+    }
+
+    if (is.finite(stab_criterion_value_niqr) && !is.na(diff_observed) && diff_observed <= stab_criterion_value_niqr) {
+      conclusion_niqr <- sprintf("|y1 - y2| (%.4f) <= c_nIQR (%.4f): CUMPLE CRITERIO ESTABILIDAD (nIQR)", diff_observed, stab_criterion_value_niqr)
+      conclusion_class_niqr <- "alert alert-success"
+    } else if (is.finite(stab_criterion_value_niqr) && !is.na(diff_observed)) {
+      conclusion_niqr <- sprintf("|y1 - y2| (%.4f) > c_nIQR (%.4f): NO CUMPLE CRITERIO ESTABILIDAD (nIQR)", diff_observed, stab_criterion_value_niqr)
+      conclusion_class_niqr <- "alert alert-warning"
+    } else if (is.na(diff_observed)) {
+      conclusion_niqr <- "Conclusión: no se puede evaluar estabilidad (nIQR) por datos insuficientes."
+      conclusion_class_niqr <- "alert alert-secondary"
+    } else {
+      conclusion_niqr <- "Conclusión: nIQR no disponible; no se puede evaluar estabilidad con nIQR."
+      conclusion_class_niqr <- "alert alert-secondary"
     }
 
     # Para la prueba t, necesitamos los resultados crudos de ambos conjuntos de datos para el nivel seleccionado
@@ -1340,6 +1570,8 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
     list(
       conclusion = conclusion,
       conclusion_class = conclusion_class,
+      conclusion_niqr = conclusion_niqr,
+      conclusion_class_niqr = conclusion_class_niqr,
       details = details_text,
       ttest_summary = t_test_result,
       ttest_conclusion = ttest_conclusion,
@@ -1579,13 +1811,23 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
     }
   })
 
-  # Salida: Conclusión de Homogeneidad
-  output$homog_conclusion <- renderUI({
+  # Salida: Conclusión de Homogeneidad (Método MADe)
+  output$homog_conclusion_made <- renderUI({
     res <- homogeneity_run()
     if (!is.null(res$error)) {
       div(class = "alert alert-danger", res$error)
     } else {
-      div(class = res$conclusion_class, HTML(res$conclusion))
+      div(class = res$conclusion_class_made, HTML(res$conclusion_made))
+    }
+  })
+
+  # Salida: Conclusión de Homogeneidad (Método nIQR)
+  output$homog_conclusion_niqr <- renderUI({
+    res <- homogeneity_run()
+    if (!is.null(res$error)) {
+      div(class = "alert alert-danger", res$error)
+    } else {
+      div(class = res$conclusion_class_niqr, HTML(res$conclusion_niqr))
     }
   })
 
@@ -1614,13 +1856,155 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
     }
   })
 
-  # Salida: Conclusión de Estabilidad
-  output$stability_conclusion <- renderUI({
+  # Salida: Tabla de Resumen de Homogeneidad (Método MADe)
+  output$hom_summary_table_made <- renderTable({
+    res <- homogeneity_run()
+    if (!is.null(res$error)) {
+      return(data.frame(Error = res$error))
+    }
+    data.frame(
+      Parámetro = c(
+        "Muestras (g)",
+        "Réplicas (m)",
+        "x_pt (hom_stab)",
+        "Median |sample_2 - x_pt|",
+        "MADe (1.483 × median)",
+        "u_sigma_pt"
+      ),
+      Valor = c(
+        res$g,
+        res$m,
+        format_num(res$x_pt),
+        format_num(res$sigma_pt),
+        format_num(res$MADe),
+        format_num(res$u_sigma_pt)
+      )
+    )
+  }, spacing = "l")
+
+  # Salida: Tabla de Resumen de Homogeneidad (Método nIQR)
+  output$hom_summary_table_niqr <- renderTable({
+    res <- homogeneity_run()
+    if (!is.null(res$error)) {
+      return(data.frame(Error = res$error))
+    }
+    data.frame(
+      Parámetro = c(
+        "Muestras (g)",
+        "Réplicas (m)",
+        "x_pt (hom_stab)",
+        "Q1 (25%)",
+        "Q3 (75%)",
+        "IQR (Q3 - Q1)",
+        "nIQR (0.7413 × IQR)",
+        "u_sigma_pt (nIQR)"
+      ),
+      Valor = c(
+        res$g,
+        res$m,
+        format_num(res$x_pt),
+        format_num(res$q1),
+        format_num(res$q3),
+        format_num(res$iqr),
+        format_num(res$nIQR),
+        format_num(res$u_sigma_pt_niqr)
+      )
+    )
+  }, spacing = "l")
+
+  # Salida: Tabla de Datos de Homogeneidad
+  output$hom_data_table <- DT::renderDT({
+    req(input$pollutant_analysis, input$target_level)
+    
+    res <- homogeneity_run()
+    
+    if (!is.null(res$error)) {
+      return(DT::datatable(data.frame(Error = res$error)))
+    }
+    
+    data_table <- res$intermediate_df %>%
+      mutate(across(where(is.numeric), ~ round(.x, 5)))
+    
+    DT::datatable(
+      data_table,
+      options = list(
+        pageLength = 20,
+        scrollX = TRUE,
+        language = list(url = "//cdn.datatables.net/plug-ins/1.10.11/i18n/Spanish.json")
+      ),
+      rownames = FALSE
+    )
+  })
+
+  # Salida: Tabla de Estadísticas y Criterios de Homogeneidad (Método MADe)
+  output$hom_stats_table_made <- renderTable({
+    res <- homogeneity_run()
+    if (!is.null(res$error)) {
+      return(data.frame(Error = res$error))
+    }
+    data.frame(
+      Estadística = c(
+        "Media General (x_t_bar)",
+        "sx (s_x_bar)",
+        "sw",
+        "ss (s_s)",
+        "Criterio Homogeneidad (c)",
+        "Criterio Expandido (c_exp)"
+      ),
+      Valor = c(
+        format_num(res$general_mean),
+        format_num(res$sd_of_means),
+        format_num(res$sw),
+        format_num(res$ss),
+        format_num(res$c_criterion),
+        format_num(res$c_criterion_expanded)
+      )
+    )
+  }, spacing = "l")
+
+  # Salida: Tabla de Estadísticas y Criterios de Homogeneidad (Método nIQR)
+  output$hom_stats_table_niqr <- renderTable({
+    res <- homogeneity_run()
+    if (!is.null(res$error)) {
+      return(data.frame(Error = res$error))
+    }
+    data.frame(
+      Estadística = c(
+        "Media General (x_t_bar)",
+        "sx (s_x_bar)",
+        "sw",
+        "ss (s_s)",
+        "Criterio Homogeneidad nIQR (c)",
+        "Criterio Expandido nIQR (c_exp)"
+      ),
+      Valor = c(
+        format_num(res$general_mean),
+        format_num(res$sd_of_means),
+        format_num(res$sw),
+        format_num(res$ss),
+        format_num(res$c_criterion_niqr),
+        format_num(res$c_criterion_expanded_niqr)
+      )
+    )
+  }, spacing = "l")
+
+  # Salida: Conclusión de Estabilidad (Método MADe)
+  output$stability_conclusion_made <- renderUI({
     res <- stability_run()
     if (!is.null(res$error)) {
       div(class = "alert alert-danger", res$error)
     } else {
       div(class = res$conclusion_class, HTML(res$conclusion))
+    }
+  })
+
+  # Salida: Conclusión de Estabilidad (Método nIQR)
+  output$stability_conclusion_niqr <- renderUI({
+    res <- stability_run()
+    if (!is.null(res$error)) {
+      div(class = "alert alert-danger", res$error)
+    } else {
+      div(class = res$conclusion_class_niqr, HTML(res$conclusion_niqr))
     }
   })
 
@@ -1705,76 +2089,154 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
     }
   })
 
+  # Salida: Resumen del Estudio de Estabilidad (Método MADe)
+  output$stab_summary_table_made <- renderTable({
+    hom_res <- homogeneity_run()
+    res <- homogeneity_run_stability()
+    if (!is.null(res$error)) {
+      return(data.frame(Error = res$error))
+    }
+    data.frame(
+      Parámetro = c(
+        "Muestras (g)",
+        "Réplicas (m)",
+        "x_pt (hom_stab)",
+        "Median |sample_2 - x_pt|",
+        "MADe (1.483 × median)",
+        "u_sigma_pt"
+      ),
+      Valor = c(
+        hom_res$g,
+        hom_res$m,
+        format_num(hom_res$x_pt),
+        format_num(hom_res$sigma_pt),
+        format_num(hom_res$MADe),
+        format_num(hom_res$u_sigma_pt)
+      )
+    )
+  }, spacing = "l")
+
+  # Salida: Resumen del Estudio de Estabilidad (Método nIQR)
+  output$stab_summary_table_niqr <- renderTable({
+    hom_res <- homogeneity_run()
+    res <- homogeneity_run_stability()
+    if (!is.null(res$error)) {
+      return(data.frame(Error = res$error))
+    }
+    data.frame(
+      Parámetro = c(
+        "Muestras (g)",
+        "Réplicas (m)",
+        "x_pt (hom_stab)",
+        "Q1 (25%)",
+        "Q3 (75%)",
+        "IQR (Q3 - Q1)",
+        "nIQR (0.7413 × IQR)",
+        "u_sigma_pt (nIQR)"
+      ),
+      Valor = c(
+        hom_res$g,
+        hom_res$m,
+        format_num(hom_res$x_pt),
+        format_num(hom_res$q1),
+        format_num(hom_res$q3),
+        format_num(hom_res$iqr),
+        format_num(hom_res$nIQR),
+        format_num(hom_res$u_sigma_pt_niqr)
+      )
+    )
+  }, spacing = "l")
+
+  # Salida: Tabla de Estadísticas y Criterios de Estabilidad (Método MADe)
+  output$stab_stats_table_made <- renderTable({
+    res <- homogeneity_run_stability()
+    if (!is.null(res$error)) {
+      return(data.frame(Error = res$error))
+    }
+    data.frame(
+      Estadística = c(
+        "Media General (stability)",
+        "Diferencia |hom - stab|",
+        "Criterio Estabilidad (c)",
+        "Criterio Expandido (c_exp)"
+      ),
+      Valor = c(
+        format_num(res$stab_general_mean),
+        format_num(res$diff_hom_stab),
+        format_num(res$stab_c_criterion),
+        format_num(res$stab_c_criterion_expanded)
+      )
+    )
+  }, spacing = "l")
+
+  # Salida: Tabla de Estadísticas y Criterios de Estabilidad (Método nIQR)
+  output$stab_stats_table_niqr <- renderTable({
+    res <- homogeneity_run_stability()
+    if (!is.null(res$error)) {
+      return(data.frame(Error = res$error))
+    }
+    data.frame(
+      Estadística = c(
+        "Media General (stability)",
+        "Diferencia |hom - stab|",
+        "Criterio Estabilidad nIQR (c)",
+        "Criterio Expandido nIQR (c_exp)"
+      ),
+      Valor = c(
+        format_num(res$stab_general_mean),
+        format_num(res$diff_hom_stab),
+        format_num(res$stab_c_criterion_niqr),
+        format_num(res$stab_c_criterion_expanded_niqr)
+      )
+    )
+  }, spacing = "l")
+
   # Salida: Componentes de varianza para Datos de estabilidad
   output$variance_components_stability <- renderTable({
+    hom_res <- homogeneity_run()
     res <- homogeneity_run_stability()
-    if (is.null(res$error)) {
-      df <- data.frame(
-        Componente = c(
-          "Valor asignado (xpt)",
-          "DE robusta (sigma_pt)",
-          "Incertidumbre del valor asignado (u_xpt)"
-        ),
-        Valor = c(
-          sprintf("%.5f", res$stab_median_val),
-          sprintf("%.5f", res$stab_sigma_pt),
-          sprintf("%.5f", res$stab_u_xpt)
-        )
-      )
-      df
+    if (!is.null(res$error)) {
+      return(data.frame(Error = res$error))
     }
+    data.frame(
+      Componente = c(
+        "Valor asignado (xpt)",
+        "DE robusta (sigma_pt)",
+        "MADe (1.483 × sigma_pt)",
+        "Incertidumbre del valor asignado (u_xpt)",
+        "Incertidumbre (u_sigma_pt)"
+      ),
+      Valor = c(
+        format_num(res$stab_median_val),
+        format_num(res$stab_sigma_pt),
+        format_num(hom_res$MADe),
+        format_num(res$stab_u_xpt),
+        format_num(hom_res$u_sigma_pt)
+      )
+    )
+  }, spacing = "l")
+
+  # Salida: Tabla de Datos de Estabilidad
+  output$stab_data_table <- DT::renderDT({
+    res <- homogeneity_run_stability()
+
+    if (!is.null(res$error)) {
+      return(DT::datatable(data.frame(Error = res$error)))
+    }
+
+    data_table <- res$stab_intermediate_df %>%
+      mutate(across(where(is.numeric), ~ round(.x, 5)))
+
+    DT::datatable(
+      data_table,
+      options = list(
+        pageLength = 20,
+        scrollX = TRUE,
+        language = list(url = "//cdn.datatables.net/plug-ins/1.10.11/i18n/Spanish.json")
+      ),
+      rownames = FALSE
+    )
   })
-
-  # Salida: Tabla de detalles por ítem para Datos de estabilidad
-  output$details_per_item_table_stability <- renderTable(
-    {
-      res <- homogeneity_run_stability()
-      if (is.null(res$error)) {
-        res$stab_intermediate_df %>% mutate(across(where(is.numeric), ~ round(.x, 5)))
-      }
-    },
-    spacing = "l",
-    digits = 5
-  )
-
-  # Salida: Tabla de estadísticos resumidos para Datos de estabilidad
-  output$details_summary_stats_table_stability <- renderTable(
-    {
-      res <- homogeneity_run_stability()
-      if (is.null(res$error)) {
-        data.frame(
-          Parámetro = c(
-            "Media general",
-            "Diferencia absoluta respecto a la media general",
-            "DE de medias",
-            "Varianza de las medias (s_x_bar_sq)",
-            "sw",
-            "Varianza dentro de la muestra (s_w_sq)",
-            "ss",
-            "---",
-            "Valor asignado (xpt)",
-            "Mediana de diferencias absolutas",
-            "Número de ítems (g)",
-            "Número de réplicas (m)",
-            "DE robusta (MADe)",
-            "nIQR",
-            "Incertidumbre del valor asignado (u_xpt)",
-            "---",
-            "Criterio c",
-            "Criterio c (expandido)"
-          ),
-          Valor = c(
-            c(format_num(res$stab_general_mean), format_num(res$diff_hom_stab), format_num(res$stab_sd_of_means), format_num(res$stab_s_x_bar_sq), format_num(res$stab_sw), format_num(res$stab_s_w_sq), format_num(res$stab_ss)),
-            "",
-            c(format_num(res$stab_median_val), format_num(res$stab_median_abs_diff), res$g, res$m, format_num(res$stab_sigma_pt), format_num(res$stab_n_iqr), format_num(res$stab_u_xpt)),
-            "",
-            c(format_num(res$stab_c_criterion), format_num(res$stab_c_criterion_expanded))
-          )
-        )
-      }
-    },
-    spacing = "l"
-  )
 
   # --- Módulo de Puntajes PT ---
 
@@ -1839,9 +2301,8 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
 
 
   compute_combo_scores <- function(participants_df, x_pt, sigma_pt, u_xpt, combo_meta, k = 2, u_hom = 0, u_stab = 0) {
-    x_pt_def <- x_pt
     u_xpt_def <- sqrt(u_xpt^2 + u_hom^2 + u_stab^2)
-    if (!is.finite(x_pt_def)) {
+    if (!is.finite(x_pt)) {
       return(list(
         error = sprintf("Valor asignado no disponible para %s.", combo_meta$title)
       ))
@@ -1860,25 +2321,25 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
         uncertainty_std = ifelse(uncertainty_std_missing, NA_real_, uncertainty_std)
       )
 
-    z_values <- (participants_df$result - x_pt_def) / sigma_pt
+    z_values <- (participants_df$result - x_pt) / sigma_pt
     zprime_den <- sqrt(sigma_pt^2 + u_xpt_def^2)
     z_prime_values <- if (zprime_den > 0) {
-      (participants_df$result - x_pt_def) / zprime_den
+      (participants_df$result - x_pt) / zprime_den
     } else {
       NA_real_
     }
     zeta_den <- sqrt(participants_df$uncertainty_std^2 + u_xpt_def^2)
-    zeta_values <- ifelse(zeta_den > 0, (participants_df$result - x_pt_def) / zeta_den, NA_real_)
+    zeta_values <- ifelse(zeta_den > 0, (participants_df$result - x_pt) / zeta_den, NA_real_)
     U_xi <- k * participants_df$uncertainty_std
     U_xpt <- k * u_xpt_def
     en_den <- sqrt(U_xi^2 + U_xpt^2)
-    en_values <- ifelse(en_den > 0, (participants_df$result - x_pt_def) / en_den, NA_real_)
+    en_values <- ifelse(en_den > 0, (participants_df$result - x_pt) / en_den, NA_real_)
 
     data <- participants_df %>%
       mutate(
         combination = combo_meta$title,
         combination_label = combo_meta$label,
-        x_pt = x_pt_def,
+        x_pt = x_pt,
         sigma_pt = sigma_pt,
         u_xpt = u_xpt,
         u_xpt_def = u_xpt_def,
@@ -1901,8 +2362,7 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
       error = NULL,
       title = combo_meta$title,
       label = combo_meta$label,
-      x_pt = x_pt_def,
-      x_pt_def = x_pt_def,
+      x_pt = x_pt,
       sigma_pt = sigma_pt,
       u_xpt = u_xpt,
       u_xpt_def = u_xpt_def,
@@ -2048,7 +2508,6 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
           Combinación = meta$title,
           Etiqueta = meta$label,
           `x_pt` = NA_real_,
-          `x_pt_def` = NA_real_,
           `sigma_pt` = NA_real_,
           `u(x_pt)` = NA_real_,
           `u(x_pt)_def` = NA_real_,
@@ -2059,7 +2518,6 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
           Combinación = combo$title,
           Etiqueta = combo$label,
           `x_pt` = combo$x_pt,
-          `x_pt_def` = combo$x_pt_def,
           `sigma_pt` = combo$sigma_pt,
           `u(x_pt)` = combo$u_xpt,
           `u(x_pt)_def` = combo$u_xpt_def,
@@ -3045,14 +3503,14 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
           `Etiqueta de combinación` = combination_label,
           Nivel = level,
           `x_pt`,
-          `u(x_pt_def)` = u_xpt_def,
+          `u(x_pt)_def` = u_xpt_def,
           `Incertidumbre expandida` = expanded_uncertainty,
           `sigma_pt`
         ),
       options = list(pageLength = 10, scrollX = TRUE),
       rownames = FALSE
     ) %>%
-      formatRound(columns = c("x_pt", "u(x_pt_def)", "Incertidumbre expandida", "sigma_pt"), digits = 5)
+      formatRound(columns = c("x_pt", "u(x_pt)_def", "Incertidumbre expandida", "sigma_pt"), digits = 5)
   })
 
   output$global_level_summary_table <- renderTable(
@@ -3558,7 +4016,6 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
             `x_pt` = x_pt,
             `sigma_pt` = sigma_pt,
             `u(x_pt)` = u_xpt,
-            `u(x_pt_def)` = u_xpt_def,
             `Puntaje z` = z_score,
             `Evaluación z` = z_score_eval,
             `Puntaje z'` = z_prime_score,
@@ -3569,7 +4026,7 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
             `Puntaje En Eval` = En_score_eval
           )
         datatable(table_df, options = list(scrollX = TRUE, pageLength = 10), rownames = FALSE) %>%
-          formatRound(columns = c("Resultado", "x_pt", "sigma_pt", "u(x_pt)", "u(x_pt_def)", "Puntaje z", "Puntaje z'", "Puntaje zeta", "Puntaje En"), digits = 3)
+          formatRound(columns = c("Resultado", "x_pt", "sigma_pt", "u(x_pt)", "Puntaje z", "Puntaje z'", "Puntaje zeta", "Puntaje En"), digits = 3)
       })
 
       output[[plot_id]] <- renderPlotly({
@@ -4459,6 +4916,13 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
       u_xpt <- 1.25 * sigma_pt / sqrt(length(vals))
     }
 
+    u_hom_val <- if(is.null(hom_res$error)) hom_res$ss else 0
+    u_stab_val <- 0
+    if (is.null(stab_res$error) && is.null(hom_res$error)) {
+      d_max <- abs(hom_res$general_mean - stab_res$stab_general_mean)
+      u_stab_val <- d_max / sqrt(3)
+    }
+
     scores_res <- compute_scores_metrics(
       summary_df = summary_df,
       target_pollutant = first_pollutant,
@@ -4467,7 +4931,9 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
       sigma_pt = sigma_pt,
       u_xpt = u_xpt,
       k = input$report_k,
-      m = if (!is.null(hom_res$m)) hom_res$m else NULL
+      m = if (!is.null(hom_res$m)) hom_res$m else NULL,
+      u_hom = u_hom_val,
+      u_stab = u_stab_val
     )
 
     if (!is.null(scores_res$error)) {

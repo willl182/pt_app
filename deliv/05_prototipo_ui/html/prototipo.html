@@ -1,0 +1,1617 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Análisis PT - ISO 13528:2022 - Prototipo UI</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f5f5f5;
+            color: #333;
+        }
+
+        /* Barra superior */
+        .top-bar {
+            background-color: #0056b3;
+            color: white;
+            padding: 12px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 1000;
+            height: 60px;
+        }
+
+        .top-bar .logo {
+            font-size: 20px;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .top-bar .breadcrumb {
+            font-size: 14px;
+            opacity: 0.9;
+        }
+
+        .top-bar .user-info {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .top-bar .icon-btn {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 18px;
+            cursor: pointer;
+            padding: 5px;
+        }
+
+        /* Layout principal */
+        .main-container {
+            display: flex;
+            margin-top: 60px;
+            min-height: calc(100vh - 60px);
+        }
+
+        /* Barra lateral */
+        .sidebar {
+            width: 250px;
+            background-color: #1a1a2e;
+            color: white;
+            padding: 20px 0;
+            position: fixed;
+            left: 0;
+            top: 60px;
+            bottom: 0;
+            overflow-y: auto;
+        }
+
+        .sidebar .menu-title {
+            padding: 10px 20px;
+            font-size: 12px;
+            text-transform: uppercase;
+            color: #888;
+            letter-spacing: 1px;
+        }
+
+        .sidebar .menu-item {
+            padding: 12px 20px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            border-left: 3px solid transparent;
+        }
+
+        .sidebar .menu-item:hover {
+            background-color: #16213e;
+        }
+
+        .sidebar .menu-item.active {
+            background-color: #0f3460;
+            border-left-color: #e94560;
+        }
+
+        .sidebar .menu-icon {
+            width: 20px;
+            text-align: center;
+        }
+
+        /* Contenido principal */
+        .content {
+            margin-left: 250px;
+            flex: 1;
+            padding: 30px;
+        }
+
+        .module-title {
+            font-size: 28px;
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: #1a1a2e;
+        }
+
+        .module-subtitle {
+            font-size: 16px;
+            color: #666;
+            margin-bottom: 30px;
+        }
+
+        /* Tarjetas */
+        .card {
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .card-header {
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #e0e0e0;
+        }
+
+        /* Grid de tarjetas */
+        .grid-2 {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
+        }
+
+        .grid-3 {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+        }
+
+        .grid-4 {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 20px;
+        }
+
+        /* Botones */
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.2s;
+        }
+
+        .btn-primary {
+            background-color: #0056b3;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background-color: #004494;
+        }
+
+        .btn-secondary {
+            background-color: #6c757d;
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background-color: #545b62;
+        }
+
+        .btn-success {
+            background-color: #28a745;
+            color: white;
+        }
+
+        .btn-danger {
+            background-color: #dc3545;
+            color: white;
+        }
+
+        /* Inputs */
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-label {
+            display: block;
+            font-weight: bold;
+            margin-bottom: 5px;
+            color: #333;
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            font-size: 14px;
+        }
+
+        .file-upload {
+            border: 2px dashed #ccc;
+            border-radius: 5px;
+            padding: 30px;
+            text-align: center;
+            cursor: pointer;
+            transition: border-color 0.2s;
+        }
+
+        .file-upload:hover {
+            border-color: #0056b3;
+        }
+
+        /* Tablas */
+        .table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+
+        .table th,
+        .table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        .table th {
+            background-color: #f8f9fa;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .table tbody tr:hover {
+            background-color: #f0f0f0;
+        }
+
+        /* Badges */
+        .badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        .badge-success {
+            background-color: #d4edda;
+            color: #155724;
+        }
+
+        .badge-warning {
+            background-color: #fff3cd;
+            color: #856404;
+        }
+
+        .badge-danger {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+
+        .badge-info {
+            background-color: #d1ecf1;
+            color: #0c5460;
+        }
+
+        /* Pestañas */
+        .tabs {
+            display: flex;
+            border-bottom: 2px solid #e0e0e0;
+            margin-bottom: 20px;
+        }
+
+        .tab {
+            padding: 12px 20px;
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            margin-bottom: -2px;
+            transition: all 0.2s;
+        }
+
+        .tab:hover {
+            background-color: #f0f0f0;
+        }
+
+        .tab.active {
+            border-bottom-color: #0056b3;
+            color: #0056b3;
+            font-weight: bold;
+        }
+
+        /* KPI Cards */
+        .kpi-card {
+            background-color: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+
+        .kpi-value {
+            font-size: 36px;
+            font-weight: bold;
+            color: #0056b3;
+            margin: 10px 0;
+        }
+
+        .kpi-label {
+            font-size: 14px;
+            color: #666;
+        }
+
+        /* Gráfico placeholder */
+        .chart-placeholder {
+            background-color: #f8f9fa;
+            border: 2px dashed #ccc;
+            border-radius: 8px;
+            padding: 40px;
+            text-align: center;
+            color: #666;
+            min-height: 300px;
+        }
+
+        .chart-placeholder h4 {
+            margin-bottom: 10px;
+            color: #333;
+        }
+
+        /* Estado de carga */
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 14px;
+        }
+
+        .status-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+        }
+
+        .status-dot.success {
+            background-color: #28a745;
+        }
+
+        .status-dot.error {
+            background-color: #dc3545;
+        }
+
+        .status-dot.warning {
+            background-color: #ffc107;
+        }
+
+        /* Panel de resumen */
+        .summary-panel {
+            background-color: #0f3460;
+            color: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+
+        .summary-panel h3 {
+            margin-bottom: 15px;
+        }
+
+        .summary-stats {
+            display: flex;
+            gap: 30px;
+            margin-bottom: 15px;
+        }
+
+        .summary-stat {
+            text-align: center;
+        }
+
+        .summary-stat .value {
+            font-size: 28px;
+            font-weight: bold;
+            color: #e94560;
+        }
+
+        .summary-stat .label {
+            font-size: 12px;
+            opacity: 0.8;
+        }
+
+        /* Búsqueda */
+        .search-box {
+            position: relative;
+            margin-bottom: 20px;
+        }
+
+        .search-box input {
+            width: 100%;
+            padding: 10px 40px 10px 15px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+
+        .search-box .search-icon {
+            position: absolute;
+            right: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #999;
+        }
+
+        /* Footer */
+        .footer {
+            background-color: #1a1a2e;
+            color: white;
+            text-align: center;
+            padding: 20px;
+            font-size: 12px;
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            margin-left: 250px;
+        }
+
+        /* Módulos ocultos por defecto */
+        .module {
+            display: none;
+        }
+
+        .module.active {
+            display: block;
+        }
+
+        /* Responsive */
+        @media (max-width: 1024px) {
+            .grid-4 {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        @media (max-width: 768px) {
+            .sidebar {
+                transform: translateX(-100%);
+                transition: transform 0.3s;
+            }
+
+            .sidebar.open {
+                transform: translateX(0);
+            }
+
+            .content {
+                margin-left: 0;
+            }
+
+            .footer {
+                margin-left: 0;
+            }
+
+            .grid-3,
+            .grid-2 {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Barra superior -->
+    <div class="top-bar">
+        <div class="logo">
+            <span>🔬</span>
+            <span>Análisis PT - ISO 13528:2022</span>
+        </div>
+        <div class="breadcrumb">
+            Inicio &gt; Carga de Datos
+        </div>
+        <div class="user-info">
+            <button class="icon-btn" title="Notificaciones">🔔</button>
+            <button class="icon-btn" title="Modo oscuro">🌙</button>
+            <button class="icon-btn" title="Perfil">👤</button>
+            <span>Usuario</span>
+        </div>
+    </div>
+
+    <div class="main-container">
+        <!-- Barra lateral -->
+        <div class="sidebar">
+            <div class="menu-item active" data-module="home">
+                <span class="menu-icon">📊</span>
+                <span>Inicio</span>
+            </div>
+            <div class="menu-item" data-module="carga-datos">
+                <span class="menu-icon">📁</span>
+                <span>Carga de Datos</span>
+            </div>
+            <div class="menu-item" data-module="homogeneidad">
+                <span class="menu-icon">🧪</span>
+                <span>Homogeneidad/Estabilidad</span>
+            </div>
+            <div class="menu-item" data-module="outliers">
+                <span class="menu-icon">🔍</span>
+                <span>Valores Atípicos</span>
+            </div>
+            <div class="menu-item" data-module="valor-asignado">
+                <span class="menu-icon">📈</span>
+                <span>Valor Asignado</span>
+            </div>
+            <div class="menu-item" data-module="puntajes">
+                <span class="menu-icon">🎯</span>
+                <span>Puntajes PT</span>
+            </div>
+            <div class="menu-item" data-module="informe-global">
+                <span class="menu-icon">📋</span>
+                <span>Informe Global</span>
+            </div>
+            <div class="menu-item" data-module="participantes">
+                <span class="menu-icon">👥</span>
+                <span>Participantes</span>
+            </div>
+            <div class="menu-item" data-module="generacion-informes">
+                <span class="menu-icon">📄</span>
+                <span>Generación de Informes</span>
+            </div>
+            <div class="menu-item" data-module="configuracion">
+                <span class="menu-icon">⚙️</span>
+                <span>Configuración</span>
+            </div>
+            <div class="menu-item" data-module="ayuda">
+                <span class="menu-icon">❓</span>
+                <span>Ayuda</span>
+            </div>
+        </div>
+
+        <!-- Contenido principal -->
+        <div class="content">
+            <!-- Módulo: Inicio -->
+            <div id="home" class="module active">
+                <h1 class="module-title">Bienvenido al Sistema de Análisis PT</h1>
+                <p class="module-subtitle">Aplicación para análisis de estudios de aptitud según ISO 13528:2022 e ISO 17043:2024</p>
+
+                <div class="grid-3">
+                    <div class="card" style="text-align: center; cursor: pointer; border: 2px solid #0056b3;">
+                        <div style="font-size: 48px; margin-bottom: 15px;">📁</div>
+                        <h3>Cargar Datos</h3>
+                        <p style="color: #666; margin-top: 10px;">Inicie un nuevo análisis cargando los archivos CSV</p>
+                        <button class="btn btn-primary" style="margin-top: 15px;">Comenzar</button>
+                    </div>
+                    <div class="card" style="text-align: center; cursor: pointer;">
+                        <div style="font-size: 48px; margin-bottom: 15px;">📋</div>
+                        <h3>Ver Informe Global</h3>
+                        <p style="color: #666; margin-top: 10px;">Acceda al dashboard consolidado de resultados</p>
+                        <button class="btn btn-secondary" style="margin-top: 15px;">Ver Informe</button>
+                    </div>
+                    <div class="card" style="text-align: center; cursor: pointer;">
+                        <div style="font-size: 48px; margin-bottom: 15px;">📖</div>
+                        <h3>Manual de Usuario</h3>
+                        <p style="color: #666; margin-top: 10px;">Guía completa de uso del sistema</p>
+                        <button class="btn btn-secondary" style="margin-top: 15px;">Leer Manual</button>
+                    </div>
+                </div>
+
+                <div class="card" style="margin-top: 30px;">
+                    <div class="card-header">Estado del Sistema</div>
+                    <div class="grid-2">
+                        <div class="status-indicator">
+                            <div class="status-dot success"></div>
+                            <span>Sesión activa</span>
+                        </div>
+                        <div class="status-indicator">
+                            <div class="status-dot warning"></div>
+                            <span>Esperando carga de datos</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Módulo: Carga de Datos -->
+            <div id="carga-datos" class="module">
+                <h1 class="module-title">Carga de Datos</h1>
+                <p class="module-subtitle">Cargue los archivos CSV requeridos para el análisis PT</p>
+
+                <div class="grid-2">
+                    <div class="card">
+                        <div class="card-header">
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <span>Homogeneidad</span>
+                                <span class="badge badge-warning">Pendiente</span>
+                            </div>
+                        </div>
+                        <div class="file-upload">
+                            <div style="font-size: 36px; margin-bottom: 10px;">📄</div>
+                            <p>Arrastre y suelte el archivo homogeneity.csv</p>
+                            <p style="font-size: 12px; color: #999;">o haga clic para seleccionar</p>
+                        </div>
+                        <div style="margin-top: 15px; text-align: center;">
+                            <button class="btn btn-secondary">Vista previa</button>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-header">
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <span>Estabilidad</span>
+                                <span class="badge badge-warning">Pendiente</span>
+                            </div>
+                        </div>
+                        <div class="file-upload">
+                            <div style="font-size: 36px; margin-bottom: 10px;">📄</div>
+                            <p>Arrastre y suelte el archivo stability.csv</p>
+                            <p style="font-size: 12px; color: #999;">o haga clic para seleccionar</p>
+                        </div>
+                        <div style="margin-top: 15px; text-align: center;">
+                            <button class="btn btn-secondary">Vista previa</button>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-header">
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <span>Participantes</span>
+                                <span class="badge badge-warning">Pendiente</span>
+                            </div>
+                        </div>
+                        <div class="file-upload">
+                            <div style="font-size: 36px; margin-bottom: 10px;">📄</div>
+                            <p>Arrastre y suelte el archivo summary_n4.csv</p>
+                            <p style="font-size: 12px; color: #999;">o haga clic para seleccionar</p>
+                        </div>
+                        <div style="margin-top: 15px; text-align: center;">
+                            <button class="btn btn-secondary">Vista previa</button>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-header">
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <span>Instrumentación</span>
+                                <span class="badge badge-warning">Pendiente</span>
+                            </div>
+                        </div>
+                        <div class="file-upload">
+                            <div style="font-size: 36px; margin-bottom: 10px;">📄</div>
+                            <p>Arrastre y suelte el archivo participants_data4.csv</p>
+                            <p style="font-size: 12px; color: #999;">o haga clic para seleccionar</p>
+                        </div>
+                        <div style="margin-top: 15px; text-align: center;">
+                            <button class="btn btn-secondary">Vista previa</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">Panel de Validación</div>
+                    <div class="status-indicator" style="margin-bottom: 15px; font-size: 18px;">
+                        <div class="status-dot warning"></div>
+                        <span>✗ Archivos faltantes (0/4 cargados)</span>
+                    </div>
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Archivo</th>
+                                <th>Estado</th>
+                                <th>Filas</th>
+                                <th>Columnas</th>
+                                <th>Tamaño</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>homogeneity.csv</td>
+                                <td><span class="badge badge-warning">Pendiente</span></td>
+                                <td>-</td>
+                                <td>-</td>
+                                <td>-</td>
+                            </tr>
+                            <tr>
+                                <td>stability.csv</td>
+                                <td><span class="badge badge-warning">Pendiente</span></td>
+                                <td>-</td>
+                                <td>-</td>
+                                <td>-</td>
+                            </tr>
+                            <tr>
+                                <td>summary_n4.csv</td>
+                                <td><span class="badge badge-warning">Pendiente</span></td>
+                                <td>-</td>
+                                <td>-</td>
+                                <td>-</td>
+                            </tr>
+                            <tr>
+                                <td>participants_data4.csv</td>
+                                <td><span class="badge badge-warning">Pendiente</span></td>
+                                <td>-</td>
+                                <td>-</td>
+                                <td>-</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    <div style="display: flex; gap: 10px;">
+                        <button class="btn btn-secondary">Limpiar todo</button>
+                        <button class="btn btn-primary" disabled>Validar y continuar</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Módulo: Homogeneidad/Estabilidad -->
+            <div id="homogeneidad" class="module">
+                <h1 class="module-title">Homogeneidad y Estabilidad</h1>
+                <p class="module-subtitle">Análisis de homogeneidad y estabilidad de las muestras</p>
+
+                <div class="tabs">
+                    <div class="tab active">Homogeneidad</div>
+                    <div class="tab">Estabilidad</div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">Resultados de Homogeneidad</div>
+                    <div class="summary-panel" style="background-color: #f8f9fa; color: #333; margin-bottom: 20px;">
+                        <h3>Resumen</h3>
+                        <div class="summary-stats">
+                            <div class="summary-stat">
+                                <div class="value">8</div>
+                                <div class="label">Componentes analizados</div>
+                            </div>
+                            <div class="summary-stat">
+                                <div class="value">7</div>
+                                <div class="label">Aprobados</div>
+                            </div>
+                            <div class="summary-stat">
+                                <div class="value">1</div>
+                                <div class="label">Revisión requerida</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Componente</th>
+                                <th>Nivel</th>
+                                <th>ss</th>
+                                <th>sw</th>
+                                <th>c (0.3×σ_pt)</th>
+                                <th>Estado</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>CO</td>
+                                <td>2-μmol/mol</td>
+                                <td>0.00234</td>
+                                <td>0.00156</td>
+                                <td>0.00045</td>
+                                <td><span class="badge badge-success">Aprobado</span></td>
+                            </tr>
+                            <tr>
+                                <td>CO2</td>
+                                <td>400-μmol/mol</td>
+                                <td>0.01890</td>
+                                <td>0.01230</td>
+                                <td>0.00360</td>
+                                <td><span class="badge badge-success">Aprobado</span></td>
+                            </tr>
+                            <tr>
+                                <td>CH4</td>
+                                <td>2-μmol/mol</td>
+                                <td>0.00112</td>
+                                <td>0.00089</td>
+                                <td>0.00027</td>
+                                <td><span class="badge badge-success">Aprobado</span></td>
+                            </tr>
+                            <tr>
+                                <td>N2O</td>
+                                <td>0.3-μmol/mol</td>
+                                <td>0.00067</td>
+                                <td>0.00045</td>
+                                <td>0.00013</td>
+                                <td><span class="badge badge-warning">Revisión</span></td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 20px;">
+                        <div>
+                            <label class="form-label" style="display: inline-block; margin-right: 10px;">Filtrar por:</label>
+                            <select class="form-control" style="display: inline-block; width: 150px;">
+                                <option>Todos</option>
+                                <option>CO</option>
+                                <option>CO2</option>
+                                <option>CH4</option>
+                            </select>
+                        </div>
+                        <button class="btn btn-primary">Descargar reporte PDF</button>
+                    </div>
+                </div>
+
+                <div class="grid-2">
+                    <div class="card">
+                        <div class="card-header">Gráfico de Varianzas</div>
+                        <div class="chart-placeholder">
+                            <h4>Gráfico de barras</h4>
+                            <p>Visualización de ss vs sw por componente</p>
+                            <small>Placeholder para gráfico ggplot2</small>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <div class="card-header">Distribución de Errores</div>
+                        <div class="chart-placeholder">
+                            <h4>Histograma</h4>
+                            <p>Distribución de errores de homogeneidad</p>
+                            <small>Placeholder para gráfico ggplot2</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Módulo: Valores Atípicos -->
+            <div id="outliers" class="module">
+                <h1 class="module-title">Valores Atípicos</h1>
+                <p class="module-subtitle">Identificación y análisis de outliers en los datos</p>
+
+                <div class="card">
+                    <div class="card-header">Configuración</div>
+                    <div class="grid-2">
+                        <div class="form-group">
+                            <label class="form-label">Método de detección</label>
+                            <select class="form-control">
+                                <option>Algoritmo A (ISO 13528)</option>
+                                <option>Tukey (IQR)</option>
+                                <option>Grubbs</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Nivel de significancia (α)</label>
+                            <select class="form-control">
+                                <option>0.01</option>
+                                <option>0.05</option>
+                                <option>0.10</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Componente</label>
+                            <select class="form-control">
+                                <option>CO</option>
+                                <option>CO2</option>
+                                <option>CH4</option>
+                                <option>N2O</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Nivel</label>
+                            <select class="form-control">
+                                <option>2-μmol/mol</option>
+                                <option>400-μmol/mol</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label style="display: flex; align-items: center; gap: 10px; cursor: pointer;">
+                            <input type="checkbox" checked>
+                            <span>Incluir/excluir outliers en cálculos posteriores</span>
+                        </label>
+                    </div>
+                    <div>
+                        <button class="btn btn-primary">Aplicar filtros</button>
+                        <button class="btn btn-secondary">Restaurar datos originales</button>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">Outliers Detectados</div>
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Participante</th>
+                                <th>Valor reportado</th>
+                                <th>Valor ajustado</th>
+                                <th>Z-score</th>
+                                <th>Estado</th>
+                                <th>Razón</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>PART-012</td>
+                                <td>2.345</td>
+                                <td>2.100</td>
+                                <td>3.45</td>
+                                <td><span class="badge badge-danger">Outlier</span></td>
+                                <td>Z > 3</td>
+                            </tr>
+                            <tr>
+                                <td>PART-045</td>
+                                <td>1.890</td>
+                                <td>2.100</td>
+                                <td>2.78</td>
+                                <td><span class="badge badge-warning">Cuestionable</span></td>
+                                <td>2 < Z < 3</td>
+                            </tr>
+                            <tr>
+                                <td>PART-089</td>
+                                <td>2.098</td>
+                                <td>-</td>
+                                <td>0.05</td>
+                                <td><span class="badge badge-success">Normal</span></td>
+                                <td>-</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    <button class="btn btn-secondary">Exportar outliers</button>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">Gráfico de Valores Reportados</div>
+                    <div class="chart-placeholder" style="min-height: 400px;">
+                        <h4>Scatter Plot</h4>
+                        <p>Valores reportados vs participantes</p>
+                        <small>Puntos outliers resaltados en rojo</small>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Módulo: Valor Asignado -->
+            <div id="valor-asignado" class="module">
+                <h1 class="module-title">Valor Asignado</h1>
+                <p class="module-subtitle">Selección del valor asignado según métodos ISO 13528</p>
+
+                <div class="card">
+                    <div class="card-header">Métodos Disponibles</div>
+                    <div style="margin-bottom: 20px;">
+                        <label style="display: block; margin-bottom: 10px; cursor: pointer;">
+                            <input type="radio" name="metodo">
+                            <strong>Método 1:</strong> Valor de referencia (certificado)
+                        </label>
+                        <label style="display: block; margin-bottom: 10px; cursor: pointer;">
+                            <input type="radio" name="metodo">
+                            <strong>Método 2a:</strong> Consenso robusto con MADe
+                        </label>
+                        <label style="display: block; margin-bottom: 10px; cursor: pointer;">
+                            <input type="radio" name="metodo">
+                            <strong>Método 2b:</strong> Consenso robusto con nIQR
+                        </label>
+                        <label style="display: block; margin-bottom: 10px; cursor: pointer;">
+                            <input type="radio" name="metodo" checked>
+                            <strong>Método 3:</strong> Algoritmo A
+                        </label>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">Tabla Comparativa de Valores Asignados</div>
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Componente</th>
+                                <th>Nivel</th>
+                                <th>Método 1</th>
+                                <th>Método 2a</th>
+                                <th>Método 2b</th>
+                                <th>Método 3</th>
+                                <th>Seleccionado</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr style="background-color: #e3f2fd;">
+                                <td>CO</td>
+                                <td>2-μmol/mol</td>
+                                <td>-</td>
+                                <td>2.0987</td>
+                                <td>2.1002</td>
+                                <td>2.0995</td>
+                                <td><strong>2.0995</strong></td>
+                            </tr>
+                            <tr>
+                                <td>CO2</td>
+                                <td>400-μmol/mol</td>
+                                <td>-</td>
+                                <td>401.23</td>
+                                <td>401.18</td>
+                                <td>401.20</td>
+                                <td>-</td>
+                            </tr>
+                            <tr>
+                                <td>CH4</td>
+                                <td>2-μmol/mol</td>
+                                <td>-</td>
+                                <td>1.9985</td>
+                                <td>1.9991</td>
+                                <td>1.9988</td>
+                                <td>-</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="grid-2">
+                    <div class="card">
+                        <div class="card-header">Detalle: CO (2-μmol/mol)</div>
+                        <div style="margin-bottom: 15px;">
+                            <div><strong>Valor asignado:</strong> 2.0995 μmol/mol</div>
+                            <div><strong>σ_pt:</strong> 0.0152 μmol/mol</div>
+                            <div><strong>N participantes:</strong> 89</div>
+                            <div><strong>CV:</strong> 0.72%</div>
+                        </div>
+                        <button class="btn btn-primary">Confirmar selección</button>
+                        <button class="btn btn-secondary">Exportar tabla</button>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-header">Comparación Visual</div>
+                        <div class="chart-placeholder" style="min-height: 250px;">
+                            <h4>Gráfico de barras</h4>
+                            <p>Comparación de x_pt por método</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Módulo: Puntajes PT -->
+            <div id="puntajes" class="module">
+                <h1 class="module-title">Puntajes PT</h1>
+                <p class="module-subtitle">Cálculo de puntajes z, z', ζ, En para participantes</p>
+
+                <div class="card">
+                    <div class="card-header">Configuración</div>
+                    <div class="grid-4">
+                        <div class="form-group">
+                            <label class="form-label">Tipo de puntaje</label>
+                            <select class="form-control">
+                                <option>z</option>
+                                <option>z'</option>
+                                <option>ζ</option>
+                                <option>En</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Componente</label>
+                            <select class="form-control">
+                                <option>CO</option>
+                                <option>CO2</option>
+                                <option>CH4</option>
+                                <option>N2O</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Nivel</label>
+                            <select class="form-control">
+                                <option>2-μmol/mol</option>
+                                <option>400-μmol/mol</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Filtro</label>
+                            <label style="display: flex; align-items: center; gap: 5px; cursor: pointer;">
+                                <input type="checkbox">
+                                <span>Solo outliers</span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="grid-4">
+                    <div class="kpi-card">
+                        <div class="kpi-value" style="color: #28a745;">78</div>
+                        <div class="kpi-label">Satisfactorios</div>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="kpi-value" style="color: #ffc107;">8</div>
+                        <div class="kpi-label">Cuestionables</div>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="kpi-value" style="color: #dc3545;">3</div>
+                        <div class="kpi-label">No satisfactorios</div>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="kpi-value">89</div>
+                        <div class="kpi-label">Total</div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">Tabla de Puntajes</div>
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>ID Participante</th>
+                                <th>Valor reportado</th>
+                                <th>x_pt</th>
+                                <th>σ_pt</th>
+                                <th>Puntaje z</th>
+                                <th>Clasificación</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>PART-001</td>
+                                <td>2.098</td>
+                                <td>2.0995</td>
+                                <td>0.0152</td>
+                                <td>0.10</td>
+                                <td><span class="badge badge-success">Satisfactorio</span></td>
+                            </tr>
+                            <tr>
+                                <td>PART-002</td>
+                                <td>2.145</td>
+                                <td>2.0995</td>
+                                <td>0.0152</td>
+                                <td>2.98</td>
+                                <td><span class="badge badge-warning">Cuestionable</span></td>
+                            </tr>
+                            <tr>
+                                <td>PART-003</td>
+                                <td>2.350</td>
+                                <td>2.0995</td>
+                                <td>0.0152</td>
+                                <td>16.52</td>
+                                <td><span class="badge badge-danger">No satisfactorio</span></td>
+                            </tr>
+                            <tr>
+                                <td>PART-004</td>
+                                <td>2.100</td>
+                                <td>2.0995</td>
+                                <td>0.0152</td>
+                                <td>0.03</td>
+                                <td><span class="badge badge-success">Satisfactorio</span></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    <div style="display: flex; justify-content: space-between;">
+                        <button class="btn btn-primary">Descargar CSV</button>
+                        <button class="btn btn-secondary">Generar reporte individual</button>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">Distribución de Puntajes</div>
+                    <div class="chart-placeholder" style="min-height: 350px;">
+                        <h4>Histograma de puntajes z</h4>
+                        <p>Líneas de referencia: z = ±2, z = ±3</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Módulo: Informe Global -->
+            <div id="informe-global" class="module">
+                <h1 class="module-title">Informe Global</h1>
+                <p class="module-subtitle">Dashboard consolidado de métricas del estudio</p>
+
+                <div class="summary-panel">
+                    <h3>📊 Resumen Ejecutivo</h3>
+                    <div class="summary-stats">
+                        <div class="summary-stat">
+                            <div class="value">89</div>
+                            <div class="label">Participantes</div>
+                        </div>
+                        <div class="summary-stat">
+                            <div class="value">87.6%</div>
+                            <div class="label">Tasa de éxito global</div>
+                        </div>
+                        <div class="summary-stat">
+                            <div class="value">CO</div>
+                            <div class="label">Mejor desempeño</div>
+                        </div>
+                        <div class="summary-stat">
+                            <div class="value">N2O</div>
+                            <div class="label">Más problemas</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="grid-2">
+                    <div class="card">
+                        <div class="card-header">Heatmap de Puntajes</div>
+                        <div class="chart-placeholder" style="min-height: 400px;">
+                            <h4>Mapa de calor</h4>
+                            <p>Puntajes por componente y participante</p>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <div class="card-header">Satisfacción por Nivel</div>
+                        <div class="chart-placeholder" style="min-height: 400px;">
+                            <h4>Gráfico de barras</h4>
+                            <p>% satisfactorios por nivel</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="grid-2">
+                    <div class="card">
+                        <div class="card-header">Radar de Desempeño</div>
+                        <div class="chart-placeholder" style="min-height: 350px;">
+                            <h4>Radar chart</h4>
+                            <p>Desempeño por componente</p>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <div class="card-header">Tabla Resumen</div>
+                        <table class="table" style="font-size: 12px;">
+                            <thead>
+                                <tr>
+                                    <th>Componente</th>
+                                    <th>Nivel 1</th>
+                                    <th>Nivel 2</th>
+                                    <th>Nivel 3</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr style="background-color: #d4edda;">
+                                    <td>CO</td>
+                                    <td>92%</td>
+                                    <td>90%</td>
+                                    <td>88%</td>
+                                </tr>
+                                <tr style="background-color: #fff3cd;">
+                                    <td>CO2</td>
+                                    <td>85%</td>
+                                    <td>83%</td>
+                                    <td>82%</td>
+                                </tr>
+                                <tr style="background-color: #d4edda;">
+                                    <td>CH4</td>
+                                    <td>90%</td>
+                                    <td>88%</td>
+                                    <td>87%</td>
+                                </tr>
+                                <tr style="background-color: #f8d7da;">
+                                    <td>N2O</td>
+                                    <td>78%</td>
+                                    <td>75%</td>
+                                    <td>72%</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div style="text-align: center; margin-top: 20px;">
+                    <button class="btn btn-primary">Generar reporte completo</button>
+                    <button class="btn btn-secondary">Descargar executive summary</button>
+                    <button class="btn btn-secondary">Exportar a PowerPoint</button>
+                </div>
+            </div>
+
+            <!-- Módulo: Participantes -->
+            <div id="participantes" class="module">
+                <h1 class="module-title">Participantes</h1>
+                <p class="module-subtitle">Gestión individual de participantes</p>
+
+                <div class="card">
+                    <div class="card-header">Búsqueda y Filtrado</div>
+                    <div class="grid-3">
+                        <div class="search-box">
+                            <input type="text" placeholder="Buscar por ID o nombre...">
+                            <span class="search-icon">🔍</span>
+                        </div>
+                        <div>
+                            <label class="form-label">Estado de desempeño</label>
+                            <select class="form-control">
+                                <option>Todos</option>
+                                <option>Satisfactorio</option>
+                                <option>Cuestionable</option>
+                                <option>No satisfactorio</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="form-label">Componente</label>
+                            <select class="form-control">
+                                <option>Todos</option>
+                                <option>CO</option>
+                                <option>CO2</option>
+                                <option>CH4</option>
+                                <option>N2O</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">Lista de Participantes</div>
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Institución</th>
+                                <th>Instrumento</th>
+                                <th>Estado Global</th>
+                                <th>z (CO)</th>
+                                <th>z (CO2)</th>
+                                <th>Tendencia</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr style="cursor: pointer;">
+                                <td>PART-001</td>
+                                <td>Laboratorio A</td>
+                                <td>IR-500</td>
+                                <td><span class="badge badge-success">Satisfactorio</span></td>
+                                <td>0.10</td>
+                                <td>0.15</td>
+                                <td>↑</td>
+                            </tr>
+                            <tr style="cursor: pointer;">
+                                <td>PART-002</td>
+                                <td>Laboratorio B</td>
+                                <td>GC-200</td>
+                                <td><span class="badge badge-warning">Cuestionable</span></td>
+                                <td>2.98</td>
+                                <td>1.85</td>
+                                <td>↓</td>
+                            </tr>
+                            <tr style="cursor: pointer;">
+                                <td>PART-003</td>
+                                <td>Laboratorio C</td>
+                                <td>NDIR-100</td>
+                                <td><span class="badge badge-danger">No satisfactorio</span></td>
+                                <td>16.52</td>
+                                <td>4.23</td>
+                                <td>↓</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    <div style="text-align: center; color: #999; font-size: 12px;">
+                        Mostrando 1-3 de 89 participantes
+                    </div>
+                </div>
+
+                <div class="card" style="border-left: 4px solid #0056b3;">
+                    <div class="card-header">Detalle: PART-001 - Laboratorio A</div>
+                    <div class="grid-3">
+                        <div>
+                            <strong>Instrumento:</strong> IR-500<br>
+                            <strong>Estado global:</strong> <span class="badge badge-success">Satisfactorio</span>
+                        </div>
+                        <div>
+                            <strong>z (CO):</strong> 0.10<br>
+                            <strong>z' (CO):</strong> 0.09
+                        </div>
+                        <div>
+                            <strong>ζ (CO):</strong> 0.08<br>
+                            <strong>En (CO):</strong> 0.07
+                        </div>
+                    </div>
+                    <div style="margin-top: 15px;">
+                        <div style="margin-bottom: 10px;"><strong>Puntajes detallados:</strong></div>
+                        <table class="table" style="font-size: 12px;">
+                            <thead>
+                                <tr>
+                                    <th>Componente</th>
+                                    <th>Nivel</th>
+                                    <th>z</th>
+                                    <th>z'</th>
+                                    <th>ζ</th>
+                                    <th>En</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>CO</td>
+                                    <td>2-μmol/mol</td>
+                                    <td>0.10</td>
+                                    <td>0.09</td>
+                                    <td>0.08</td>
+                                    <td>0.07</td>
+                                </tr>
+                                <tr>
+                                    <td>CO2</td>
+                                    <td>400-μmol/mol</td>
+                                    <td>0.15</td>
+                                    <td>0.14</td>
+                                    <td>0.13</td>
+                                    <td>0.12</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div style="margin-top: 15px;">
+                        <button class="btn btn-primary">Generar reporte PDF</button>
+                        <button class="btn btn-secondary">Enviar correo</button>
+                        <button class="btn btn-secondary">Comparar con pares</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Módulo: Generación de Informes -->
+            <div id="generacion-informes" class="module">
+                <h1 class="module-title">Generación de Informes</h1>
+                <p class="module-subtitle">Configuración y generación de informes automatizados</p>
+
+                <div class="grid-2">
+                    <div class="card">
+                        <div class="card-header">Configuración</div>
+                        <div class="form-group">
+                            <label class="form-label">Tipo de informe</label>
+                            <select class="form-control">
+                                <option>Resumen ejecutivo</option>
+                                <option>Reporte completo por componente</option>
+                                <option>Reporte individual por participante</option>
+                                <option>Análisis estadístico detallado</option>
+                                <option>Informe de conformidad ISO 17043</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Formato de salida</label>
+                            <select class="form-control">
+                                <option>PDF</option>
+                                <option>Word (DOCX)</option>
+                                <option>HTML</option>
+                                <option>Excel (XLSX)</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Secciones a incluir</label>
+                            <div style="display: flex; flex-direction: column; gap: 8px;">
+                                <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                                    <input type="checkbox" checked> Resumen ejecutivo
+                                </label>
+                                <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                                    <input type="checkbox" checked> Tablas de resultados
+                                </label>
+                                <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                                    <input type="checkbox" checked> Gráficos
+                                </label>
+                                <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                                    <input type="checkbox"> Anexos técnicos
+                                </label>
+                                <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                                    <input type="checkbox"> Cálculos paso a paso
+                                </label>
+                                <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                                    <input type="checkbox"> Referencias normativas
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-header">Previsualización</div>
+                        <div style="background-color: #f5f5f5; padding: 20px; border: 1px solid #ddd; border-radius: 5px; margin-bottom: 15px;">
+                            <div style="font-weight: bold; margin-bottom: 10px;">📄 Resumen Ejecutivo.pdf</div>
+                            <div style="font-size: 12px; color: #666; margin-bottom: 10px;">
+                                Tamaño estimado: 1.2 MB<br>
+                                Páginas: 15
+                            </div>
+                            <div style="font-size: 12px; color: #666;">
+                                <strong>Contenido:</strong>
+                                <ul style="margin-left: 20px;">
+                                    <li>1. Introducción</li>
+                                    <li>2. Resumen ejecutivo</li>
+                                    <li>3. Tablas de resultados</li>
+                                    <li>4. Gráficos</li>
+                                </ul>
+                            </div>
+                        </div>
+                        <div>
+                            <button class="btn btn-primary">Generar informe</button>
+                            <button class="btn btn-secondary">Programar generación</button>
+                            <button class="btn btn-secondary">Guardar plantilla</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">Historial de Informes</div>
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Fecha</th>
+                                <th>Tipo</th>
+                                <th>Formato</th>
+                                <th>Tamaño</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>2026-01-24 14:30</td>
+                                <td>Resumen ejecutivo</td>
+                                <td>PDF</td>
+                                <td>1.2 MB</td>
+                                <td>
+                                    <button class="btn btn-primary" style="padding: 5px 10px; font-size: 12px;">Descargar</button>
+                                    <button class="btn btn-secondary" style="padding: 5px 10px; font-size: 12px;">Regenerar</button>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>2026-01-24 10:15</td>
+                                <td>Reporte individual</td>
+                                <td>DOCX</td>
+                                <td>0.8 MB</td>
+                                <td>
+                                    <button class="btn btn-primary" style="padding: 5px 10px; font-size: 12px;">Descargar</button>
+                                    <button class="btn btn-secondary" style="padding: 5px 10px; font-size: 12px;">Regenerar</button>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Módulos adicionales (placeholders) -->
+            <div id="configuracion" class="module">
+                <h1 class="module-title">Configuración</h1>
+                <p class="module-subtitle">Configuración del sistema</p>
+                <div class="card">
+                    <p>Opciones de configuración del sistema...</p>
+                </div>
+            </div>
+
+            <div id="ayuda" class="module">
+                <h1 class="module-title">Ayuda</h1>
+                <p class="module-subtitle">Documentación y soporte</p>
+                <div class="card">
+                    <p>Documentación de ayuda...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="footer">
+        <div>© 2026 Instituto Nacional de Metrología | Versión 1.0.0 | ISO 13528:2022 | ISO 17043:2024</div>
+    </div>
+
+    <script>
+        // Navegación entre módulos
+        document.querySelectorAll('.sidebar .menu-item').forEach(item => {
+            item.addEventListener('click', function() {
+                const moduleId = this.getAttribute('data-module');
+                
+                if (moduleId) {
+                    document.querySelectorAll('.sidebar .menu-item').forEach(i => i.classList.remove('active'));
+                    this.classList.add('active');
+                    
+                    document.querySelectorAll('.module').forEach(m => m.classList.remove('active'));
+                    const targetModule = document.getElementById(moduleId);
+                    if (targetModule) {
+                        targetModule.classList.add('active');
+                    }
+                    
+                    const breadcrumb = document.querySelector('.breadcrumb');
+                    if (breadcrumb) {
+                        const moduleName = this.querySelector('span:nth-child(2)').textContent;
+                        breadcrumb.textContent = 'Inicio > ' + moduleName;
+                    }
+                }
+            });
+        });
+
+        // Navegación entre pestañas
+        document.querySelectorAll('.tab').forEach(tab => {
+            tab.addEventListener('click', function() {
+                const tabsContainer = this.parentElement;
+                tabsContainer.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                this.classList.add('active');
+            });
+        });
+
+        // Navegación desde tarjetas de inicio
+        document.querySelectorAll('#home .card').forEach(card => {
+            card.addEventListener('click', function() {
+                const title = this.querySelector('h3').textContent;
+                if (title === 'Cargar Datos') {
+                    document.querySelector('[data-module="carga-datos"]').click();
+                } else if (title === 'Ver Informe Global') {
+                    document.querySelector('[data-module="informe-global"]').click();
+                }
+            });
+        });
+
+        // Toggle checkboxes en lista
+        document.querySelectorAll('input[type="checkbox"]').forEach(checkbox => {
+            checkbox.addEventListener('change', function() {
+                console.log('Checkbox changed:', this.checked);
+            });
+        });
+
+        // Selección de radio buttons
+        document.querySelectorAll('input[type="radio"]').forEach(radio => {
+            radio.addEventListener('change', function() {
+                document.querySelectorAll('input[name="' + this.name + '"]').forEach(r => {
+                    const row = r.closest('tr') || r.closest('.card');
+                    if (row) {
+                        row.style.backgroundColor = r.checked ? '#e3f2fd' : '';
+                    }
+                });
+            });
+        });
+    </script>
+</body>
+</html>

@@ -71,33 +71,42 @@ calculate_mad_e <- function(x) {
   1.483 * mad_value
 }
 
+# Helper: Check if two values are equal to 3 significant figures
+same_3sf <- function(a, b) {
+  if (!is.finite(a) || !is.finite(b)) {
+    return(FALSE)
+  }
+  if (a == 0 && b == 0) {
+    return(TRUE)
+  }
+  signif(a, 3) == signif(b, 3)
+}
+
 #' ISO 13528 Algorithm A - Robust Mean and Standard Deviation
 #'
 #' Iterative algorithm for computing robust estimates of location (x*) and
-#' scale (s*) from proficiency testing data. Down-weights outliers using
-#' Huber-type weighting.
+#' scale (s*) from proficiency testing data using Winsorization.
 #'
 #' @details
 #' Algorithm A is an iterative procedure that computes robust estimates:
 #' 1. Initialize with median (x*) and scaled MAD (s*)
-#' 2. Compute standardized residuals: u = (x - x*) / (1.5 * s*)
-#' 3. Apply Huber weights: w = 1 if |u| <= 1, else w = 1/u^2
-#' 4. Update x* and s* using weighted mean and weighted SD
-#' 5. Repeat until convergence (changes < tolerance)
+#' 2. Compute delta: δ = 1.5 × s*
+#' 3. Winsorize values: clamp to \code{[x* - δ, x* + δ]}
+#' 4. Update x* = mean(winsorized), s* = 1.134 × sqrt(Σ(x* - x)²/(p-1))
+#' 5. Repeat until convergence (no change in 3rd significant figure)
 #'
-#' Reference: ISO 13528:2022, Annex C
+#' Reference: ISO 13528:2022, Annex C.3
 #'
 #' @param values A numeric vector of participant results.
 #' @param ids Optional vector of participant identifiers (same length as values).
 #' @param max_iter Maximum number of iterations (default: 50).
-#' @param tol Convergence tolerance for x* and s* (default: 1e-03).
 #' @return A list containing:
 #'   - assigned_value: Robust mean (x*)
 #'   - robust_sd: Robust standard deviation (s*)
 #'   - iterations: Data frame of iteration history
-#'   - weights: Data frame with participant weights
+#'   - winsorized_values: Data frame with original and winsorized values
 #'   - converged: Logical indicating convergence
-#'   - effective_weight: Sum of final weights
+#'   - n_participants: Number of participants used
 #'   - error: Error message or NULL if successful
 #'
 #' @examples
@@ -109,138 +118,126 @@ calculate_mad_e <- function(x) {
 #'
 #' @seealso \code{\link{calculate_niqr}}, \code{\link{calculate_mad_e}}
 #' @export
-run_algorithm_a <- function(values, ids = NULL, max_iter = 50, tol = 1e-03) {
+run_algorithm_a <- function(values, ids = NULL, max_iter = 50) {
   # Remove non-finite values
   mask <- is.finite(values)
   values <- values[mask]
-  
+
   if (is.null(ids)) {
     ids <- seq_along(values)
   } else {
     ids <- ids[mask]
   }
-  
-  n <- length(values)
-  if (n < 3) {
+
+  p <- length(values)
+  if (p < 3) {
     return(list(
       error = "Algorithm A requires at least 3 valid observations.",
       assigned_value = NA_real_,
       robust_sd = NA_real_,
       iterations = data.frame(),
-      weights = data.frame(),
+      winsorized_values = data.frame(),
       converged = FALSE,
-      effective_weight = NA_real_
+      n_participants = p
     ))
   }
-  
-  # Initial estimates: median and scaled MAD
+
+  # Initial estimates: median and scaled MAD (Formula C.6)
   x_star <- stats::median(values, na.rm = TRUE)
   s_star <- 1.483 * stats::median(abs(values - x_star), na.rm = TRUE)
-  
-  # Handle zero or near-zero dispersion
+
+  # Handle s* = 0 case (ISO NOTE 2): use sample standard deviation as fallback
   if (!is.finite(s_star) || s_star < .Machine$double.eps) {
     s_star <- stats::sd(values, na.rm = TRUE)
   }
-  
+
+  # If still zero dispersion, return with robust_sd = 0 (no error needed)
   if (!is.finite(s_star) || s_star < .Machine$double.eps) {
     return(list(
-      error = "Data dispersion is insufficient for Algorithm A.",
       assigned_value = x_star,
       robust_sd = 0,
-      iterations = data.frame(),
-      weights = data.frame(),
+      iterations = data.frame(iteration = 0, x_star = x_star, s_star = 0, stringsAsFactors = FALSE),
+      winsorized_values = data.frame(id = ids, original = values, winsorized = values, stringsAsFactors = FALSE),
       converged = TRUE,
-      effective_weight = n
+      n_participants = p,
+      error = NULL
     ))
   }
-  
+
   # Iteration records
   iteration_records <- list()
   converged <- FALSE
-  
+
   for (iter in seq_len(max_iter)) {
-    # Standardized residuals
-    u_values <- (values - x_star) / (1.5 * s_star)
-    
-    # Huber-type weights: 1 if |u| <= 1, else 1/u^2
-    weights <- ifelse(abs(u_values) <= 1, 1, 1 / (u_values^2))
-    
-    weight_sum <- sum(weights)
-    if (!is.finite(weight_sum) || weight_sum <= 0) {
-      return(list(
-        error = "Computed weights are invalid for Algorithm A.",
-        assigned_value = x_star,
-        robust_sd = s_star,
-        iterations = if (length(iteration_records) > 0) do.call(rbind, iteration_records) else data.frame(),
-        weights = data.frame(),
-        converged = FALSE,
-        effective_weight = NA_real_
-      ))
-    }
-    
-    # Updated estimates
-    x_new <- sum(weights * values) / weight_sum
-    s_new <- sqrt(sum(weights * (values - x_new)^2) / weight_sum)
-    
+    delta <- 1.5 * s_star
+
+    # Winsorize: clamp values to [x* - δ, x* + δ] (Formula C.8)
+    x_winsorized <- pmax(pmin(values, x_star + delta), x_star - delta)
+
+    # Updated estimates (Formulas C.9, C.10)
+    x_new <- mean(x_winsorized)
+    s_new <- 1.134 * sqrt(sum((x_winsorized - x_new)^2) / (p - 1))
+
     if (!is.finite(s_new) || s_new < .Machine$double.eps) {
       return(list(
         error = "Algorithm A collapsed due to zero standard deviation.",
         assigned_value = x_new,
         robust_sd = 0,
         iterations = if (length(iteration_records) > 0) do.call(rbind, iteration_records) else data.frame(),
-        weights = data.frame(),
+        winsorized_values = data.frame(),
         converged = FALSE,
-        effective_weight = NA_real_
+        n_participants = p
       ))
     }
-    
-    # Convergence check
-    delta_x <- abs(x_new - x_star)
-    delta_s <- abs(s_new - s_star)
-    delta <- max(delta_x, delta_s)
-    
+
+    # Convergence check: 3rd significant figure
+    if (same_3sf(x_star, x_new) && same_3sf(s_star, s_new)) {
+      converged <- TRUE
+      x_star <- x_new
+      s_star <- s_new
+      iteration_records[[iter]] <- data.frame(
+        iteration = iter,
+        x_star = x_new,
+        s_star = s_new,
+        stringsAsFactors = FALSE
+      )
+      break
+    }
+
     iteration_records[[iter]] <- data.frame(
       iteration = iter,
       x_star = x_new,
       s_star = s_new,
-      delta = delta,
       stringsAsFactors = FALSE
     )
-    
+
     x_star <- x_new
     s_star <- s_new
-    
-    if (delta_x < tol && delta_s < tol) {
-      converged <- TRUE
-      break
-    }
   }
-  
-  # Final weights
-  u_final <- (values - x_star) / (1.5 * s_star)
-  weights_final <- ifelse(abs(u_final) <= 1, 1, 1 / (u_final^2))
-  
+
   iterations_df <- if (length(iteration_records) > 0) {
     do.call(rbind, iteration_records)
   } else {
     data.frame()
   }
-  
-  weights_df <- data.frame(
+
+  delta <- 1.5 * s_star
+  x_winsorized_final <- pmax(pmin(values, x_star + delta), x_star - delta)
+
+  winsorized_df <- data.frame(
     id = ids,
-    value = values,
-    weight = weights_final,
-    standardized_residual = u_final,
+    original = values,
+    winsorized = x_winsorized_final,
     stringsAsFactors = FALSE
   )
-  
+
   list(
     assigned_value = x_star,
     robust_sd = s_star,
     iterations = iterations_df,
-    weights = weights_df,
+    winsorized_values = winsorized_df,
     converged = converged,
-    effective_weight = sum(weights_final),
+    n_participants = p,
     error = NULL
   )
 }

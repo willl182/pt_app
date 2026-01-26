@@ -1,11 +1,48 @@
 flowchart TD
     A[Inicio] --> B[Carga de Datos]
+    
     B --> C{Datos válidos?}
+    C -->|No| E[Error: Verificar formato de archivos]
     C -->|Sí| D[Homogeneidad/Estabilidad]
-    C -->|No| E[Error: verificar formato]
+    
+    E --> B
+    
     D --> F[Valores Atípicos]
-    F --> G[Valor Asignado]
-    G --> H[Puntajes PT]
-    H --> I[Informe Global]
-    I --> J[Participantes]
-    J --> K[Generación Informes]
+    F --> G{Método de detección seleccionado?}
+    G -->|No| F
+    G -->|Sí| H[Valor Asignado]
+    
+    H --> I{Método seleccionado?}
+    I -->|No| H
+    I -->|Sí| J[Puntajes PT]
+    
+    J --> K{Puntajes calculados?}
+    K -->|No| J
+    K -->|Sí| L[Informe Global]
+    
+    L --> M[Participantes]
+    M --> N{Participante seleccionado?}
+    N -->|Sí| O[Reporte Individual]
+    N -->|No| P[Generación de Informes]
+    
+    O --> P
+    P --> Q{Informe generado?}
+    Q -->|No| P
+    Q -->|Sí| R[Descarga de Informe]
+    
+    R --> S[Fin del Flujo]
+    
+    style A fill:#e3f2fd
+    style R fill:#d4edda
+    style E fill:#f8d7da
+    style S fill:#e3f2fd
+    
+    classDef navNode fill:#e3f2fd,stroke:#0056b3,stroke-width:2px
+    classDef decisionNode fill:#fff3cd,stroke:#ffc107,stroke-width:2px
+    classDef errorNode fill:#f8d7da,stroke:#dc3545,stroke-width:2px
+    classDef successNode fill:#d4edda,stroke:#28a745,stroke-width:2px
+    
+    class A,B,D,F,H,J,L,M,P,R navNode
+    class C,G,I,K,Q decisionNode
+    class E errorNode
+    class S successNode

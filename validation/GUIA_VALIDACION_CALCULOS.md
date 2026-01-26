@@ -173,41 +173,91 @@ donde Dmax = |media_homogeneidad - media_estabilidad|
 
 ---
 
-## Algoritmo A
+## Algoritmo A (Método de Winsorización)
 
 ### Descripción
 
-El Algoritmo A es un procedimiento iterativo para calcular estimaciones robustas de ubicación (x*) y escala (s*).
+El Algoritmo A (ISO 13528:2022 Anexo C.3) es un procedimiento iterativo para calcular estimaciones robustas de ubicación (x*) y escala (s*) utilizando el método de **winsorización**. Este método limita (clamp) los valores extremos en lugar de ponderarlos.
 
-### Fórmulas
+### Fórmulas (Winsorización)
 
 **Inicialización:**
 ```
-x* = mediana(valores)
-s* = 1.483 × mediana(|xi - x*|)
+x*₀ = mediana(xi)
+s*₀ = 1.483 × mediana(|xi - x*₀|)
 ```
 
 **Iteración k:**
 ```
-u_i = (xi - x*) / (1.5 × s*)
+δ = 1.5 × s*_k
+xi* = clamp(xi, x*_k - δ, x*_k + δ)
 
-w_i = 1          si |u_i| ≤ 1
-w_i = 1/u_i²     si |u_i| > 1
+Donde clamp significa:
+  xi* = x*_k - δ   si xi < x*_k - δ
+  xi* = xi         si x*_k - δ ≤ xi ≤ x*_k + δ
+  xi* = x*_k + δ   si xi > x*_k + δ
 
-x*_nuevo = Σ(wi × xi) / Σwi
-s*_nuevo = √(Σ(wi × (xi - x*_nuevo)²) / Σwi)
+x*_k+1 = promedio(xi*)
+s*_k+1 = 1.134 × √(Σ(xi* - x*_k+1)² / (p-1))
 ```
 
 **Convergencia:**
-- Cuando |x*_nuevo - x*| < tolerancia Y |s*_nuevo - s*| < tolerancia
+- La iteración converge cuando x* y s* son estables hasta la **tercera cifra significativa** (no usamos tolerancia absoluta).
+
+### Diferencias con Método Anterior (Huber Weighting)
+
+| Aspecto | Anterior (Huber) | Actual (Winsorización) |
+|----------|-----------------|----------------------|
+| Manejo de valores atípicos | Reducción de peso (w = 1/u²) | Limitado/clampado a bounds |
+| Actualización x* | Σ(w×xi)/Σwi | mean(xi*) |
+| Actualización s* | √(Σw(x-x*)²/Σw) | 1.134×√(Σ(xi*-x*)²/(p-1)) |
+| Convergencia | Δ < 1e-03 | 3ra cifra significativa |
 
 ### Pasos en Hoja de Cálculo
 
-| Iter | x* | s* | u_i | w_i | Δx* | Δs* |
-|------|----|----|-----|-----|-----|-----|
-| 0 | mediana | MADe | - | - | - | - |
-| 1 | Σ(w×x)/Σw | √(Σw(x-x*)²/Σw) | (x-x*)/(1.5s*) | SI(ABS(u)≤1;1;1/u²) | x*₁-x*₀ | s*₁-s*₀ |
-| ... | ... | ... | ... | ... | ... | ... |
+| Iter | x* | s* | δ | Lower Bound | Upper Bound | xi* | Δx* | Δs* | Converged |
+|------|----|----|----|------------|------------|------|-----|-----|----------|
+| 0 | mediana | 1.483×MAD | 1.5×s*₀ | x*₀-δ | x*₀+δ | - | - | - | - |
+| 1 | mean(xi*) | 1.134×SD(xi*) | 1.5×s*₁ | x*₁-δ | x*₁+δ | clamped values | x*₁-x*₀ | s*₁-s*₀ | 3ra sig fig? |
+| ... | ... | ... | ... | ... | ... | ... | ... | ... | ... | |
+
+### Ejemplo Numérico
+
+**Datos:** `[10.1, 10.2, 9.9, 10.0, 10.3, 50.0]` (6 valores, p=6)
+
+**Iteración 0:**
+- x*₀ = 10.05 (mediana)
+- MAD = 0.15, s*₀ = 1.483 × 0.15 = 0.222
+- δ = 1.5 × 0.222 = 0.333
+- Límites: [9.717, 10.383]
+
+**Iteración 1 (Winsorización):**
+| xi | xi* (clamped) |
+|----|---------------|
+| 10.1 | 10.1 |
+| 10.2 | 10.2 |
+| 9.9 | 9.9 |
+| 10.0 | 10.0 |
+| 10.3 | 10.3 |
+| 50.0 | **10.383** ← clampado |
+
+- x*₁ = mean(xi*) = 10.147
+- s*₁ = 1.134 × SD(xi*) ≈ 0.14
+
+**Iteración 2:**
+- δ = 1.5 × 0.14 = 0.21
+- Nueva winsorización → x*₂ ≈ 10.10, s*₂ ≈ 0.15
+
+**Convergencia:** x* y s* estables en 3ra cifra significativa (10.1, 0.15)
+
+### Casos Especiales
+
+| Caso | Comportamiento Esperado |
+|-------|---------------------|
+| Valores idénticos | s* = 0, usa SD clásico como fallback |
+| < 3 participantes | Error retornado (p < 3) |
+| Un solo outlier extremo | Outlier clampado a x* ± δ |
+| Sin outliers | x* ≈ mean, s* ≈ SD, winsorización mínima |
 
 ---
 
@@ -261,40 +311,107 @@ Esta incertidumbre definitiva incorpora las contribuciones de:
 
 ## Hojas de Cálculo de Validación
 
-Las siguientes hojas de cálculo están disponibles en el directorio `validation/`:
+El archivo `validation_calculations.xlsx` contiene 6 hojas de validación con fórmulas de Excel/Calc:
 
-### 1. validation_homogeneity.csv
+### 1. Homogeneity
 
-Validación paso a paso de cálculos de homogeneidad para CO, nivel 0-μmol/mol.
+Validación paso a paso de cálculos de homogeneidad para SO2, nivel 60-nmol/mol.
 
-**Columnas:**
-- Item, sample_1, sample_2, media, rango, diff_from_median, abs_diff
+**Parámetros:**
+- g = 10 (muestras)
+- m = 2 (réplicas)
+- σ_pt = 0.6 (entrada usuario)
 
-**Resumen:**
-- Mediana, MADe, s_x̄², sw, ss, c, c_expanded, Evaluación
+**Cálculos:**
+- sw (desviación estándar intra-muestra)
+- ss (desviación estándar inter-muestras)
+- Criterio: ss ≤ 0.3×σ_pt
 
-### 2. validation_stability.csv
+### 2. Stability
 
 Validación de cálculos de estabilidad comparando datos de homogeneidad vs estabilidad.
 
-### 3. validation_robust_stats.csv
+**Cálculos:**
+- Medias de homogeneidad y estabilidad
+- Diferencia absoluta (Dmax)
+- Criterio básico: Dmax ≤ 0.3×σ_pt
+- Criterio expandido (con incertidumbres)
+- u_stab = Dmax / √3
 
-Validación de MADe y nIQR con datos de ejemplo.
+### 3. Robust_Stats
 
-### 4. validation_algorithm_a.csv
+Validación de MADe y nIQR con datos de SO2 60-nmol/mol.
 
-Validación iteración por iteración del Algoritmo A.
+**Estadísticos calculados:**
+- n, Median, Q1, Q3, IQR
+- nIQR = 0.7413 × IQR
+- MADe = 1.483 × MAD
 
-### 5. validation_pt_scores.csv
+### 4. Algorithm_A
+
+Validación iteración por iteración del **Algoritmo A (Winsorización)** para SO2 60-nmol/mol.
+
+**Parámetros:**
+- p = número de observaciones
+- Factor MAD = 1.483
+- Factor de winsorización = 1.5
+- Factor de ajuste de escala = 1.134
+
+**Columnas de iteración:**
+- i, xi, Lower bound, Upper bound, xi* (winsorizado)
+- (xi* - x*₁)²
+
+**Convergencia:** Comparación de tercera cifra significativa
+
+### 5. PT_Scores
 
 Validación de cálculos de puntajes z, z', zeta, En.
+
+**Parámetros:**
+- x_pt (valor asignado)
+- σ_pt (desviación estándar)
+- u_xpt_def (incertidumbre definitiva)
+
+**Puntajes calculados:**
+- z = (x - x_pt) / σ_pt
+- z' = (x - x_pt) / √(σ_pt² + u_xpt_def²)
+- ζ = (x - x_pt) / √(u_x² + u_xpt_def²)
+- En = (x - x_pt) / √(U_x² + U_xpt²)
+
+### 6. Edge_Cases (NUEVA)
+
+Validación de casos especiales para el Algoritmo A:
+
+**Caso 1: Valores idénticos (dispersión cero)**
+- Datos: `[10.0, 10.0, 10.0, 10.0, 10.0]`
+- Esperado: x* = 10.0, s* = 0, convergió = TRUE
+
+**Caso 2: Menos de 3 participantes**
+- Datos: `[10.1, 10.2]`
+- Esperado: Error retornado (p < 3)
+
+**Caso 3: Un solo outlier extremo**
+- Datos: `[10.1, 10.2, 10.0, 10.3, 100.0]`
+- Esperado: 100.0 winsorizado a ≈ 10.6
+
+**Caso 4: Sin outliers**
+- Datos: `[10.1, 10.2, 9.9, 10.0, 10.3]`
+- Esperado: x* ≈ mean, s* ≈ SD, winsorización mínima
+
+### Notas
+
+- Todas las fórmulas son dinámicas - cambiar valores de entrada recalculará automáticamente
+- Los resultados esperados pueden verificarse ejecutando `ptcalc::run_algorithm_a()` en R
 
 ---
 
 ## Referencias
 
 - ISO 13528:2022 - Statistical methods for use in proficiency testing
-- ISO 17043:2023 - Conformity assessment — General requirements for proficiency testing
+  - Annex C.3 - Algorithm A (Winsorization method) for robust estimation
+- ISO 17043:2024 - Conformity assessment — General requirements for proficiency testing
+- `ptcalc/R/pt_robust_stats.R` - Implementación actual en R
+- `es/03_estadisticas_robustas_pt.md` - Documentación detallada del Algoritmo A
 
 ---
 
@@ -345,4 +462,35 @@ Validación de cálculos de puntajes z, z', zeta, En.
 **En-score:**
 ```excel
 =(x-x_pt)/RAIZ(U_x^2+U_xpt^2)
+```
+
+### Algoritmo A (Winsorización)
+
+**Inicialización:**
+```excel
+x*_0 = MEDIANA(rango)
+s*_0 = 1.483*MEDIANA(ABS(rango-MEDIANA(rango)))
+```
+
+**Bounds de winsorización:**
+```excel
+delta = 1.5 * s*_0
+lower_bound = x*_0 - delta
+upper_bound = x*_0 + delta
+```
+
+**Valor winsorizado (xi*):**
+```excel
+=SI(xi<lower_bound,lower_bound,SI(xi>upper_bound,upper_bound,xi))
+```
+
+**Actualización iterativa:**
+```excel
+x*_nuevo = PROMEDIO(rango_winsorizado)
+s*_nuevo = 1.134*RAIZ(SUMA((rango_winsorizado-x*_nuevo)^2)/(p-1))
+```
+
+**Convergencia (3ra cifra significativa):**
+```excel
+=SI(Y(REDONDEAR(x*_antiguo,2-ENTERO(LOG10(ABS(x*_antiguo))))=REDONDEAR(x*_nuevo,2-ENTERO(LOG10(ABS(x*_nuevo))),REDONDEAR(s*_antiguo,2-ENTERO(LOG10(ABS(s*_antiguo))))=REDONDEAR(s*_nuevo,2-ENTERO(LOG10(ABS(s*_nuevo)))),"SI","NO")
 ```

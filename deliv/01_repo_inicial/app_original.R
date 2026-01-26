@@ -325,46 +325,36 @@ server <- function(input, output, session) {
         select(Item, everything())
     }
 
-    hom_data <- level_data %>%
-      mutate(Item = factor(row_number())) %>%
-      pivot_longer(
-        cols = -Item,
-        names_to = "replicate",
-        values_to = "Resultado"
-      )
-
     if (!"sample_1" %in% names(level_data)) {
       return(list(error = "No se encontró la columna 'sample_1'. Es obligatoria para calcular sigma_pt."))
     }
 
+    # Calculate sigma_pt from MADe of first sample column (ISO 13528)
     first_sample_results <- level_data %>% pull(sample_1)
-    median_val <- median(first_sample_results, na.rm = TRUE)
-    abs_diff_from_median <- abs(first_sample_results - median_val)
-    median_abs_diff <- median(abs_diff_from_median, na.rm = TRUE)
-    mad_e <- 1.483 * median_abs_diff
+    mad_e <- calculate_mad_e(first_sample_results)
     n_iqr <- calculate_niqr(first_sample_results)
 
+    # Calculate u_xpt (standard uncertainty of assigned value)
     n_robust <- length(first_sample_results)
     u_xpt <- 1.25 * mad_e / sqrt(n_robust)
 
-    hom_item_stats <- hom_data %>%
-      group_by(Item) %>%
-      summarise(
-        mean = mean(Resultado, na.rm = TRUE),
-        var = var(Resultado, na.rm = TRUE),
-        diff = max(Resultado, na.rm = TRUE) - min(Resultado, na.rm = TRUE),
-        .groups = "drop"
-      )
+    # Calculate homogeneity statistics using ptcalc package (ISO 13528 Section 9.2)
+    hom_stats <- calculate_homogeneity_stats(level_data)
+    if (!is.null(hom_stats$error)) {
+      return(list(error = hom_stats$error))
+    }
 
-    hom_x_t_bar <- mean(hom_item_stats$mean, na.rm = TRUE)
-    hom_s_x_bar_sq <- var(hom_item_stats$mean, na.rm = TRUE)
-    hom_s_xt <- sqrt(hom_s_x_bar_sq)
+    # Extract stats for ANOVA summary and return values
+    hom_x_t_bar <- hom_stats$general_mean_homog
+    hom_s_x_bar_sq <- hom_stats$s_x_bar_sq
+    hom_s_xt <- hom_stats$s_xt
+    hom_sw <- hom_stats$sw
+    hom_ss <- hom_stats$ss
 
-    hom_wt <- abs(hom_item_stats$diff)
-    hom_sw <- sqrt(sum(hom_wt^2) / (2 * length(hom_wt)))
-
-    hom_ss_sq <- abs(hom_s_xt^2 - ((hom_sw^2) / 2))
-    hom_ss <- sqrt(hom_ss_sq)
+    # Keep intermediate values for display (MADe components)
+    median_val <- median(first_sample_results, na.rm = TRUE)
+    abs_diff_from_median <- abs(first_sample_results - median_val)
+    median_abs_diff <- median(abs_diff_from_median, na.rm = TRUE)
 
     hom_anova_summary <- data.frame(
       "gl" = c(g - 1, g * (m - 1)),
@@ -375,9 +365,9 @@ server <- function(input, output, session) {
     rownames(hom_anova_summary) <- c("Ítem", "Residuos")
 
     hom_sigma_pt <- mad_e
-    hom_c_criterion <- 0.3 * hom_sigma_pt
+    hom_c_criterion <- calculate_homogeneity_criterion(hom_sigma_pt)
     hom_sigma_allowed_sq <- hom_c_criterion^2
-    hom_c_criterion_expanded <- sqrt(hom_sigma_allowed_sq * 1.88 + (hom_sw^2) * 1.01)
+    hom_c_criterion_expanded <- calculate_homogeneity_criterion_expanded(hom_sigma_pt, hom_sw^2)
 
     if (hom_ss <= hom_c_criterion) {
       hom_conclusion1 <- sprintf("ss (%.4f) <= c_criterion (%.4f): CUMPLE CRITERIO HOMOGENEIDAD", hom_ss, hom_c_criterion)
@@ -412,7 +402,7 @@ server <- function(input, output, session) {
       n_iqr = n_iqr,
       u_xpt = u_xpt,
       n_robust = n_robust,
-      item_means = hom_item_stats$mean,
+      item_means = hom_stats$sample_means,
       general_mean = hom_x_t_bar,
       sd_of_means = hom_s_xt,
       s_x_bar_sq = hom_s_x_bar_sq,
@@ -477,7 +467,7 @@ server <- function(input, output, session) {
         select(Item, everything())
     }
 
-    stab_data <- level_data %>%
+    stab_data_long <- level_data %>%
       mutate(Item = factor(row_number())) %>%
       pivot_longer(
         cols = -Item,
@@ -489,36 +479,39 @@ server <- function(input, output, session) {
       return(list(error = "No se encontró la columna 'sample_1'. Es obligatoria para calcular sigma_pt en los datos de estabilidad."))
     }
 
+    # Calculate sigma_pt from MADe of first sample column (ISO 13528)
     first_sample_results <- level_data %>% pull(sample_1)
-    median_val <- median(first_sample_results, na.rm = TRUE)
-    abs_diff_from_median <- abs(first_sample_results - median_val)
-    median_abs_diff <- median(abs_diff_from_median, na.rm = TRUE)
-    mad_e <- 1.483 * median_abs_diff
+    mad_e <- calculate_mad_e(first_sample_results)
     stab_n_iqr <- calculate_niqr(first_sample_results)
 
+    # Calculate u_xpt (standard uncertainty of assigned value)
     n_robust <- length(first_sample_results)
     u_xpt <- 1.25 * mad_e / sqrt(n_robust)
 
-    stab_item_stats <- stab_data %>%
-      group_by(Item) %>%
-      summarise(
-        mean = mean(Resultado, na.rm = TRUE),
-        var = var(Resultado, na.rm = TRUE),
-        diff = max(Resultado, na.rm = TRUE) - min(Resultado, na.rm = TRUE),
-        .groups = "drop"
-      )
+    # Calculate stability statistics using ptcalc package (ISO 13528 Section 9.3)
+    stab_stats <- calculate_stability_stats(
+      level_data,
+      hom_results$general_mean,
+      hom_results$x_pt,
+      hom_results$sigma_pt
+    )
+    if (!is.null(stab_stats$error)) {
+      return(list(error = stab_stats$error))
+    }
 
-    stab_x_t_bar <- mean(stab_item_stats$mean, na.rm = TRUE)
+    # Extract stats for ANOVA summary and return values
+    stab_x_t_bar <- stab_stats$general_mean
     diff_hom_stab <- abs(stab_x_t_bar - hom_results$general_mean)
 
-    stab_s_x_bar_sq <- var(stab_item_stats$mean, na.rm = TRUE)
-    stab_s_xt <- sqrt(stab_s_x_bar_sq)
+    stab_s_x_bar_sq <- stab_stats$s_x_bar_sq
+    stab_s_xt <- stab_stats$s_xt
+    stab_sw <- stab_stats$sw
+    stab_ss <- stab_stats$ss
 
-    stab_wt <- abs(stab_item_stats$diff)
-    stab_sw <- sqrt(sum(stab_wt^2) / (2 * length(stab_wt)))
-
-    stab_ss_sq <- abs(stab_s_xt^2 - ((stab_sw^2) / 2))
-    stab_ss <- sqrt(stab_ss_sq)
+    # Keep intermediate values for display (MADe components)
+    median_val <- median(first_sample_results, na.rm = TRUE)
+    abs_diff_from_median <- abs(first_sample_results - median_val)
+    median_abs_diff <- median(abs_diff_from_median, na.rm = TRUE)
 
     stab_anova_summary <- data.frame(
       "gl" = c(g - 1, g * (m - 1)),
@@ -529,7 +522,7 @@ server <- function(input, output, session) {
     rownames(stab_anova_summary) <- c("Ítem", "Residuos")
 
     stab_sigma_pt <- mad_e
-    stab_c_criterion <- 0.3 * hom_results$sigma_pt
+    stab_c_criterion <- calculate_stability_criterion(hom_results$sigma_pt)
     stab_sigma_allowed_sq <- stab_c_criterion^2
     
     # Calcular u_hom_mean
@@ -543,13 +536,13 @@ server <- function(input, output, session) {
     u_hom_mean <- sd_hom_mean / sqrt(n_hom)
     
     # Calcular u_stab_mean
-    stab_values <- stab_data$Resultado
+    stab_values <- stab_data_long$Resultado
     stab_values <- stab_values[!is.na(stab_values)]
     sd_stab_mean <- sd(stab_values)
     n_stab <- length(stab_values)
     u_stab_mean <- sd_stab_mean / sqrt(n_stab)
     
-    stab_c_criterion_expanded <- stab_c_criterion + 2 * sqrt(u_hom_mean^2 + u_stab_mean^2)
+    stab_c_criterion_expanded <- calculate_stability_criterion_expanded(stab_c_criterion, u_hom_mean, u_stab_mean)
 
     if (diff_hom_stab <= stab_c_criterion) {
       stab_conclusion1 <- sprintf("ss (%.4f) <= c_criterion (%.4f): CUMPLE CRITERIO ESTABILIDAD", diff_hom_stab, stab_c_criterion)
@@ -585,7 +578,7 @@ server <- function(input, output, session) {
       stab_n_iqr = stab_n_iqr,
       stab_u_xpt = u_xpt,
       n_robust = n_robust,
-      stab_item_means = stab_item_stats$mean,
+      stab_item_means = stab_stats$sample_means,
       stab_general_mean = stab_x_t_bar,
       stab_sd_of_means = stab_s_xt,
       stab_s_x_bar_sq = stab_s_x_bar_sq,
@@ -721,9 +714,9 @@ server <- function(input, output, session) {
           error = "Se requieren al menos tres participantes para ejecutar el Algoritmo A.",
           input_data = aggregated,
           iterations = tibble(),
-          weights = tibble(),
+          winsorized_values = tibble(),
           converged = FALSE,
-          effective_weight = NA_real_
+          n_participants = NA_integer_
         )
       } else {
         algo_res <- run_algorithm_a(
@@ -734,9 +727,9 @@ server <- function(input, output, session) {
 
         if (!is.null(algo_res$error)) {
           if (is.null(algo_res$iterations)) algo_res$iterations <- tibble()
-          if (is.null(algo_res$weights)) algo_res$weights <- tibble()
+          if (is.null(algo_res$winsorized_values)) algo_res$winsorized_values <- tibble()
           if (is.null(algo_res$converged)) algo_res$converged <- FALSE
-          if (is.null(algo_res$effective_weight)) algo_res$effective_weight <- NA_real_
+          if (is.null(algo_res$n_participants)) algo_res$n_participants <- NA_integer_
         }
 
         algo_res$input_data <- aggregated
@@ -1848,31 +1841,7 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
     df
   }
 
-  pt_en_class_labels <- c(
-    a1 = "a1 - Totalmente satisfactorio",
-    a2 = "a2 - Satisfactorio pero conservador",
-    a3 = "a3 - Satisfactorio con MU subestimada",
-    a4 = "a4 - Cuestionable pero aceptable",
-    a5 = "a5 - Cuestionable e inconsistente",
-    a6 = "a6 - No satisfactorio pero la MU cubre la desviación",
-    a7 = "a7 - No satisfactorio (crítico)"
-  )
 
-  pt_en_class_colors <- c(
-    a1 = "#2E7D32",
-    a2 = "#66BB6A",
-    a3 = "#9CCC65",
-    a4 = "#FFF59D",
-    a5 = "#FBC02D",
-    a6 = "#EF9A9A",
-    a7 = "#C62828",
-    mu_missing_z = "#90A4AE",
-    mu_missing_zprime = "#78909C"
-  )
-
-  # Nota: score_eval_z y classify_with_en ahora se obtienen de R/pt_scores.R
-  # Usando evaluate_z_score_vec() para evaluación vectorizada de puntaje z
-  # Usando classify_with_en() para clasificación con puntaje En
 
   compute_combo_scores <- function(participants_df, x_pt, sigma_pt, u_xpt, combo_meta, k = 2, u_hom = 0, u_stab = 0) {
     x_pt_def <- x_pt
@@ -1882,11 +1851,11 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
         error = sprintf("Valor asignado no disponible para %s.", combo_meta$title)
       ))
     }
-#    if (!is.finite(sigma_pt) || sigma_pt <= 0) {
-#      return(list(
-#        error = sprintf("sigma_pt no válido para %s.", combo_meta$title)
-#      ))
-#    }
+    if (!is.finite(sigma_pt) || sigma_pt <= 0) {
+      return(list(
+        error = sprintf("sigma_pt no valido para %s.", combo_meta$title)
+      ))
+    }
     if (!is.finite(u_xpt_def) || u_xpt_def < 0) {
       u_xpt_def <- 0
     }
@@ -1928,25 +1897,10 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
         zeta_score = zeta_values,
         zeta_score_eval = evaluate_z_score_vec(zeta_score),
         En_score = en_values,
-        En_score_eval = case_when(
-          !is.finite(En_score) ~ "N/A",
-          abs(En_score) <= 1 ~ "Satisfactorio",
-          abs(En_score) > 1 ~ "No satisfactorio"
-        ),
+        En_score_eval = evaluate_en_score_vec(En_score),
         U_xi = U_xi,
         U_xpt = U_xpt
-      ) %>%
-      rowwise() %>%
-      mutate(
-        classification_z_en_res = list(classify_with_en(z_score, En_score, U_xi, sigma_pt, uncertainty_std_missing, "z")),
-        classification_z_en = classification_z_en_res$label,
-        classification_z_en_code = classification_z_en_res$code,
-        classification_zprime_en_res = list(classify_with_en(z_prime_score, En_score, U_xi, sigma_pt, uncertainty_std_missing, "z'")),
-        classification_zprime_en = classification_zprime_en_res$label,
-        classification_zprime_en_code = classification_zprime_en_res$code
-      ) %>%
-      ungroup() %>%
-      select(-classification_z_en_res, -classification_zprime_en_res)
+      )
 
     list(
       error = NULL,
@@ -2996,105 +2950,7 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
     })
   }
 
-  render_global_classification_heatmap <- function(output_id, combo_key, code_col, label_col, title_prefix) {
-    output[[output_id]] <- renderPlotly({
-      combos <- global_report_combos()
-      req(nrow(combos) > 0, input$global_report_pollutant, input$global_report_n_lab)
-      combos <- ensure_classification_columns(combos)
-      spec <- global_combo_specs[[combo_key]]
-      filtered <- combos %>%
-        filter(
-          pollutant == input$global_report_pollutant,
-          n_lab == input$global_report_n_lab,
-          combo_key == combo_key,
-          combination_label == spec$label,
-          participant_id != "ref"
-        )
-      if (nrow(filtered) == 0) {
-        empty_plot <- ggplot() +
-          theme_void() +
-          labs(title = paste(title_prefix, "- sin datos disponibles"))
-        return(plotly::ggplotly(empty_plot))
-      }
-      filtered <- filtered %>%
-        mutate(run_label = as.character(level))
 
-      participant_levels <- filtered %>%
-        distinct(participant_id) %>%
-        arrange(participant_id) %>%
-        pull(participant_id)
-
-      run_levels <- filtered %>%
-        distinct(level, run_label) %>%
-        mutate(level_numeric = readr::parse_number(as.character(level))) %>%
-        arrange(level_numeric, level, run_label) %>%
-        pull(run_label)
-
-      base_grid <- expand.grid(
-        participant_id = participant_levels,
-        run_label = run_levels,
-        stringsAsFactors = FALSE
-      ) %>%
-        as_tibble()
-
-      code_sym <- rlang::sym(code_col)
-      label_sym <- rlang::sym(label_col)
-
-      plot_data <- base_grid %>%
-        left_join(
-          filtered %>%
-            transmute(
-              participant_id,
-              run_label = as.character(level),
-              class_code = !!code_sym,
-              class_label = !!label_sym
-            ),
-          by = c("participant_id", "run_label")
-        ) %>%
-        mutate(
-          class_code = ifelse(class_code == "", NA_character_, class_code),
-          class_label = ifelse(is.na(class_label) | class_label == "", "N/A", class_label),
-          participant_id = factor(participant_id, levels = participant_levels),
-          run_label = factor(run_label, levels = run_levels),
-          display_code = case_when(
-            is.na(class_code) ~ "",
-            grepl("^mu_missing", class_code) ~ "MU",
-            TRUE ~ toupper(class_code)
-          ),
-          fill_code = factor(class_code, levels = names(pt_en_class_colors))
-        )
-
-      legend_labels <- c(
-        pt_en_class_labels,
-        `mu_missing_z` = "MU ausente - solo z",
-        `mu_missing_zprime` = "MU ausente - solo z'"
-      )
-
-      class_plot <- ggplot(plot_data, aes(x = run_label, y = participant_id, fill = fill_code)) +
-        geom_tile(color = "white") +
-        geom_text(aes(label = display_code), size = 3, color = "#1B1B1B") +
-        scale_fill_manual(
-          values = pt_en_class_colors,
-          breaks = names(pt_en_class_colors),
-          labels = legend_labels,
-          drop = FALSE,
-          na.value = "#EEEEEE"
-        ) +
-        labs(
-          title = paste(title_prefix, "para", spec$title),
-          subtitle = paste("Analito:", input$global_report_pollutant),
-          x = "Nivel",
-          y = "Participante",
-          fill = "Clase"
-        ) +
-        theme_minimal() +
-        theme(
-          panel.grid = element_blank(),
-          axis.text.x = element_text(angle = 45, hjust = 1)
-        )
-      plotly::ggplotly(class_plot)
-    })
-  }
 
   purrr::iwalk(global_combo_specs, function(spec, combo_key) {
     output[[paste0("global_params_", combo_key)]] <- renderTable(
@@ -3168,21 +3024,7 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
       "Mapa de calor Puntaje En"
     )
 
-    render_global_classification_heatmap(
-      paste0("global_class_heatmap_z_", combo_key),
-      combo_key,
-      "classification_z_en_code",
-      "classification_z_en",
-      "Clasificación z + En"
-    )
 
-    render_global_classification_heatmap(
-      paste0("global_class_heatmap_zprime_", combo_key),
-      combo_key,
-      "classification_zprime_en_code",
-      "classification_zprime_en",
-      "Clasificación z' + En"
-    )
   })
 
   output$global_xpt_summary_table <- renderDataTable({
@@ -4748,7 +4590,8 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
         heatmaps = report_heatmaps(),
         participant_data = report_participant_data(),
         metrological_compatibility = metrological_compatibility_data(),
-        metrological_compatibility_method = input$report_metrological_compatibility
+        metrological_compatibility_method = input$report_metrological_compatibility,
+        project_root = app_dir
       )
       
       # Select output format

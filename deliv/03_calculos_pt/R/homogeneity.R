@@ -1,92 +1,213 @@
 # ===================================================================
-# Cálculos de homogeneidad para ensayos de aptitud
-# ISO 13528:2022
-# Archivo independiente sin dependencias externas
+# Titulo: homogeneity.R
+# Entregable: 03
+# Descripcion: Funciones standalone para cálculo de homogeneidad según ISO 13528:2022
+# Entrada: data/homogeneity.csv
+# Salida: Estadísticos ss, sw, criterios c y c_expandido
+# Referencia: ISO 13528:2022, Sección 9.2
 # ===================================================================
 
-cargar_datos_homogeneidad <- function(ruta_datos = "../../data/homogeneity.csv") {
-  datos <- read.csv(ruta_datos, stringsAsFactors = FALSE)
-  required_cols <- c("pollutant", "level", "replicate", "sample_id", "value")
-  if (!all(required_cols %in% names(datos))) {
-    stop("El archivo de homogeneidad no contiene las columnas esperadas.")
-  }
-  datos
-}
+# ===================================================================
+# ESTADÍSTICOS DE HOMOGENEIDAD
+# ===================================================================
 
-construir_matriz_muestras <- function(datos, contaminante, nivel) {
-  subset_datos <- datos[datos$pollutant == contaminante & datos$level == nivel, , drop = FALSE]
-  if (nrow(subset_datos) == 0) {
-    stop("No se encontraron registros para el contaminante y nivel solicitados.")
-  }
-  matriz <- stats::xtabs(value ~ sample_id + replicate, data = subset_datos)
-  as.matrix(matriz)
-}
+calcular_estadisticas_homogeneidad <- function(datos_homogeneidad, contaminante, nivel) {
+  # Filtrar por contaminante y nivel
+  datos_filtrados <- datos_homogeneidad[
+    datos_homogeneidad$pollutant == contaminante &
+    datos_homogeneidad$level == nivel,
+  ]
 
-#' Calcular estadísticos de homogeneidad
-#'
-#' Calcula estadísticos básicos para evaluar la homogeneidad de un lote de ítems.
-#' Incluye la desviación estándar entre muestras (s_s) y dentro de muestras (s_w).
-#'
-#' @param contaminante Nombre del analito (ej. "co").
-#' @param nivel Nivel del analito (ej. "2-μmol/mol").
-#' @param ruta_datos Ruta al archivo `homogeneity.csv`.
-#' @return Lista con estadísticos calculados y un campo `error` si aplica.
-calculate_homogeneity_stats <- function(contaminante, nivel, ruta_datos = "../../data/homogeneity.csv") {
-  datos <- cargar_datos_homogeneidad(ruta_datos)
-  muestras <- construir_matriz_muestras(datos, contaminante, nivel)
-
-  g <- nrow(muestras)
-  m <- ncol(muestras)
-
-  if (g < 2) {
-    return(list(error = "Se requieren al menos 2 muestras para evaluar homogeneidad."))
-  }
-  if (m < 2) {
-    return(list(error = "Se requieren al menos 2 réplicas por muestra para evaluar homogeneidad."))
+  if (nrow(datos_filtrados) == 0) {
+    return(list(error = paste("No se encontraron datos para", contaminante, nivel)))
   }
 
-  medias_muestras <- rowMeans(muestras, na.rm = TRUE)
-  media_general <- base::mean(medias_muestras, na.rm = TRUE)
+  # Preparar matriz de datos (muestras como filas, réplicas como columnas)
+  datos_matrix <- tapply(
+    datos_filtrados$value,
+    list(datos_filtrados$sample_id, datos_filtrados$replicate),
+    function(x) x[1]
+  )
 
-  s_x_bar_sq <- stats::var(medias_muestras, na.rm = TRUE)
+  # Convertir a matriz
+  datos_matrix <- as.matrix(datos_matrix)
+
+  # Número de muestras (g) y réplicas (m)
+  g <- nrow(datos_matrix)
+  m <- ncol(datos_matrix)
+
+  # Medias por muestra
+  medias_muestras <- rowMeans(datos_matrix, na.rm = TRUE)
+
+  # Media global: media de TODOS los valores (no solo las medias)
+  media_global <- mean(datos_matrix, na.rm = TRUE)
+
+  # x_pt: mediana de la primera réplica
+  x_pt <- median(datos_matrix[, 1], na.rm = TRUE)
+
+  # Varianza entre medias de muestra (s_x_bar^2)
+  s_x_bar_sq <- var(medias_muestras, na.rm = TRUE)
   s_xt <- sqrt(s_x_bar_sq)
 
+  # Desviación estándar dentro de la muestra (sw)
   if (m == 2) {
-    rangos <- abs(muestras[, 1] - muestras[, 2])
-    sw <- sqrt(sum(rangos^2) / (2 * g))
+    # Para m=2, usar rangos
+    range_btw <- abs(datos_matrix[, 1] - datos_matrix[, 2])
+    sw <- sqrt(sum(range_btw^2) / (2 * g))
   } else {
-    vars_internas <- apply(muestras, 1, stats::var, na.rm = TRUE)
-    sw <- sqrt(base::mean(vars_internas, na.rm = TRUE))
+    # Caso general: varianza dentro de la muestra agrupada
+    var_dentro <- apply(datos_matrix, 1, var, na.rm = TRUE)
+    sw <- sqrt(mean(var_dentro, na.rm = TRUE))
   }
 
   sw_sq <- sw^2
+
+  # Componente de varianza entre muestras (ss^2)
   ss_sq <- abs(s_x_bar_sq - (sw_sq / m))
   ss <- sqrt(ss_sq)
 
+  # Mediana de las diferencias absolutas entre primera réplica y x_pt
+  median_of_diffs <- median(abs(datos_matrix[, 1] - x_pt), na.rm = TRUE)
+
+  # MADe: estimación robusta de sigma
+  MADe <- 1.483 * median_of_diffs
+
+  # Incertidumbre de MADe
+  u_sigma_pt <- 1.25 * MADe / sqrt(g)
+
+  # nIQR: estimación robusta alternativa de sigma
+  Q1 <- quantile(datos_matrix[, 1], 0.25, na.rm = TRUE)
+  Q3 <- quantile(datos_matrix[, 1], 0.75, na.rm = TRUE)
+  IQR_val <- Q3 - Q1
+  nIQR_val <- 0.7413 * IQR_val
+
   list(
+    contaminante = contaminante,
+    nivel = nivel,
     g = g,
     m = m,
-    grand_mean = media_general,
-    sample_means = medias_muestras,
+    media_global = media_global,
+    medias_muestras = medias_muestras,
+    x_pt = x_pt,
     s_x_bar_sq = s_x_bar_sq,
     s_xt = s_xt,
     sw = sw,
     sw_sq = sw_sq,
     ss_sq = ss_sq,
     ss = ss,
+    median_of_diffs = median_of_diffs,
+    MADe = MADe,
+    nIQR = nIQR_val,
+    sigma_pt = MADe,
+    u_sigma_pt = u_sigma_pt,
+    datos_matrix = datos_matrix,
     error = NULL
   )
 }
 
-#' Calcular criterio de homogeneidad
-#'
-#' Criterio: c = 0.3 × σ_pt (ISO 13528:2022, 9.2.3).
-#'
-#' @param sigma_pt Desviación estándar para la evaluación de aptitud.
-#' @return Valor del criterio de homogeneidad.
-calculate_homogeneity_criterion <- function(sigma_pt) {
-  if (!is.finite(sigma_pt)) {
-    return(NA_real_)
-  }
+# ===================================================================
+# CRITERIOS DE HOMOGENEIDAD
+# ===================================================================
+
+calcular_criterio_homogeneidad <- function(sigma_pt) {
+  # c = 0.3 * sigma_pt
   0.3 * sigma_pt
+}
+
+calcular_criterio_expandido_homogeneidad <- function(sigma_pt, u_sigma_pt) {
+  # c_expanded = c_criterion + u_sigma_pt
+  c_criterion <- 0.3 * sigma_pt
+  c_criterion + u_sigma_pt
+}
+
+evaluar_homogeneidad <- function(ss, c_criterion, c_expanded = NULL) {
+  if (!is.finite(ss) || !is.finite(c_criterion)) {
+    pasa_criterio <- NA
+    conclusion1 <- "No se puede evaluar homogeneidad (valores NA)"
+  } else {
+    pasa_criterio <- ss <= c_criterion
+
+    conclusion1 <- if (pasa_criterio) {
+      sprintf("ss (%.6f) <= criterio (%.6f): CUMPLE CRITERIO DE HOMOGENEIDAD", ss, c_criterion)
+    } else {
+      sprintf("ss (%.6f) > criterio (%.6f): NO CUMPLE CRITERIO DE HOMOGENEIDAD", ss, c_criterion)
+    }
+  }
+
+  pasa_expandido <- NA
+  conclusion2 <- NULL
+
+  if (!is.null(c_expanded)) {
+    if (!is.finite(ss) || !is.finite(c_expanded)) {
+      conclusion2 <- "No se puede evaluar criterio expandido (valores NA)"
+    } else {
+      pasa_expandido <- ss <= c_expanded
+      conclusion2 <- if (pasa_expandido) {
+        sprintf("ss (%.6f) <= expandido (%.6f): CUMPLE CRITERIO EXPANDIDO", ss, c_expanded)
+      } else {
+        sprintf("ss (%.6f) > expandido (%.6f): NO CUMPLE CRITERIO EXPANDIDO", ss, c_expanded)
+      }
+    }
+  }
+
+  list(
+    pasa_criterio = pasa_criterio,
+    pasa_expandido = pasa_expandido,
+    conclusion = paste(c(conclusion1, conclusion2), collapse = "\n")
+  )
+}
+
+# ===================================================================
+# FUNCIÓN PRINCIPAL DE HOMOGENEIDAD
+# ===================================================================
+
+analizar_homogeneidad <- function(datos_homogeneidad, contaminante, nivel, sigma_pt) {
+  # Calcular estadísticos
+  stats <- calcular_estadisticas_homogeneidad(datos_homogeneidad, contaminante, nivel)
+
+  if (!is.null(stats$error)) {
+    return(stats)
+  }
+
+  # Calcular criterios (usar sigma_pt calculado de MADe)
+  c_criterion <- calcular_criterio_homogeneidad(stats$sigma_pt)
+  c_expanded <- calcular_criterio_expandido_homogeneidad(stats$sigma_pt, stats$u_sigma_pt)
+
+  # Evaluar
+  evaluacion <- evaluar_homogeneidad(stats$ss, c_criterion, c_expanded)
+
+  list(
+    contaminante = contaminante,
+    nivel = nivel,
+    stats = stats,
+    c_criterion = c_criterion,
+    c_expanded = c_expanded,
+    evaluacion = evaluacion,
+    error = NULL
+  )
+}
+
+# ===================================================================
+# FUNCIÓN PARA PROCESAR MÚLTIPLES CONTAMINANTES/NIVELES
+# ===================================================================
+
+analizar_homogeneidad_todos <- function(datos_homogeneidad, sigma_pt_por_nivel) {
+  # Obtener combinaciones únicas de contaminante y nivel
+  combinaciones <- unique(datos_homogeneidad[, c("pollutant", "level")])
+
+  resultados <- list()
+
+  for (i in 1:nrow(combinaciones)) {
+    cont <- combinaciones$pollutant[i]
+    niv <- combinaciones$level[i]
+
+    # sigma_pt ahora se calcula internamente desde los datos (MADe)
+    # El parámetro sigma_pt_por_nivel ya no se usa pero se mantiene por compatibilidad
+    nombre_sigma <- paste(cont, niv, sep = "_")
+
+    resultado <- analizar_homogeneidad(datos_homogeneidad, cont, niv, NULL)
+    resultados[[nombre_sigma]] <- resultado
+  }
+
+  resultados
 }

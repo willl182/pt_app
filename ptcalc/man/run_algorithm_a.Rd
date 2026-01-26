@@ -4,7 +4,7 @@
 \alias{run_algorithm_a}
 \title{ISO 13528 Algorithm A - Robust Mean and Standard Deviation}
 \usage{
-run_algorithm_a(values, ids = NULL, max_iter = 50, tol = 0.001)
+run_algorithm_a(values, ids = NULL, max_iter = 50)
 }
 \arguments{
 \item{values}{A numeric vector of participant results.}
@@ -12,8 +12,6 @@ run_algorithm_a(values, ids = NULL, max_iter = 50, tol = 0.001)
 \item{ids}{Optional vector of participant identifiers (same length as values).}
 
 \item{max_iter}{Maximum number of iterations (default: 50).}
-
-\item{tol}{Convergence tolerance for x* and s* (default: 1e-03).}
 }
 \value{
 A list containing:
@@ -21,28 +19,27 @@ A list containing:
 \item assigned_value: Robust mean (x*)
 \item robust_sd: Robust standard deviation (s*)
 \item iterations: Data frame of iteration history
-\item weights: Data frame with participant weights
+\item winsorized_values: Data frame with original and winsorized values
 \item converged: Logical indicating convergence
-\item effective_weight: Sum of final weights
+\item n_participants: Number of participants used
 \item error: Error message or NULL if successful
 }
 }
 \description{
 Iterative algorithm for computing robust estimates of location (x*) and
-scale (s*) from proficiency testing data. Down-weights outliers using
-Huber-type weighting.
+scale (s*) from proficiency testing data using Winsorization.
 }
 \details{
 Algorithm A is an iterative procedure that computes robust estimates:
 \enumerate{
 \item Initialize with median (x*) and scaled MAD (s*)
-\item Compute standardized residuals: u = (x - x*) / (1.5 * s*)
-\item Apply Huber weights: w = 1 if |u| <= 1, else w = 1/u^2
-\item Update x* and s* using weighted mean and weighted SD
-\item Repeat until convergence (changes < tolerance)
+\item Compute delta: δ = 1.5 × s*
+\item Winsorize values: clamp to \code{[x* - δ, x* + δ]}
+4. Update x* = mean(winsorized), s* = 1.134 × sqrt(Σ(x* - x)²/(p-1))
+\item Repeat until convergence (no change in 3rd significant figure)
 }
 
-Reference: ISO 13528:2022, Annex C
+Reference: ISO 13528:2022, Annex C.3
 }
 \examples{
 # Robust mean/sd with outlier in data

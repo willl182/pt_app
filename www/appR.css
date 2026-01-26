@@ -506,7 +506,7 @@ table.dataTable,
 
 .table thead th,
 table.dataTable thead th,
-.dataTable thead th {
+.dataTables_wrapper .dataTables_scrollHead thead th {
   background: linear-gradient(180deg, var(--pt-primary-subtle) 0%, var(--pt-bg-card) 100%);
   color: var(--pt-secondary);
   font-weight: 600;
@@ -514,7 +514,6 @@ table.dataTable thead th,
   text-align: left;
   border-bottom: 2px solid var(--pt-primary);
   font-size: 0.875rem;
-  text-transform: uppercase;
   letter-spacing: 0.03em;
 }
 

@@ -1,228 +1,53 @@
-%% Diagrama de Flujo - Sistema PT App
-%% Entregable 07: Dashboards y Visualización
-%% Basado en arquitectura ISO 13528:2022 / ISO 17043:2024
-
-%% ============================================
-%% DIAGRAMA 1: Flujo Principal de Datos
-%% ============================================
-
 flowchart LR
-    subgraph Datos_Entrada["📁 Archivos de Entrada"]
+    subgraph Datos_Fijos["Datos Fijos"]
         A[homogeneity.csv]
         B[stability.csv]
-        C[summary_n*.csv]
-        D[participants_data*.csv]
+        C[summary_n4.csv]
+        D[participants_data4.csv]
     end
     
-    subgraph Carga["📥 Carga de Datos"]
-        E[hom_data_full]
-        F[stab_data_full]
-        G[pt_prep_data]
+    subgraph Procesamiento["Procesamiento"]
+        E[Homogeneidad]
+        F[Estabilidad]
+        G[Valor Asignado]
+        H[Puntajes]
     end
     
-    subgraph Procesamiento["⚙️ Procesamiento"]
-        H[Homogeneidad]
-        I[Estabilidad]
-        J[Valor Asignado]
-        K[Puntajes PT]
+    subgraph Visualizacion["Visualización"]
+        I[Tablas DT]
+        J[Histogramas]
+        K[Boxplots]
+        L[Heatmaps]
+        M[Barras]
     end
     
-    subgraph Visualizacion["📊 Visualización"]
-        L[Tablas DT]
-        M[Histogramas]
-        N[Boxplots]
-        O[Heatmaps]
+    subgraph Exportacion["Exportación"]
+        N[CSV Participantes]
+        O[CSV Puntajes]
     end
     
-    A --> E --> H
-    B --> F --> I
-    C --> G --> J & K
-    H & I & J & K --> L & M & N & O
-
-%% ============================================
-%% DIAGRAMA 2: Grafo de Dependencias Reactivas
-%% ============================================
-
-graph TD
-    subgraph Client_Layer["🖥️ Capa Cliente (UI)"]
-        UI["Interfaz de Usuario"]
-        INPUTS["Selectores de Entrada<br/>fileInput, selectInput, sliderInput"]
-        OUTPUTS["Salidas<br/>Tablas, Gráficos, Reportes"]
-    end
+    A --> E
+    B --> F
+    C --> G
+    C --> H
+    E --> G
+    F --> G
     
-    subgraph Reactive_Layer["⚡ Capa Reactiva (Server)"]
-        DL["Reactivos de Carga<br/>hom_data_full(), stab_data_full()"]
-        VR["Valores Reactivos<br/>rv$raw_summary_data"]
-        AL["Reactivos de Análisis<br/>homogeneity_run(), stability_run()"]
-        TR["Triggers<br/>analysis_trigger, scores_trigger"]
-        CACHE["Cache de Resultados<br/>algoA_cache, scores_cache"]
-    end
+    E --> I
+    F --> I
+    G --> I
+    H --> I
     
-    subgraph Calculation_Layer["📐 Capa de Cálculo (ptcalc)"]
-        ROBUST["Estadísticos Robustos<br/>run_algorithm_a(), calculate_niqr()"]
-        HOM["Homogeneidad<br/>calculate_homogeneity_stats()"]
-        STAB["Estabilidad<br/>calculate_stability_stats()"]
-        SCORES["Puntajes<br/>calculate_z_score(), calculate_en_score()"]
-    end
+    H --> J
+    H --> K
+    H --> L
+    H --> M
     
-    subgraph Visualization_Layer["📊 Capa de Visualización"]
-        PLOTS["Gráficos Plotly<br/>scatter, histogramas, boxplots"]
-        TABLES["DataTables<br/>tablas de resultados"]
-        REPORTS["Reportes RMarkdown<br/>HTML/Word"]
-    end
-
-    INPUTS --> DL
-    DL --> VR
-    VR --> AL
-    AL --> ROBUST & HOM & STAB
-    TR --> CACHE
-    CACHE --> SCORES
-    ROBUST --> SCORES
-    SCORES --> PLOTS & TABLES & REPORTS
-    PLOTS & TABLES & REPORTS --> OUTPUTS
-    UI -.-> INPUTS
-    OUTPUTS -.-> UI
-
-%% ============================================
-%% DIAGRAMA 3: Cadena de Cálculo de Puntajes
-%% ============================================
-
-flowchart TD
-    BTN["input$scores_run<br/>Clic de botón"] --> OE["observeEvent"]
+    D --> I
+    I --> N
+    H --> O
     
-    OE --> LOOP{"Para cada<br/>pollutant/level/n_lab"}
-    
-    LOOP --> CSF["compute_scores_for_selection"]
-    
-    CSF --> CHM["compute_homogeneity_metrics"]
-    CSF --> CSM["compute_stability_metrics"]
-    CSF --> RAA["run_algorithm_a"]
-    
-    CHM --> |"sigma_pt, u_xpt"| CCS["compute_combo_scores"]
-    CSM --> |"u_stab"| CCS
-    RAA --> |"assigned_value, robust_sd"| CCS
-    
-    CCS --> |"por cada método"| CACHE["scores_results_cache"]
-    
-    CACHE --> TRIG["scores_trigger"]
-    TRIG --> SRS["scores_results_selected"]
-    SRS --> OUT["Tablas y gráficos de salida"]
-
-%% ============================================
-%% DIAGRAMA 4: Flujo de Datos Primario
-%% ============================================
-
-flowchart TD
-    subgraph File_Inputs["Archivos de Entrada"]
-        HF["input$hom_file"]
-        SF["input$stab_file"]
-        SUM["input$summary_files"]
-    end
-
-    subgraph Raw_Data["Datos Crudos Reactivos"]
-        HDF["hom_data_full"]
-        SDF["stab_data_full"]
-        PPD["pt_prep_data"]
-    end
-
-    subgraph Processed["Datos Procesados"]
-        RD["raw_data"]
-        SDR["stability_data_raw"]
-        RV["rv$raw_summary_data"]
-    end
-
-    subgraph Results["Resultados de Análisis"]
-        HR["homogeneity_run"]
-        SR["stability_run"]
-    end
-
-    HF --> HDF --> RD --> HR
-    SF --> SDF --> SDR --> SR
-    SUM --> PPD --> RV --> SR
-
-%% ============================================
-%% DIAGRAMA 5: Patrón Trigger-Cache
-%% ============================================
-
-graph LR
-    A["Usuario hace clic"] --> B["observeEvent activa trigger"]
-    B --> C["Cambia timestamp del trigger"]
-    C --> D["Reactivo se invalida"]
-    D --> E["Se ejecuta cálculo"]
-    E --> F["Resultados se almacenan en cache"]
-    F --> G["Output se actualiza"]
-
-%% ============================================
-%% DIAGRAMA 6: Invalidación de Cache
-%% ============================================
-
-flowchart TD
-    SUM["input$summary_files cambia"] --> OE["observeEvent"]
-    OE --> CL["Limpiar todos los caches:<br/>algoA, consensus, scores"]
-    OE --> RT["Resetear triggers a NULL"]
-
-%% ============================================
-%% DIAGRAMA 7: Flujo de Secuencia de Datos
-%% ============================================
-
-sequenceDiagram
-    participant U as Usuario
-    participant UI as UI
-    participant S as Server Reactives
-    participant P as ptcalc Package
-    participant C as Cache
-    
-    U->>UI: Cargar archivos CSV
-    UI->>S: input$files
-    S->>S: Validar columnas y almacenar en rv
-    U->>UI: Clic "Calcular Puntajes"
-    UI->>S: scores_run
-    S->>C: Verificar clave de cache
-    alt Cache Miss
-        S->>P: Llamar ptcalc::compute_scores
-        P-->>S: Retornar puntajes
-        S->>C: Actualizar cache
-    end
-    S->>UI: Actualizar heatmaps y tablas
-
-%% ============================================
-%% DIAGRAMA 8: Estructura del Servidor
-%% ============================================
-
-flowchart TB
-    subgraph Server["Estructura del Servidor"]
-        DL["Data Loading<br/>líneas 80-160"]
-        TC["Trigger/Cache Setup<br/>líneas 161-224"]
-        HF["Helper Functions<br/>líneas 226-638"]
-        AA["Algorithm A Handler<br/>líneas 642-715"]
-        UI_DYN["Dynamic UI Layout<br/>líneas 717-1165"]
-        HS["Homogeneity/Stability<br/>líneas 1168-1390"]
-        UT["Uncertainty Tables<br/>líneas 1291-1389"]
-        DP["Data Preview<br/>líneas 1391-1718"]
-        PS["PT Scores Module<br/>líneas 1720-2255"]
-        GR["Global Report<br/>líneas 2256-3237"]
-        PM["Participants Module<br/>líneas 3238-3746"]
-        RG["Report Generation<br/>líneas 3748-4690"]
-        AV["Assigned Value<br/>líneas 4715-5042"]
-        OM["Outliers Module<br/>líneas 5114-5176"]
-    end
-
-    DL --> TC --> HF --> AA
-    AA --> UI_DYN --> HS --> UT
-    UT --> DP --> PS --> GR
-    GR --> PM --> RG --> AV --> OM
-
-%% ============================================
-%% DIAGRAMA 9: Selección de Puntajes
-%% ============================================
-
-flowchart TD
-    A["Seleccionar Tipo de Puntaje"] --> B{"¿Participante<br/>reporta incertidumbre?"}
-    B -->|No| C{"¿u_xpt significativo<br/>respecto a sigma_pt?"}
-    C -->|No| D["Usar z-score"]
-    C -->|Sí| E["Usar z'-score"]
-    B -->|Sí| F{"¿Evaluar incertidumbre<br/>reportada?"}
-    F -->|No| G["Usar z o z'"]
-    F -->|Sí| H{"¿U expandida<br/>disponible?"}
-    H -->|No| I["Usar zeta-score"]
-    H -->|Sí| J["Usar En-score"]
+    style Datos_Fijos fill:#e1f5e1,stroke:#4CAF50
+    style Procesamiento fill:#e3f2fd,stroke:#2196F3
+    style Visualizacion fill:#fff3e0,stroke:#FF9800
+    style Exportacion fill:#f3e5f5,stroke:#9C27B0

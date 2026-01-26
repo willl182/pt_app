@@ -101,7 +101,7 @@ calculate_zeta_score <- function(x, x_pt, u_x, u_xpt) {
 #' en <- calculate_en_score(x = 10.5, x_pt = 10.0, U_x = 0.4, U_xpt = 0.2)
 #' cat("En-score:", en, "Eval:", evaluate_en_score(en))
 #'
-#' @seealso \code{\link{evaluate_en_score}}, \code{\link{classify_with_en}}
+#' @seealso \code{\link{evaluate_en_score}}
 #' @export
 calculate_en_score <- function(x, x_pt, U_x, U_xpt) {
   denominator <- sqrt(U_x^2 + U_xpt^2)

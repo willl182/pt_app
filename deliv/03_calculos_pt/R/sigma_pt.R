@@ -1,170 +1,231 @@
 # ===================================================================
-# Estimadores robustos para sigma_pt
-# ISO 13528:2022
-# Archivo independiente sin dependencias externas
+# Titulo: sigma_pt.R
+# Entregable: 03
+# Descripcion: Funciones standalone para cálculo de sigma_pt según ISO 13528:2022
+# Entrada: data/summary_n4.csv
+# Salida: sigma_pt por cada método (MADe, nIQR, Algoritmo A)
+# Referencia: ISO 13528:2022, Sección 9.4
 # ===================================================================
 
-#' Calcular nIQR (Rango Intercuartílico Normalizado)
-#'
-#' nIQR = 0.7413 × IQR (ISO 13528:2022, 9.4).
-#'
-#' @param x Vector numérico.
-#' @return nIQR o NA si no hay datos suficientes.
-calculate_niqr <- function(x) {
-  x_clean <- x[is.finite(x)]
-  if (length(x_clean) < 2) {
-    return(NA_real_)
-  }
-  quartiles <- stats::quantile(x_clean, probs = c(0.25, 0.75), na.rm = TRUE, type = 7)
-  0.7413 * (quartiles[2] - quartiles[1])
-}
+# ===================================================================
+# NOTA: ESTADÍSTICOS ROBUSTOS
+# ===================================================================
+# Las funciones de estadísticas robustas (calcular_niqr, calcular_mad_e,
+# ejecutar_algoritmo_a) están disponibles en robust_stats.R
+# ===================================================================
 
-#' Calcular MADe (Desviación Absoluta de la Mediana Escalada)
-#'
-#' MADe = 1.483 × MAD (ISO 13528:2022, 9.4).
-#'
-#' @param x Vector numérico.
-#' @return MADe o NA si no hay datos suficientes.
-calculate_mad_e <- function(x) {
-  x_clean <- x[is.finite(x)]
-  if (length(x_clean) == 0) {
-    return(NA_real_)
-  }
-  data_median <- stats::median(x_clean, na.rm = TRUE)
-  abs_deviations <- abs(x_clean - data_median)
-  mad_value <- stats::median(abs_deviations, na.rm = TRUE)
-  1.483 * mad_value
-}
+# ===================================================================
+# MÉTODO 1: SIGMA_PT USANDO MADe
+# ===================================================================
 
-#' Ejecutar Algoritmo A (ISO 13528:2022, Anexo C)
-#'
-#' @param values Vector numérico de resultados.
-#' @param ids Vector opcional de identificadores.
-#' @param max_iter Número máximo de iteraciones.
-#' @param tol Tolerancia de convergencia.
-#' @return Lista con valor asignado, desviación robusta y detalles de iteraciones.
-run_algorithm_a <- function(values, ids = NULL, max_iter = 50, tol = 1e-03) {
-  mask <- is.finite(values)
-  values <- values[mask]
+calcular_sigma_pt_made <- function(datos_participantes, contaminante, nivel, excluir_ref = TRUE) {
+  # Filtrar por contaminante y nivel
+  datos_filtrados <- datos_participantes[
+    datos_participantes$pollutant == contaminante &
+    datos_participantes$level == nivel,
+  ]
 
-  if (is.null(ids)) {
-    ids <- seq_along(values)
-  } else {
-    ids <- ids[mask]
+  # Excluir participante de referencia si se solicita
+  if (excluir_ref) {
+    datos_filtrados <- datos_filtrados[datos_filtrados$participant_id != "ref", ]
   }
 
-  n <- length(values)
-  if (n < 3) {
+  if (nrow(datos_filtrados) == 0) {
     return(list(
-      error = "El Algoritmo A requiere al menos 3 observaciones válidas.",
-      assigned_value = NA_real_,
-      robust_sd = NA_real_,
-      iterations = data.frame(),
-      weights = data.frame(),
-      converged = FALSE,
-      effective_weight = NA_real_
+      error = "No se encontraron datos de participantes",
+      sigma_pt = NA_real_,
+      metodo = "made"
     ))
   }
 
-  x_star <- stats::median(values, na.rm = TRUE)
-  s_star <- 1.483 * stats::median(abs(values - x_star), na.rm = TRUE)
+  # Usar mean_value de cada participante
+  valores <- datos_filtrados$mean_value
 
-  if (!is.finite(s_star) || s_star < .Machine$double.eps) {
-    s_star <- stats::sd(values, na.rm = TRUE)
-  }
-
-  if (!is.finite(s_star) || s_star < .Machine$double.eps) {
-    return(list(
-      error = "La dispersión es insuficiente para el Algoritmo A.",
-      assigned_value = x_star,
-      robust_sd = 0,
-      iterations = data.frame(),
-      weights = data.frame(),
-      converged = TRUE,
-      effective_weight = n
-    ))
-  }
-
-  iteration_records <- list()
-  converged <- FALSE
-
-  for (iter in seq_len(max_iter)) {
-    u_values <- (values - x_star) / (1.5 * s_star)
-    weights <- ifelse(abs(u_values) <= 1, 1, 1 / (u_values^2))
-
-    weight_sum <- sum(weights)
-    if (!is.finite(weight_sum) || weight_sum <= 0) {
-      return(list(
-        error = "Los pesos calculados son inválidos para el Algoritmo A.",
-        assigned_value = x_star,
-        robust_sd = s_star,
-        iterations = if (length(iteration_records) > 0) do.call(rbind, iteration_records) else data.frame(),
-        weights = data.frame(),
-        converged = FALSE,
-        effective_weight = NA_real_
-      ))
-    }
-
-    x_new <- sum(weights * values) / weight_sum
-    s_new <- sqrt(sum(weights * (values - x_new)^2) / weight_sum)
-
-    if (!is.finite(s_new) || s_new < .Machine$double.eps) {
-      return(list(
-        error = "El Algoritmo A colapsó por desviación cero.",
-        assigned_value = x_new,
-        robust_sd = 0,
-        iterations = if (length(iteration_records) > 0) do.call(rbind, iteration_records) else data.frame(),
-        weights = data.frame(),
-        converged = FALSE,
-        effective_weight = NA_real_
-      ))
-    }
-
-    delta_x <- abs(x_new - x_star)
-    delta_s <- abs(s_new - s_star)
-    delta <- max(delta_x, delta_s)
-
-    iteration_records[[iter]] <- data.frame(
-      iteration = iter,
-      x_star = x_new,
-      s_star = s_new,
-      delta = delta,
-      stringsAsFactors = FALSE
-    )
-
-    x_star <- x_new
-    s_star <- s_new
-
-    if (delta_x < tol && delta_s < tol) {
-      converged <- TRUE
-      break
-    }
-  }
-
-  u_final <- (values - x_star) / (1.5 * s_star)
-  weights_final <- ifelse(abs(u_final) <= 1, 1, 1 / (u_final^2))
-
-  iterations_df <- if (length(iteration_records) > 0) {
-    do.call(rbind, iteration_records)
-  } else {
-    data.frame()
-  }
-
-  weights_df <- data.frame(
-    id = ids,
-    value = values,
-    weight = weights_final,
-    standardized_residual = u_final,
-    stringsAsFactors = FALSE
-  )
+  # Calcular sigma_pt como MADe
+  sigma_pt <- calcular_mad_e(valores)
 
   list(
-    assigned_value = x_star,
-    robust_sd = s_star,
-    iterations = iterations_df,
-    weights = weights_df,
-    converged = converged,
-    effective_weight = sum(weights_final),
+    contaminante = contaminante,
+    nivel = nivel,
+    sigma_pt = sigma_pt,
+    n_participantes = nrow(datos_filtrados),
+    metodo = "made",
     error = NULL
   )
+}
+
+# ===================================================================
+# MÉTODO 2: SIGMA_PT USANDO nIQR
+# ===================================================================
+
+calcular_sigma_pt_niqr <- function(datos_participantes, contaminante, nivel, excluir_ref = TRUE) {
+  # Filtrar por contaminante y nivel
+  datos_filtrados <- datos_participantes[
+    datos_participantes$pollutant == contaminante &
+    datos_participantes$level == nivel,
+  ]
+
+  # Excluir participante de referencia si se solicita
+  if (excluir_ref) {
+    datos_filtrados <- datos_filtrados[datos_filtrados$participant_id != "ref", ]
+  }
+
+  if (nrow(datos_filtrados) == 0) {
+    return(list(
+      error = "No se encontraron datos de participantes",
+      sigma_pt = NA_real_,
+      metodo = "niqr"
+    ))
+  }
+
+  # Usar mean_value de cada participante
+  valores <- datos_filtrados$mean_value
+
+  # Calcular sigma_pt como nIQR
+  sigma_pt <- calcular_niqr(valores)
+
+  list(
+    contaminante = contaminante,
+    nivel = nivel,
+    sigma_pt = sigma_pt,
+    n_participantes = nrow(datos_filtrados),
+    metodo = "niqr",
+    error = NULL
+  )
+}
+
+# ===================================================================
+# MÉTODO 3: SIGMA_PT USANDO ALGORITMO A
+# ===================================================================
+
+calcular_sigma_pt_algoritmo_a <- function(datos_participantes, contaminante, nivel, excluir_ref = TRUE,
+                                          max_iter = 50, tol = 1e-03) {
+  # Filtrar por contaminante y nivel
+  datos_filtrados <- datos_participantes[
+    datos_participantes$pollutant == contaminante &
+    datos_participantes$level == nivel,
+  ]
+
+  # Excluir participante de referencia si se solicita
+  if (excluir_ref) {
+    datos_filtrados <- datos_filtrados[datos_filtrados$participant_id != "ref", ]
+  }
+
+  if (nrow(datos_filtrados) == 0) {
+    return(list(
+      error = "No se encontraron datos de participantes",
+      sigma_pt = NA_real_,
+      metodo = "algoritmo_a"
+    ))
+  }
+
+  # Usar mean_value de cada participante
+  valores <- datos_filtrados$mean_value
+  ids <- datos_filtrados$participant_id
+
+  # Ejecutar Algoritmo A
+  resultado_algo_a <- ejecutar_algoritmo_a(valores, ids, max_iter, tol)
+
+  if (!is.null(resultado_algo_a$error)) {
+    return(list(
+      error = resultado_algo_a$error,
+      sigma_pt = NA_real_,
+      metodo = "algoritmo_a"
+    ))
+  }
+
+  list(
+    contaminante = contaminante,
+    nivel = nivel,
+    sigma_pt = resultado_algo_a$sigma_pt,
+    valor_asignado = resultado_algo_a$valor_asignado,
+    n_participantes = length(valores),
+    n_iteraciones = nrow(resultado_algo_a$iteraciones),
+    convergencia = resultado_algo_a$convergencia,
+    metodo = "algoritmo_a",
+    error = NULL
+  )
+}
+
+# ===================================================================
+# FUNCIÓN PRINCIPAL: CALCULAR SIGMA_PT
+# ===================================================================
+
+calcular_sigma_pt <- function(datos_participantes, contaminante, nivel, metodo = "algoritmo_a",
+                             excluir_ref = TRUE) {
+  if (metodo == "made") {
+    return(calcular_sigma_pt_made(datos_participantes, contaminante, nivel, excluir_ref))
+  } else if (metodo == "niqr") {
+    return(calcular_sigma_pt_niqr(datos_participantes, contaminante, nivel, excluir_ref))
+  } else if (metodo == "algoritmo_a") {
+    return(calcular_sigma_pt_algoritmo_a(datos_participantes, contaminante, nivel, excluir_ref))
+  } else {
+    return(list(
+      error = paste("Método no reconocido:", metodo),
+      sigma_pt = NA_real_,
+      metodo = metodo
+    ))
+  }
+}
+
+# ===================================================================
+# FUNCIÓN PARA PROCESAR MÚLTIPLES CONTAMINANTES/NIVELES
+# ===================================================================
+
+calcular_sigma_pt_todos <- function(datos_participantes, metodo = "algoritmo_a", excluir_ref = TRUE) {
+  # Obtener combinaciones únicas de contaminante y nivel
+  combinaciones <- unique(datos_participantes[, c("pollutant", "level")])
+
+  resultados <- list()
+
+  for (i in 1:nrow(combinaciones)) {
+    cont <- combinaciones$pollutant[i]
+    niv <- combinaciones$level[i]
+
+    nombre <- paste(cont, niv, sep = "_")
+    resultado <- calcular_sigma_pt(datos_participantes, cont, niv, metodo, excluir_ref)
+    resultados[[nombre]] <- resultado
+  }
+
+  resultados
+}
+
+# ===================================================================
+# FUNCIÓN PARA COMPARAR MÉTODOS
+# ===================================================================
+
+comparar_metodos_sigma_pt <- function(datos_participantes, contaminante, nivel) {
+  metodos <- c("made", "niqr", "algoritmo_a")
+
+  resultados <- list()
+
+  for (met in metodos) {
+    resultado <- calcular_sigma_pt(datos_participantes, contaminante, nivel, met, excluir_ref = TRUE)
+    resultados[[met]] <- resultado
+  }
+
+  list(
+    contaminante = contaminante,
+    nivel = nivel,
+    metodos = resultados
+  )
+}
+
+# ===================================================================
+# CREAR DICCIONARIO DE SIGMA_PT PARA USO EN HOMOGENEIDAD/ESTABILIDAD
+# ===================================================================
+
+crear_diccionario_sigma_pt <- function(datos_participantes, metodo = "algoritmo_a") {
+  resultados <- calcular_sigma_pt_todos(datos_participantes, metodo, excluir_ref = TRUE)
+
+  diccionario <- list()
+
+  for (nombre in names(resultados)) {
+    resultado <- resultados[[nombre]]
+    if (is.null(resultado$error)) {
+      diccionario[[nombre]] <- resultado$sigma_pt
+    }
+  }
+
+  diccionario
 }

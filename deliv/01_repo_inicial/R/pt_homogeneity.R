@@ -10,6 +10,7 @@
 #'
 #' Computes between-sample standard deviation (ss), within-sample standard
 #' deviation (sw), and related ANOVA components for homogeneity assessment.
+#' Also calculates robust sigma estimate (MADe) and its uncertainty.
 #'
 #' Reference: ISO 13528:2022, Section 9.2
 #'
@@ -17,14 +18,20 @@
 #' @return A list containing:
 #'   - g: Number of samples (groups)
 #'   - m: Number of replicates per sample
-#'   - grand_mean: Overall mean (x bar bar)
+#'   - general_mean_homog: Overall mean of ALL values
 #'   - sample_means: Vector of sample means
+#'   - x_pt: Median of first replicate values
 #'   - s_x_bar_sq: Variance of sample means
 #'   - s_xt: Standard deviation of sample means
 #'   - sw: Within-sample standard deviation
 #'   - sw_sq: Within-sample variance
 #'   - ss_sq: Between-sample variance component
 #'   - ss: Between-sample standard deviation
+ #'   - median_of_diffs: Median of absolute differences between sample means
+ #'   - MADe: Robust sigma estimate (1.483 * median_of_diffs)
+ #'   - nIQR: Alternative robust sigma estimate (0.7413 * IQR)
+ #'   - sigma_pt: Standard deviation for proficiency assessment (equals MADe or nIQR)
+ #'   - u_sigma_pt: Uncertainty of sigma_pt (MADe / sqrt(2 * (g-1))
 #'   - error: Error message or NULL if successful
 #'
 #' @examples
@@ -32,6 +39,7 @@
 #' sample_data <- matrix(rnorm(20, mean = 10, sd = 0.5), nrow = 10, ncol = 2)
 #' stats <- calculate_homogeneity_stats(sample_data)
 #' cat("Between-sample SD (ss):", stats$ss, "\n")
+#' cat("Sigma PT (MADe):", stats$sigma_pt, "\n")
 #'
 #' @seealso \code{\link{calculate_homogeneity_criterion}}, \code{\link{evaluate_homogeneity}}
 #' @export
@@ -40,52 +48,77 @@ calculate_homogeneity_stats <- function(sample_data) {
   if (is.data.frame(sample_data)) {
     sample_data <- as.matrix(sample_data)
   }
-  
-  g <- nrow(sample_data)  # Number of samples
-  m <- ncol(sample_data)  # Number of replicates
-  
+
+  g <- nrow(sample_data)
+  m <- ncol(sample_data)
+
   if (g < 2) {
     return(list(error = "At least 2 samples required for homogeneity assessment."))
   }
   if (m < 2) {
     return(list(error = "At least 2 replicates per sample required for homogeneity assessment."))
   }
-  
-  # Sample means and grand mean
+
+  # Sample means
   sample_means <- rowMeans(sample_data, na.rm = TRUE)
-  grand_mean <- base::mean(sample_means, na.rm = TRUE)
-  
-  # Variance of sample means
+
+  # General mean: mean of ALL values (not just means)
+  general_mean_homog <- base::mean(sample_data, na.rm = TRUE)
+
+  # x_pt: median of first replicate values
+  x_pt <- stats::median(sample_data[, 1], na.rm = TRUE)
+
+  # Variance and standard deviation of sample means
   s_x_bar_sq <- stats::var(sample_means, na.rm = TRUE)
   s_xt <- sqrt(s_x_bar_sq)
-  
+
   # Within-sample standard deviation (using ranges for m=2)
   if (m == 2) {
-    ranges <- abs(sample_data[, 1] - sample_data[, 2])
-    sw <- sqrt(sum(ranges^2) / (2 * g))
+    range_btw <- abs(sample_data[, 1] - sample_data[, 2])
+    sw <- sqrt(sum(range_btw^2) / (2 * g))
   } else {
-    # General case: pooled within-sample variance
     within_vars <- apply(sample_data, 1, stats::var, na.rm = TRUE)
     sw <- sqrt(base::mean(within_vars, na.rm = TRUE))
   }
-  
+
   sw_sq <- sw^2
-  
+
   # Between-sample variance component
   ss_sq <- abs(s_x_bar_sq - (sw_sq / m))
   ss <- sqrt(ss_sq)
-  
+
+  # Median of absolute differences between sample means
+  median_of_diffs <- stats::median(abs(sample_means - stats::median(sample_means)), na.rm = TRUE)
+
+  # MADe: robust sigma estimate
+  MADe <- 1.483 * median_of_diffs
+
+  # Uncertainty of MADe
+  u_sigma_pt <- 1.25 * MADe / sqrt(g)
+
+  # nIQR: alternative robust sigma estimate
+  Q1 <- quantile(sample_data[, 1], 0.25, na.rm = TRUE)
+  Q3 <- quantile(sample_data[, 1], 0.75, na.rm = TRUE)
+  IQR_val <- Q3 - Q1
+  nIQR_val <- 0.7413 * IQR_val
+
   list(
     g = g,
     m = m,
-    grand_mean = grand_mean,
+    general_mean_homog = general_mean_homog,
     sample_means = sample_means,
+    x_pt = x_pt,
     s_x_bar_sq = s_x_bar_sq,
     s_xt = s_xt,
     sw = sw,
     sw_sq = sw_sq,
     ss_sq = ss_sq,
     ss = ss,
+    median_of_diffs = median_of_diffs,
+    MADe = MADe,
+    nIQR = nIQR_val,
+    sigma_pt = MADe,
+    u_sigma_pt = u_sigma_pt,
     error = NULL
   )
 }
@@ -112,18 +145,17 @@ calculate_homogeneity_criterion <- function(sigma_pt) {
 
 #' Calculate expanded homogeneity criterion
 #'
-#' c_expanded = sqrt(sigma_allowed_sq * 1.88 + sw_sq * 1.01)
+#' c_expanded = c_criterion + u_sigma_pt
 #'
 #' Reference: ISO 13528:2022, Section 9.2.4
 #'
-#' @param sigma_pt Standard deviation for proficiency assessment
-#' @param sw_sq Within-sample variance
+#' @param sigma_pt Standard deviation for proficiency assessment (from MADe)
+#' @param u_sigma_pt Uncertainty of sigma_pt
 #' @return The expanded criterion value
 #' @export
-calculate_homogeneity_criterion_expanded <- function(sigma_pt, sw_sq) {
+calculate_homogeneity_criterion_expanded <- function(sigma_pt, u_sigma_pt) {
   c_criterion <- 0.3 * sigma_pt
-  sigma_allowed_sq <- c_criterion^2
-  sqrt(sigma_allowed_sq * 1.88 + sw_sq * 1.01)
+  c_criterion + u_sigma_pt
 }
 
 #' Evaluate homogeneity against criterion
@@ -166,31 +198,100 @@ evaluate_homogeneity <- function(ss, c_criterion, c_expanded = NULL) {
 
 #' Calculate stability statistics
 #'
-#' Compares stability sample mean to homogeneity sample mean to assess
-#' short-term stability of proficiency test items.
+#' Calculates statistics from stability data using same pattern as homogeneity
+#' assessment. Independent of homogeneity calculations. Compares stability mean to
+#' homogeneity mean to assess short-term stability of proficiency test items.
 #'
 #' Reference: ISO 13528:2022, Section 9.3
 #'
 #' @param stab_sample_data Data frame or matrix with stability samples
-#' @param hom_grand_mean Grand mean from homogeneity study
+#' @param hom_general_mean_homog General mean from homogeneity study
+#' @param hom_stab_x_pt Median of 1st replicate values from HOMOGENEITY study (assigned value x_pt), used as REFERENCE for median_of_diffs calculation
+#' @param hom_stab_sigma_pt Standard deviation for proficiency assessment from HOMOGENEITY study (robust sigma estimate MADe)
 #' @return A list containing:
-#'   - stab_grand_mean: Mean of stability samples
-#'   - diff_hom_stab: Absolute difference |stab_mean - hom_mean|
-#'   - (plus all outputs from calculate_homogeneity_stats on stability data)
+#'   - g: Number of stability samples (groups)
+#'   - m: Number of replicates per stability sample
+#'   - general_mean: Overall mean of ALL stability values
+#'   - sample_means: Vector of stability sample means
+#'   - x_pt: Median of first replicate values (calculated internally, same formula as homogeneity)
+#'   - s_x_bar_sq: Variance of stability sample means
+#'   - s_xt: Standard deviation of stability sample means
+#'   - sw: Within-sample standard deviation (stability)
+#'   - sw_sq: Within-sample variance (stability)
+#'   - ss_sq: Between-sample variance component (stability)
+#'   - ss: Between-sample standard deviation (stability)
+#'   - hom_stab_median_of_diffs: Median of absolute differences between 2nd replicate values (stability) and HOMOGENEITY's x_pt
+#'   - hom_stab_sigma_pt: Standard deviation from HOMOGENEITY study (passed through, not calculated internally)
+#'   - diff_hom_stab: Absolute difference |stability_mean - homogeneity_mean|
+#'   - error: Error message or NULL if successful
 #' @export
-calculate_stability_stats <- function(stab_sample_data, hom_grand_mean) {
-  # First calculate homogeneity-type stats on stability data
-  stats <- calculate_homogeneity_stats(stab_sample_data)
-  
-  if (!is.null(stats$error)) {
-    return(stats)
+calculate_stability_stats <- function(stab_sample_data, hom_general_mean_homog, hom_stab_x_pt, hom_stab_sigma_pt) {
+  # Convert to matrix if needed
+  if (is.data.frame(stab_sample_data)) {
+    stab_sample_data <- as.matrix(stab_sample_data)
   }
-  
-  # Add stability-specific calculations
-  stats$stab_grand_mean <- stats$grand_mean
-  stats$diff_hom_stab <- abs(stats$grand_mean - hom_grand_mean)
-  
-  stats
+
+  g_stab <- nrow(stab_sample_data)
+  m_stab <- ncol(stab_sample_data)
+
+  if (g_stab < 2) {
+    return(list(error = "At least 2 samples required for stability assessment."))
+  }
+  if (m_stab < 2) {
+    return(list(error = "At least 2 replicates per sample required for stability assessment."))
+  }
+
+  # Sample means
+  stab_sample_means <- rowMeans(stab_sample_data, na.rm = TRUE)
+
+  # General mean: mean of ALL values (not just means)
+  stab_general_mean <- base::mean(stab_sample_data, na.rm = TRUE)
+
+  # x_pt: median of first replicate values
+  stab_x_pt <- stats::median(stab_sample_data[, 1], na.rm = TRUE)
+
+  # Variance and standard deviation of sample means
+  stab_s_x_bar_sq <- stats::var(stab_sample_means, na.rm = TRUE)
+  stab_s_xt <- sqrt(stab_s_x_bar_sq)
+
+  # Within-sample standard deviation (using ranges for m=2)
+  if (m_stab == 2) {
+    range_btw <- abs(stab_sample_data[, 1] - stab_sample_data[, 2])
+    stab_sw <- sqrt(sum(range_btw^2) / (2 * g_stab))
+  } else {
+    within_vars <- apply(stab_sample_data, 1, stats::var, na.rm = TRUE)
+    stab_sw <- sqrt(base::mean(within_vars, na.rm = TRUE))
+  }
+
+  stab_sw_sq <- stab_sw^2
+
+  # Between-sample variance component
+  stab_ss_sq <- abs(stab_s_x_bar_sq - (stab_sw_sq / m_stab))
+  stab_ss <- sqrt(stab_ss_sq)
+
+  # hom_stab_median_of_diffs: Median of absolute differences between 2nd replicate (stability) and hom_stab_x_pt (HOMOGENEITY's x_pt as reference)
+  hom_stab_median_of_diffs <- stats::median(abs(stab_sample_data[, 2] - hom_stab_x_pt), na.rm = TRUE)
+
+  # Difference between homogeneity and stability means
+  diff_hom_stab <- abs(stab_general_mean - hom_general_mean_homog)
+
+  list(
+    g = g_stab,
+    m = m_stab,
+    general_mean = stab_general_mean,
+    sample_means = stab_sample_means,
+    x_pt = stab_x_pt,
+    s_x_bar_sq = stab_s_x_bar_sq,
+    s_xt = stab_s_xt,
+    sw = stab_sw,
+    sw_sq = stab_sw_sq,
+    ss_sq = stab_ss_sq,
+    ss = stab_ss,
+    hom_stab_median_of_diffs = hom_stab_median_of_diffs,
+    hom_stab_sigma_pt = hom_stab_sigma_pt,
+    diff_hom_stab = diff_hom_stab,
+    error = NULL
+  )
 }
 
 #' Calculate stability criterion

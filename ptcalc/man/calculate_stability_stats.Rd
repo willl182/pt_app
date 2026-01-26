@@ -4,24 +4,46 @@
 \alias{calculate_stability_stats}
 \title{Calculate stability statistics}
 \usage{
-calculate_stability_stats(stab_sample_data, hom_grand_mean)
+calculate_stability_stats(
+  stab_sample_data,
+  hom_general_mean_homog,
+  hom_stab_x_pt,
+  hom_stab_sigma_pt
+)
 }
 \arguments{
 \item{stab_sample_data}{Data frame or matrix with stability samples}
 
-\item{hom_grand_mean}{Grand mean from homogeneity study}
+\item{hom_general_mean_homog}{General mean from homogeneity study}
+
+\item{hom_stab_x_pt}{Median of 1st replicate values from HOMOGENEITY study (assigned value x_pt), used as REFERENCE for median_of_diffs calculation}
+
+\item{hom_stab_sigma_pt}{Standard deviation for proficiency assessment from HOMOGENEITY study (robust sigma estimate MADe)}
 }
 \value{
 A list containing:
 \itemize{
-\item stab_grand_mean: Mean of stability samples
-\item diff_hom_stab: Absolute difference |stab_mean - hom_mean|
-\item (plus all outputs from calculate_homogeneity_stats on stability data)
+\item g: Number of stability samples (groups)
+\item m: Number of replicates per stability sample
+\item general_mean: Overall mean of ALL stability values
+\item sample_means: Vector of stability sample means
+\item x_pt: Median of first replicate values (calculated internally, same formula as homogeneity)
+\item s_x_bar_sq: Variance of stability sample means
+\item s_xt: Standard deviation of stability sample means
+\item sw: Within-sample standard deviation (stability)
+\item sw_sq: Within-sample variance (stability)
+\item ss_sq: Between-sample variance component (stability)
+\item ss: Between-sample standard deviation (stability)
+\item hom_stab_median_of_diffs: Median of absolute differences between 2nd replicate values (stability) and HOMOGENEITY's x_pt
+\item hom_stab_sigma_pt: Standard deviation from HOMOGENEITY study (passed through, not calculated internally)
+\item diff_hom_stab: Absolute difference |stability_mean - homogeneity_mean|
+\item error: Error message or NULL if successful
 }
 }
 \description{
-Compares stability sample mean to homogeneity sample mean to assess
-short-term stability of proficiency test items.
+Calculates statistics from stability data using same pattern as homogeneity
+assessment. Independent of homogeneity calculations. Compares stability mean to
+homogeneity mean to assess short-term stability of proficiency test items.
 }
 \details{
 Reference: ISO 13528:2022, Section 9.3

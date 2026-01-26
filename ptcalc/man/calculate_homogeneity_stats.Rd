@@ -14,20 +14,26 @@ A list containing:
 \itemize{
 \item g: Number of samples (groups)
 \item m: Number of replicates per sample
-\item grand_mean: Overall mean (x bar bar)
+\item general_mean_homog: Overall mean of ALL values
 \item sample_means: Vector of sample means
+\item x_pt: Median of first replicate values
 \item s_x_bar_sq: Variance of sample means
 \item s_xt: Standard deviation of sample means
 \item sw: Within-sample standard deviation
 \item sw_sq: Within-sample variance
 \item ss_sq: Between-sample variance component
 \item ss: Between-sample standard deviation
+\item median_of_diffs: Median of absolute differences between sample means
+\item MADe: Robust sigma estimate (1.483 * median_of_diffs)
+\item sigma_pt: Standard deviation for proficiency assessment (equals MADe)
+\item u_sigma_pt: Uncertainty of sigma_pt (1.23 * MADe / sqrt(g))
 \item error: Error message or NULL if successful
 }
 }
 \description{
 Computes between-sample standard deviation (ss), within-sample standard
 deviation (sw), and related ANOVA components for homogeneity assessment.
+Also calculates robust sigma estimate (MADe) and its uncertainty.
 }
 \details{
 Reference: ISO 13528:2022, Section 9.2
@@ -37,6 +43,7 @@ Reference: ISO 13528:2022, Section 9.2
 sample_data <- matrix(rnorm(20, mean = 10, sd = 0.5), nrow = 10, ncol = 2)
 stats <- calculate_homogeneity_stats(sample_data)
 cat("Between-sample SD (ss):", stats$ss, "\n")
+cat("Sigma PT (MADe):", stats$sigma_pt, "\n")
 
 }
 \seealso{

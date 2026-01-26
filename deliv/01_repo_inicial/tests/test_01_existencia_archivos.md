@@ -1,95 +1,157 @@
-# Guia de Uso - Test 01: Existencia de Archivos
+# Guía de Uso - Test 01: Verificación de Archivos Originales
 
-## Descripcion
+## Propósito
 
-Este test verifica que el Entregable 01 contenga copias exactas de los archivos
-originales del repositorio pt_app. Valida:
+Este test verifica la integridad y completitud de los archivos copiados en el Entregable 01, asegurando que son copias exactas de los archivos originales.
 
-1. **Existencia de archivos originales** en `pt_app/R/`
-2. **Existencia de copias** en `deliv/01_repo_inicial/R/`
-3. **Correspondencia SHA256** entre originales y copias
-4. **Existencia de app_original.R**
-5. **Sintaxis R basica** (parentesis, llaves y corchetes balanceados)
+## Prerrequisitos
 
-## Archivos Verificados
+- R versión 4.0 o superior
+- Paquetes R instalados:
+  - `testthat`
+  - `digest`
 
-| Archivo | Descripcion |
-|---------|-------------|
-| `pt_homogeneity.R` | Funciones de homogeneidad y estabilidad |
-| `pt_robust_stats.R` | Estimadores estadisticos robustos |
-| `pt_scores.R` | Calculo de puntajes z, z', zeta, En |
-| `utils.R` | Funciones utilitarias (deprecadas) |
-| `app_original.R` | Copia de la aplicacion Shiny original |
-
-## Requisitos
+Para instalar los paquetes necesarios:
 
 ```r
 install.packages(c("testthat", "digest"))
 ```
 
-## Ejecucion
+## Estructura de Verificación
 
-### Opcion 1: Desde linea de comandos
+El test realiza tres tipos de verificaciones:
 
-```bash
-cd pt_app/deliv/01_repo_inicial/tests
-Rscript -e "testthat::test_file('test_01_existencia_archivos.R')"
-```
+### 1. Verificación de Existencia
+- Confirma que los 5 archivos originales existen en `pt_app/`
+- Confirma que las 5 copias existen en `deliv/01_repo_inicial/`
 
-### Opcion 2: Desde R interactivo
+**Archivos verificados:**
+- `app.R` / `app_original.R`
+- `R/pt_homogeneity.R`
+- `R/pt_robust_stats.R`
+- `R/pt_scores.R`
+- `R/utils.R`
+
+### 2. Verificación de Hash SHA256
+- Calcula el hash SHA256 de cada archivo original
+- Calcula el hash SHA256 de cada copia
+- Compara que sean idénticos
+
+Esto garantiza que no hubo modificaciones en los archivos.
+
+### 3. Verificación de Sintaxis R
+- Ejecuta `parse()` en cada archivo `.R`
+- Verifica que no haya errores de sintaxis
+
+Esto asegura que el código R es válido y puede ser interpretado.
+
+## Ejecución del Test
+
+### Opción 1: Ejecutar desde la consola de R
 
 ```r
-setwd("pt_app/deliv/01_repo_inicial/tests")
+# Ir al directorio de tests
+setwd("deliv/01_repo_inicial/tests")
+
+# Ejecutar el test
+source("test_01_existencia_archivos.R")
+```
+
+### Opción 2: Ejecutar con testthat
+
+```r
+# Desde cualquier directorio
 library(testthat)
-test_file("test_01_existencia_archivos.R")
+
+# Ejecutar todos los tests en el archivo
+test_file("deliv/01_repo_inicial/tests/test_01_existencia_archivos.R")
 ```
 
-### Opcion 3: Ejecutar todos los tests del entregable
+### Opción 3: Ejecutar desde la línea de comandos
 
+```bash
+Rscript deliv/01_repo_inicial/tests/test_01_existencia_archivos.R
+```
+
+## Salida del Test
+
+El test genera dos salidas:
+
+### 1. Salida en Consola
+
+```
+=== EJECUTANDO TESTS ENTREGABLE 01 ===
+
+                    test  resultado                 valor_esperado status
+1       existencia_orig_app_R                     TRUE            PASS
+2 existencia_orig_R_pt_homogeneity_R            TRUE            PASS
+3 existencia_orig_R_pt_robust_stats_R           TRUE            PASS
+4     existencia_orig_R_pt_scores_R              TRUE            PASS
+5        existencia_orig_R_utils_R               TRUE            PASS
+6           hash_app_R       a1b2c3...             a1b2c3...     PASS
+7     hash_pt_homogeneity    d4e5f6...             d4e5f6...     PASS
+...
+
+=== RESUMEN ===
+Total tests: 15
+PASS: 15
+FAIL: 0
+
+Resultados guardados en: deliv/01_repo_inicial/test_01_resultados.csv
+```
+
+### 2. Archivo CSV
+
+El archivo `test_01_resultados.csv` contiene una tabla con todos los resultados:
+
+| test | resultado | valor_esperado | status |
+|------|-----------|----------------|--------|
+| existencia_orig_app_R | TRUE | TRUE | PASS |
+| hash_app_R | a1b2c3... | a1b2c3... | PASS |
+| sintaxis_app_original | TRUE | TRUE | PASS |
+| ... | ... | ... | ... |
+
+## Interpretación de Resultados
+
+### Status PASS ✅
+- El archivo existe y es correcto
+- El hash coincide con el original
+- La sintaxis R es válida
+
+### Status FAIL ❌
+Posibles causas:
+- **Falta archivo original:** El archivo no existe en `pt_app/`
+- **Falta archivo copia:** El archivo no fue copiado a `deliv/01_repo_inicial/`
+- **Hash diferente:** El archivo fue modificado accidentalmente
+- **Error de sintaxis:** El archivo tiene errores de código R
+
+## Solución de Problemas
+
+### Error: "package 'digest' not found"
 ```r
-testthat::test_dir("pt_app/deliv/01_repo_inicial/tests")
+install.packages("digest")
 ```
 
-## Interpretacion de Resultados
-
-| Status | Significado |
-|--------|-------------|
-| `PASS` | El test paso correctamente |
-| `FAIL` | El test fallo - revisar mensaje de error |
-| `SKIP` | El test fue omitido |
-
-## Formato de Salida
-
-Los resultados se presentan como data.frame con las columnas:
-
-| Columna | Descripcion |
-|---------|-------------|
-| `test` | Nombre del test |
-| `resultado` | Valor obtenido |
-| `valor_esperado` | Valor esperado |
-| `status` | PASS o FAIL |
-
-## Solucion de Problemas
-
-### Error: "Archivo original no encontrado"
-
-Verificar que los archivos existen en `pt_app/R/`:
-```bash
-ls -la pt_app/R/
+### Error: "package 'testthat' not found"
+```r
+install.packages("testthat")
 ```
 
-### Error: "Hash no coincide"
+### Error: "File does not exist"
+Verifique que está ejecutando el test desde el directorio correcto o ajuste las rutas relativas en el script.
 
-Los archivos fueron modificados despues de la copia. Regenerar las copias:
-```bash
-cp pt_app/R/*.R pt_app/deliv/01_repo_inicial/R/
-```
+### Error de sintaxis en un archivo
+Si un archivo tiene errores de sintaxis, revise el archivo original. No intente corregir el error en el entregable, ya que debe ser una copia exacta del original.
 
-### Error: "Parentesis desbalanceados"
+## Próximos Pasos
 
-El archivo tiene un error de sintaxis. Revisar manualmente el archivo indicado.
+Una vez que todos los tests pasen (status PASS), puede proceder con:
 
-## Referencia
+1. **Entregable 02:** Documentar las funciones usadas en `app.R`
+2. Revisar las funciones identificadas para entender su propósito
 
-- ISO 13528:2022 - Metodos estadisticos para ensayos de aptitud
-- Entregable 01: Repositorio de codigo y scripts iniciales
+## Notas
+
+- Los hashes SHA256 son únicos por contenido. Cualquier cambio en el archivo (incluso un espacio) generará un hash diferente.
+- La validación de sintaxis no ejecuta el código, solo verifica que puede ser parseado correctamente.
+- Este test debe ejecutarse antes de modificar cualquier archivo, para tener una línea base verificada.

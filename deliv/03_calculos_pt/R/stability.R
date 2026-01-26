@@ -1,134 +1,206 @@
 # ===================================================================
-# Cálculos de estabilidad para ensayos de aptitud
-# ISO 13528:2022
-# Archivo independiente sin dependencias externas
+# Titulo: stability.R
+# Entregable: 03
+# Descripcion: Funciones standalone para cálculo de estabilidad según ISO 13528:2022
+# Entrada: data/stability.csv, data/homogeneity.csv
+# Salida: Diferencia de medias, evaluación de criterio
+# Referencia: ISO 13528:2022, Sección 9.3
 # ===================================================================
 
-cargar_datos_estabilidad <- function(ruta_datos = "../../data/stability.csv") {
-  datos <- read.csv(ruta_datos, stringsAsFactors = FALSE)
-  required_cols <- c("pollutant", "level", "replicate", "sample_id", "value")
-  if (!all(required_cols %in% names(datos))) {
-    stop("El archivo de estabilidad no contiene las columnas esperadas.")
+# ===================================================================
+# ESTADÍSTICOS DE ESTABILIDAD
+# ===================================================================
+
+calcular_estadisticas_estabilidad <- function(datos_estabilidad, media_homogeneidad, contaminante, nivel) {
+  # Filtrar por contaminante y nivel
+  datos_filtrados <- datos_estabilidad[
+    datos_estabilidad$pollutant == contaminante &
+    datos_estabilidad$level == nivel,
+  ]
+
+  if (nrow(datos_filtrados) == 0) {
+    return(list(error = paste("No se encontraron datos de estabilidad para", contaminante, nivel)))
   }
-  datos
-}
 
-cargar_datos_homogeneidad_estabilidad <- function(ruta_datos = "../../data/homogeneity.csv") {
-  datos <- read.csv(ruta_datos, stringsAsFactors = FALSE)
-  required_cols <- c("pollutant", "level", "replicate", "sample_id", "value")
-  if (!all(required_cols %in% names(datos))) {
-    stop("El archivo de homogeneidad no contiene las columnas esperadas.")
-  }
-  datos
-}
+  # Preparar matriz de datos (muestras como filas, réplicas como columnas)
+  datos_matrix <- tapply(
+    datos_filtrados$value,
+    list(datos_filtrados$sample_id, datos_filtrados$replicate),
+    function(x) x[1]
+  )
 
-construir_matriz_estabilidad <- function(datos, contaminante, nivel) {
-  subset_datos <- datos[datos$pollutant == contaminante & datos$level == nivel, , drop = FALSE]
-  if (nrow(subset_datos) == 0) {
-    stop("No se encontraron registros para el contaminante y nivel solicitados.")
-  }
-  matriz <- stats::xtabs(value ~ sample_id + replicate, data = subset_datos)
-  as.matrix(matriz)
-}
+  # Convertir a matriz
+  datos_matrix <- as.matrix(datos_matrix)
 
-calcular_estadisticos_basicos <- function(muestras) {
-  g <- nrow(muestras)
-  m <- ncol(muestras)
+  # Número de muestras (g) y réplicas (m)
+  g <- nrow(datos_matrix)
+  m <- ncol(datos_matrix)
 
-  medias_muestras <- rowMeans(muestras, na.rm = TRUE)
-  media_general <- base::mean(medias_muestras, na.rm = TRUE)
+  # Medias por muestra
+  medias_muestras <- rowMeans(datos_matrix, na.rm = TRUE)
 
-  s_x_bar_sq <- stats::var(medias_muestras, na.rm = TRUE)
-  s_xt <- sqrt(s_x_bar_sq)
+  # Media de estabilidad: media de TODOS los valores (no solo las medias)
+  media_estabilidad <- mean(datos_matrix, na.rm = TRUE)
 
+  # Diferencia entre medias de homogeneidad y estabilidad
+  diff_hom_est <- abs(media_estabilidad - media_homogeneidad)
+
+  # Desviación estándar dentro de la muestra
   if (m == 2) {
-    rangos <- abs(muestras[, 1] - muestras[, 2])
+    rangos <- abs(datos_matrix[, 1] - datos_matrix[, 2])
     sw <- sqrt(sum(rangos^2) / (2 * g))
   } else {
-    vars_internas <- apply(muestras, 1, stats::var, na.rm = TRUE)
-    sw <- sqrt(base::mean(vars_internas, na.rm = TRUE))
+    var_dentro <- apply(datos_matrix, 1, var, na.rm = TRUE)
+    sw <- sqrt(mean(var_dentro, na.rm = TRUE))
   }
 
-  sw_sq <- sw^2
-  ss_sq <- abs(s_x_bar_sq - (sw_sq / m))
-  ss <- sqrt(ss_sq)
-
   list(
+    contaminante = contaminante,
+    nivel = nivel,
     g = g,
     m = m,
-    grand_mean = media_general,
+    media_homogeneidad = media_homogeneidad,
+    media_estabilidad = media_estabilidad,
+    diff_hom_est = diff_hom_est,
+    medias_muestras = medias_muestras,
     sw = sw,
-    sw_sq = sw_sq,
-    ss = ss,
-    ss_sq = ss_sq
-  )
-}
-
-#' Calcular estadísticos de estabilidad
-#'
-#' Compara la media de estabilidad con la media de homogeneidad.
-#'
-#' @param contaminante Nombre del analito.
-#' @param nivel Nivel del analito.
-#' @param ruta_estabilidad Ruta a `stability.csv`.
-#' @param ruta_homogeneidad Ruta a `homogeneity.csv`.
-#' @return Lista con medias y diferencia absoluta.
-calculate_stability_stats <- function(contaminante,
-                                      nivel,
-                                      ruta_estabilidad = "../../data/stability.csv",
-                                      ruta_homogeneidad = "../../data/homogeneity.csv") {
-  datos_estabilidad <- cargar_datos_estabilidad(ruta_estabilidad)
-  datos_homogeneidad <- cargar_datos_homogeneidad_estabilidad(ruta_homogeneidad)
-
-  muestras_estabilidad <- construir_matriz_estabilidad(datos_estabilidad, contaminante, nivel)
-  muestras_homogeneidad <- construir_matriz_estabilidad(datos_homogeneidad, contaminante, nivel)
-
-  g <- nrow(muestras_estabilidad)
-  m <- ncol(muestras_estabilidad)
-
-  if (g < 2 || m < 2) {
-    return(list(error = "No hay suficientes datos de estabilidad para evaluar el criterio."))
-  }
-
-  stats_estabilidad <- calcular_estadisticos_basicos(muestras_estabilidad)
-  stats_homogeneidad <- calcular_estadisticos_basicos(muestras_homogeneidad)
-
-  diff_hom_stab <- abs(stats_estabilidad$grand_mean - stats_homogeneidad$grand_mean)
-
-  list(
-    g = stats_estabilidad$g,
-    m = stats_estabilidad$m,
-    stab_grand_mean = stats_estabilidad$grand_mean,
-    hom_grand_mean = stats_homogeneidad$grand_mean,
-    diff_hom_stab = diff_hom_stab,
-    sw = stats_estabilidad$sw,
-    ss = stats_estabilidad$ss,
+    datos_matrix = datos_matrix,
     error = NULL
   )
 }
 
-#' Evaluar criterio de estabilidad
-#'
-#' Criterio: c = 0.3 × σ_pt (ISO 13528:2022, 9.2.3).
-#'
-#' @param diff_hom_stab Diferencia absoluta entre medias.
-#' @param sigma_pt Desviación estándar para la evaluación de aptitud.
-#' @return Lista con evaluación y conclusión.
-evaluate_stability <- function(diff_hom_stab, sigma_pt) {
-  if (!is.finite(diff_hom_stab) || !is.finite(sigma_pt)) {
-    return(list(passes_criterion = NA, c_criterion = NA_real_, conclusion = "Datos insuficientes"))
-  }
-  c_criterion <- 0.3 * sigma_pt
-  passes <- diff_hom_stab <= c_criterion
-  conclusion <- if (passes) {
-    sprintf("|y1 - y2| (%.4f) <= c (%.4f): CUMPLE CRITERIO DE ESTABILIDAD", diff_hom_stab, c_criterion)
+# ===================================================================
+# CRITERIOS DE ESTABILIDAD
+# ===================================================================
+
+calcular_criterio_estabilidad <- function(sigma_pt) {
+  # c_stab = 0.3 * sigma_pt (igual que criterio de homogeneidad)
+  0.3 * sigma_pt
+}
+
+calcular_criterio_expandido_estabilidad <- function(c_criterion, u_hom_mean, u_stab_mean) {
+  # c_stab_expanded = c_criterion + 2 * sqrt(u_hom^2 + u_stab^2)
+  c_criterion + 2 * sqrt(u_hom_mean^2 + u_stab_mean^2)
+}
+
+# ===================================================================
+# INCERTIDUMBRE DE MEDIA
+# ===================================================================
+
+calcular_incertidumbre_media <- function(media, datos_matrix, sw) {
+  # u(x) = sw / sqrt(n) donde n es número total de observaciones
+  g <- nrow(datos_matrix)
+  m <- ncol(datos_matrix)
+  n_total <- g * m
+
+  sw / sqrt(n_total)
+}
+
+evaluar_estabilidad <- function(diff_hom_est, c_criterion, c_expanded = NULL) {
+  if (!is.finite(diff_hom_est) || !is.finite(c_criterion)) {
+    pasa_criterio <- NA
+    conclusion1 <- "No se puede evaluar estabilidad (valores NA)"
   } else {
-    sprintf("|y1 - y2| (%.4f) > c (%.4f): NO CUMPLE CRITERIO DE ESTABILIDAD", diff_hom_stab, c_criterion)
+    pasa_criterio <- diff_hom_est <= c_criterion
+
+    conclusion1 <- if (pasa_criterio) {
+      sprintf("diff (%.6f) <= criterio (%.6f): CUMPLE CRITERIO DE ESTABILIDAD", diff_hom_est, c_criterion)
+    } else {
+      sprintf("diff (%.6f) > criterio (%.6f): NO CUMPLE CRITERIO DE ESTABILIDAD", diff_hom_est, c_criterion)
+    }
+  }
+
+  pasa_expandido <- NA
+  conclusion2 <- NULL
+
+  if (!is.null(c_expanded)) {
+    if (!is.finite(diff_hom_est) || !is.finite(c_expanded)) {
+      conclusion2 <- "No se puede evaluar criterio expandido (valores NA)"
+    } else {
+      pasa_expandido <- diff_hom_est <= c_expanded
+      conclusion2 <- if (pasa_expandido) {
+        sprintf("diff (%.6f) <= expandido (%.6f): CUMPLE CRITERIO EXPANDIDO", diff_hom_est, c_expanded)
+      } else {
+        sprintf("diff (%.6f) > expandido (%.6f): NO CUMPLE CRITERIO EXPANDIDO", diff_hom_est, c_expanded)
+      }
+    }
   }
 
   list(
-    passes_criterion = passes,
-    c_criterion = c_criterion,
-    conclusion = conclusion
+    pasa_criterio = pasa_criterio,
+    pasa_expandido = pasa_expandido,
+    conclusion = paste(c(conclusion1, conclusion2), collapse = "\n")
   )
+}
+
+# ===================================================================
+# FUNCIÓN PRINCIPAL DE ESTABILIDAD
+# ===================================================================
+
+analizar_estabilidad <- function(datos_estabilidad, media_homogeneidad, contaminante, nivel, sigma_pt) {
+  # Calcular estadísticos
+  stats <- calcular_estadisticas_estabilidad(datos_estabilidad, media_homogeneidad, contaminante, nivel)
+
+  if (!is.null(stats$error)) {
+    return(stats)
+  }
+
+  # Calcular incertidumbre de medias
+  u_hom_mean <- calcular_incertidumbre_media(media_homogeneidad, stats$datos_matrix, stats$sw)
+  u_stab_mean <- calcular_incertidumbre_media(stats$media_estabilidad, stats$datos_matrix, stats$sw)
+
+  # Calcular criterios
+  c_criterion <- calcular_criterio_estabilidad(sigma_pt)
+  c_expanded <- calcular_criterio_expandido_estabilidad(c_criterion, u_hom_mean, u_stab_mean)
+
+  # Evaluar
+  evaluacion <- evaluar_estabilidad(stats$diff_hom_est, c_criterion, c_expanded)
+
+  list(
+    contaminante = contaminante,
+    nivel = nivel,
+    media_homogeneidad = media_homogeneidad,
+    media_estabilidad = stats$media_estabilidad,
+    diff_hom_est = stats$diff_hom_est,
+    stats = stats,
+    u_hom_mean = u_hom_mean,
+    u_stab_mean = u_stab_mean,
+    c_criterion = c_criterion,
+    c_expanded = c_expanded,
+    evaluacion = evaluacion,
+    error = NULL
+  )
+}
+
+# ===================================================================
+# FUNCIÓN PARA PROCESAR MÚLTIPLES CONTAMINANTES/NIVELES
+# ===================================================================
+
+analizar_estabilidad_todos <- function(datos_estabilidad, datos_homogeneidad, resultados_homogeneidad) {
+  # Obtener combinaciones únicas de contaminante y nivel de estabilidad
+  combinaciones <- unique(datos_estabilidad[, c("pollutant", "level")])
+
+  resultados <- list()
+
+  for (i in 1:nrow(combinaciones)) {
+    cont <- combinaciones$pollutant[i]
+    niv <- combinaciones$level[i]
+
+    # Buscar resultado de homogeneidad correspondiente
+    nombre_hom <- paste(cont, niv, sep = "_")
+    resultado_hom <- resultados_homogeneidad[[nombre_hom]]
+
+    if (is.null(resultado_hom) || !is.null(resultado_hom$error)) {
+      warning(paste("No se encontró resultado de homogeneidad para", nombre_hom))
+      next
+    }
+
+    media_hom <- resultado_hom$stats$media_global
+    sigma_pt <- resultado_hom$c_criterion / 0.3
+
+    resultado <- analizar_estabilidad(datos_estabilidad, media_hom, cont, niv, sigma_pt)
+    resultados[[nombre_hom]] <- resultado
+  }
+
+  resultados
 }

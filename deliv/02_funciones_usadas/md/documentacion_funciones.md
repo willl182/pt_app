@@ -1,570 +1,469 @@
-# Documentación de Funciones - Entregable 02
+# Documentación de Funciones
 
-Este documento cataloga todas las funciones del paquete `ptcalc` usadas por la aplicación. Las referencias se alinean con las normas **ISO 13528:2022** e **ISO 17043:2024**.
+**Fecha de generación:** 2026-01-24 17:27:58.725427
 
----
-
-## Índice de Contenidos
-
-- [1. Estadísticos Robustos](#1-estadísticos-robustos)
-- [2. Homogeneidad](#2-homogeneidad)
-- [3. Estabilidad](#3-estabilidad)
-- [4. Incertidumbres](#4-incertidumbres)
-- [5. Puntajes](#5-puntajes)
-- [6. Evaluación de Puntajes](#6-evaluación-de-puntajes)
-- [7. Clasificación Combinada](#7-clasificación-combinada)
-- [8. Constantes](#8-constantes)
-- [9. Funciones Deprecadas](#9-funciones-deprecadas)
+**Total funciones:** 48
 
 ---
 
-## 1. Estadísticos Robustos
+## `algo_key`
 
-### calculate_niqr
+**Archivo:** `app.R`
 
-Calcula el Rango Intercuartil Normalizado (nIQR), un estimador robusto de la desviación estándar.
-
-**Archivo:** `R/pt_robust_stats.R`  
-**Referencia:** ISO 13528:2022, Sección 9.4
-
-| Parámetro | Tipo | Requerido | Descripción |
-|-----------|------|-----------|-------------|
-| `x` | numeric vector | Sí | Vector de valores numéricos |
-
-**Retorno:** `numeric` - nIQR = 0.7413 × (Q3 - Q1), o `NA_real_` si datos insuficientes.
-
-**Fórmula:**
-```
-nIQR = 0.7413 × (Q₃ - Q₁)
-```
-
-**Ejemplo:**
-```r
-values <- c(10.1, 10.2, 9.9, 10.0, 10.3, 9.8, 10.1)
-niqr <- calculate_niqr(values)  # ~0.222
-```
+**Parámetros:** `pollutant, n_lab, level) paste(pollutant, n_lab, level, sep = "||"`
 
 ---
 
-### calculate_mad_e
+## `algorithm_A`
 
-Calcula la Desviación Absoluta Mediana escalada (MADe), muy resistente a valores atípicos.
+@export
 
-**Archivo:** `R/pt_robust_stats.R`  
-**Referencia:** ISO 13528:2022, Sección 9.4
+**Archivo:** `utils.R`
 
-| Parámetro | Tipo | Requerido | Descripción |
-|-----------|------|-----------|-------------|
-| `x` | numeric vector | Sí | Vector de valores numéricos |
-
-**Retorno:** `numeric` - MADe = 1.483 × MAD.
-
-**Fórmula:**
-```
-MADe = 1.483 × median(|xᵢ - median(x)|)
-```
-
-**Ejemplo:**
-```r
-values <- c(10.1, 10.2, 9.9, 10.0, 50.0)  # 50 es outlier
-mad_e <- calculate_mad_e(values)  # ~0.222 (ignora el outlier)
-```
+**Parámetros:** `x, max_iter = 100`
 
 ---
 
-### run_algorithm_a
+## `calculate_en_score`
 
-Implementa el Algoritmo A de ISO 13528 para calcular la media y desviación estándar robustas mediante ponderación iterativa de Huber.
+@export
 
-**Archivo:** `R/pt_robust_stats.R`  
-**Referencia:** ISO 13528:2022, Anexo C
+**Archivo:** `pt_scores.R`
 
-| Parámetro | Tipo | Requerido | Default | Descripción |
-|-----------|------|-----------|---------|-------------|
-| `values` | numeric vector | Sí | - | Resultados de los participantes |
-| `ids` | vector | No | `NULL` | Identificadores opcionales |
-| `max_iter` | integer | No | 50 | Máximo número de iteraciones |
-| `tol` | numeric | No | 1e-03 | Tolerancia de convergencia |
+**Parámetros:** `x, x_pt, U_x, U_xpt`
 
-**Retorno:** Lista con:
-
-| Campo | Tipo | Descripción |
-|-------|------|-------------|
-| `assigned_value` | numeric | Media robusta final (x*) |
-| `robust_sd` | numeric | Desviación estándar robusta (s*) |
-| `iterations` | data.frame | Historial de convergencia |
-| `weights` | data.frame | Pesos y residuos finales |
-| `converged` | logical | TRUE si convergió |
-| `effective_weight` | numeric | Suma de pesos finales |
-| `error` | character | Mensaje de error o NULL |
-
-**Algoritmo (Flujo):**
-```mermaid
-graph TD
-    A[Inicializar x* = mediana, s* = MADe] --> B{Iterar}
-    B --> C[Calcular u = x - x* / 1.5*s*]
-    C --> D[Pesos: w = 1 si |u| <= 1, else 1/u²]
-    D --> E[Actualizar x* y s* ponderados]
-    E --> F{¿Convergió?}
-    F -->|No| B
-    F -->|Sí| G[Retornar resultados]
-```
-
-**Ejemplo:**
-```r
-values <- c(10.1, 10.2, 9.9, 10.0, 10.3, 50.0)
-ids <- c("Lab1", "Lab2", "Lab3", "Lab4", "Lab5", "Lab6")
-result <- run_algorithm_a(values, ids)
-
-cat("Valor Asignado:", result$assigned_value)  # ~10.1
-cat("SD Robusta:", result$robust_sd)           # ~0.14
-```
-
-**Casos de Error:**
-
-| Condición | Comportamiento |
-|-----------|----------------|
-| `n < 3` | Error: "Algorithm A requires at least 3 valid observations." |
-| Dispersión cero | Error: "Data dispersion is insufficient for Algorithm A." |
-| SD colapsa a cero | Error: "Algorithm A collapsed due to zero standard deviation." |
-| No convergencia | Retorna últimos valores con `converged = FALSE` |
+**Referencia ISO:** ISO 13528:2022, Section 10.5
 
 ---
 
-## 2. Homogeneidad
+## `calculate_homogeneity_criterion`
 
-### calculate_homogeneity_stats
+@export
 
-Calcula los componentes de varianza mediante ANOVA para evaluar la homogeneidad de los ítems.
+**Archivo:** `pt_homogeneity.R`
 
-**Archivo:** `R/pt_homogeneity.R`  
-**Referencia:** ISO 13528:2022, Sección 9.2
+**Parámetros:** `sigma_pt`
 
-| Parámetro | Tipo | Requerido | Descripción |
-|-----------|------|-----------|-------------|
-| `sample_data` | data.frame/matrix | Sí | Datos con muestras en filas, réplicas en columnas |
-
-**Retorno:** Lista con:
-
-| Campo | Tipo | Descripción |
-|-------|------|-------------|
-| `g` | integer | Número de muestras |
-| `m` | integer | Número de réplicas por muestra |
-| `grand_mean` | numeric | Media global (x̄̄) |
-| `sample_means` | numeric vector | Media de cada muestra |
-| `s_x_bar_sq` | numeric | Varianza de las medias |
-| `sw` | numeric | Desviación estándar intra-muestra |
-| `ss` | numeric | Desviación estándar entre-muestras |
-| `error` | character | Mensaje de error si aplica |
-
-**Fórmulas (para m = 2):**
-```
-sᵥ = √[Σ(rangoᵢ²) / (2g)]   donde rangoᵢ = max - min de muestra i
-sₛ² = max(0, s²ₓ̄ - sᵥ²/m)
-```
+**Referencia ISO:** ISO 13528:2022, Section 9.2.3
 
 ---
 
-### calculate_homogeneity_criterion
+## `calculate_homogeneity_criterion_expanded`
 
-Calcula el límite crítico estándar para la homogeneidad.
+@export
 
-**Archivo:** `R/pt_homogeneity.R`  
-**Referencia:** ISO 13528:2022, Sección 9.2.3
+**Archivo:** `pt_homogeneity.R`
 
-| Parámetro | Tipo | Descripción |
-|-----------|------|-------------|
-| `sigma_pt` | numeric | Desviación estándar objetivo del ensayo |
+**Parámetros:** `sigma_pt, sw_sq`
 
-**Retorno:** `numeric` - c = 0.3 × σ_pt
+**Referencia ISO:** ISO 13528:2022, Section 9.2.4
 
 ---
 
-### calculate_homogeneity_criterion_expanded
+## `calculate_homogeneity_stats`
 
-Calcula el criterio de homogeneidad expandido según ISO 13528 §9.2.4.
+@export
 
-**Archivo:** `R/pt_homogeneity.R`  
-**Referencia:** ISO 13528:2022, Sección 9.2.4
+**Archivo:** `pt_homogeneity.R`
 
-| Parámetro | Tipo | Descripción |
-|-----------|------|-------------|
-| `sigma_pt` | numeric | Desviación estándar objetivo |
-| `sw_sq` | numeric | Varianza intra-muestra (sw²) |
+**Parámetros:** `sample_data`
 
-**Fórmula:**
-```
-c_expandido = √[(0.3 × σ_pt)² × 1.88 + sᵥ² × 1.01]
-```
+**Referencia ISO:** ISO 13528:2022, Section 9.2
 
 ---
 
-### evaluate_homogeneity
+## `calculate_mad_e`
 
-Determina si los resultados del estudio de homogeneidad cumplen con los criterios.
+@export
 
-**Archivo:** `R/pt_homogeneity.R`  
-**Referencia:** ISO 13528:2022, Sección 9.2
+**Archivo:** `pt_robust_stats.R`
 
-| Parámetro | Tipo | Descripción |
-|-----------|------|-------------|
-| `ss` | numeric | Desviación estándar entre-muestras |
-| `c_criterion` | numeric | Criterio estándar (0.3 × σ_pt) |
-| `c_expanded` | numeric | Criterio expandido (opcional) |
+**Parámetros:** `x`
 
-**Retorno:** Lista con:
-
-| Campo | Tipo | Descripción |
-|-------|------|-------------|
-| `passes_criterion` | logical | TRUE si ss ≤ c |
-| `passes_expanded` | logical | TRUE si ss ≤ c_expandido (o NA) |
-| `conclusion` | character | Resumen textual de la evaluación |
+**Referencia ISO:** ISO 13528:2022, Section 9.4
 
 ---
 
-## 3. Estabilidad
+## `calculate_method_scores_df`
 
-### calculate_stability_stats
+**Archivo:** `app.R`
 
-Evalúa la estabilidad comparando la media de muestras bajo condiciones de estabilidad contra la media del estudio de homogeneidad.
-
-**Archivo:** `R/pt_homogeneity.R`  
-**Referencia:** ISO 13528:2022, Sección 9.3
-
-| Parámetro | Tipo | Descripción |
-|-----------|------|-------------|
-| `stab_sample_data` | data.frame/matrix | Datos de estabilidad |
-| `hom_grand_mean` | numeric | Media del estudio de homogeneidad |
-
-**Retorno:** Extiende `calculate_homogeneity_stats` con:
-- `stab_grand_mean`: Media de las muestras de estabilidad
-- `diff_hom_stab`: |media_estabilidad - media_homogeneidad|
+**Parámetros:** `method_code`
 
 ---
 
-### calculate_stability_criterion
+## `calculate_niqr`
 
-Calcula el criterio base de estabilidad.
+@export
 
-**Archivo:** `R/pt_homogeneity.R`  
-**Referencia:** ISO 13528:2022, Sección 9.3.3
+**Archivo:** `pt_robust_stats.R`
 
-**Retorno:** `numeric` - c = 0.3 × σ_pt
+**Parámetros:** `x`
 
----
-
-### calculate_stability_criterion_expanded
-
-Calcula el criterio de estabilidad expandido considerando las incertidumbres.
-
-**Archivo:** `R/pt_homogeneity.R`  
-**Referencia:** ISO 13528:2022, Sección 9.3.4
-
-| Parámetro | Tipo | Descripción |
-|-----------|------|-------------|
-| `c_criterion` | numeric | Criterio base |
-| `u_hom_mean` | numeric | Incertidumbre de la media de homogeneidad |
-| `u_stab_mean` | numeric | Incertidumbre de la media de estabilidad |
-
-**Fórmula:**
-```
-c_stab_exp = c + 2 × √(u_hom² + u_stab²)
-```
+**Referencia ISO:** ISO 13528:2022, Section 9.4
 
 ---
 
-### evaluate_stability
+## `calculate_stability_criterion`
 
-Determina si el cambio en la media durante el estudio de estabilidad es aceptable.
+@export
 
-**Archivo:** `R/pt_homogeneity.R`
+**Archivo:** `pt_homogeneity.R`
 
-| Parámetro | Tipo | Descripción |
-|-----------|------|-------------|
-| `diff_hom_stab` | numeric | Diferencia de medias |
-| `c_criterion` | numeric | Criterio base |
-| `c_expanded` | numeric | Criterio expandido (opcional) |
+**Parámetros:** `sigma_pt`
+
+**Referencia ISO:** ISO 13528:2022, Section 9.3.3
 
 ---
 
-## 4. Incertidumbres
+## `calculate_stability_criterion_expanded`
 
-### calculate_u_hom
+@export
 
-Calcula la incertidumbre estándar debida a la falta de homogeneidad.
+**Archivo:** `pt_homogeneity.R`
 
-**Archivo:** `R/pt_homogeneity.R`  
-**Referencia:** ISO 13528:2022, Sección 9.5
-
-**Fórmula:**
-```
-u_hom = sₛ
-```
+**Parámetros:** `c_criterion, u_hom_mean, u_stab_mean`
 
 ---
 
-### calculate_u_stab
+## `calculate_stability_stats`
 
-Calcula la incertidumbre estándar debida a la inestabilidad.
+@export
 
-**Archivo:** `R/pt_homogeneity.R`  
-**Referencia:** ISO 13528:2022, Sección 9.5
+**Archivo:** `pt_homogeneity.R`
 
-**Fórmula:**
-```
-u_stab = 0                    si |diff| ≤ c
-u_stab = |diff| / √3          si |diff| > c
-```
+**Parámetros:** `stab_sample_data, hom_grand_mean`
+
+**Referencia ISO:** ISO 13528:2022, Section 9.3
 
 ---
 
-## 5. Puntajes
+## `calculate_u_hom`
 
-### calculate_z_score
+@export
 
-Calcula el puntaje z convencional para evaluar el desempeño.
+**Archivo:** `pt_homogeneity.R`
 
-**Archivo:** `R/pt_scores.R`  
-**Referencia:** ISO 13528:2022, Sección 10.2
+**Parámetros:** `ss`
 
-| Parámetro | Tipo | Descripción |
-|-----------|------|-------------|
-| `x` | numeric | Valor del participante |
-| `x_pt` | numeric | Valor asignado (referencia) |
-| `sigma_pt` | numeric | Desviación estándar objetivo |
-
-**Fórmula:**
-```
-z = (x - x_pt) / σ_pt
-```
-
-**Casos Edge:** Retorna `NA_real_` si σ_pt no es finito o es ≤ 0.
+**Referencia ISO:** ISO 13528:2022, Section 9.5
 
 ---
 
-### calculate_z_prime_score
+## `calculate_u_stab`
 
-Calcula el puntaje z' que incorpora la incertidumbre del valor asignado.
+@export
 
-**Archivo:** `R/pt_scores.R`  
-**Referencia:** ISO 13528:2022, Sección 10.3
+**Archivo:** `pt_homogeneity.R`
 
-| Parámetro | Tipo | Descripción |
-|-----------|------|-------------|
-| `x` | numeric | Valor del participante |
-| `x_pt` | numeric | Valor asignado |
-| `sigma_pt` | numeric | Desviación estándar objetivo |
-| `u_xpt` | numeric | Incertidumbre del valor asignado |
+**Parámetros:** `diff_hom_stab, c_criterion`
 
-**Fórmula:**
-```
-z' = (x - x_pt) / √(σ_pt² + u_xpt²)
-```
+**Referencia ISO:** ISO 13528:2022, Section 9.5
 
 ---
 
-### calculate_zeta_score
+## `calculate_z_prime_score`
 
-Calcula el puntaje zeta utilizando la incertidumbre informada por el participante.
+@export
 
-**Archivo:** `R/pt_scores.R`  
-**Referencia:** ISO 13528:2022, Sección 10.4
+**Archivo:** `pt_scores.R`
 
-| Parámetro | Tipo | Descripción |
-|-----------|------|-------------|
-| `x` | numeric | Valor del participante |
-| `x_pt` | numeric | Valor asignado |
-| `u_x` | numeric | Incertidumbre del participante (u) |
-| `u_xpt` | numeric | Incertidumbre del valor asignado |
+**Parámetros:** `x, x_pt, sigma_pt, u_xpt`
 
-**Fórmula:**
-```
-ζ = (x - x_pt) / √(u_x² + u_xpt²)
-```
+**Referencia ISO:** ISO 13528:2022, Section 10.3
 
 ---
 
-### calculate_en_score
+## `calculate_z_score`
 
-Calcula el puntaje En (Error Normalizado) usando incertidumbres expandidas (k=2).
+@export
 
-**Archivo:** `R/pt_scores.R`  
-**Referencia:** ISO 13528:2022, Sección 10.5
+**Archivo:** `pt_scores.R`
 
-| Parámetro | Tipo | Descripción |
-|-----------|------|-------------|
-| `x` | numeric | Valor del participante |
-| `x_pt` | numeric | Valor asignado |
-| `U_x` | numeric | Incertidumbre expandida del participante |
-| `U_xpt` | numeric | Incertidumbre expandida del valor asignado |
+**Parámetros:** `x, x_pt, sigma_pt`
 
-**Fórmula:**
-```
-Eₙ = (x - x_pt) / √(U_x² + U_xpt²)
-```
+**Referencia ISO:** ISO 13528:2022, Section 10.2
 
 ---
 
-## 6. Evaluación de Puntajes
+## `calculate_zeta_score`
 
-### evaluate_z_score / evaluate_z_score_vec
+@export
 
-Clasifica los puntajes z, z' o zeta según los umbrales de ISO 13528.
+**Archivo:** `pt_scores.R`
 
-**Archivo:** `R/pt_scores.R`  
-**Referencia:** ISO 13528:2022, Sección 10.6
+**Parámetros:** `x, x_pt, u_x, u_xpt`
 
-| Condición | Categoría |
-|-----------|-----------|
-| \|score\| ≤ 2 | "Satisfactorio" |
-| 2 < \|score\| < 3 | "Cuestionable" |
-| \|score\| ≥ 3 | "No satisfactorio" |
-| No finito | "N/A" |
+**Referencia ISO:** ISO 13528:2022, Section 10.4
 
 ---
 
-### evaluate_en_score / evaluate_en_score_vec
+## `combine_scores_result`
 
-Clasifica el puntaje En según el criterio unitario.
+**Archivo:** `app.R`
 
-**Archivo:** `R/pt_scores.R`  
-**Referencia:** ISO 13528:2022, Sección 10.6
-
-| Condición | Categoría |
-|-----------|-----------|
-| \|Eₙ\| ≤ 1 | "Satisfactorio" |
-| \|Eₙ\| > 1 | "No satisfactorio" |
-| No finito | "N/A" |
+**Parámetros:** `res`
 
 ---
 
-## 7. Clasificación Combinada
+## `compute_combo_scores`
 
-### classify_with_en
+**Archivo:** `app.R`
 
-Realiza una clasificación profunda (categorías a1 a a7) integrando el desempeño (z/z') y la consistencia de la incertidumbre informada (En).
-
-**Archivo:** `R/pt_scores.R`  
-**Referencia:** ISO 13528:2022, Sección 10.7
-
-| Parámetro | Tipo | Descripción |
-|-----------|------|-------------|
-| `score_val` | numeric | Puntaje z o z' |
-| `en_val` | numeric | Puntaje En |
-| `U_xi` | numeric | Incertidumbre expandida del participante |
-| `sigma_pt` | numeric | Desviación estándar objetivo |
-| `mu_missing` | logical | TRUE si falta información de incertidumbre |
-| `score_label` | character | Tipo de puntaje ("z" o "z'") |
-
-**Retorno:** Lista con:
-- `code`: Código de clasificación (a1-a7)
-- `label`: Descripción textual
-
-**Tabla de Categorías:**
-
-| Código | Descripción |
-|--------|-------------|
-| **a1** | Totalmente satisfactorio |
-| **a2** | Satisfactorio pero conservador (U informada muy grande) |
-| **a3** | Satisfactorio con MU subestimada (En > 1 pero z bueno) |
-| **a4** | Cuestionable pero aceptable (la MU cubre el error) |
-| **a5** | Cuestionable e inconsistente |
-| **a6** | No satisfactorio pero la MU cubre la desviación |
-| **a7** | No satisfactorio (crítico - fuera de z y fuera de En) |
-
-**Diagrama de Lógica:**
-```mermaid
-graph TD
-    A{¿MU ausente?} -->|Sí| B[mu_missing]
-    A -->|No| C{|z| <= 2?}
-    C -->|Sí| D{|En| < 1?}
-    D -->|Sí| E{U_xi >= 2*σ_pt?}
-    E -->|Sí| F[a2: Conservador]
-    E -->|No| G[a1: Totalmente satisfactorio]
-    D -->|No| H[a3: MU subestimada]
-    C -->|No| I{|z| < 3?}
-    I -->|Sí| J{|En| < 1?}
-    J -->|Sí| K[a4: Cuestionable aceptable]
-    J -->|No| L[a5: Cuestionable inconsistente]
-    I -->|No| M{|En| < 1?}
-    M -->|Sí| N[a6: No satisf. cubierto]
-    M -->|No| O[a7: Crítico]
-```
+**Parámetros:** `participants_df, x_pt, sigma_pt, u_xpt, combo_meta, k = 2, u_hom = 0, u_stab = 0`
 
 ---
 
-## 8. Constantes
+## `compute_homogeneity`
 
-### PT_EN_CLASS_LABELS
+**Archivo:** `report_template.Rmd`
 
-Vector nombrado con las descripciones textuales para las categorías a1-a7.
-
-```r
-PT_EN_CLASS_LABELS
-#> a1: "Totalmente satisfactorio"
-#> a2: "Satisfactorio pero conservador"
-#> ...
-```
-
-### PT_EN_CLASS_COLORS
-
-Paleta de colores oficial para la representación visual:
-
-| Código | Color | Hex |
-|--------|-------|-----|
-| a1 | Verde | `#2E7D32` |
-| a2 | Verde claro | `#66BB6A` |
-| a3 | Amarillo-verde | `#C0CA33` |
-| a4 | Amarillo | `#FFF59D` |
-| a5 | Naranja | `#FFB74D` |
-| a6 | Naranja oscuro | `#FF8A65` |
-| a7 | Rojo | `#C62828` |
+**Parámetros:** `data_full, pol, lev`
 
 ---
 
-## 9. Funciones Deprecadas
+## `compute_homogeneity_metrics`
 
-Las siguientes funciones en `utils.R` se mantienen por compatibilidad pero se recomienda usar las versiones actuales:
+**Archivo:** `app.R`
 
-| Función Deprecada | Reemplazo |
-|-------------------|-----------|
-| `algorithm_A` | `run_algorithm_a` |
-| `mad_e_manual` | `calculate_mad_e` |
-| `nIQR_manual` | `calculate_niqr` |
+**Parámetros:** `target_pollutant, target_level`
 
 ---
 
-## Catálogo Completo de Funciones
+## `compute_scores_for_selection`
 
-| Función | Archivo | Parámetros | Retorno | ISO |
-|---------|---------|------------|---------|-----|
-| `calculate_niqr` | `pt_robust_stats.R` | `x` | Numérico | 13528 §9.4 |
-| `calculate_mad_e` | `pt_robust_stats.R` | `x` | Numérico | 13528 §9.4 |
-| `run_algorithm_a` | `pt_robust_stats.R` | `values`, `ids`, `max_iter`, `tol` | Lista | 13528 Anexo C |
-| `calculate_homogeneity_stats` | `pt_homogeneity.R` | `sample_data` | Lista | 13528 §9.2 |
-| `calculate_homogeneity_criterion` | `pt_homogeneity.R` | `sigma_pt` | Numérico | 13528 §9.2.3 |
-| `calculate_homogeneity_criterion_expanded` | `pt_homogeneity.R` | `sigma_pt`, `sw_sq` | Numérico | 13528 §9.2.4 |
-| `evaluate_homogeneity` | `pt_homogeneity.R` | `ss`, `c_criterion`, `c_expanded` | Lista | 13528 §9.2 |
-| `calculate_stability_stats` | `pt_homogeneity.R` | `stab_sample_data`, `hom_grand_mean` | Lista | 13528 §9.3 |
-| `calculate_stability_criterion` | `pt_homogeneity.R` | `sigma_pt` | Numérico | 13528 §9.3.3 |
-| `calculate_stability_criterion_expanded` | `pt_homogeneity.R` | `c_criterion`, `u_hom_mean`, `u_stab_mean` | Numérico | 13528 §9.3.4 |
-| `evaluate_stability` | `pt_homogeneity.R` | `diff_hom_stab`, `c_criterion`, `c_expanded` | Lista | 13528 §9.3 |
-| `calculate_u_hom` | `pt_homogeneity.R` | `ss` | Numérico | 13528 §9.5 |
-| `calculate_u_stab` | `pt_homogeneity.R` | `diff_hom_stab`, `c_criterion` | Numérico | 13528 §9.5 |
-| `calculate_z_score` | `pt_scores.R` | `x`, `x_pt`, `sigma_pt` | Numérico | 13528 §10.2 |
-| `calculate_z_prime_score` | `pt_scores.R` | `x`, `x_pt`, `sigma_pt`, `u_xpt` | Numérico | 13528 §10.3 |
-| `calculate_zeta_score` | `pt_scores.R` | `x`, `x_pt`, `u_x`, `u_xpt` | Numérico | 13528 §10.4 |
-| `calculate_en_score` | `pt_scores.R` | `x`, `x_pt`, `U_x`, `U_xpt` | Numérico | 13528 §10.5 |
-| `evaluate_z_score` | `pt_scores.R` | `z` | Texto | 13528 §10.6 |
-| `evaluate_z_score_vec` | `pt_scores.R` | `z` | Vector | 13528 §10.6 |
-| `evaluate_en_score` | `pt_scores.R` | `en` | Texto | 13528 §10.6 |
-| `evaluate_en_score_vec` | `pt_scores.R` | `en` | Vector | 13528 §10.6 |
-| `classify_with_en` | `pt_scores.R` | `score_val`, `en_val`, `U_xi`, `sigma_pt`, `mu_missing`, `score_label` | Lista | 13528 §10.7 |
+**Archivo:** `app.R`
+
+**Parámetros:** `target_pollutant, target_n_lab, target_level, summary_data, max_iter = 50, k_factor = 2`
 
 ---
 
-## Referencias
+## `compute_scores_metrics`
 
-- **ISO 13528:2022**: Statistical methods for use in proficiency testing by interlaboratory comparison.
-- **ISO 17043:2024**: Conformity assessment — General requirements for proficiency testing.
-- **ISO/IEC Guide 98-3 (GUM)**: Guide to the expression of uncertainty in measurement.
+**Archivo:** `app.R`
+
+**Parámetros:** `summary_df, target_pollutant, target_n_lab, target_level, sigma_pt, u_xpt, k, m = NULL`
+
+---
+
+## `compute_stability_metrics`
+
+**Archivo:** `app.R`
+
+**Parámetros:** `target_pollutant, target_level, hom_results`
+
+---
+
+## `count_eval`
+
+**Archivo:** `app.R`
+
+**Parámetros:** `eval_col, eval_type`
+
+---
+
+## `create_combo_plot`
+
+**Archivo:** `app.R`
+
+**Parámetros:** `df, score_col, title_suffix, limit_lines = c(2, 3), limit_colors = c("orange", "red"), show_legend = TRUE`
+
+---
+
+## `ensure_classification_columns`
+
+**Archivo:** `app.R`
+
+**Parámetros:** `df`
+
+---
+
+## `evaluate_en_score`
+
+@export
+
+**Archivo:** `pt_scores.R`
+
+**Parámetros:** `en`
+
+---
+
+## `evaluate_en_score_vec`
+
+@export
+
+**Archivo:** `pt_scores.R`
+
+**Parámetros:** `en`
+
+---
+
+## `evaluate_homogeneity`
+
+@export
+
+**Archivo:** `pt_homogeneity.R`
+
+**Parámetros:** `ss, c_criterion, c_expanded = NULL`
+
+---
+
+## `evaluate_stability`
+
+@export
+
+**Archivo:** `pt_homogeneity.R`
+
+**Parámetros:** `diff_hom_stab, c_criterion, c_expanded = NULL`
+
+---
+
+## `evaluate_z_score`
+
+@export
+
+**Archivo:** `pt_scores.R`
+
+**Parámetros:** `z`
+
+---
+
+## `evaluate_z_score_vec`
+
+@export
+
+**Archivo:** `pt_scores.R`
+
+**Parámetros:** `z`
+
+---
+
+## `format_num`
+
+**Archivo:** `app.R`
+
+**Parámetros:** `x`
+
+---
+
+## `get_combo_levels_order`
+
+**Archivo:** `app.R`
+
+**Parámetros:** `combos_filtered`
+
+---
+
+## `get_global_overview_data`
+
+**Archivo:** `app.R`
+
+**Parámetros:** `spec`
+
+---
+
+## `get_global_summary_row`
+
+**Archivo:** `app.R`
+
+**Parámetros:** `spec`
+
+---
+
+## `get_scores_result`
+
+**Archivo:** `app.R`
+
+**Parámetros:** `pollutant, n_lab, level`
+
+---
+
+## `get_wide_data`
+
+**Archivo:** `app.R`
+
+**Parámetros:** `df, target_pollutant`
+
+---
+
+## `mad_e_manual`
+
+@export
+
+**Archivo:** `utils.R`
+
+**Parámetros:** `x`
+
+---
+
+## `nIQR_manual`
+
+@export
+
+**Archivo:** `utils.R`
+
+**Parámetros:** `x`
+
+---
+
+## `normalize_n`
+
+**Archivo:** `app.R`
+
+**Parámetros:** `df`
+
+---
+
+## `plot_scores`
+
+**Archivo:** `app.R`
+
+**Parámetros:** `df, score_col, title, subtitle, ylab, warn_limits = NULL, action_limits = NULL`
+
+---
+
+## `render_global_score_heatmap`
+
+**Archivo:** `app.R`
+
+**Parámetros:** `output_id, combo_key, score_col, eval_col, palette, title_prefix`
+
+---
+
+## `run_algorithm_a`
+
+@export
+
+**Archivo:** `pt_robust_stats.R`
+
+**Parámetros:** `values, ids = NULL, max_iter = 50, tol = 1e-03`
+
+**Referencia ISO:** ISO 13528:2022, Annex C
+
+---
+
+## `run_algorithm_a_report`
+
+**Archivo:** `report_template.Rmd`
+
+**Parámetros:** `values, max_iter = 50`
+
+---
+
+## `server`
+
+**Archivo:** `app.R`
+
+**Parámetros:** `input, output, session`
+
+---
+
+## `summarize_scores`
+
+**Archivo:** `app.R`
+
+**Parámetros:** `df`
+
+---
+
+

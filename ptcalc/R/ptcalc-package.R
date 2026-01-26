@@ -17,7 +17,6 @@
 #'   \item \code{\link{calculate_en_score}} - En-score
 #'   \item \code{\link{evaluate_z_score}} - Evaluate z-type scores
 #'   \item \code{\link{evaluate_en_score}} - Evaluate En-scores
-#'   \item \code{\link{classify_with_en}} - Combined z/En classification
 #' }
 #'
 #' @section Homogeneity/Stability:

@@ -1,259 +1,245 @@
 # ===================================================================
 # Titulo: crea_reporte.R
-# Entregable: 04 - Modulo de Calculo de Puntajes
-# Descripcion: Carga summary_n4.csv, calcula puntajes y genera
-#              reporte en HTML y Word mediante rmarkdown.
-# Entrada: data/summary_n4.csv
-# Salida: reporte_puntajes.html y reporte_puntajes.docx
-# Autor: [PT App Team]
-# Fecha: 2026-01-11
-# Referencia: ISO 13528:2022 §10.2-10.5
+# Entregable: 04
+# Descripcion: Función para generar reporte de puntajes PT
+# Entrada: data/summary_n4.csv, valores asignados, sigma_pt
+# Salida: data.frame con puntajes, archivo CSV
+# Referencia: ISO 13528:2022, Sección 10
 # ===================================================================
 
-# -------------------------------------------------------------------
-# Funciones locales (sin dependencias externas)
-# -------------------------------------------------------------------
+# ===================================================================
+# GENERAR REPORTE COMPLETO DE PUNTAJES
+# ===================================================================
 
-calculate_z_score <- function(x, x_pt, sigma_pt) {
-  if (!is.finite(sigma_pt) || sigma_pt <= 0) {
-    return(rep(NA_real_, length(x)))
+generar_reporte_puntajes <- function(datos_participantes, valor_asignado_dict, sigma_pt_dict,
+                                    archivo_salida = NULL, incluir_ref = TRUE) {
+  # Generar reporte completo con todos los puntajes
+
+  # Preparar diccionarios de incertidumbre (usar NA si no están disponibles)
+  u_xpt_dict <- NULL
+  u_x_dict <- NULL
+  U_x_dict <- NULL
+  U_xpt_dict <- NULL
+
+  # Generar puntajes
+  datos_puntajes <- calcular_puntajes_todos(
+    datos_participantes,
+    valor_asignado_dict,
+    sigma_pt_dict,
+    u_xpt_dict,
+    u_x_dict,
+    U_x_dict,
+    U_xpt_dict
+  )
+
+  if (nrow(datos_puntajes) == 0) {
+    return(list(
+      error = "No se generaron datos de puntajes",
+      datos = data.frame(),
+      archivo_salida = NULL
+    ))
   }
-  (x - x_pt) / sigma_pt
-}
 
-calculate_z_prime_score <- function(x, x_pt, sigma_pt, u_xpt) {
-  denominador <- sqrt(sigma_pt^2 + u_xpt^2)
-  if (!is.finite(denominador) || denominador <= 0) {
-    return(rep(NA_real_, length(x)))
+  # Opcional: excluir participante de referencia del reporte
+  if (!incluir_ref) {
+    datos_puntajes <- datos_puntajes[datos_puntajes$participant_id != "ref", ]
   }
-  (x - x_pt) / denominador
-}
 
-calculate_zeta_score <- function(x, x_pt, u_x, u_xpt) {
-  denominador <- sqrt(u_x^2 + u_xpt^2)
-  if (!is.finite(denominador) || denominador <= 0) {
-    return(rep(NA_real_, length(x)))
+  # Guardar en archivo si se especifica
+  if (!is.null(archivo_salida)) {
+    write.csv(datos_puntajes, archivo_salida, row.names = FALSE)
   }
-  (x - x_pt) / denominador
-}
 
-calculate_en_score <- function(x, x_pt, U_x, U_xpt) {
-  denominador <- sqrt(U_x^2 + U_xpt^2)
-  if (!is.finite(denominador) || denominador <= 0) {
-    return(rep(NA_real_, length(x)))
-  }
-  (x - x_pt) / denominador
-}
-
-evaluate_z_score <- function(z) {
-  ifelse(
-    !is.finite(z),
-    "N/A",
-    ifelse(
-      abs(z) <= 2,
-      "Satisfactorio",
-      ifelse(abs(z) < 3, "Cuestionable", "No satisfactorio")
-    )
+  list(
+    error = NULL,
+    datos = datos_puntajes,
+    archivo_salida = archivo_salida,
+    n_observaciones = nrow(datos_puntajes),
+    n_participantes = length(unique(datos_puntajes$participant_id))
   )
 }
 
-evaluate_en_score <- function(en) {
-  ifelse(
-    !is.finite(en),
-    "N/A",
-    ifelse(abs(en) <= 1, "Satisfactorio", "No satisfactorio")
-  )
-}
+# ===================================================================
+# GENERAR REPORTE RESUMIDO POR PARTICIPANTE
+# ===================================================================
 
-calculate_scores_table <- function(summary_df, m = NULL, k = 2) {
-  columnas_requeridas <- c(
-    "pollutant", "level", "participant_id", "sample_group",
-    "mean_value", "sd_value"
-  )
-  columnas_faltantes <- setdiff(columnas_requeridas, names(summary_df))
-  if (length(columnas_faltantes) > 0) {
-    stop(
-      sprintf("Faltan columnas requeridas: %s", paste(columnas_faltantes, collapse = ", "))
-    )
+generar_reporte_resumido_participantes <- function(datos_puntajes, archivo_salida = NULL) {
+  # Generar reporte resumido por participante
+
+  participantes <- unique(datos_puntajes$participant_id)
+  resumenes_list <- list()
+
+  for (part in participantes) {
+    resumen <- resumir_puntajes_participante(datos_puntajes, part)
+    resumenes_list[[part]] <- resumen
   }
 
-  grupos <- split(summary_df, list(summary_df$pollutant, summary_df$level), drop = TRUE)
-
-  resultados <- lapply(grupos, function(datos_grupo) {
-    valores <- datos_grupo$mean_value
-    valores <- valores[is.finite(valores)]
-
-    ref_data <- datos_grupo[datos_grupo$participant_id == "ref", , drop = FALSE]
-    if (nrow(ref_data) == 0) {
-      x_pt <- NA_real_
+  # Convertir a data.frame
+  resumenes_df <- do.call(rbind, lapply(resumenes_list, function(r) {
+    if (is.null(r$error)) {
+      data.frame(
+        participant_id = r$participant_id,
+        total_observaciones = r$total_observaciones,
+        n_satisfactorio_z = r$resumen_z$`Satisfactorio`,
+        n_cuestionable_z = if (!is.null(r$resumen_z$`Cuestionable`)) r$resumen_z$`Cuestionable` else 0,
+        n_no_satisfactorio_z = if (!is.null(r$resumen_z$`No satisfactorio`)) r$resumen_z$`No satisfactorio` else 0,
+        n_satisfactorio_en = if (!is.null(r$resumen_en$`Satisfactorio`)) r$resumen_en$`Satisfactorio` else 0,
+        n_no_satisfactorio_en = if (!is.null(r$resumen_en$`No satisfactorio`)) r$resumen_en$`No satisfactorio` else 0,
+        stringsAsFactors = FALSE
+      )
     } else {
-      x_pt <- mean(ref_data$mean_value, na.rm = TRUE)
+      NULL
     }
+  }))
 
-    mediana_val <- median(valores, na.rm = TRUE)
-    sigma_pt <- 1.483 * median(abs(valores - mediana_val), na.rm = TRUE)
+  resumenes_df <- resumenes_df[!sapply(resumenes_df, is.null), ]
 
-    n_valores <- length(valores)
-    if (!is.finite(sigma_pt) || n_valores == 0) {
-      u_xpt <- NA_real_
-    } else {
-      u_xpt <- 1.25 * sigma_pt / sqrt(n_valores)
-    }
+  # Guardar en archivo si se especifica
+  if (!is.null(archivo_salida) && nrow(resumenes_df) > 0) {
+    write.csv(resumenes_df, archivo_salida, row.names = FALSE)
+  }
 
-    m_local <- if (is.null(m)) length(unique(datos_grupo$sample_group)) else m
-    u_x <- datos_grupo$sd_value / sqrt(m_local)
-    U_x <- k * u_x
-    U_xpt <- k * u_xpt
+  list(
+    error = NULL,
+    datos = resumenes_df,
+    archivo_salida = archivo_salida,
+    n_participantes = nrow(resumenes_df)
+  )
+}
 
-    z_score <- calculate_z_score(datos_grupo$mean_value, x_pt, sigma_pt)
-    z_prime_score <- calculate_z_prime_score(datos_grupo$mean_value, x_pt, sigma_pt, u_xpt)
-    zeta_score <- calculate_zeta_score(datos_grupo$mean_value, x_pt, u_x, u_xpt)
-    en_score <- calculate_en_score(datos_grupo$mean_value, x_pt, U_x, U_xpt)
+# ===================================================================
+# GENERAR REPORTE DE ESTADÍSTICAS GLOBALES
+# ===================================================================
 
-    data.frame(
-      datos_grupo,
-      x_pt = x_pt,
-      sigma_pt = sigma_pt,
-      u_xpt = u_xpt,
-      u_x = u_x,
-      U_x = U_x,
-      U_xpt = U_xpt,
-      z_score = z_score,
-      z_eval = evaluate_z_score(z_score),
-      z_prime_score = z_prime_score,
-      z_prime_eval = evaluate_z_score(z_prime_score),
-      zeta_score = zeta_score,
-      zeta_eval = evaluate_z_score(zeta_score),
-      En_score = en_score,
-      En_eval = evaluate_en_score(en_score),
-      stringsAsFactors = FALSE
-    )
+generar_reporte_estadisticas_globales <- function(datos_puntajes, archivo_salida = NULL) {
+  # Generar reporte de estadísticas globales
+
+  stats_global <- calcular_estadisticas_puntajes(datos_puntajes)
+
+  # Crear data.frame con estadísticas
+  estadisticas_df <- data.frame(
+    tipo_puntaje = c("z", "z", "z", "z", "z", "z", "z",
+                      "z'", "z'",
+                      "ζ", "ζ",
+                      "En", "En", "En"),
+    metrica = c("n", "media", "sd", "max_abs",
+                "% satisfactorio", "% cuestionable", "% no satisfactorio",
+                "n", "sd",
+                "n", "sd",
+                "n", "media", "% satisfactorio"),
+    valor = c(stats_global$n_z, stats_global$media_z, stats_global$sd_z,
+              stats_global$max_abs_z,
+              stats_global$pct_satisfactorio_z, stats_global$pct_cuestionable_z,
+              stats_global$pct_no_satisfactorio_z,
+              stats_global$n_z_prima, stats_global$sd_z_prima,
+              stats_global$n_zeta, stats_global$sd_zeta,
+              stats_global$n_en, stats_global$media_en, stats_global$pct_satisfactorio_en)
+  )
+
+  # Guardar en archivo si se especifica
+  if (!is.null(archivo_salida)) {
+    write.csv(estadisticas_df, archivo_salida, row.names = FALSE)
+  }
+
+  list(
+    error = NULL,
+    datos = estadisticas_df,
+    estadisticas = stats_global,
+    archivo_salida = archivo_salida
+  )
+}
+
+# ===================================================================
+# GENERAR REPORTE COMPLETO (TODOS LOS COMPONENTES)
+# ===================================================================
+
+generar_reporte_completo <- function(datos_participantes, valor_asignado_dict, sigma_pt_dict,
+                                    directorio_salida = NULL, incluir_ref = TRUE) {
+  # Generar todos los reportes
+
+  # Generar reporte de puntajes
+  archivo_puntajes <- if (!is.null(directorio_salida)) {
+    file.path(directorio_salida, "puntajes_completos.csv")
+  } else {
+    NULL
+  }
+
+  reporte_puntajes <- generar_reporte_puntajes(
+    datos_participantes,
+    valor_asignado_dict,
+    sigma_pt_dict,
+    archivo_puntajes,
+    incluir_ref
+  )
+
+  if (!is.null(reporte_puntajes$error)) {
+    return(reporte_puntajes)
+  }
+
+  # Generar reporte resumido
+  archivo_resumido <- if (!is.null(directorio_salida)) {
+    file.path(directorio_salida, "resumen_participantes.csv")
+  } else {
+    NULL
+  }
+
+  reporte_resumido <- generar_reporte_resumido_participantes(
+    reporte_puntajes$datos,
+    archivo_resumido
+  )
+
+  # Generar reporte de estadísticas globales
+  archivo_estadisticas <- if (!is.null(directorio_salida)) {
+    file.path(directorio_salida, "estadisticas_globales.csv")
+  } else {
+    NULL
+  }
+
+  reporte_estadisticas <- generar_reporte_estadisticas_globales(
+    reporte_puntajes$datos,
+    archivo_estadisticas
+  )
+
+  list(
+    error = NULL,
+    puntajes = reporte_puntajes,
+    resumen_participantes = reporte_resumido,
+    estadisticas_globales = reporte_estadisticas,
+    directorio_salida = directorio_salida
+  )
+}
+
+# ===================================================================
+# FUNCIÓN PRINCIPAL: GENERAR REPORTE PT
+# ===================================================================
+
+generar_reporte_pt <- function(datos_participantes, metodo_valor_asignado = "algoritmo_a",
+                                metodo_sigma_pt = "algoritmo_a", directorio_salida = NULL,
+                                incluir_ref = TRUE) {
+  # Flujo completo: calcular valor asignado, sigma_pt y generar reporte
+
+  # Calcular valor asignado para todos
+  resultados_va <- calcular_valor_asignado_todos(datos_participantes, metodo_valor_asignado, incluir_ref)
+
+  # Extraer valor asignado por contaminante/nivel
+  valor_asignado_dict <- lapply(resultados_va, function(r) {
+    if (is.null(r$error)) r$valor_asignado else NA_real_
   })
 
-  tabla_final <- do.call(rbind, resultados)
-  rownames(tabla_final) <- NULL
-  tabla_final
+  # Calcular sigma_pt para todos
+  resultados_sigma <- calcular_sigma_pt_todos(datos_participantes, metodo_sigma_pt, incluir_ref)
+
+  # Extraer sigma_pt por contaminante/nivel
+  sigma_pt_dict <- lapply(resultados_sigma, function(r) {
+    if (is.null(r$error)) r$sigma_pt else NA_real_
+  })
+
+  # Generar reporte completo
+  generar_reporte_completo(
+    datos_participantes,
+    valor_asignado_dict,
+    sigma_pt_dict,
+    directorio_salida,
+    incluir_ref
+  )
 }
-
-# -------------------------------------------------------------------
-# Preparar datos y generar reporte
-# -------------------------------------------------------------------
-
-ruta_script <- sys.frame(1)$ofile
-if (is.null(ruta_script)) {
-  ruta_script <- "crea_reporte.R"
-}
-
-ruta_script <- normalizePath(ruta_script, mustWork = FALSE)
-carpeta_r <- dirname(ruta_script)
-carpeta_entregable <- dirname(carpeta_r)
-base_dir <- dirname(dirname(carpeta_entregable))
-
-ruta_summary <- file.path(base_dir, "data", "summary_n4.csv")
-if (!file.exists(ruta_summary)) {
-  stop("No se encontro el archivo summary_n4.csv en data/.")
-}
-
-summary_df <- read.csv(ruta_summary, stringsAsFactors = FALSE)
-
-scores_df <- calculate_scores_table(summary_df)
-
-resumen_z <- as.data.frame(table(scores_df$z_eval), stringsAsFactors = FALSE)
-colnames(resumen_z) <- c("evaluacion", "conteo")
-
-resumen_en <- as.data.frame(table(scores_df$En_eval), stringsAsFactors = FALSE)
-colnames(resumen_en) <- c("evaluacion", "conteo")
-
-if (!requireNamespace("rmarkdown", quietly = TRUE)) {
-  stop("El paquete rmarkdown es necesario para generar el reporte.")
-}
-
-ruta_rmd <- tempfile(fileext = ".Rmd")
-
-contenido_rmd <- c(
-  "---",
-  "title: \"Reporte de Puntajes de Desempeño\"",
-  "output:",
-  "  html_document:",
-  "    number_sections: true",
-  "  word_document:",
-  "    toc: true",
-  "params:",
-  "  scores: NULL",
-  "  resumen_z: NULL",
-  "  resumen_en: NULL",
-  "  fecha: NULL",
-  "---",
-  "",
-  "# Introduccion",
-  "Este reporte resume los puntajes de desempeño calculados segun ISO 13528:2022",
-  "(secciones 10.2 a 10.5). Se incluyen z, z', zeta y En, junto con los",
-  "criterios de evaluacion acordes al esquema PT.",
-  "",
-  "# Resumen de evaluaciones",
-  "",
-  "## Evaluaciones para z, z' y zeta",
-  "```{r}",
-  "knitr::kable(params$resumen_z)",
-  "```",
-  "",
-  "## Evaluaciones para En",
-  "```{r}",
-  "knitr::kable(params$resumen_en)",
-  "```",
-  "",
-  "# Tabla de puntajes (primeras 15 filas)",
-  "```{r}",
-  "knitr::kable(utils::head(params$scores, 15))",
-  "```",
-  "",
-  "# Formulas usadas",
-  "- z = (x - x_pt) / sigma_pt",
-  "- z' = (x - x_pt) / sqrt(sigma_pt^2 + u_xpt^2)",
-  "- zeta = (x - x_pt) / sqrt(u_x^2 + u_xpt^2)",
-  "- En = (x - x_pt) / sqrt(U_x^2 + U_xpt^2)",
-  "",
-  "# Criterios de evaluacion",
-  "- |z|, |z'| y |zeta| <= 2: Satisfactorio",
-  "- 2 < |z|, |z'| y |zeta| < 3: Cuestionable",
-  "- |z|, |z'| y |zeta| >= 3: No satisfactorio",
-  "- |En| <= 1: Satisfactorio",
-  "- |En| > 1: No satisfactorio"
-)
-
-writeLines(contenido_rmd, ruta_rmd)
-
-ruta_html <- file.path(carpeta_entregable, "reporte_puntajes.html")
-ruta_docx <- file.path(carpeta_entregable, "reporte_puntajes.docx")
-
-rmarkdown::render(
-  input = ruta_rmd,
-  output_format = "html_document",
-  output_file = "reporte_puntajes.html",
-  output_dir = carpeta_entregable,
-  params = list(
-    scores = scores_df,
-    resumen_z = resumen_z,
-    resumen_en = resumen_en,
-    fecha = Sys.Date()
-  ),
-  envir = new.env(parent = globalenv()),
-  quiet = TRUE
-)
-
-rmarkdown::render(
-  input = ruta_rmd,
-  output_format = "word_document",
-  output_file = "reporte_puntajes.docx",
-  output_dir = carpeta_entregable,
-  params = list(
-    scores = scores_df,
-    resumen_z = resumen_z,
-    resumen_en = resumen_en,
-    fecha = Sys.Date()
-  ),
-  envir = new.env(parent = globalenv()),
-  quiet = TRUE
-)
-
-message("Reportes generados en: ", carpeta_entregable)

@@ -1,211 +1,342 @@
 # ===================================================================
-# Generación de anexos de validación - Deliverable 09
-# Proyecto: PT App
-# Referencias: ISO 13528:2022; ISO 17043:2024
-# Fecha: 2026-01-11
+# Titulo: genera_anexos.R
+# Entregable: 09
+# Descripcion: Genera CSVs con resultados intermedios y log de ejecución
+# Entrada: data/homogeneity.csv, stability.csv, summary_n4.csv
+# Salida: anexos CSV, log.txt
+# Autor: UNAL/INM
+# Fecha: 2026-01-24
+# Referencia: ISO 13528:2022, ISO 17043:2024
 # ===================================================================
 
-obtener_directorio_script <- function() {
-  # Intentar desde argumentos de linea de comandos
-  argumentos <- commandArgs(trailingOnly = FALSE)
-  archivo <- argumentos[grep("--file=", argumentos)]
-  if (length(archivo) > 0) {
-    return(dirname(normalizePath(sub("--file=", "", archivo))))
-  }
+library(tidyverse)
+
+# Cargar funciones
+source("deliv/08_beta/R/funciones_finales.R")
+
+# ===================================================================
+# CARGA DE DATOS
+# ===================================================================
+
+cat("Cargando datos...\n")
+
+hom_data <- read.csv("data/homogeneity.csv", check.names = FALSE)
+stab_data <- read.csv("data/stability.csv", check.names = FALSE)
+summary_data <- read.csv("data/summary_n4.csv", check.names = FALSE)
+
+cat("  - homogeneity.csv:", nrow(hom_data), "registros\n")
+cat("  - stability.csv:", nrow(stab_data), "registros\n")
+cat("  - summary_n4.csv:", nrow(summary_data), "registros\n")
+
+# ===================================================================
+# DIRECTORIO DE ANEXOS
+# ===================================================================
+
+anexos_dir <- "deliv/09_informe_final/anexos"
+if (!dir.exists(anexos_dir)) {
+  dir.create(anexos_dir, recursive = TRUE)
+  cat("Creado directorio de anexos:", anexos_dir, "\n")
+}
+
+# ===================================================================
+# 1. HOMOGENEIDAD POR ANALITO/NIVEL
+# ===================================================================
+
+cat("\nCalculando homogeneidad...\n")
+
+hom_results <- list()
+
+analitos_unicos <- unique(hom_data$pollutant)
+
+for (analito in analitos_unicos) {
+  cat("  Analito:", analito, "\n")
   
-  # Intentar desde sys.frame
-  if (!is.null(sys.frame(1)$ofile)) {
-    return(dirname(normalizePath(sys.frame(1)$ofile)))
-  }
+  niveles_unicos <- unique(hom_data$level[hom_data$pollutant == analito])
   
-  # Buscar directorio conocido
-  candidatos <- c(
-    file.path(getwd(), "deliv", "09_informe_final", "R"),
-    "/home/w182/w421/pt_app/deliv/09_informe_final/R"
-  )
-  
-  for (candidato in candidatos) {
-    if (dir.exists(candidato)) {
-      return(normalizePath(candidato))
+  for (nivel in niveles_unicos) {
+    hom_filtered <- hom_data[hom_data$pollutant == analito & 
+                            hom_data$level == nivel, ]
+    
+    # Crear matriz (muestras x réplicas)
+    sample_ids <- unique(hom_filtered$sample_id)
+    replicates <- unique(hom_filtered$replicate)
+    
+    matriz <- matrix(NA, nrow = length(sample_ids), ncol = length(replicates))
+    
+    for (i in seq_along(sample_ids)) {
+      for (j in seq_along(replicates)) {
+        idx <- hom_filtered$sample_id == sample_ids[i] & 
+                hom_filtered$replicate == replicates[j]
+        matriz[i, j] <- hom_filtered$value[idx]
+      }
+    }
+    
+    # Calcular estadísticos
+    stats <- calculate_homogeneity_stats(matriz)
+    
+    if (is.null(stats$error)) {
+      # Calcular criterio
+      sigma_pt <- 0.03  # Asumir valor
+      c_criterion <- calculate_homogeneity_criterion(sigma_pt)
+      c_expanded <- calculate_homogeneity_criterion_expanded(sigma_pt, stats$sw_sq)
+      
+      # Evaluar
+      evaluacion <- evaluate_homogeneity(stats$ss, c_criterion)
+      
+      hom_results[[paste0(analito, "_", nivel)]] <- data.frame(
+        pollutant = analito,
+        level = nivel,
+        g = stats$g,
+        m = stats$m,
+        grand_mean = stats$grand_mean,
+        s_x_bar = stats$s_xt,
+        sw = stats$sw,
+        ss = stats$ss,
+        c_criterion = c_criterion,
+        c_expanded = c_expanded,
+        evaluacion = evaluacion,
+        stringsAsFactors = FALSE
+      )
     }
   }
+}
+
+hom_df <- do.call(rbind, hom_results)
+write.csv(hom_df, file.path(anexos_dir, "homogeneidad_resultados.csv"), row.names = FALSE)
+cat("  Guardado: homogeneidad_resultados.csv (", nrow(hom_df), " registros)\n")
+
+# ===================================================================
+# 2. ESTABILIDAD POR ANALITO
+# ===================================================================
+
+cat("\nCalculando estabilidad...\n")
+
+stab_results <- list()
+
+for (analito in analitos_unicos) {
+  cat("  Analito:", analito, "\n")
   
-  # Fallback: buscar pt_app en el path actual
-  wd <- getwd()
-  if (grepl("pt_app", wd)) {
-    base <- sub("/deliv.*", "", wd)
-    ruta <- file.path(base, "deliv", "09_informe_final", "R")
-    if (dir.exists(ruta)) {
-      return(normalizePath(ruta))
-    }
+  # Obtener media de homogeneidad para este analito
+  hom_analito <- hom_df[hom_df$pollutant == analito, ]
+  
+  if (nrow(hom_analito) > 0) {
+    hom_mean <- mean(hom_analito$grand_mean, na.rm = TRUE)
+  } else {
+    hom_mean <- NA
   }
   
-  return(normalizePath(getwd()))
+  # Filtrar datos de estabilidad
+  stab_filtered <- stab_data[stab_data$pollutant == analito, ]
+  
+  if (nrow(stab_filtered) > 0) {
+    stats <- calculate_stability_stats(stab_filtered$value, hom_mean)
+    
+    # Criterio
+    sigma_pt <- 0.03
+    criterion <- 0.3 * sigma_pt
+    
+    evaluacion <- evaluate_stability(stats$difference, criterion)
+    
+    stab_results[[analito]] <- data.frame(
+      pollutant = analito,
+      hom_mean = hom_mean,
+      stab_mean = stats$stab_mean,
+      difference = stats$difference,
+      criterion = criterion,
+      evaluacion = evaluacion,
+      stringsAsFactors = FALSE
+    )
+  }
 }
 
-registrar_evento <- function(archivo_log, mensaje) {
-  marca_tiempo <- format(Sys.time(), "%Y-%m-%d %H:%M:%S")
-  cat(paste0("[", marca_tiempo, "] ", mensaje, "\n"), file = archivo_log, append = TRUE)
+stab_df <- do.call(rbind, stab_results)
+write.csv(stab_df, file.path(anexos_dir, "estabilidad_resultados.csv"), row.names = FALSE)
+cat("  Guardado: estabilidad_resultados.csv (", nrow(stab_df), " registros)\n")
+
+# ===================================================================
+# 3. ESTADÍSTICOS ROBUSTOS POR ANALITO/NIVEL
+# ===================================================================
+
+cat("\nCalculando estadísticos robustos...\n")
+
+robust_results <- list()
+
+analitos_summary <- unique(summary_data$pollutant)
+
+for (analito in analitos_summary) {
+  cat("  Analito:", analito, "\n")
+  
+  niveles_summary <- unique(summary_data$level[summary_data$pollutant == analito])
+  
+  for (nivel in niveles_summary) {
+    # Filtrar datos (excluyendo referencia)
+    filtered <- summary_data[summary_data$pollutant == analito &
+                            summary_data$level == nivel &
+                            summary_data$participant_id != "ref", ]
+    
+    if (nrow(filtered) > 0) {
+      valores <- filtered$mean_value
+      
+      # Calcular estadísticos
+      niqr <- calculate_niqr(valores)
+      made <- calculate_mad_e(valores)
+      algo_a <- run_algorithm_a(valores)
+      
+      robust_results[[paste0(analito, "_", nivel)]] <- data.frame(
+        pollutant = analito,
+        level = nivel,
+        n_lab = nrow(filtered),
+        n_participants = sum(!is.na(filtered$participant_id)),
+        median = median(valores, na.rm = TRUE),
+        niqr = niqr,
+        made = made,
+        algo_a_x = if (!is.null(algo_a$error)) algo_a$assigned_value else NA,
+        algo_a_sd = if (!is.null(algo_a$error)) algo_a$robust_sd else NA,
+        algo_a_converged = if (!is.null(algo_a$error)) algo_a$converged else NA,
+        stringsAsFactors = FALSE
+      )
+    }
+  }
 }
 
-script_dir <- obtener_directorio_script()
-base_dir <- dirname(script_dir)
-data_dir <- normalizePath(file.path(base_dir, "..", "..", "data"))
-output_dir <- file.path(script_dir, "output")
-if (!dir.exists(output_dir)) {
-  dir.create(output_dir, recursive = TRUE)
+robust_df <- do.call(rbind, robust_results)
+write.csv(robust_df, file.path(anexos_dir, "estadisticos_robustos.csv"), row.names = FALSE)
+cat("  Guardado: estadisticos_robustos.csv (", nrow(robust_df), " registros)\n")
+
+# ===================================================================
+# 4. PUNTAJES PT POR ANALITO/NIVEL
+# ===================================================================
+
+cat("\nCalculando puntajes PT...\n")
+
+scores_results <- list()
+
+for (analito in analitos_summary) {
+  cat("  Analito:", analito, "\n")
+  
+  for (nivel in niveles_summary) {
+    # Filtrar datos
+    all_data <- summary_data[summary_data$pollutant == analito &
+                           summary_data$level == nivel, ]
+    
+    ref_data <- all_data[all_data$participant_id == "ref", ]
+    participants_data_df <- all_data[all_data$participant_id != "ref", ]
+    
+    if (nrow(ref_data) > 0 && nrow(participants_data_df) > 0) {
+      # Calcular parámetros
+      x_pt <- mean(ref_data$mean_value, na.rm = TRUE)
+      valores <- participants_data_df$mean_value
+      n <- length(valores)
+      
+      sigma_pt_made <- calculate_mad_e(valores)
+      u_xpt <- 1.25 * sigma_pt_made / sqrt(n)
+      k <- 2
+      
+      # Calcular puntajes
+      scores_df <- calculate_scores_participants(
+        participants_data_df, x_pt, sigma_pt_made, u_xpt, k
+      )
+      
+      # Agregar información del análisis
+      scores_df$pollutant <- analito
+      scores_df$level <- nivel
+      scores_df$n_lab <- n
+      
+      scores_results[[paste0(analito, "_", nivel)]] <- scores_df
+    }
+  }
 }
 
-archivo_log <- file.path(output_dir, "ejecucion_log.txt")
-if (file.exists(archivo_log)) {
-  file.remove(archivo_log)
-}
-registrar_evento(archivo_log, "Inicio de generación de anexos")
-registrar_evento(archivo_log, paste("Directorio de datos:", data_dir))
+scores_df <- do.call(rbind, scores_results)
+write.csv(scores_df, file.path(anexos_dir, "puntajes_pt.csv"), row.names = FALSE)
+cat("  Guardado: puntajes_pt.csv (", nrow(scores_df), " registros)\n")
 
-homogeneidad <- read.csv(file.path(data_dir, "homogeneity.csv"))
-estabilidad <- read.csv(file.path(data_dir, "stability.csv"))
-resumen <- read.csv(file.path(data_dir, "summary_n4.csv"))
-participantes <- read.csv(file.path(data_dir, "participants_data4.csv"))
+# ===================================================================
+# 5. RESUMEN DE PUNTAJES
+# ===================================================================
 
-registrar_evento(archivo_log, "Datos cargados correctamente")
+cat("\nResumen de evaluación de puntajes...\n")
 
-# -------------------------------------------------------------------
-# Homogeneidad (ISO 13528:2022, Anexo B.3-B.4)
-# -------------------------------------------------------------------
-homo_sub <- subset(homogeneidad, pollutant == "co" & level == "2-μmol/mol")
-medias_muestra <- aggregate(value ~ sample_id, homo_sub, mean)
-desv_muestra <- aggregate(value ~ sample_id, homo_sub, sd)
-homo_intermedio <- merge(medias_muestra, desv_muestra, by = "sample_id")
-colnames(homo_intermedio) <- c("sample_id", "media", "desviacion")
-
-n_r <- length(unique(homo_sub[["replicate"]]))
-s_x <- sd(medias_muestra[["value"]])
-s_w <- sqrt(mean(desv_muestra[["value"]]^2))
-s_b <- sqrt(max(0, s_x^2 - (s_w^2 / n_r)))
-
-homo_resumen <- data.frame(
-  metrica = c("n_replicas", "s_x", "s_w", "s_b"),
-  valor = c(n_r, s_x, s_w, s_b)
-)
-
-write.csv(homo_intermedio, file.path(output_dir, "homogeneidad_intermedia.csv"), row.names = FALSE)
-write.csv(homo_resumen, file.path(output_dir, "homogeneidad_resumen.csv"), row.names = FALSE)
-registrar_evento(archivo_log, "Homogeneidad calculada y exportada")
-
-# -------------------------------------------------------------------
-# Estabilidad (ISO 13528:2022, Anexo B.7)
-# -------------------------------------------------------------------
-estab_sub <- subset(estabilidad, pollutant == "co" & level == "2-μmol/mol")
-medias_estab <- aggregate(value ~ sample_id, estab_sub, mean)
-medias_estab <- medias_estab[order(medias_estab[["sample_id"]]), ]
-
-tiempos <- seq(0, nrow(medias_estab) - 1)
-pendiente <- coef(stats::lm(medias_estab[["value"]] ~ tiempos))[2]
-
-estab_intermedio <- data.frame(
-  sample_id = medias_estab[["sample_id"]],
-  tiempo = tiempos,
-  media = medias_estab[["value"]]
-)
-
-estab_resumen <- data.frame(
-  metrica = c("pendiente"),
-  valor = c(as.numeric(pendiente))
-)
-
-write.csv(estab_intermedio, file.path(output_dir, "estabilidad_intermedia.csv"), row.names = FALSE)
-write.csv(estab_resumen, file.path(output_dir, "estabilidad_resumen.csv"), row.names = FALSE)
-registrar_evento(archivo_log, "Estabilidad calculada y exportada")
-
-# -------------------------------------------------------------------
-# Puntajes (ISO 13528:2022, 10.4-10.6; ISO 17043:2024)
-# -------------------------------------------------------------------
-res_sub <- subset(resumen, pollutant == "co" & level == "2-μmol/mol" & sample_group == "1-10")
-participantes_sub <- subset(res_sub, participant_id %in% c("part_1", "part_2", "part_3"))
-referencia <- subset(res_sub, participant_id == "ref")
-
-x_pt <- referencia[["mean_value"]][1]
-x_i <- participantes_sub[["mean_value"]][participantes_sub[["participant_id"]] == "part_1"][1]
-s_pt <- sd(participantes_sub[["mean_value"]])
-
-u_x <- referencia[["sd_value"]][1] / sqrt(10)
-u_i <- participantes_sub[["sd_value"]][participantes_sub[["participant_id"]] == "part_1"][1] / sqrt(10)
-
-z <- (x_i - x_pt) / s_pt
-z_prima <- (x_i - x_pt) / sqrt(s_pt^2 + u_x^2)
-zeta <- (x_i - x_pt) / sqrt(u_x^2 + u_i^2)
-En <- (x_i - x_pt) / sqrt((2 * u_x)^2 + (2 * u_i)^2)
-
-puntajes_intermedios <- data.frame(
-  participante = "part_1",
-  x_pt = x_pt,
-  x_i = x_i,
-  s_pt = s_pt,
-  u_x = u_x,
-  u_i = u_i,
-  z = z,
-  z_prima = z_prima,
-  zeta = zeta,
-  En = En
-)
-
-write.csv(puntajes_intermedios, file.path(output_dir, "puntajes_intermedios.csv"), row.names = FALSE)
-registrar_evento(archivo_log, "Puntajes calculados y exportados")
-
-# -------------------------------------------------------------------
-# Resumen de pruebas
-# -------------------------------------------------------------------
-criterio_hom <- 0.3 * s_pt
-resultado_hom <- ifelse(s_b <= criterio_hom, "Cumple", "No cumple")
-
-criterio_estab <- 0.3 * s_pt
-resultado_estab <- ifelse(abs(pendiente) <= criterio_estab, "Cumple", "No cumple")
-
-resultado_z <- ifelse(abs(z) <= 2, "Satisfactorio", "Alerta")
-resultado_z_prima <- ifelse(abs(z_prima) <= 2, "Satisfactorio", "Alerta")
-resultado_zeta <- ifelse(abs(zeta) <= 2, "Satisfactorio", "Alerta")
-resultado_en <- ifelse(abs(En) <= 1, "Satisfactorio", "Alerta")
-
-resumen_pruebas <- data.frame(
-  prueba = c("Homogeneidad", "Estabilidad", "z", "z'", "ζ", "En", "Participantes"),
-  valor = c(
-    round(s_b, 9),
-    round(pendiente, 9),
-    round(z, 6),
-    round(z_prima, 6),
-    round(zeta, 6),
-    round(En, 6),
-    nrow(participantes)
-  ),
-  criterio = c(
-    round(criterio_hom, 9),
-    round(criterio_estab, 9),
-    "|z| ≤ 2",
-    "|z'| ≤ 2",
-    "|ζ| ≤ 2",
-    "|En| ≤ 1",
-    "número de laboratorios"
-  ),
-  resultado = c(
-    resultado_hom,
-    resultado_estab,
-    resultado_z,
-    resultado_z_prima,
-    resultado_zeta,
-    resultado_en,
-    "Informativo"
+summary_scores <- scores_df %>%
+  group_by(pollutant, level) %>%
+  summarise(
+    n_participants = n(),
+    z_satisfactorio = sum(z_score_eval == "Satisfactorio", na.rm = TRUE),
+    z_cuestionable = sum(z_score_eval == "Cuestionable", na.rm = TRUE),
+    z_no_satisfactorio = sum(z_score_eval == "No satisfactorio", na.rm = TRUE),
+    en_satisfactorio = sum(En_score_eval == "Satisfactorio", na.rm = TRUE),
+    en_no_satisfactorio = sum(En_score_eval == "No satisfactorio", na.rm = TRUE),
+    .groups = "drop"
   )
+
+write.csv(summary_scores, file.path(anexos_dir, "resumen_puntajes.csv"), row.names = FALSE)
+cat("  Guardado: resumen_puntajes.csv (", nrow(summary_scores), " registros)\n")
+
+# ===================================================================
+# 6. LOG DE EJECUCIÓN
+# ===================================================================
+
+cat("\nGenerando log de ejecución...\n")
+
+log_timestamp <- format(Sys.time(), "%Y-%m-%d %H:%M:%S")
+
+log_content <- paste0(
+  "=== LOG DE GENERACIÓN DE ANEXOS ===\n",
+  "Fecha: ", log_timestamp, "\n",
+  "Script: genera_anexos.R\n\n",
+  
+  "--- RESUMEN DE ARCHIVOS GENERADOS ---\n",
+  "1. homogeneidad_resultados.csv: ", nrow(hom_df), " registros\n",
+  "2. estabilidad_resultados.csv: ", nrow(stab_df), " registros\n",
+  "3. estadisticos_robustos.csv: ", nrow(robust_df), " registros\n",
+  "4. puntajes_pt.csv: ", nrow(scores_df), " registros\n",
+  "5. resumen_puntajes.csv: ", nrow(summary_scores), " registros\n\n",
+  
+  "--- RESUMEN DE HOMOGENEIDAD ---\n",
+  "Total evaluaciones: ", nrow(hom_df), "\n",
+  "Aceptables: ", sum(hom_df$evaluacion == "Aceptable", na.rm = TRUE), "\n",
+  "No aceptables: ", sum(hom_df$evaluacion == "No aceptable", na.rm = TRUE), "\n\n",
+  
+  "--- RESUMEN DE ESTABILIDAD ---\n",
+  "Total evaluaciones: ", nrow(stab_df), "\n",
+  "Estables: ", sum(stab_df$evaluacion == "Estable", na.rm = TRUE), "\n",
+  "No estables: ", sum(stab_df$evaluacion == "No estable", na.rm = TRUE), "\n\n",
+  
+  "--- RESUMEN DE PUNTAJES Z ---\n",
+  "Total puntajes z: ", sum(!is.na(scores_df$z_score)), "\n",
+  "Satisfactorios: ", sum(scores_df$z_score_eval == "Satisfactorio", na.rm = TRUE), "\n",
+  "Cuestionables: ", sum(scores_df$z_score_eval == "Cuestionable", na.rm = TRUE), "\n",
+  "No satisfactorios: ", sum(scores_df$z_score_eval == "No satisfactorio", na.rm = TRUE), "\n\n",
+  
+  "--- FIN DEL LOG ---\n"
 )
 
-write.csv(resumen_pruebas, file.path(output_dir, "resumen_pruebas.csv"), row.names = FALSE)
-registrar_evento(archivo_log, "Resumen de pruebas generado")
+log_file <- file.path(anexos_dir, "generacion_log.txt")
+writeLines(log_content, log_file)
+cat("  Guardado: generacion_log.txt\n")
 
-registrar_evento(archivo_log, "Finalización de la generación de anexos")
+# ===================================================================
+# 7. RESUMEN FINAL
+# ===================================================================
 
-invisible(list(
-  homogeneidad = homo_resumen,
-  estabilidad = estab_resumen,
-  puntajes = puntajes_intermedios,
-  resumen = resumen_pruebas
-))
+cat("\n", rep("=", 60), "\n", sep = "")
+cat("GENERACIÓN DE ANEXOS COMPLETADA\n")
+cat(rep("=", 60), "\n\n", sep = "")
+
+cat("Archivos generados en:", anexos_dir, "\n\n")
+
+cat("1. homogeneidad_resultados.csv\n")
+cat("2. estabilidad_resultados.csv\n")
+cat("3. estadisticos_robustos.csv\n")
+cat("4. puntajes_pt.csv\n")
+cat("5. resumen_puntajes.csv\n")
+cat("6. generacion_log.txt\n\n")
+
+cat("Total de registros generados:\n")
+cat("  Homogeneidad:", nrow(hom_df), "\n")
+cat("  Estabilidad:", nrow(stab_df), "\n")
+cat("  Estadísticos robustos:", nrow(robust_df), "\n")
+cat("  Puntajes:", nrow(scores_df), "\n")
+cat("  Resumen:", nrow(summary_scores), "\n\n")
+
+cat("Proceso finalizado exitosamente.\n")

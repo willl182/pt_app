@@ -371,47 +371,53 @@ create_algorithm_a_sheet <- function(wb, summary_data) {
   example <- summary_data[summary_data$pollutant == "so2" & summary_data$level == "60-nmol/mol", ]
   values <- example$mean_value[!is.na(example$mean_value)]
   n <- length(values)
+  p <- n
   
   writeData(wb, ws, "ALGORITHM A VALIDATION - SO2 60-nmol/mol", startRow = 1, startCol = 1)
   addStyle(wb, ws, createStyle(fontSize = 14, textDecoration = "bold"), rows = 1, cols = 1)
-  mergeCells(wb, ws, cols = 1:12, rows = 1)
+  mergeCells(wb, ws, cols = 1:8, rows = 1)
   
-  writeData(wb, ws, "ISO 13528:2022 Annex C - Iterative Robust Estimation (Algorithm A)", startRow = 2, startCol = 1)
-  mergeCells(wb, ws, cols = 1:12, rows = 2)
+  writeData(wb, ws, "ISO 13528:2022 Annex C.3 - Iterative Robust Estimation (Winsorization Method)", startRow = 2, startCol = 1)
+  mergeCells(wb, ws, cols = 1:8, rows = 2)
   
   # Parameters section
   writeData(wb, ws, "ALGORITHM PARAMETERS", startRow = 4, startCol = 1)
   addStyle(wb, ws, createStyle(textDecoration = "bold"), rows = 4, cols = 1)
   
-  writeData(wb, ws, "Huber constant (c)", startRow = 5, startCol = 1)
-  writeData(wb, ws, 1.5, startRow = 5, startCol = 2)
+  writeData(wb, ws, "p (observations)", startRow = 5, startCol = 1)
+  writeData(wb, ws, p, startRow = 5, startCol = 2)
   addStyle(wb, ws, input_style, rows = 5, cols = 2)
-  writeData(wb, ws, "← Weight cutoff: |u| <= 1", startRow = 5, startCol = 3)
   
   writeData(wb, ws, "MAD scale factor", startRow = 6, startCol = 1)
   writeData(wb, ws, 1.483, startRow = 6, startCol = 2)
   addStyle(wb, ws, input_style, rows = 6, cols = 2)
   writeData(wb, ws, "← Makes MAD consistent for normal distribution", startRow = 6, startCol = 3)
   
-  writeData(wb, ws, "Tolerance", startRow = 7, startCol = 1)
-  writeData(wb, ws, 0.001, startRow = 7, startCol = 2)
+  writeData(wb, ws, "Winsorization factor (1.5×s*)", startRow = 7, startCol = 1)
+  writeData(wb, ws, 1.5, startRow = 7, startCol = 2)
   addStyle(wb, ws, input_style, rows = 7, cols = 2)
+  writeData(wb, ws, "← δ = 1.5 × s* for winsorization bounds", startRow = 7, startCol = 3)
+  
+  writeData(wb, ws, "Scale adjustment factor", startRow = 8, startCol = 1)
+  writeData(wb, ws, 1.134, startRow = 8, startCol = 2)
+  addStyle(wb, ws, input_style, rows = 8, cols = 2)
+  writeData(wb, ws, "← Applied to s* calculation: 1.134 × SD", startRow = 8, startCol = 3)
   
   # Input data section
-  writeData(wb, ws, "INPUT DATA (xi)", startRow = 9, startCol = 1)
-  addStyle(wb, ws, createStyle(textDecoration = "bold"), rows = 9, cols = 1)
+  writeData(wb, ws, "INPUT DATA (xi)", startRow = 10, startCol = 1)
+  addStyle(wb, ws, createStyle(textDecoration = "bold"), rows = 10, cols = 1)
   
-  headers <- c("i", "xi", "|xi - median|")
-  writeData(wb, ws, t(headers), startRow = 10, startCol = 1, colNames = FALSE)
-  addStyle(wb, ws, header_style, rows = 10, cols = 1:3, gridExpand = TRUE)
+  headers <- c("i", "xi")
+  writeData(wb, ws, t(headers), startRow = 11, startCol = 1, colNames = FALSE)
+  addStyle(wb, ws, header_style, rows = 11, cols = 1:2, gridExpand = TRUE)
   
   for (i in seq_along(values)) {
-    r <- 10 + i
+    r <- 11 + i
     writeData(wb, ws, i, startRow = r, startCol = 1)
     writeData(wb, ws, values[i], startRow = r, startCol = 2)
   }
   
-  data_end <- 10 + n
+  data_end <- 11 + n
   
   # Initial estimates
   init_row <- data_end + 2
@@ -419,19 +425,19 @@ create_algorithm_a_sheet <- function(wb, summary_data) {
   addStyle(wb, ws, createStyle(textDecoration = "bold"), rows = init_row, cols = 1)
   
   writeData(wb, ws, "Median", startRow = init_row + 1, startCol = 1)
-  writeFormula(wb, ws, sprintf("MEDIAN(B11:B%d)", data_end), startRow = init_row + 1, startCol = 2)
+  writeFormula(wb, ws, sprintf("MEDIAN(B12:B%d)", data_end), startRow = init_row + 1, startCol = 2)
   addStyle(wb, ws, result_style, rows = init_row + 1, cols = 2)
   median_cell <- sprintf("B%d", init_row + 1)
   
-  # Compute |xi - median| column
+  # Compute |xi - median| column for MAD
   for (i in seq_along(values)) {
-    r <- 10 + i
+    r <- 11 + i
     writeFormula(wb, ws, sprintf("ABS(B%d-%s)", r, median_cell), startRow = r, startCol = 3)
     addStyle(wb, ws, formula_style, rows = r, cols = 3)
   }
   
   writeData(wb, ws, "MAD (median of |xi - median|)", startRow = init_row + 2, startCol = 1)
-  writeFormula(wb, ws, sprintf("MEDIAN(C11:C%d)", data_end), startRow = init_row + 2, startCol = 2)
+  writeFormula(wb, ws, sprintf("MEDIAN(C12:C%d)", data_end), startRow = init_row + 2, startCol = 2)
   
   writeData(wb, ws, "x*₀ = median", startRow = init_row + 3, startCol = 1)
   writeFormula(wb, ws, sprintf("=%s", median_cell), startRow = init_row + 3, startCol = 2)
@@ -443,82 +449,92 @@ create_algorithm_a_sheet <- function(wb, summary_data) {
   addStyle(wb, ws, result_style, rows = init_row + 4, cols = 2)
   s0_cell <- sprintf("B%d", init_row + 4)
   
-  # Iteration 1 detail
-  iter1_row <- init_row + 7
-  writeData(wb, ws, "ITERATION 1 DETAIL", startRow = iter1_row, startCol = 1)
+  writeData(wb, ws, "δ₀ = 1.5 × s*₀", startRow = init_row + 5, startCol = 1)
+  writeFormula(wb, ws, sprintf("B7*%s", s0_cell), startRow = init_row + 5, startCol = 2)
+  addStyle(wb, ws, result_style, rows = init_row + 5, cols = 2)
+  delta0_cell <- sprintf("B%d", init_row + 5)
+  
+  writeData(wb, ws, "Lower bound = x*₀ - δ₀", startRow = init_row + 6, startCol = 1)
+  writeFormula(wb, ws, sprintf("%s-%s", x0_cell, delta0_cell), startRow = init_row + 6, startCol = 2)
+  addStyle(wb, ws, result_style, rows = init_row + 6, cols = 2)
+  lower0_cell <- sprintf("B%d", init_row + 6)
+  
+  writeData(wb, ws, "Upper bound = x*₀ + δ₀", startRow = init_row + 7, startCol = 1)
+  writeFormula(wb, ws, sprintf("%s+%s", x0_cell, delta0_cell), startRow = init_row + 7, startCol = 2)
+  addStyle(wb, ws, result_style, rows = init_row + 7, cols = 2)
+  upper0_cell <- sprintf("B%d", init_row + 7)
+  
+  # Iteration 1 detail - Winsorization
+  iter1_row <- init_row + 10
+  writeData(wb, ws, "ITERATION 1 DETAIL - WINSORIZATION", startRow = iter1_row, startCol = 1)
   addStyle(wb, ws, createStyle(textDecoration = "bold"), rows = iter1_row, cols = 1)
   
-  iter1_headers <- c("i", "xi", "ui = (xi-x*₀)/(1.5×s*₀)", "|ui|", "wi", "wi×xi", "wi×(xi-x*₁)²")
+  iter1_headers <- c("i", "xi", "Lower bound", "Upper bound", "xi* (winsorized)", "(xi* - x*₁)²")
   writeData(wb, ws, t(iter1_headers), startRow = iter1_row + 1, startCol = 1, colNames = FALSE)
-  addStyle(wb, ws, header_style, rows = iter1_row + 1, cols = 1:7, gridExpand = TRUE)
+  addStyle(wb, ws, header_style, rows = iter1_row + 1, cols = 1:6, gridExpand = TRUE)
   
   for (i in seq_along(values)) {
     r <- iter1_row + 1 + i
     writeData(wb, ws, i, startRow = r, startCol = 1)
     writeData(wb, ws, values[i], startRow = r, startCol = 2)
-    # ui = (xi - x*0) / (1.5 * s*0)
-    writeFormula(wb, ws, sprintf("(B%d-%s)/(B5*%s)", r, x0_cell, s0_cell), startRow = r, startCol = 3)
+    # Lower and upper bounds (same for all in iteration 1)
+    writeFormula(wb, ws, sprintf("=%s", lower0_cell), startRow = r, startCol = 3)
     addStyle(wb, ws, formula_style, rows = r, cols = 3)
-    # |ui|
-    writeFormula(wb, ws, sprintf("ABS(C%d)", r), startRow = r, startCol = 4)
+    writeFormula(wb, ws, sprintf("=%s", upper0_cell), startRow = r, startCol = 4)
     addStyle(wb, ws, formula_style, rows = r, cols = 4)
-    # wi = IF(|ui|<=1, 1, 1/ui^2)
-    writeFormula(wb, ws, sprintf("IF(D%d<=1,1,1/(C%d^2))", r, r), startRow = r, startCol = 5)
+    # xi* = clamp(xi, lower, upper)
+    writeFormula(wb, ws, sprintf("IF(B%d<%s,%s,IF(B%d>%s,%s,B%d))", r, lower0_cell, lower0_cell, r, upper0_cell, upper0_cell, r),
+                 startRow = r, startCol = 5)
     addStyle(wb, ws, formula_style, rows = r, cols = 5)
-    # wi * xi
-    writeFormula(wb, ws, sprintf("E%d*B%d", r, r), startRow = r, startCol = 6)
-    addStyle(wb, ws, formula_style, rows = r, cols = 6)
   }
   
   iter1_data_end <- iter1_row + 1 + n
   
-  # Sums for iteration 1
-  sum1_row <- iter1_data_end + 1
-  writeData(wb, ws, "Σ", startRow = sum1_row, startCol = 1)
-  addStyle(wb, ws, createStyle(textDecoration = "bold"), rows = sum1_row, cols = 1)
-  writeFormula(wb, ws, sprintf("SUM(E%d:E%d)", iter1_row + 2, iter1_data_end), startRow = sum1_row, startCol = 5)
-  addStyle(wb, ws, result_style, rows = sum1_row, cols = 5)
-  writeFormula(wb, ws, sprintf("SUM(F%d:F%d)", iter1_row + 2, iter1_data_end), startRow = sum1_row, startCol = 6)
-  addStyle(wb, ws, result_style, rows = sum1_row, cols = 6)
-  
-  # x*1 calculation
-  result1_row <- sum1_row + 2
-  writeData(wb, ws, "x*₁ = Σ(wi×xi) / Σwi", startRow = result1_row, startCol = 1)
-  writeFormula(wb, ws, sprintf("F%d/E%d", sum1_row, sum1_row), startRow = result1_row, startCol = 2)
+  # Calculate x*1 first
+  result1_row <- iter1_data_end + 1
+  writeData(wb, ws, "x*₁ = mean(xi*)", startRow = result1_row, startCol = 1)
+  writeFormula(wb, ws, sprintf("AVERAGE(E%d:E%d)", iter1_row + 2, iter1_data_end), startRow = result1_row, startCol = 2)
   addStyle(wb, ws, result_style, rows = result1_row, cols = 2)
   x1_cell <- sprintf("B%d", result1_row)
   
-  # Now fill in column G (wi×(xi-x*1)²) using x*1
+  # Now fill in column F (xi* - x*1)^2 using x*1
   for (i in seq_along(values)) {
     r <- iter1_row + 1 + i
-    writeFormula(wb, ws, sprintf("E%d*(B%d-%s)^2", r, r, x1_cell), startRow = r, startCol = 7)
-    addStyle(wb, ws, formula_style, rows = r, cols = 7)
+    writeFormula(wb, ws, sprintf("(E%d-%s)^2", r, x1_cell), startRow = r, startCol = 6)
+    addStyle(wb, ws, formula_style, rows = r, cols = 6)
   }
   
-  # Sum of column G
-  writeFormula(wb, ws, sprintf("SUM(G%d:G%d)", iter1_row + 2, iter1_data_end), startRow = sum1_row, startCol = 7)
-  addStyle(wb, ws, result_style, rows = sum1_row, cols = 7)
-  
-  # s*1 calculation
-  writeData(wb, ws, "s*₁ = √(Σ(wi×(xi-x*₁)²) / Σwi)", startRow = result1_row + 1, startCol = 1)
-  writeFormula(wb, ws, sprintf("SQRT(G%d/E%d)", sum1_row, sum1_row), startRow = result1_row + 1, startCol = 2)
+  # Sum of squared deviations
+  sum_sq_cell <- sprintf("F%d", result1_row + 1)
+  writeData(wb, ws, "Σ(xi* - x*₁)²", startRow = result1_row + 1, startCol = 1)
+  writeFormula(wb, ws, sprintf("SUM(F%d:F%d)", iter1_row + 2, iter1_data_end), startRow = result1_row + 1, startCol = 2)
   addStyle(wb, ws, result_style, rows = result1_row + 1, cols = 2)
-  s1_cell <- sprintf("B%d", result1_row + 1)
   
-  # Convergence check
-  writeData(wb, ws, "Δx* = |x*₁ - x*₀|", startRow = result1_row + 3, startCol = 1)
-  writeFormula(wb, ws, sprintf("ABS(%s-%s)", x1_cell, x0_cell), startRow = result1_row + 3, startCol = 2)
+  # s*1 calculation with 1.134 factor
+  writeData(wb, ws, "s*₁ = 1.134 × √(Σ(xi* - x*₁)² / (p-1))", startRow = result1_row + 2, startCol = 1)
+  writeFormula(wb, ws, sprintf("B8*SQRT(%s/(B5-1))", sum_sq_cell), startRow = result1_row + 2, startCol = 2)
+  addStyle(wb, ws, result_style, rows = result1_row + 2, cols = 2)
+  s1_cell <- sprintf("B%d", result1_row + 2)
   
-  writeData(wb, ws, "Δs* = |s*₁ - s*₀|", startRow = result1_row + 4, startCol = 1)
-  writeFormula(wb, ws, sprintf("ABS(%s-%s)", s1_cell, s0_cell), startRow = result1_row + 4, startCol = 2)
+  # Convergence check using 3rd significant figure
+  writeData(wb, ws, "3rd Sig Fig Comparison", startRow = result1_row + 4, startCol = 1)
+  addStyle(wb, ws, createStyle(textDecoration = "bold"), rows = result1_row + 4, cols = 1)
   
-  writeData(wb, ws, "Converged? (Δ < tol)", startRow = result1_row + 5, startCol = 1)
-  writeFormula(wb, ws, sprintf('IF(AND(B%d<B7,B%d<B7),"YES","NO")', result1_row + 3, result1_row + 4), 
-               startRow = result1_row + 5, startCol = 2)
-  addStyle(wb, ws, result_style, rows = result1_row + 5, cols = 2)
+  writeData(wb, ws, "Δx* = |x*₁ - x*₀|", startRow = result1_row + 5, startCol = 1)
+  writeFormula(wb, ws, sprintf("ABS(%s-%s)", x1_cell, x0_cell), startRow = result1_row + 5, startCol = 2)
+  
+  writeData(wb, ws, "Δs* = |s*₁ - s*₀|", startRow = result1_row + 6, startCol = 1)
+  writeFormula(wb, ws, sprintf("ABS(%s-%s)", s1_cell, s0_cell), startRow = result1_row + 6, startCol = 2)
+  
+  writeData(wb, ws, "Converged? (3rd sig fig match)", startRow = result1_row + 7, startCol = 1)
+  writeFormula(wb, ws, sprintf('IF(ROUND(%s,2-INT(LOG10(ABS(%s))))=ROUND(%s,2-INT(LOG10(ABS(%s)))),ROUND(%s,2-INT(LOG10(ABS(%s))))=ROUND(%s,2-INT(LOG10(ABS(%s)))),"YES","NO")', 
+               x0_cell, x0_cell, x1_cell, x1_cell, s0_cell, s0_cell, s1_cell, s1_cell), 
+               startRow = result1_row + 7, startCol = 2)
+  addStyle(wb, ws, result_style, rows = result1_row + 7, cols = 2)
+  conv1_cell <- sprintf("B%d", result1_row + 7)
   
   # Summary section
-  summary_row <- result1_row + 8
+  summary_row <- result1_row + 10
   writeData(wb, ws, "ITERATION SUMMARY", startRow = summary_row, startCol = 1)
   addStyle(wb, ws, createStyle(textDecoration = "bold"), rows = summary_row, cols = 1)
   
@@ -536,9 +552,9 @@ create_algorithm_a_sheet <- function(wb, summary_data) {
   writeData(wb, ws, 1, startRow = summary_row + 3, startCol = 1)
   writeFormula(wb, ws, sprintf("=%s", x1_cell), startRow = summary_row + 3, startCol = 2)
   writeFormula(wb, ws, sprintf("=%s", s1_cell), startRow = summary_row + 3, startCol = 3)
-  writeFormula(wb, ws, sprintf("=B%d", result1_row + 3), startRow = summary_row + 3, startCol = 4)
-  writeFormula(wb, ws, sprintf("=B%d", result1_row + 4), startRow = summary_row + 3, startCol = 5)
-  writeFormula(wb, ws, sprintf("=B%d", result1_row + 5), startRow = summary_row + 3, startCol = 6)
+  writeFormula(wb, ws, sprintf("=B%d", result1_row + 5), startRow = summary_row + 3, startCol = 4)
+  writeFormula(wb, ws, sprintf("=B%d", result1_row + 6), startRow = summary_row + 3, startCol = 5)
+  writeFormula(wb, ws, sprintf("=%s", conv1_cell), startRow = summary_row + 3, startCol = 6)
   addStyle(wb, ws, result_style, rows = summary_row + 3, cols = 2:6, gridExpand = TRUE)
   
   # Final results
@@ -554,23 +570,24 @@ create_algorithm_a_sheet <- function(wb, summary_data) {
   writeFormula(wb, ws, sprintf("=%s", s1_cell), startRow = final_row + 2, startCol = 2)
   addStyle(wb, ws, result_style, rows = final_row + 2, cols = 2)
   
-  writeData(wb, ws, "Effective n (Σwi)", startRow = final_row + 3, startCol = 1)
-  writeFormula(wb, ws, sprintf("=E%d", sum1_row), startRow = final_row + 3, startCol = 2)
+  writeData(wb, ws, "p (observations)", startRow = final_row + 3, startCol = 1)
+  writeFormula(wb, ws, "=B5", startRow = final_row + 3, startCol = 2)
   addStyle(wb, ws, result_style, rows = final_row + 3, cols = 2)
   
   # Formula reference
   ref_row <- final_row + 6
-  writeData(wb, ws, "FORMULA REFERENCE (ISO 13528:2022 Annex C)", startRow = ref_row, startCol = 1)
+  writeData(wb, ws, "FORMULA REFERENCE (ISO 13528:2022 Annex C.3 - Winsorization Method)", startRow = ref_row, startCol = 1)
   addStyle(wb, ws, createStyle(textDecoration = "bold"), rows = ref_row, cols = 1)
   
   formulas <- data.frame(
-    step = c("Initial x*", "Initial s*", "Standardized residual", "Weights", "Updated x*", "Updated s*"),
+    step = c("Initial x*", "Initial s*", "Winsorization bound", "Winsorized value", "Updated x*", "Updated s*", "Convergence"),
     formula = c("x*₀ = median(xi)", 
-                "s*₀ = 1.483 × median(|xi - median|)",
-                "ui = (xi - x*) / (1.5 × s*)",
-                "wi = 1 if |ui| ≤ 1, else wi = 1/ui²",
-                "x* = Σ(wi × xi) / Σwi",
-                "s* = √(Σ(wi × (xi - x*)²) / Σwi)"),
+                "s*₀ = 1.483 × MAD(xi)",
+                "δ = 1.5 × s*",
+                "xi* = clamp(xi, x* - δ, x* + δ)",
+                "x* = mean(xi*)",
+                "s* = 1.134 × √(Σ(xi* - x*)² / (p-1))",
+                "3rd significant figure unchanged"),
     stringsAsFactors = FALSE
   )
   
@@ -579,7 +596,7 @@ create_algorithm_a_sheet <- function(wb, summary_data) {
     writeData(wb, ws, formulas$formula[i], startRow = ref_row + i, startCol = 2)
   }
   
-  setColWidths(wb, ws, cols = 1:7, widths = "auto")
+  setColWidths(wb, ws, cols = 1:6, widths = "auto")
 }
 
 create_pt_scores_sheet <- function(wb) {
@@ -831,6 +848,195 @@ create_multi_pollutant_sheet <- function(wb, summary_data, hom_data) {
   setColWidths(wb, ws, cols = 1:6, widths = "auto")
 }
 
+create_edge_cases_sheet <- function(wb) {
+  addWorksheet(wb, "Edge_Cases")
+  ws <- "Edge_Cases"
+  
+  writeData(wb, ws, "ALGORITHM A - EDGE CASES VALIDATION", startRow = 1, startCol = 1)
+  addStyle(wb, ws, createStyle(fontSize = 14, textDecoration = "bold"), rows = 1, cols = 1)
+  mergeCells(wb, ws, cols = 1:6, rows = 1)
+  
+  writeData(wb, ws, "ISO 13528:2022 Annex C.3 - Testing special datasets and error conditions", startRow = 2, startCol = 1)
+  mergeCells(wb, ws, cols = 1:6, rows = 2)
+  
+  # Case 1: Identical values (zero dispersion)
+  case1_row <- 4
+  writeData(wb, ws, "CASE 1: IDENTICAL VALUES (Zero Dispersion)", startRow = case1_row, startCol = 1)
+  addStyle(wb, ws, createStyle(textDecoration = "bold", fgFill = "#D9E1F2"), rows = case1_row, cols = 1:6, gridExpand = TRUE)
+  mergeCells(wb, ws, cols = 1:6, rows = case1_row)
+  
+  values1 <- c(10.0, 10.0, 10.0, 10.0, 10.0)
+  n1 <- length(values1)
+  
+  writeData(wb, ws, "Values", startRow = case1_row + 1, startCol = 1)
+  for (i in seq_along(values1)) {
+    writeData(wb, ws, values1[i], startRow = case1_row + 1 + i, startCol = 1)
+    addStyle(wb, ws, input_style, rows = case1_row + 1 + i, cols = 1)
+  }
+  
+  case1_calc <- case1_row + 1 + n1 + 1
+  writeData(wb, ws, "Expected Behavior:", startRow = case1_calc, startCol = 1)
+  addStyle(wb, ws, createStyle(textDecoration = "bold"), rows = case1_calc, cols = 1)
+  
+  writeData(wb, ws, "n", startRow = case1_calc + 1, startCol = 1)
+  writeFormula(wb, ws, sprintf("COUNT(A%d:A%d)", case1_row + 2, case1_row + 1 + n1), startRow = case1_calc + 1, startCol = 2)
+  
+  writeData(wb, ws, "Median", startRow = case1_calc + 2, startCol = 1)
+  writeFormula(wb, ws, sprintf("MEDIAN(A%d:A%d)", case1_row + 2, case1_row + 1 + n1), startRow = case1_calc + 2, startCol = 2)
+  addStyle(wb, ws, result_style, rows = case1_calc + 2, cols = 2)
+  
+  writeData(wb, ws, "MAD", startRow = case1_calc + 3, startCol = 1)
+  writeFormula(wb, ws, sprintf("MEDIAN(ABS(A%d:A%d-B%d))", case1_row + 2, case1_row + 1 + n1, case1_calc + 2), startRow = case1_calc + 3, startCol = 2)
+  
+  writeData(wb, ws, "s*₀ (initial)", startRow = case1_calc + 4, startCol = 1)
+  writeFormula(wb, ws, sprintf("1.483*B%d", case1_calc + 3), startRow = case1_calc + 4, startCol = 2)
+  addStyle(wb, ws, result_style, rows = case1_calc + 4, cols = 2)
+  
+  writeData(wb, ws, "Expected: x* = 10.0, s* = 0, converged = TRUE (uses classical SD fallback, then zero)", startRow = case1_calc + 5, startCol = 1)
+  addStyle(wb, ws, createStyle(fgFill = "#E2EFDA"), rows = case1_calc + 5, cols = 1:2, gridExpand = TRUE)
+  mergeCells(wb, ws, cols = 1:2, rows = case1_calc + 5)
+  
+  # Case 2: Fewer than 3 participants
+  case2_row <- case1_calc + 8
+  writeData(wb, ws, "CASE 2: FEWER THAN 3 PARTICIPANTS", startRow = case2_row, startCol = 1)
+  addStyle(wb, ws, createStyle(textDecoration = "bold", fgFill = "#FFCDD2"), rows = case2_row, cols = 1:6, gridExpand = TRUE)
+  mergeCells(wb, ws, cols = 1:6, rows = case2_row)
+  
+  values2 <- c(10.1, 10.2)
+  n2 <- length(values2)
+  
+  writeData(wb, ws, "Values", startRow = case2_row + 1, startCol = 1)
+  for (i in seq_along(values2)) {
+    writeData(wb, ws, values2[i], startRow = case2_row + 1 + i, startCol = 1)
+    addStyle(wb, ws, input_style, rows = case2_row + 1 + i, cols = 1)
+  }
+  
+  case2_calc <- case2_row + 1 + n2 + 1
+  writeData(wb, ws, "Expected Behavior:", startRow = case2_calc, startCol = 1)
+  addStyle(wb, ws, createStyle(textDecoration = "bold"), rows = case2_calc, cols = 1)
+  
+  writeData(wb, ws, "n", startRow = case2_calc + 1, startCol = 1)
+  writeFormula(wb, ws, sprintf("COUNT(A%d:A%d)", case2_row + 2, case2_row + 1 + n2), startRow = case2_calc + 1, startCol = 2)
+  
+  writeData(wb, ws, "Expected: Error returned (p < 3)", startRow = case2_calc + 2, startCol = 1)
+  addStyle(wb, ws, createStyle(fgFill = "#FFCDD2"), rows = case2_calc + 2, cols = 1:2, gridExpand = TRUE)
+  mergeCells(wb, ws, cols = 1:2, rows = case2_calc + 2)
+  
+  # Case 3: Single outlier at extreme
+  case3_row <- case2_calc + 5
+  writeData(wb, ws, "CASE 3: SINGLE EXTREME OUTLIER", startRow = case3_row, startCol = 1)
+  addStyle(wb, ws, createStyle(textDecoration = "bold", fgFill = "#FFF9C4"), rows = case3_row, cols = 1:6, gridExpand = TRUE)
+  mergeCells(wb, ws, cols = 1:6, rows = case3_row)
+  
+  values3 <- c(10.1, 10.2, 10.0, 10.3, 100.0)
+  n3 <- length(values3)
+  
+  writeData(wb, ws, "Values (xi)", startRow = case3_row + 1, startCol = 1)
+  for (i in seq_along(values3)) {
+    writeData(wb, ws, values3[i], startRow = case3_row + 1 + i, startCol = 1)
+    addStyle(wb, ws, input_style, rows = case3_row + 1 + i, cols = 1)
+    if (values3[i] == 100.0) {
+      addStyle(wb, ws, createStyle(fgFill = "#FFCDD2"), rows = case3_row + 1 + i, cols = 1)
+    }
+  }
+  
+  case3_calc <- case3_row + 1 + n3 + 1
+  writeData(wb, ws, "Iteration 0 (Initial)", startRow = case3_calc, startCol = 1)
+  addStyle(wb, ws, createStyle(textDecoration = "bold"), rows = case3_calc, cols = 1)
+  
+  writeData(wb, ws, "x*₀ = median", startRow = case3_calc + 1, startCol = 1)
+  writeFormula(wb, ws, sprintf("MEDIAN(A%d:A%d)", case3_row + 2, case3_row + 1 + n3), startRow = case3_calc + 1, startCol = 2)
+  addStyle(wb, ws, result_style, rows = case3_calc + 1, cols = 2)
+  x3_0_cell <- sprintf("B%d", case3_calc + 1)
+  
+  writeData(wb, ws, "s*₀ = 1.483 × MAD", startRow = case3_calc + 2, startCol = 1)
+  writeData(wb, ws, "≈ 0.15", startRow = case3_calc + 2, startCol = 2)
+  addStyle(wb, ws, result_style, rows = case3_calc + 2, cols = 2)
+  
+  writeData(wb, ws, "δ = 1.5 × s*₀", startRow = case3_calc + 3, startCol = 1)
+  writeFormula(wb, ws, sprintf("1.5*%s", sprintf("B%d", case3_calc + 2)), startRow = case3_calc + 3, startCol = 2)
+  addStyle(wb, ws, result_style, rows = case3_calc + 3, cols = 2)
+  delta3_cell <- sprintf("B%d", case3_calc + 3)
+  
+  writeData(wb, ws, "Lower bound = x*₀ - δ", startRow = case3_calc + 4, startCol = 1)
+  writeFormula(wb, ws, sprintf("%s-%s", x3_0_cell, delta3_cell), startRow = case3_calc + 4, startCol = 2)
+  addStyle(wb, ws, result_style, rows = case3_calc + 4, cols = 2)
+  lower3_cell <- sprintf("B%d", case3_calc + 4)
+  
+  writeData(wb, ws, "Upper bound = x*₀ + δ", startRow = case3_calc + 5, startCol = 1)
+  writeFormula(wb, ws, sprintf("%s+%s", x3_0_cell, delta3_cell), startRow = case3_calc + 5, startCol = 2)
+  addStyle(wb, ws, result_style, rows = case3_calc + 5, cols = 2)
+  upper3_cell <- sprintf("B%d", case3_calc + 5)
+  
+  writeData(wb, ws, "Winsorized value for 100.0", startRow = case3_calc + 6, startCol = 1)
+  writeFormula(wb, ws, sprintf("IF(100.0<%s,%s,IF(100.0>%s,%s,100.0))", lower3_cell, lower3_cell, upper3_cell, upper3_cell), startRow = case3_calc + 6, startCol = 2)
+  addStyle(wb, ws, result_style, rows = case3_calc + 6, cols = 2)
+  
+  writeData(wb, ws, "Expected: 100.0 winsorized to ≈ 10.6 (x*₀ + δ)", startRow = case3_calc + 7, startCol = 1)
+  addStyle(wb, ws, createStyle(fgFill = "#FFF9C4"), rows = case3_calc + 7, cols = 1:2, gridExpand = TRUE)
+  mergeCells(wb, ws, cols = 1:2, rows = case3_calc + 7)
+  
+  # Case 4: No outliers
+  case4_row <- case3_calc + 10
+  writeData(wb, ws, "CASE 4: NO OUTLIERS", startRow = case4_row, startCol = 1)
+  addStyle(wb, ws, createStyle(textDecoration = "bold", fgFill = "#C8E6C9"), rows = case4_row, cols = 1:6, gridExpand = TRUE)
+  mergeCells(wb, ws, cols = 1:6, rows = case4_row)
+  
+  values4 <- c(10.1, 10.2, 9.9, 10.0, 10.3)
+  n4 <- length(values4)
+  
+  writeData(wb, ws, "Values (xi)", startRow = case4_row + 1, startCol = 1)
+  for (i in seq_along(values4)) {
+    writeData(wb, ws, values4[i], startRow = case4_row + 1 + i, startCol = 1)
+    addStyle(wb, ws, input_style, rows = case4_row + 1 + i, cols = 1)
+  }
+  
+  case4_calc <- case4_row + 1 + n4 + 1
+  writeData(wb, ws, "Statistics", startRow = case4_calc, startCol = 1)
+  addStyle(wb, ws, createStyle(textDecoration = "bold"), rows = case4_calc, cols = 1)
+  
+  writeData(wb, ws, "n", startRow = case4_calc + 1, startCol = 1)
+  writeFormula(wb, ws, sprintf("COUNT(A%d:A%d)", case4_row + 2, case4_row + 1 + n4), startRow = case4_calc + 1, startCol = 2)
+  
+  writeData(wb, ws, "Mean (classical)", startRow = case4_calc + 2, startCol = 1)
+  writeFormula(wb, ws, sprintf("AVERAGE(A%d:A%d)", case4_row + 2, case4_row + 1 + n4), startRow = case4_calc + 2, startCol = 2)
+  
+  writeData(wb, ws, "SD (classical)", startRow = case4_calc + 3, startCol = 1)
+  writeFormula(wb, ws, sprintf("STDEV.S(A%d:A%d)", case4_row + 2, case4_row + 1 + n4), startRow = case4_calc + 3, startCol = 2)
+  
+  writeData(wb, ws, "Expected: x* ≈ mean, s* ≈ SD, minimal winsorization", startRow = case4_calc + 4, startCol = 1)
+  addStyle(wb, ws, createStyle(fgFill = "#C8E6C9"), rows = case4_calc + 4, cols = 1:2, gridExpand = TRUE)
+  mergeCells(wb, ws, cols = 1:2, rows = case4_calc + 4)
+  
+  # Summary table
+  summary_row <- case4_calc + 7
+  writeData(wb, ws, "EDGE CASES SUMMARY", startRow = summary_row, startCol = 1)
+  addStyle(wb, ws, createStyle(textDecoration = "bold"), rows = summary_row, cols = 1)
+  
+  sum_headers <- c("Case", "n", "Expected x*", "Expected s*", "Expected Result")
+  writeData(wb, ws, t(sum_headers), startRow = summary_row + 1, startCol = 1, colNames = FALSE)
+  addStyle(wb, ws, header_style, rows = summary_row + 1, cols = 1:5, gridExpand = TRUE)
+  
+  summary_cases <- data.frame(
+    case = c("Identical values", "<3 participants", "Extreme outlier", "No outliers"),
+    n = c(n1, n2, n3, n4),
+    expected_x = c("10.0", "NA", "~10.1", "~10.1"),
+    expected_s = c("0.0", "NA", "~0.15", "~0.14"),
+    result = c("converged=TRUE, s*=0", "error returned", "100.0 clamped", "x*≈mean, s*≈SD")
+  )
+  
+  for (i in seq_len(nrow(summary_cases))) {
+    r <- summary_row + 1 + i
+    writeData(wb, ws, summary_cases$case[i], startRow = r, startCol = 1)
+    writeData(wb, ws, summary_cases$n[i], startRow = r, startCol = 2)
+    writeData(wb, ws, summary_cases$expected_x[i], startRow = r, startCol = 3)
+    writeData(wb, ws, summary_cases$expected_s[i], startRow = r, startCol = 4)
+    writeData(wb, ws, summary_cases$result[i], startRow = r, startCol = 5)
+  }
+  
+  setColWidths(wb, ws, cols = 1:6, widths = "auto")
+}
+
 main <- function() {
   message("Loading data files...")
   
@@ -861,6 +1067,9 @@ main <- function() {
   
   message("Creating PT Scores sheet...")
   create_pt_scores_sheet(wb)
+  
+  message("Creating Edge Cases sheet...")
+  create_edge_cases_sheet(wb)
   
   output_path <- file.path(OUTPUT_DIR, "validation_calculations.xlsx")
   saveWorkbook(wb, output_path, overwrite = TRUE)
