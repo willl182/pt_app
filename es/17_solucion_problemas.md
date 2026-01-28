@@ -3,7 +3,7 @@
 | Propiedad | Valor |
 |----------|-------|
 | **Tipo de Documento** | FAQ / Solución de Errores |
-| **Archivo Principal** | `app.R` / `cloned_app.R` |
+| **Archivo Principal** | `app.R` |
 | **Docs Relacionados** | `01_carga_datos.md`, `15_arquitectura.md`, `02_paquete_ptcalc.md` |
 
 Este documento proporciona soluciones a los errores, problemas y dificultades comunes encontrados al utilizar el Aplicativo de Análisis de Datos de PT. Incluye la solución de problemas para la carga de datos, los cálculos, la optimización del desempeño y la compatibilidad del navegador.

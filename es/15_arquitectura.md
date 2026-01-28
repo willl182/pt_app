@@ -3,7 +3,7 @@
 | Propiedad | Valor |
 |----------|-------|
 | **Tipo de Documento** | Referencia de Arquitectura |
-| **Archivo Principal** | `app.R` (anteriormente `cloned_app.R`) (aprox. 5,184 líneas) |
+| **Archivo Principal** | `app.R` (aprox. 5,685 líneas) |
 | **Paquete** | `ptcalc/` |
 | **Arquitectura** | MVC (Modelo-Vista-Controlador) con Programación Reactiva |
 | **Docs Relacionados** | `02_paquete_ptcalc.md`, `README.md`, `01_carga_datos.md`, `03_estadisticas_robustas_pt.md`, `05_puntajes_pt.md` |
@@ -304,7 +304,7 @@ El paquete `ptcalc` sirve como el núcleo matemático.
 | **Homogeneidad** | `calculate_homogeneity_stats()`, `evaluate_homogeneity()`, `calculate_u_hom()` |
 | **Estabilidad** | `calculate_stability_stats()`, `evaluate_stability()`, `calculate_u_stab()` |
 | **Puntajes** | `calculate_z_score()`, `calculate_z_prime_score()`, `calculate_zeta_score()`, `calculate_en_score()` |
-| **Evaluación** | `evaluate_z_score_vec()`, `evaluate_en_score_vec()`, `classify_with_en()` |
+| **Evaluación** | `evaluate_z_score_vec()`, `evaluate_en_score_vec()` |
 
 ### 7.2 Método de Integración
 La aplicación carga el paquete al inicio mediante `library(ptcalc)`. Durante el desarrollo, se utiliza `devtools::load_all("ptcalc")` para sincronizar los cambios.

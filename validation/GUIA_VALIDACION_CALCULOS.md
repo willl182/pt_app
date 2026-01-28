@@ -311,9 +311,24 @@ Esta incertidumbre definitiva incorpora las contribuciones de:
 
 ## Hojas de Cálculo de Validación
 
-El archivo `validation_calculations.xlsx` contiene 6 hojas de validación con fórmulas de Excel/Calc:
+El archivo `validation_calculations.xlsx` contiene 7 hojas de validación con fórmulas de Excel/Calc:
 
-### 1. Homogeneity
+### 1. Grubbs Test (NUEVA)
+
+Validación de la prueba de Grubbs para detección de valores atípicos en datos de SO2 60-nmol/mol.
+
+**Parámetros:**
+- n = número de observaciones (excluyendo 'ref')
+- α = 0.05 (nivel de significancia)
+- Test tipo: Two-sided (detecta outliers en ambos extremos)
+
+**Cálculos:**
+- Estadístico G = max|xi - x̄| / s
+- Valor crítico G_α usando distribución t
+- Comparación G ≥ G_α ?
+- Identificación de outlier (mínimo o máximo)
+
+### 2. Homogeneity
 
 Validación paso a paso de cálculos de homogeneidad para SO2, nivel 60-nmol/mol.
 

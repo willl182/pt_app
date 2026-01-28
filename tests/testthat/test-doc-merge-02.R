@@ -18,6 +18,4 @@ test_that("merged ptcalc documentation contains content from all sources", {
   expect_match(content_02a, "run_algorithm_a")
   expect_match(content_02a, "calculate_mad_e")
   expect_match(content_02a, "calculate_homogeneity_stats")
-  expect_match(content_02a, "classify_with_en")
-  expect_match(content_02a, "PT_EN_CLASS_COLORS")
 })

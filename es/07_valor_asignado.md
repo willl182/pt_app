@@ -5,7 +5,7 @@ Este módulo gestiona el cálculo del valor asignado ($x_{pt}$) y su incertidumb
 
 | Propiedad | Valor |
 |-----------|-------|
-| **Archivo** | `cloned_app.R` |
+| **Archivo** | `app.R` |
 | **Ubicación UI** | Accordion dentro de la pestaña "Valor asignado" |
 | **Líneas UI** | 877-946 (tabPanel "Valor asignado") |
 | **Líneas Lógica** | 642-715 (`observeEvent algoA_run`), 1926-2098 (`compute_scores_for_selection`), 2480-2658 (compatibilidad) |

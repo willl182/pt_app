@@ -169,7 +169,7 @@ compute_homogeneity_metrics <- function(target_pollutant, target_level) {
   hom_sigma_pt <- mad_e
   hom_c_criterion <- 0.3 * hom_sigma_pt
   hom_sigma_allowed_sq <- hom_c_criterion^2
-  hom_c_criterion_expanded <- sqrt(hom_sigma_allowed_sq * 1.88 + (hom_sw^2) * 1.01)
+  hom_c_criterion_expanded <- calculate_homogeneity_criterion_expanded(hom_sigma_pt, hom_sw, g)
 
   if (hom_ss <= hom_c_criterion) {
     hom_conclusion1 <- sprintf("ss (%.4f) <= c_criterion (%.4f): CUMPLE CRITERIO HOMOGENEIDAD", hom_ss, hom_c_criterion)
@@ -319,7 +319,7 @@ compute_stability_metrics <- function(target_pollutant, target_level, hom_result
   stab_sigma_pt <- mad_e
   stab_c_criterion <- 0.3 * hom_results$sigma_pt
   stab_sigma_allowed_sq <- stab_c_criterion^2
-  stab_c_criterion_expanded <- sqrt(stab_sigma_allowed_sq * 1.88 + (stab_sw^2) * 1.01)
+  stab_c_criterion_expanded <- calculate_homogeneity_criterion_expanded(stab_sigma_pt, stab_sw, g)
 
   if (diff_hom_stab <= stab_c_criterion) {
     stab_conclusion1 <- sprintf("ss (%.4f) <= c_criterion (%.4f): CUMPLE CRITERIO ESTABILIDAD", diff_hom_stab, stab_c_criterion)

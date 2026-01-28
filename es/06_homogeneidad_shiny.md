@@ -225,7 +225,7 @@ Se utiliza `reactiveVal(NULL)` para almacenar los resultados. Si el usuario camb
 
 ```mermaid
 flowchart LR
-    SHINY["cloned_app.R<br>compute_homogeneity_metrics()"] --> PTCALC["ptcalc package"]
+    SHINY["app.R<br>compute_homogeneity_metrics()"] --> PTCALC["ptcalc package"]
     PTCALC --> EVAL["Evaluar Criterios"]
     EVAL --> OUTPUT["Salidas UI"]
 

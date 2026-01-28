@@ -187,7 +187,18 @@ cat(rep("-", 50), "\n", sep = "")
 hom_sigma_pt <- mad_e
 hom_c_criterion <- 0.3 * hom_sigma_pt
 hom_sigma_allowed_sq <- hom_c_criterion^2
-hom_c_criterion_expanded <- sqrt(hom_sigma_allowed_sq * 1.88 + (hom_sw^2) * 1.01)
+
+# F1/F2 lookup table indexed by g (7 to 20)
+f_table <- data.frame(
+  g = 7:20,
+  f1 = c(2.10, 2.01, 1.94, 1.88, 1.83, 1.79, 1.75, 1.72, 1.69, 1.67, 1.64, 1.62, 1.60, 1.59),
+  f2 = c(1.43, 1.25, 1.11, 1.01, 0.93, 0.86, 0.80, 0.75, 0.71, 0.68, 0.64, 0.62, 0.59, 0.57)
+)
+g_clamped <- max(7, min(20, g))
+idx <- which(f_table$g == g_clamped)
+f1 <- f_table$f1[idx]
+f2 <- f_table$f2[idx]
+hom_c_criterion_expanded <- f1 * (0.3 * hom_sigma_pt)^2 + f2 * hom_sw^2
 
 cat(sprintf("\nCriterio básico: s_s ≤ 0.3 × σ_pt\n"))
 cat(sprintf("  c = 0.3 × %.6f = %.6f\n", hom_sigma_pt, hom_c_criterion))
@@ -196,11 +207,11 @@ cat(sprintf("  Evaluación: %.6f %s %.6f → %s\n",
             hom_ss, ifelse(hom_ss <= hom_c_criterion, "≤", ">"), hom_c_criterion,
             ifelse(hom_ss <= hom_c_criterion, "CUMPLE", "NO CUMPLE")))
 
-cat(sprintf("\nCriterio expandido: s_s ≤ √(1.88×c² + 1.01×s_w²)\n"))
-cat(sprintf("  c_expandido = √(1.88 × %.8f + 1.01 × %.8f)\n", 
-            hom_sigma_allowed_sq, hom_sw^2))
-cat(sprintf("  c_expandido = √(%.8f + %.8f) = %.6f\n", 
-            1.88 * hom_sigma_allowed_sq, 1.01 * hom_sw^2, hom_c_criterion_expanded))
+cat(sprintf("\nCriterio expandido: c_exp = F1×(0.3×σ_pt)² + F2×s_w² (g=%d, F1=%.2f, F2=%.2f)\n", g, f1, f2))
+cat(sprintf("  c_expandido = %.2f × %.8f + %.2f × %.8f\n", 
+            f1, hom_sigma_allowed_sq, f2, hom_sw^2))
+cat(sprintf("  c_expandido = %.8f + %.8f = %.6f\n", 
+            f1 * hom_sigma_allowed_sq, f2 * hom_sw^2, hom_c_criterion_expanded))
 cat(sprintf("  Evaluación: %.6f %s %.6f → %s\n", 
             hom_ss, ifelse(hom_ss <= hom_c_criterion_expanded, "≤", ">"), 
             hom_c_criterion_expanded,

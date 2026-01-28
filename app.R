@@ -33,7 +33,7 @@ library(bslib)
 # Para producción: cargar desde los archivos en ptcalc/R
 # -------------------------------------------------------------------
 if (interactive()) {
-  source("dev/load_ptcalc.R")
+  devtools::load_all("ptcalc", quiet = TRUE)
 } else {
   source("ptcalc/R/pt_robust_stats.R")
   source("ptcalc/R/pt_scores.R")
@@ -389,7 +389,7 @@ server <- function(input, output, session) {
     hom_sigma_pt <- hom_stats$sigma_pt
     hom_u_sigma_pt <- hom_stats$u_sigma_pt
     hom_c_criterion <- if (length(hom_stats$MADe) > 0) calculate_homogeneity_criterion(hom_stats$MADe) else numeric(0)
-    hom_c_criterion_expanded <- if (length(hom_stats$MADe) > 0) calculate_homogeneity_criterion_expanded(hom_stats$MADe, hom_u_sigma_pt) else numeric(0)
+    hom_c_criterion_expanded <- if (length(hom_stats$MADe) > 0) calculate_homogeneity_criterion_expanded(hom_stats$MADe, hom_sw, g) else numeric(0)
 
     # Calculate u_sigma_pt for nIQR
     if (is.finite(n_iqr)) {
@@ -406,7 +406,7 @@ server <- function(input, output, session) {
     }
     hom_c_criterion_niqr <- if (length(n_iqr_for_criterion) > 0) calculate_homogeneity_criterion(n_iqr_for_criterion) else numeric(0)
     hom_c_criterion_expanded_niqr <- if (length(n_iqr_for_criterion) > 0) {
-      calculate_homogeneity_criterion_expanded(n_iqr_for_criterion, hom_u_sigma_pt_niqr)
+      calculate_homogeneity_criterion_expanded(n_iqr_for_criterion, hom_sw, g)
     } else {
       numeric(0)
     }

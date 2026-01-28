@@ -145,17 +145,36 @@ calculate_homogeneity_criterion <- function(sigma_pt) {
 
 #' Calculate expanded homogeneity criterion
 #'
-#' c_expanded = c_criterion + u_sigma_pt
+#' c_exp = F1 * (0.3 * sigma_pt)^2 + F2 * sw^2
+#'
+#' Where F1 and F2 are coefficients that depend on the number of samples (g).
+#' Values are clamped to the range 7-20.
 #'
 #' Reference: ISO 13528:2022, Section 9.2.4
 #'
-#' @param sigma_pt Standard deviation for proficiency assessment (from MADe)
-#' @param u_sigma_pt Uncertainty of sigma_pt
+#' @param sigma_pt Standard deviation for proficiency assessment (from MADe or nIQR)
+#' @param sw Within-sample standard deviation from ANOVA
+#' @param g Number of samples (items)
 #' @return The expanded criterion value
 #' @export
-calculate_homogeneity_criterion_expanded <- function(sigma_pt, u_sigma_pt) {
-  c_criterion <- 0.3 * sigma_pt
-  c_criterion + u_sigma_pt
+calculate_homogeneity_criterion_expanded <- function(sigma_pt, sw, g) {
+  # F1/F2 lookup table indexed by g (7 to 20)
+  f_table <- data.frame(
+    g = 7:20,
+    f1 = c(2.10, 2.01, 1.94, 1.88, 1.83, 1.79, 1.75, 1.72, 1.69, 1.67, 1.64, 1.62, 1.60, 1.59),
+    f2 = c(1.43, 1.25, 1.11, 1.01, 0.93, 0.86, 0.80, 0.75, 0.71, 0.68, 0.64, 0.62, 0.59, 0.57)
+  )
+  
+  # Clamp g to valid range
+  g_clamped <- max(7, min(20, g))
+  
+  # Lookup F1, F2
+  idx <- which(f_table$g == g_clamped)
+  f1 <- f_table$f1[idx]
+  f2 <- f_table$f2[idx]
+  
+  # c_exp = F1*(0.3*sigma_pt)^2 + F2*(sw)^2
+  f1 * (0.3 * sigma_pt)^2 + f2 * sw^2
 }
 
 #' Evaluate homogeneity against criterion

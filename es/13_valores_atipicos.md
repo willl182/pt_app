@@ -6,9 +6,9 @@ Este módulo implementa la detección de valores anómalos mediante la **Prueba 
 
 | Propiedad | Valor |
 |-----------|-------|
-| **Archivo** | `cloned_app.R` |
-| **Ubicación UI** | `tabPanel("Valores Atípicos")` (Líneas 858-876) |
-| **Lógica Server** | Reactive `grubbs_summary()` (Líneas 3801-3938) |
+| **Archivo** | `app.R` |
+| **Ubicación UI** | `tabPanel("Valores Atípicos")` (Líneas 1111-1130) |
+| **Lógica Server** | Reactive `grubbs_summary()` (Líneas 4191-4230) |
 | **Librería R** | `outliers` |
 | **Norma de Referencia** | ISO 13528:2022 Sección 7.3 |
 | **Dependencias** | `pt_prep_data()` |

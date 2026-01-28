@@ -84,8 +84,6 @@ graph LR
         D --> M[calculate_z_prime_score]
         L --> N[evaluate_z_score]
         O[calculate_en_score] --> P[evaluate_en_score]
-        L --> Q[classify_with_en]
-        O --> Q
     end
 ```
 
@@ -128,16 +126,6 @@ graph LR
 | `evaluate_z_score_vec` | `z` (vector) | Vector de clasificaciones | 13528:2022 §10.6 |
 | `evaluate_en_score` | `en` | Clasificación (Satisfactorio, No sat.) | 13528:2022 §10.6 |
 | `evaluate_en_score_vec` | `en` (vector) | Vector de clasificaciones | 13528:2022 §10.6 |
-| `classify_with_en` | `score`, `en`, `U_xi`, `sigma_pt`, ... | Lista: `code` (a1-a7), `label` | 13528:2022 §10.7 |
-
----
-
-## Constantes Exportadas
-
-| Constante | Tipo | Descripción |
-|-----------|------|-------------|
-| `PT_EN_CLASS_LABELS` | Named Vector | Etiquetas para la clasificación combinada z/En (a1 a a7). |
-| `PT_EN_CLASS_COLORS` | Named Vector | Códigos de colores hexadecimales para visualizaciones de clasificación. |
 
 ---
 

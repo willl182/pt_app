@@ -78,7 +78,7 @@ params:
 
 ### 6.2 Sección en el Informe
 
-Ubicación: report_template.Rmd, líneas 312-352
+Ubicación: report_template.Rmd, líneas 312-361
 
 Título: "2.4. Compatibilidad Metrológica"
 

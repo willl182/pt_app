@@ -1,106 +1,161 @@
 # PT Data Analysis Application
 
-This Shiny application provides a comprehensive toolkit for analyzing data from proficiency testing (PT) schemes. It implements the statistical methods described in ISO 13528:2022 for assessing the homogeneity and stability of PT items and for calculating participant performance scores.
+**Version 0.4.0 | January 2026**
 
-## User Guide
+This Shiny application provides a comprehensive toolkit for analyzing data from proficiency testing (PT) schemes. It implements statistical methods described in ISO 13528:2022 and ISO 17043:2024 for assessing homogeneity and stability of PT items and for calculating participant performance scores.
 
-For a step-by-step installation walkthrough and a deeper explanation of how the app and report template calculate homogeneity, stability, and participant scores, see `DOCUMENTACION_CALCULOS.md` and `TECHNICAL_DOCUMENTATION.md`.
+## 📖 Documentation
 
-### Getting Started
+**Spanish Documentation:** For complete documentation in Spanish, see [/es/README.md](es/README.md)
 
-To run the application, you need to have R and the required packages installed.
+The `/es/` directory contains comprehensive user guides, API references, and technical documentation for version 0.4.0.
 
-1.  **Install R:** Download and install R from the [Comprehensive R Archive Network (CRAN)](https://cran.r-project.org/).
-2.  **Install Packages:** Open an R console and run the following command to install the necessary packages:
+---
+
+## Getting Started
+
+### Prerequisites
+
+To run the application, you need to have R and required packages installed.
+
+1. **Install R:** Download and install R from [Comprehensive R Archive Network (CRAN)](https://cran.r-project.org/).
+
+2. **Install Packages:** Open an R console and run the following command to install necessary packages:
     ```r
     install.packages(c("shiny", "tidyverse", "vroom", "DT", "rhandsontable", "shinythemes", "outliers", "patchwork", "bsplus", "plotly", "rmarkdown", "bslib"))
     ```
-3.  **Run the Application:** Open a terminal or command prompt, navigate to the directory containing the application files, and run the following command:
+
+3. **Run the Application:** Open a terminal or command prompt, navigate to the directory containing the application files, and run the following command:
     ```bash
     Rscript app.R
     ```
-    The application will start and can be accessed in your web browser, typically at `http://127.0.0.1:XXXX` (the port `XXXX` will be displayed in the console).
 
-### Application Modules
+The application will start and can be accessed in your web browser, typically at `http://127.0.0.1:XXXX` (the port `XXXX` will be displayed in the console).
 
-#### 1. Carga de datos
+---
+
+## Application Modules
+
+### 1. Carga de datos (Data Loading)
 
 This module handles the initial loading of CSV files for analysis.
 
-*   **Inputs:** `homogeneity.csv`, `stability.csv`, and `summary_n*.csv` files.
+**Inputs:**
+- `homogeneity.csv` - Homogeneity test data
+- `stability.csv` - Stability test data
+- `summary_n*.csv` - Participant summary data (one file per PT scheme)
 
-#### 2. Homogeneity & Stability Analysis
+### 2. Homogeneity & Stability Analysis
 
-This module is used to assess whether the proficiency test items are sufficiently homogeneous and stable for the PT scheme.
+This module assesses whether proficiency test items are sufficiently homogeneous and stable for the PT scheme.
 
-*   **Inputs:**
-    *   **Select Pollutant:** Choose the pollutant to analyze (`co`, `no`, `no2`, `o3`, `so2`).
-    *   **Select PT Level:** Choose the concentration level to analyze.
-*   **Outputs:** Data preview, ANOVA summary, homogeneity and stability assessments.
+**Inputs:**
+- **Select Pollutant:** Choose pollutant to analyze (`co`, `no`, `no2`, `o3`, `so2`)
+- **Select PT Level:** Choose concentration level to analyze
 
-#### 3. PT Preparation
+**Outputs:**
+- Data preview
+- ANOVA summary
+- Homogeneity and stability assessments
+
+### 3. PT Preparation
 
 Analyzes participant results from different rounds.
 
-*   **Functionality:** Dynamically creates tabs for each pollutant.
-*   **Outputs:** Bar charts, distributions, and Grubbs' test for outliers.
+**Functionality:**
+- Dynamically creates tabs for each pollutant
+- Displays bar charts and distributions
+- Performs Grubbs' test for outliers
 
-#### 4. Valor Asignado / PT Scores
+### 4. Valor Asignado / PT Scores
 
 Calculates reference values and participant performance scores.
 
-*   **Functionality:**
-    *   **Value Assignment:** Supports Algorithm A, Consensus (MADe/nIQR), or Reference laboratory.
-    *   **Scoring:** Calculates z, z', zeta, and En scores.
+**Functionality:**
+- **Value Assignment:** Supports Algorithm A, Consensus (MADe/nIQR), or Reference Laboratory methods
+- **Scoring:** Calculates z-scores, z'-scores, zeta-scores, and En-scores
+- **Metrological Compatibility:** Evaluates measurement system compatibility (ISO 13528:2022)
 
-#### 5. Informe Global & Generación de Informes
+### 5. Informe Global & Generación de Informes
 
-*   **Informe Global:** Heatmap visualization of results across all levels and pollutants.
-*   **Generación de informes:** Interface to configure and download the RMarkdown final report.
+**Informe Global:**
+- Heatmap visualization of results across all levels and pollutants
+- Cross-pollutant analysis
+- Cross-scheme comparison
+
+**Generación de informes:**
+- Interface to configure and download final RMarkdown reports
+- Customizable report sections including homogeneity, stability, PT scores, and metrological compatibility
+
+---
+
+## User Interface
+
+The application features a modern UI design inspired by shadcn/ui components:
+
+- **Enhanced Header:** Branded header with logo and navigation (see `www/appR.css` lines 830-902)
+- **shadcn Cards:** Modern card components for organized data presentation
+- **shadcn Alerts:** Color-coded alert boxes for important information and warnings
+- **shadcn Badges:** Compact badges for displaying status information
+- **Modern Footer:** Clean footer with institutional information (see `www/appR.css` lines 1219-1280)
+
+---
 
 ## Developer Documentation
 
 ### Technical Overview
 
-*   **Framework:** R / Shiny
-*   **Core Libraries:**
-    *   `shiny`: Web application framework.
-    *   `tidyverse`: Data manipulation and visualization.
-    *   `DT`: Interactive data tables.
-    *   `rhandsontable`: Not actively used in the current version, but loaded.
-    *   `shinythemes`: For custom application themes.
-    *   `outliers`: For the Grubbs' test.
-*   **Data Sources:**
-    *   `homogeneity.csv`: Data for homogeneity analysis.
-    *   `stability.csv`: Data for stability analysis.
-    *   `summary_n*.csv`: Summary data from different PT schemes.
+**Framework:** R / Shiny (v0.4.0)
 
-### `app.R` Deep Dive
+**Core Libraries:**
+- `shiny` - Web application framework
+- `tidyverse` - Data manipulation and visualization
+- `vroom` - Fast CSV file reading
+- `DT` - Interactive data tables
+- `rhandsontable` - Editable tables (loaded but not actively used)
+- `shinythemes` / `bslib` - Custom application themes
+- `outliers` - Grubbs' test for outlier detection
+- `patchwork` - Plot composition
+- `plotly` - Interactive plots
+- `rmarkdown` - Report generation
 
-The `app.R` script is divided into two main parts: the User Interface (`ui`) and the Server Logic (`server`).
+**Data Sources:**
+- `homogeneity.csv` - Homogeneity test data
+- `stability.csv` - Stability test data
+- `summary_n*.csv` - Summary data from different PT schemes
 
-#### UI (`ui`) Structure
+### Package Structure
 
-The UI is defined using `fluidPage` and is structured as follows:
+```
+pt_app/
+├── app.R                    # Main Shiny application (5,685 lines)
+├── www/
+│   └── appR.css            # Custom CSS styles (1,456 lines)
+├── ptcalc/                 # Calculation package (ISO 13528:2022)
+│   ├── R/                 # Package functions
+│   ├── DESCRIPTION         # Package metadata
+│   └── NEWS.md            # Package changelog
+├── reports/
+│   └── report_template.Rmd  # RMarkdown report template (552 lines)
+├── es/                   # Spanish documentation (25 files, ~7,678 lines)
+└── data/                  # Example data files
+```
 
-1.  **`titlePanel`**: Sets the main title of the application.
-2.  **Layout Options**: A collapsible panel (`checkboxInput` and `conditionalPanel`) allows the user to adjust the width of the navigation and analysis panels using `sliderInput`.
-3.  **`uiOutput("main_layout")`**: This is the main UI container. The entire layout is rendered dynamically in the server logic to allow for the adjustable panel widths.
-4.  **`navlistPanel`**: Inside the dynamic layout, a `navlistPanel` creates the main navigation structure with three tabs: "Homogeneity & Stability Analysis," "PT Preparation," and "PT Scores."
-5.  **Module Layouts**:
-    *   **Homogeneity & Stability**: Uses a `sidebarLayout` with a `sidebarPanel` for inputs and a `mainPanel` with a `tabsetPanel` for displaying the results.
-    *   **PT Preparation**: Uses a `uiOutput("pt_pollutant_tabs")` to dynamically generate a `tabsetPanel` with a tab for each pollutant.
-    *   **PT Scores**: Uses a `sidebarLayout` with a `sidebarPanel` for inputs and a `mainPanel` with a `tabsetPanel` for the scores table and plots.
+### Development Setup
 
-#### Server (`server`) Logic
+For development, load the `ptcalc` package using:
+
+```r
+devtools::load_all("ptcalc")
+```
+
+To test changes, restart the Shiny application.
 
 ### Running Syntax Checks Without a System R Installation
 
-Some execution environments (including this automated assessment sandbox) do not provide a native `Rscript` binary. For these
-cases the repository ships with a lightweight replacement located at the project root. It performs structural validation of R
-files—verifying bracket balance and string termination—so that automated checks can still run.
+Some execution environments (including this automated assessment sandbox) do not provide a native `Rscript` binary. For these cases, the repository ships with a lightweight replacement located at the project root. It performs structural validation of R files—verifying bracket balance and string termination—so that automated checks can still run.
 
-To invoke the stub, execute:
+To invoke the stub:
 
 ```bash
 ./Rscript -e "source('app.R')"
@@ -113,28 +168,101 @@ export PATH="$PWD:$PATH"
 Rscript -e "source('app.R')"
 ```
 
-> **Note:** the stub does **not** evaluate R code. It only performs basic structural validation, so you should still run the app with a real R installation before deploying changes.
+> **Note:** The stub does **not** evaluate R code. It only performs basic structural validation, so you should still run the app with a real R installation before deploying changes.
+
+---
 
 ## File Structure
-The server function contains the logic for data processing, analysis, and rendering outputs.
 
-1.  **Data Loading**:
-    *   `hom_data_full` and `stab_data_full` are read from `homogeneity.csv` and `stability.csv` at the start of the session.
-    *   `pt_prep_data` is a `reactive` expression that reads all `summary_n*.csv` files, combines them into a single data frame, and adds a column `n_lab` to identify the scheme.
+The `app.R` script is divided into two main parts: User Interface (`ui`) and Server Logic (`server`).
 
-2.  **Dynamic UI Rendering**:
-    *   `output$main_layout`: Renders the main `navlistPanel` based on the user's layout selections.
-    *   The selectors for pollutants, levels, and schemes within each module are rendered dynamically using `renderUI` and `uiOutput`. This ensures that the choices are always based on the currently available data.
+### UI (`ui`) Structure
 
-3.  **Reactive Expressions for Analysis**:
-    *   **`homogeneity_run`**: An `eventReactive` expression that triggers when the "Run Analysis" button is clicked. It performs the homogeneity calculations on the data from `homogeneity.csv` for the selected pollutant and level. It returns a list containing the results, including variance components (`ss`, `sw`), conclusions, and intermediate data frames.
-    *   **`homogeneity_run_stability`**: A similar `eventReactive` expression for the stability data from `stability.csv`. It also calculates the difference in means between the homogeneity and stability datasets.
-    *   **`scores_run`**: A `reactive` expression that calculates the z-scores, z'-scores, zeta-scores, and En-scores based on the selected PT scheme and parameters.
-    *   **Dynamic Module Logic (`PT Preparation`)**: An `observe` block is used to dynamically create the UI and server logic for each pollutant tab in the "PT Preparation" module. It uses `lapply` to loop through the pollutants and creates the necessary `renderUI`, `renderPlot`, `renderDataTable`, and `renderPrint` outputs for each one.
+The UI is defined using `fluidPage` and is structured as follows:
 
-4.  **Outputs (`output$*`)**:
-    *   Each `render*` function (e.g., `renderDataTable`, `renderPlot`, `renderTable`, `renderUI`) is responsible for generating a specific piece of output in the UI.
-    *   The outputs are linked to the reactive expressions. When an input changes, the reactive expressions that depend on it are re-evaluated, which in turn causes the outputs that depend on those reactives to be updated. This is the core of Shiny's reactivity model.
-    *   **Tables**: `renderDataTable` is used for interactive tables (e.g., `scores_table`), while `renderTable` is used for static tables (e.g., `variance_components`).
-    *   **Plots**: `renderPlot` is used to generate all the plots using `ggplot2`.
-    *   **Text**: `renderPrint` and `renderUI` are used to display text outputs, such as conclusions and summaries. `renderUI` is used when the output needs to include HTML for styling (e.g., colored alert boxes for conclusions).
+1. **`titlePanel`** - Sets the main title of the application
+2. **Layout Options** - Collapsible panel allows users to adjust panel widths using a slider
+3. **`uiOutput("main_layout")`** - Main UI container rendered dynamically
+4. **`navlistPanel`** - Navigation structure with tabs for different modules
+5. **Module Layouts**:
+   - **Homogeneity & Stability**: Sidebar layout with input controls and tabsetPanel for results
+   - **PT Preparation**: Dynamic tabs created per pollutant
+   - **PT Scores**: Sidebar layout for value assignment and score calculation
+
+### Server (`server`) Logic
+
+1. **Data Loading:**
+   - `hom_data_full` and `stab_data_full` are read from `homogeneity.csv` and `stability.csv`
+   - `pt_prep_data` reads all `summary_n*.csv` files and combines them with `n_lab` column
+
+2. **Dynamic UI Rendering:**
+   - `output$main_layout`: Renders main `navlistPanel` based on user's layout selections
+   - Dynamic selectors for pollutants, levels, and schemes use `renderUI` and `uiOutput`
+
+3. **Reactive Expressions for Analysis:**
+   - **`homogeneity_run`**: EventReactive triggered on "Run Analysis" button click
+   - **`homogeneity_run_stability`**: EventReactive for stability analysis
+   - **`scores_run`**: Reactive for z, z', zeta, and En score calculations
+   - **Cache System**: Trigger-based caching for performance optimization
+
+4. **Outputs (`output$*`)**:
+   - **Tables**: `renderDataTable` for interactive tables, `renderTable` for static tables
+   - **Plots**: `renderPlot` with `ggplot2` for all visualizations
+   - **Text**: `renderPrint` and `renderUI` for formatted text and HTML
+
+---
+
+## ISO Standards
+
+The application implements the following standards:
+
+- **ISO 13528:2022** - Statistical methods for use in proficiency testing
+  - Robust statistics (MADe, nIQR, Algorithm A)
+  - Homogeneity and stability assessment
+  - PT scores (z, z', zeta, En)
+  - Metrological compatibility
+
+- **ISO 17043:2024** - General requirements for proficiency testing
+
+---
+
+## Support
+
+- **Spanish Documentation:** [/es/README.md](es/README.md) - Complete user and developer guides
+- **Data Format Reference:** [/es/01a_formatos_datos.md](es/01a_formatos_datos.md) - Complete CSV schema specification
+- **API Reference:** [/es/02a_api_ptcalc.md](es/02a_api_ptcalc.md) - ptcalc package API documentation
+
+---
+
+## Changelog
+
+### v0.4.0 (January 2026)
+
+**Documentation:**
+- Complete documentation audit and update (25 files, ~7,678 lines in `/es/`)
+- Master documentation guide created
+- All obsolete references corrected
+- Language standardized (Spanish for `/es/` documentation)
+
+**Features:**
+- Metrological compatibility analysis (ISO 13528:2022)
+- Enhanced UI with shadcn-inspired components
+- Modern header and footer design
+- Improved caching system for performance
+
+**Technical:**
+- Updated to app.R: 5,685 lines
+- Updated appR.css: 1,456 lines
+- Updated report_template.Rmd: 552 lines
+
+### v0.3.0 (January 2026)
+
+- Modern UI redesign (shadcn components, header/footer)
+- Metrological compatibility feature
+- Enhanced data format (run column)
+
+---
+
+## License
+
+MIT License - Universidad Nacional de Colombia / Instituto Nacional de Metrología

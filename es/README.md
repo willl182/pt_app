@@ -181,6 +181,7 @@ La aplicación utiliza un sistema de diseño moderno con componentes inspirados 
 | Badges shadcn | Badges de estado con variantes de puntuación | Líneas 1022-1075 |
 | Componentes de carga | Cuadrícula de carga de archivos y entradas con estilo | Líneas 1076-1159 |
 | Pie de página moderno | Diseño de pie de página de tres columnas | Líneas 1217-1280 |
+| Referencia de UI y CSS | Componentes shadcn, arquitectura CSS (1,456 líneas) | |
 
 Para la documentación completa de CSS, consulte [18_ui.md](18_ui.md).
 

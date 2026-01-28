@@ -5,6 +5,6 @@ account: w421
 server: shinyapps.io
 hostUrl: https://api.shinyapps.io/v1
 appId: 16338441
-bundleId: 11495178
+bundleId: 11508130
 url: https://w421.shinyapps.io/pt_app/
 version: 1

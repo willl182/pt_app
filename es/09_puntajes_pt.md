@@ -179,20 +179,6 @@ Genera gráficos de tipo "Lollipop" o barras usando `ggplot2` y los convierte a 
 
 ---
 
-## Sistema de Clasificación (a1-a7)
-
-El módulo implementa una clasificación combinada **z + En** para proporcionar una visión integral del desempeño:
-
-| Código | Clasificación | Criterio z | Criterio En | Color Sugerido |
-|--------|---------------|------------|-------------|----------------|
-| **a1** | Totalmente satisfactorio | $|z| \le 2$ | $|En| \le 1$ | Verde Oscuro |
-| **a2** | Satisfactorio pero conservador | $|z| \le 2$ | $|En| \ll 1$ | Verde Claro |
-| **a3** | Satisfactorio con MU subestimada | $|z| \le 2$ | $|En| > 1$ | Verde Lima |
-| **a4** | Cuestionable pero aceptable | $2 < |z| < 3$ | $|En| \le 1$ | Amarillo Claro |
-| **a5** | Cuestionable e inconsistente | $2 < |z| < 3$ | $|En| > 1$ | Amarillo Oscuro |
-| **a6** | No satisfactorio pero MU cubre | $|z| \ge 3$ | $|En| \le 1$ | Rosa |
-| **a7** | No satisfactorio (crítico) | $|z| \ge 3$ | $|En| > 1$ | Rojo Oscuro |
-
 ---
 
 ## Estrategia de Cache (Actualizada)

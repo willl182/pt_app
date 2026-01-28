@@ -3,8 +3,8 @@
 ## 1. Descripción General
 El módulo de "Participantes" genera un tablero dinámico y dedicado para cada laboratorio que participa en el esquema de Ensayos de Aptitud (PT). Permite un análisis individualizado del desempeño a través de diferentes contaminantes y niveles, proporcionando tanto resúmenes tabulares como análisis de tendencias visuales.
 
-**Ubicación del archivo:** `cloned_app.R`  
-**Pestaña de la UI:** `tabPanel("Participantes")`  
+**Ubicación del archivo:** `app.R`
+**Pestaña de la UI:** `tabPanel("Participantes")`
 **Rango de implementación:** Líneas 3615-3746 (aprox.)
 
 ---

@@ -197,86 +197,26 @@ u_xpt_def_bad <- sqrt(0.016^2 + 0.115^2)  # 0.116
 
 ---
 
-## 7. Clasificación Combinada (a1-a7)
-
-La función `classify_with_en()` combina los puntajes de desempeño (z/z') con $E_n$ para una evaluación más exhaustiva del desempeño del laboratorio.
-
-### 7.1 Tabla de Clasificación
-| Código | Etiqueta | Puntaje z | Puntaje En | $U_x$ vs $\sigma_{pt}$ | Significado |
-| :--- | :--- | :---: | :---: | :---: | :--- |
-| **a1** | Totalmente satisfactorio | $\le 2$ | $\le 1$ | $U_x < 2\sigma_{pt}$ | Tanto el resultado como la incertidumbre son correctos. |
-| **a2** | Satisfactorio pero conservador | $\le 2$ | $\le 1$ | $U_x \ge 2\sigma_{pt}$ | Resultado correcto, pero la incertidumbre está sobreestimada. |
-| **a3** | Satisfactorio con MU subestimada | $\le 2$ | $> 1$ | - | Resultado correcto, pero la incertidumbre está subestimada. |
-| **a4** | Cuestionable pero aceptable | 2 - 3 | $\le 1$ | - | Resultado cuestionable, pero cubierto por la MU reportada. |
-| **a5** | Cuestionable e inconsistente | 2 - 3 | $> 1$ | - | Tanto el resultado como la incertidumbre son problemáticos. |
-| **a6** | No satisfactorio pero MU cubre | $\ge 3$ | $\le 1$ | - | Resultado pobre, pero cubierto por una MU muy grande. |
-| **a7** | No satisfactorio (crítico) | $\ge 3$ | $> 1$ | - | Falla crítica tanto en el resultado como en la incertidumbre. |
-
-### 7.2 Códigos Especiales
-| Código | Etiqueta | Condición |
-| :--- | :---: | :--- |
-| `mu_missing_z` | MU ausente - solo z: [desempeño] | No se proporcionó incertidumbre, se usó puntaje z. |
-| `mu_missing_zprime` | MU ausente - solo z': [desempeño] | No se proporcionó incertidumbre, se usó puntaje z'. |
-
-### 7.3 Matriz de Interpretación Visual
-```
-                    |En| <= 1             |En| > 1
-            ┌─────────────────────┬─────────────────────┐
-            │                     │                     │
-   |z| <= 2 │   a1 (o a2 si U     │        a3           │
-            │   conservadora)     │   MU subestimada    │
-            │     [VERDE OSCURO]  │   [VERDE CLARO]     │
-            ├─────────────────────┼─────────────────────┤
-            │                     │                     │
-   2<|z|<3  │        a4           │        a5           │
-            │   Cuestionable OK   │   Cuestionable mal  │
-            │    [AMARILLO]       │   [NARANJA]         │
-            ├─────────────────────┼─────────────────────┤
-            │                     │                     │
-   |z| >= 3 │        a6           │        a7           │
-            │   MU cubre el error │     CRÍTICO         │
-            │   [ROSADO]          │     [ROJO]          │
-            └─────────────────────┴─────────────────────┘
-```
-
-### 7.4 Paleta de Colores (PT_EN_CLASS_COLORS)
-| Código | Color Hex | Descripción |
-| :--- | :--- | :--- |
-| **a1** | `#2E7D32` | Verde Oscuro (Excelente) |
-| **a2** | `#66BB6A` | Verde Medio (Conservador) |
-| **a3** | `#9CCC65` | Verde Claro (MU Subestimada) |
-| **a4** | `#FFF59D` | Amarillo Claro (Cuestionable OK) |
-| **a5** | `#FBC02D` | Naranja (Cuestionable Mal) |
-| **a6** | `#EF9A9A` | Rosado (No satisfactorio Cubierto) |
-| **a7** | `#C62828` | Rojo Oscuro (Crítico) |
-| `mu_missing_z` | `#90A4AE` | Gris-Azulado (MU Faltante - z) |
-| `mu_missing_zprime` | `#78909C` | Gris Oscuro (MU Faltante - z') |
-
----
-
-## 8. Escenarios Prácticos
+## 7. Escenarios Prácticos
 
 ### Escenario 1: Buen Resultado e Incertidumbre Confiable
 - $x = 10.05, x_{pt} = 10.00, \sigma_{pt} = 0.5, U_x = 0.20$
-- $z = 0.10$ (Satisfactorio)
-- $E_n = 0.25$ (Satisfactorio)
-- **Clasificación:** **a1** (Totalmente satisfactorio)
+- $z = 0.10$ → **Satisfactorio**
+- $E_n = 0.25$ → **Satisfactorio**
 
 ### Escenario 2: Incertidumbre Subestimada
 - $x = 10.80, x_{pt} = 10.00, \sigma_{pt} = 0.5, U_x = 0.10$
-- $z = 1.60$ (Satisfactorio)
-- $E_n = 7.69$ (No satisfactorio)
-- **Clasificación:** **a3** (Resultado satisfactorio, pero MU demasiado pequeña)
+- $z = 1.60$ → **Satisfactorio**
+- $E_n = 7.69$ → **No satisfactorio** (la MU reportada es demasiado pequeña)
 
 ### Escenario 3: Resultado Pobre cubierto por Gran Incertidumbre
 - $x = 12.00, x_{pt} = 10.00, \sigma_{pt} = 0.5, U_x = 2.50$
-- $z = 4.00$ (No satisfactorio)
-- $E_n = 0.80$ (Satisfactorio)
-- **Clasificación:** **a6** (No satisfactorio, pero la MU cubre el error)
+- $z = 4.00$ → **No satisfactorio**
+- $E_n = 0.80$ → **Satisfactorio** (la MU cubre el error)
 
 ---
 
-## 9. Flujo de Trabajo en el Aplicativo
+## 8. Flujo de Trabajo en el Aplicativo
 
 ```mermaid
 flowchart TD
@@ -299,24 +239,19 @@ flowchart TD
         G --> J[evaluate_z_score]
         H --> K[evaluate_en_score]
     end
-    
-    subgraph Clasificacion
-        I & K --> L[classify_with_en]
-        L --> M[Código a1-a7]
-    end
 ```
 
 ---
 
-## 10. Consideraciones Estadísticas
+## 9. Consideraciones Estadísticas
 
-### 10.1 Distribución de los puntajes z
+### 9.1 Distribución de los puntajes z
 En una población de laboratorios competentes, los puntajes z deberían:
 - Seguir aproximadamente una distribución normal estándar $N(0,1)$.
 - ~95% de los resultados deberían caer dentro de $\pm 2$.
 - ~99.7% de los resultados deberían caer dentro de $\pm 3$.
 
-### 10.2 Análisis de Patrones
+### 9.2 Análisis de Patrones
 | Patrón Observado | Causa Posible |
 | :--- | :--- |
 | Media $z \neq 0$ | Sesgo sistemático en $x_{pt}$ o en el grupo de participantes. |
@@ -326,14 +261,14 @@ En una población de laboratorios competentes, los puntajes z deberían:
 
 ---
 
-## 11. Referencias
+## 10. Referencias
 - **ISO 13528:2022** Métodos estadísticos para uso en ensayos de aptitud por comparación interlaboratorio.
 - **ILAC-G13:08/2007** Directrices para los requisitos de competencia de los proveedores de esquemas de ensayos de aptitud.
 - **Guía EURACHEM (2000)** Cuantificación de la incertidumbre en las mediciones analíticas.
 
 ---
 
-## 12. Documentos Relacionados
+## 11. Documentos Relacionados
 - [03_estadisticas_robustas_pt.md](03_estadisticas_robustas_pt.md) - Media y DE robustas para valores asignados.
 - [04_homogeneidad_pt.md](04_homogeneidad_pt.md) - Contribuciones de homogeneidad y estabilidad a $u_{xpt}$.
 - [09_puntajes_pt.md](09_puntajes_pt.md) - Interfaz de usuario para los puntajes de desempeño.

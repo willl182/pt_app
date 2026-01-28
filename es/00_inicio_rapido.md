@@ -74,16 +74,16 @@ devtools::install("ptcalc")
 
 ```r
 setwd("/ruta/a/pt_app")
-shiny::runApp("cloned_app.R")
+shiny::runApp("app.R")
 ```
 
 ### Método B: Línea de Comandos
 ```bash
 # Opción 1: Usando Rscript
-Rscript cloned_app.R
+Rscript app.R
 
 # Opción 2: Usando la ejecución de R
-R -e "shiny::runApp('cloned_app.R')"
+R -e "shiny::runApp('app.R')"
 ```
 *Nota: La aplicación será accesible típicamente en su navegador en `http://127.0.0.1:3838` o en el puerto que se muestre en la consola.*
 
@@ -194,7 +194,7 @@ Asegúrese de que sus archivos CSV contengan todas las columnas requeridas con l
   missing <- setdiff(required_packages, rownames(installed.packages()))
   if (length(missing) > 0) install.packages(missing)
   ```
-- **Verifique el Directorio:** Asegúrese de estar en la raíz del proyecto donde se encuentra `cloned_app.R`.
+- **Verifique el Directorio:** Asegúrese de estar en la raíz del proyecto donde se encuentra `app.R`.
 
 ### Paquete ptcalc no Encontrado
 Ejecute `devtools::load_all("ptcalc")` desde la raíz del proyecto antes de ejecutar la aplicación.

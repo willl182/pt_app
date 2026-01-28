@@ -109,17 +109,6 @@ Este glosario proporciona definiciones y traducciones (español/inglés) para lo
 | Cuestionable | Questionable | $2 < |z| < 3$ | El desempeño proporciona una señal de advertencia. |
 | No satisfactorio | Unsatisfactory | $|z| \geq 3$ o $|E_n| > 1$ | El desempeño se considera inaceptable (se requiere acción). |
 
-### Clasificación Combinada (a1-a7)
-| Código | Español | Inglés | Descripción |
-|------|---------|---------|-------------|
-| a1 | Totalmente satisfactorio | Fully satisfactory | Tanto z como En son satisfactorios. |
-| a2 | Satisfactorio pero conservador | Satisfactory but conservative | z es satisfactorio, pero En es muy pequeño (la MU puede estar sobreestimada). |
-| a3 | Satisfactorio con MU subestimada | Satisfactory with underestimated MU | z es satisfactorio, pero En no es satisfactorio (la MU es probablemente demasiado pequeña). |
-| a4 | Cuestionable pero aceptable | Questionable but acceptable | z es cuestionable, pero En es satisfactorio. |
-| a5 | Cuestionable e inconsistente | Questionable and inconsistent | Tanto z como En muestran problemas (advertencia). |
-| a6 | No satisfactorio pero MU cubre | Unsatisfactory but MU covers | z no es satisfactorio, pero En es satisfactorio debido a una MU grande. |
-| a7 | No satisfactorio (crítico) | Unsatisfactory (critical) | Tanto z como En no son satisfactorios. |
-
 ---
 
 ## 8. Términos Estadísticos

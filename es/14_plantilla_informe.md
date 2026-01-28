@@ -30,7 +30,7 @@ El archivo `report_template.Rmd` es una plantilla de RMarkdown para la generaci�
 ```
 pt_app/
 └── reports/
-    └── report_template.Rmd    # Plantilla de informe principal (558 líneas)
+    └── report_template.Rmd    # Plantilla de informe principal (552 líneas)
 ```
 
 ---

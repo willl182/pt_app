@@ -8,10 +8,10 @@ Este módulo implementa las directrices de la norma **ISO 13528:2022 Sección 10
 
 | Propiedad | Valor |
 |-----------|-------|
-| **Archivo** | `cloned_app.R` |
+| **Archivo** | `app.R` |
 | **Pestaña UI** | `tabPanel("Informe global")` |
-| **Ubicación UI** | Líneas 984-1084 |
-| **Lógica del Servidor** | Líneas 2138-2478 |
+| **Ubicación UI** | Líneas 1241-1295 |
+| **Lógica del Servidor** | Líneas 2734-3245 |
 | **Dependencias** | `scores_trigger()`, `scores_results_cache()` |
 
 ---

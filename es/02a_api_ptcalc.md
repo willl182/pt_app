@@ -250,7 +250,7 @@ $$c_{expandido} = \sqrt{(0.3 \times \sigma_{pt})^2 \times 1.88 + s_w^2 \times 1.
 
 Determina si los resultados del estudio de homogeneidad cumplen con los criterios establecidos.
 
-**Archivo:** `R/pt_homogeneity.R` (lineas 139-165)
+**Archivo:** `R/pt_homogeneity.R` (lineas 142-165)
 
 #### Firma
 ```r
@@ -438,61 +438,7 @@ Clasifica el puntaje En segun el criterio unitario.
 
 ---
 
-## 7. Clasificacion Combinada
-
-### classify_with_en
-
-Realiza una clasificacion profunda (categorias a1 a a7) integrando el desempeño (z/z') y la consistencia de la incertidumbre informada (En).
-
-**Archivo:** `R/pt_scores.R` (lineas 229-274)  
-**Referencia:** ISO 13528:2022, Seccion 10.7
-
-#### Diagrama de Logica
-```mermaid
-graph TD
-    A{MU ausente?} -->|Si| B[mu_missing]
-    A -->|No| C{abs z <= 2?}
-    C -->|Si| D{abs En < 1?}
-    D -->|Si| E{U_xi >= 2*sigma_pt?}
-    E -->|Si| F[a2: Conservador]
-    E -->|No| G[a1: Totalmente satisfactorio]
-    D -->|No| H[a3: MU subestimada]
-    C -->|No| I{abs z < 3?}
-    I -->|Si| J{abs En < 1?}
-    J -->|Si| K[a4: Cuestionable aceptable]
-    J -->|No| L[a5: Cuestionable inconsistente]
-    I -->|No| M{abs En < 1?}
-    M -->|Si| N[a6: No satisf. cubierto]
-    M -->|No| O[a7: Critico]
-```
-
-#### Tabla de Categorias
-| Codigo | Descripcion Completa |
-|--------|----------------------|
-| **a1** | Totalmente satisfactorio |
-| **a2** | Satisfactorio pero conservador (U informada muy grande) |
-| **a3** | Satisfactorio con MU subestimada (En > 1 pero z bueno) |
-| **a4** | Cuestionable pero aceptable (la MU cubre el error) |
-| **a5** | Cuestionable e inconsistente |
-| **a6** | No satisfactorio pero la MU cubre la desviacion |
-| **a7** | No satisfactorio (critico - fuera de z y fuera de En) |
-
----
-
-## 8. Constantes
-
-### PT_EN_CLASS_LABELS
-Vector nombrado con las descripciones textuales para las categorias a1-a7.
-
-### PT_EN_CLASS_COLORS
-Paleta de colores oficial para la representacion visual de las categorias en graficos y heatmaps.
-- **a1**: `#2E7D32` (Verde)
-- **a4**: `#FFF59D` (Amarillo)
-- **a7**: `#C62828` (Rojo)
-
----
-
-## 9. Ejemplo de Flujo Completo
+## 7. Ejemplo de Flujo Completo
 
 A continuacion se muestra como integrar las funciones del API en un flujo de trabajo real:
 
@@ -518,9 +464,9 @@ u_i <- 0.2
 z_i <- calculate_z_score(x_i, x_pt, s_pt)
 en_i <- calculate_en_score(x_i, x_pt, 2*u_i, 0.1) # U_xpt asumida 0.1
 
-# 4. Clasificacion combinada
-final_class <- classify_with_en(z_i, en_i, 2*u_i, s_pt, FALSE, "z")
-cat("Resultado final:", final_class$label)
+# 4. Evaluar desempeño
+cat("z-score:", z_i, "->", evaluate_z_score(z_i), "\n")
+cat("En-score:", en_i, "->", evaluate_en_score(en_i), "\n")
 ```
 
 ---

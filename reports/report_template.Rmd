@@ -161,14 +161,17 @@ compute_homogeneity <- function(data_full, pol, lev) {
   sample1 <- wide$sample_1
   sigma_pt <- calculate_mad_e(sample1)
   c_crit <- calculate_homogeneity_criterion(sigma_pt)
+  c_crit_expanded <- calculate_homogeneity_criterion_expanded(sigma_pt, stats$sw, g)
   
   list(
     ss = stats$ss, 
     sw = stats$sw, 
     sigma_pt = sigma_pt, 
     c_crit = c_crit, 
+    c_crit_expanded = c_crit_expanded,
     mean = stats$grand_mean, 
-    passed = stats$ss <= c_crit
+    passed = stats$ss <= c_crit,
+    passed_expanded = stats$ss <= c_crit_expanded
   )
 }
 ```

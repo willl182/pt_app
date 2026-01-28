@@ -252,7 +252,7 @@ La aplicación utiliza componentes inspirados en shadcn para los elementos moder
 
 #### Encabezado (Enhanced Header)
 
-Ubicación: `www/appR.css` líneas 828-902
+Ubicación: `www/appR.css` líneas 830-902
 
 **Elementos Clave:**
 - Contenedor del logo con la marca UNAL (alineado a la izquierda)
@@ -276,7 +276,7 @@ Ubicación: `www/appR.css` líneas 828-902
 
 #### Pie de Página (Modern Footer)
 
-Ubicación: `www/appR.css` líneas 1217-1280
+Ubicación: `www/appR.css` líneas 1219-1280
 
 **Elementos Clave:**
 - Diseño de tres columnas
@@ -438,9 +438,9 @@ calculate_q_score <- function(x, x_pt, sigma) {
 }
 ```
 
-2. **Integre en `cloned_app.R`**:
-- Actualice `selectInput("score_method", ...)` en la UI.
-- Actualice la lógica de computación del puntaje en el servidor (ej., bloques `switch` o `if`).
+ 2. **Integre en `app.R`**:
+   - Actualice `selectInput("score_method", ...)` en la UI.
+   - Actualice la lógica de computación del puntaje en el servidor (ej., bloques `switch` o `if`).
 
 ### Flujo de Trabajo de Desarrollo
 ```r
@@ -448,22 +448,6 @@ devtools::document("ptcalc") # Reconstruir documentos
 devtools::load_all("ptcalc") # Recarga rápida para pruebas
 devtools::test("ptcalc")     # Ejecutar pruebas unitarias
 devtools::install("ptcalc")  # Instalar para uso de la aplicación
-```
-
----
-
-## Personalización de los Colores de Clasificación de Puntajes
-
-Las visualizaciones de puntajes (como los mapas de calor) utilizan paletas de colores predefinidas.
-
-### Modificación de los Colores (ej., Puntaje En)
-Edite `PT_EN_CLASS_COLORS` en `ptcalc/R/pt_scores.R`:
-```r
-PT_EN_CLASS_COLORS <- c(
-  "a1" = "#2E7D32",  # Verde - Excelente
-  "a4" = "#FFEB3B",  # Amarillo - Aceptable
-  "a7" = "#B71C1C"   # Rojo - Pobre
-)
 ```
 
 ---

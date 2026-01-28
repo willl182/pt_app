@@ -12,7 +12,7 @@ Este módulo gestiona la carga y validación de los archivos CSV de entrada. Es 
 |----------|-------|
 | **Archivo** | `app.R` |
 | **Líneas (Server)** | 79 - 156 |
-| **Pestaña UI** | `tabPanel("Carga de datos")` (Líneas 762-806) |
+| **Pestaña UI** | `tabPanel("Carga de datos")` (Líneas 932-1010) |
 | **Dependencias** | `vroom`, `stringr`, `dplyr`, `shiny` |
 
 ---
