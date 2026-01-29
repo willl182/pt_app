@@ -293,10 +293,11 @@ La función del servidor contiene la lógica para el procesamiento de datos:
 ## Historial de Versiones
 
 | Versión | Fecha | Cambios |
-|---------|------|---------|\
-| 0.1.0 | 2024 | Versión inicial refactorizada con separación del paquete ptcalc |
-| 0.2.0 | 2025 | Actualización de documentación (Fase 1) |
+|---------|------|---------|
+| 0.4.0 | 2026-01-28 | Auditoría completa de documentación (25 archivos, ~7,313 líneas), documento maestro consolidado, corrección de referencias obsoletas, estandarización de idioma |
 | 0.3.0 | 2026-01 | Rediseño moderno de la UI (componentes shadcn, encabezado/pie de página), función de compatibilidad metrológica, formato de datos mejorado (columna run) |
+| 0.2.0 | 2025 | Actualización de documentación (Fase 1) |
+| 0.1.0 | 2024 | Versión inicial refactorizada con separación del paquete ptcalc |
 
 ---
 

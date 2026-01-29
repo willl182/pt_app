@@ -78,7 +78,7 @@ for (analito in analitos_unicos) {
       # Calcular criterio
       sigma_pt <- 0.03  # Asumir valor
       c_criterion <- calculate_homogeneity_criterion(sigma_pt)
-      c_expanded <- calculate_homogeneity_criterion_expanded(sigma_pt, stats$sw_sq)
+      c_expanded <- calculate_homogeneity_criterion_expanded(sigma_pt, stats$sw, stats$g)
       
       # Evaluar
       evaluacion <- evaluate_homogeneity(stats$ss, c_criterion)

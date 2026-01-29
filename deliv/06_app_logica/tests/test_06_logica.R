@@ -155,7 +155,7 @@ test_that("calculate_homogeneity_criterion calcula correctamente", {
 })
 
 test_that("calculate_homogeneity_criterion_expanded calcula correctamente", {
-  c_expanded <- calculate_homogeneity_criterion_expanded(sigma_pt = 0.5, sw_sq = 0.1)
+  c_expanded <- calculate_homogeneity_criterion_expanded(sigma_pt = 0.5, sw = 0.316, g = 10)
   expect_true(is.numeric(c_expanded))
   expect_gt(c_expanded, 0)
 })

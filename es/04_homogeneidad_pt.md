@@ -12,9 +12,9 @@ Este módulo implementa los métodos estadísticos descritos en las **Secciones 
 
 | Elemento | Valor |
 |:---|:---|
-| **Archivo** | `ptcalc/R/pt_homogeneity.R` |
-| **Líneas** | 1 - 290 |
-| **Norma** | ISO 13528:2022, Guía ISO 35:2017 |
+ | **Archivo** | `ptcalc/R/pt_homogeneity.R` |
+ | **Líneas** | 1 - 410 |
+ | **Norma** | ISO 13528:2022, Guía ISO 35:2017 |
 
 ---
 
@@ -101,9 +101,30 @@ $$u_{\sigma_{pt}} = 1.25 \times \frac{\sigma_{pt}}{\sqrt{g}}$$
 El material se considera suficientemente homogéneo si:
 $$s_s \leq c = 0.3 \times \sigma_{pt}$$
 
-### 5.3 Criterio Expandido ($c_{exp}$)
-Si no se cumple el criterio básico, se utiliza un criterio expandido que incorpora la incertidumbre de la estimación de $\sigma_{pt}$:
-$$c_{exp} = c + u_{\sigma_{pt}} = 0.3 \times \sigma_{pt} + 1.25 \times \frac{\sigma_{pt}}{\sqrt{g}}$$
+ ### 5.3 Criterio Expandido ($c_{exp}$)
+ Si no se cumple el criterio básico, se utiliza un criterio expandido según ISO 13528:2022, Sección 9.2.4:
+ $$c_{exp} = F_1 \times (0.3 \times \sigma_{pt})^2 + F_2 \times s_w^2$$
+
+ Donde $F_1$ y $F_2$ son coeficientes que dependen del número de muestras $g$:
+
+ | g (muestras) | F₁ | F₂ |
+ |--------------|-----|-----|
+ | 7 | 2.10 | 1.43 |
+ | 8 | 2.01 | 1.25 |
+ | 9 | 1.94 | 1.11 |
+ | 10 | 1.88 | 1.01 |
+ | 11 | 1.83 | 0.93 |
+ | 12 | 1.79 | 0.86 |
+ | 13 | 1.75 | 0.80 |
+ | 14 | 1.72 | 0.75 |
+ | 15 | 1.69 | 0.71 |
+ | 16 | 1.67 | 0.68 |
+ | 17 | 1.64 | 0.64 |
+ | 18 | 1.62 | 0.62 |
+ | 19 | 1.60 | 0.59 |
+ | 20 | 1.59 | 0.57 |
+
+ **Nota:** Para valores de $g$ fuera del rango [7, 20], se usa clamping a los extremos del rango.
 
 ### 5.4 Método Alternativo: nIQR
 
@@ -274,11 +295,11 @@ library(ptcalc)
 # Cargar datos
 hom_data <- matrix(c(19.70, 19.72, 19.68, 19.69, ...), ncol=2, byrow=TRUE)
 
-# 1. Homogeneidad (sigma_pt se calcula internamente desde MADe)
-stats <- calculate_homogeneity_stats(hom_data)
-c_crit <- calculate_homogeneity_criterion(stats$sigma_pt)
-c_exp <- calculate_homogeneity_criterion_expanded(stats$sigma_pt, stats$u_sigma_pt)
-eval <- evaluate_homogeneity(stats$ss, c_crit, c_exp)
+ # 1. Homogeneidad (sigma_pt se calcula internamente desde MADe)
+ stats <- calculate_homogeneity_stats(hom_data)
+ c_crit <- calculate_homogeneity_criterion(stats$sigma_pt)
+ c_exp <- calculate_homogeneity_criterion_expanded(stats$sigma_pt, stats$sw, stats$g)
+ eval <- evaluate_homogeneity(stats$ss, c_crit, c_exp)
 
 # 2. Estabilidad
 stab_stats <- calculate_stability_stats(

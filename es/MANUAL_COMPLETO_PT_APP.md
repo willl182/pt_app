@@ -488,7 +488,9 @@ flowchart TD
 $$s_s \leq c = 0.3 \times \sigma_{pt}$$
 
 **Criterio Expandido:**
-$$c_{exp} = c + u_{\sigma_{pt}} = 0.3 \times \sigma_{pt} + 1.25 \times \frac{\sigma_{pt}}{\sqrt{g}}$$
+$$c_{exp} = F_1 \times (0.3 \times \sigma_{pt})^2 + F_2 \times s_w^2$$
+
+Donde $F_1$ y $F_2$ son coeficientes que dependen del número de muestras $g$ (ver Sección 14.4.3 para tabla completa).
 
 #### 5.3.3 Árbol de Decisión
 
@@ -996,7 +998,28 @@ $$s_s \leq c = 0.3 \times \sigma_{pt}$$
 
 #### 14.4.3 Criterio Expandido ($c_{exp}$)
 
-$$c_{exp} = c + u_{\sigma_{pt}} = 0.3 \times \sigma_{pt} + 1.25 \times \frac{\sigma_{pt}}{\sqrt{g}}$$
+$$c_{exp} = F_1 \times (0.3 \times \sigma_{pt})^2 + F_2 \times s_w^2$$
+
+Donde $F_1$ y $F_2$ son coeficientes que dependen del número de muestras $g$:
+
+| g (muestras) | F₁ | F₂ |
+|--------------|-----|-----|
+| 7 | 2.10 | 1.43 |
+| 8 | 2.01 | 1.25 |
+| 9 | 1.94 | 1.11 |
+| 10 | 1.88 | 1.01 |
+| 11 | 1.83 | 0.93 |
+| 12 | 1.79 | 0.86 |
+| 13 | 1.75 | 0.80 |
+| 14 | 1.72 | 0.75 |
+| 15 | 1.69 | 0.71 |
+| 16 | 1.67 | 0.68 |
+| 17 | 1.64 | 0.64 |
+| 18 | 1.62 | 0.62 |
+| 19 | 1.60 | 0.59 |
+| 20 | 1.59 | 0.57 |
+
+**Nota:** Para valores de $g$ fuera del rango [7, 20], se usa clamping a los extremos del rango.
 
 #### 14.4.4 Método Alternativo: nIQR
 
@@ -1119,7 +1142,7 @@ ptcalc/
 |---------|------------|---------|----------------|
 | `calculate_homogeneity_stats` | `sample_data` (df/matrix) | Lista: `g`, `m`, `grand_mean`, `sw`, `ss`, etc. | 13528:2022 §9.2 |
 | `calculate_homogeneity_criterion` | `sigma_pt` | Valor del criterio (0.3 * sigma_pt) | 13528:2022 §9.2.3 |
-| `calculate_homogeneity_criterion_expanded` | `sigma_pt`, `sw_sq` | Criterio expandido (según §9.2.4) | 13528:2022 §9.2.4 |
+ | `calculate_homogeneity_criterion_expanded` | `sigma_pt`, `sw`, `g` | Criterio expandido (según §9.2.4) | 13528:2022 §9.2.4 |
 | `evaluate_homogeneity` | `ss`, `c_criterion`, `c_expanded` | Lista: `passes_criterion`, `conclusion`, etc. | 13528:2022 §9.2 |
 | `calculate_stability_stats` | `stab_data`, `hom_mean`, `hom_stab_x_pt`, `hom_stab_sigma_pt` | Lista: `stab_grand_mean`, `diff_hom_stab`, etc. | 13528:2022 §9.3 |
 | `calculate_stability_criterion` | `sigma_pt` | Criterio de estabilidad (0.3 * sigma_pt) | 13528:2022 §9.3.3 |

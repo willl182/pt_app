@@ -467,12 +467,20 @@ calculate_homogeneity_criterion <- function(sigma_pt) {
 #' @return Valor del criterio expandido
 #'
 #' @examples
-#' c_exp <- calculate_homogeneity_criterion_expanded(sigma_pt = 0.5, u_sigma_pt = 0.01)
+#' c_exp <- calculate_homogeneity_criterion_expanded(sigma_pt = 0.5, sw = 0.1, g = 10)
 #'
 #' @export
-calculate_homogeneity_criterion_expanded <- function(sigma_pt, u_sigma_pt) {
-  c_criterion <- 0.3 * sigma_pt
-  c_criterion + u_sigma_pt
+calculate_homogeneity_criterion_expanded <- function(sigma_pt, sw, g) {
+  f_table <- data.frame(
+    g = 7:20,
+    f1 = c(2.10, 2.01, 1.94, 1.88, 1.83, 1.79, 1.75, 1.72, 1.69, 1.67, 1.64, 1.62, 1.60, 1.59),
+    f2 = c(1.43, 1.25, 1.11, 1.01, 0.93, 0.86, 0.80, 0.75, 0.71, 0.68, 0.64, 0.62, 0.59, 0.57)
+  )
+  g_clamped <- max(7, min(20, g))
+  idx <- which(f_table$g == g_clamped)
+  f1 <- f_table$f1[idx]
+  f2 <- f_table$f2[idx]
+  f1 * (0.3 * sigma_pt)^2 + f2 * sw^2
 }
 
 #' Evaluar homogeneidad

@@ -1,5 +1,21 @@
 # ptcalc News
 
+## Version 0.4.0 (2026-01-28)
+
+### Documentation
+- Updated documentation to reflect app.R line count (5,685 lines)
+- Verified all function signatures are current
+- Updated version references to 0.4.0
+
+### Bug Fixes
+- None (no changes to package code)
+
+### Maintenance
+- Updated DESCRIPTION version to 0.4.0
+- Updated NEWS.md
+
+---
+
 ## Version 0.1.0 (2025-01-26)
 
 Initial release of ptcalc package for proficiency testing calculations.

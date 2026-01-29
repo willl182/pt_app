@@ -230,19 +230,21 @@ calculate_homogeneity_criterion(sigma_pt)
 
 ---
 
-### calculate_homogeneity_criterion_expanded
+ ### calculate_homogeneity_criterion_expanded
 
-Calcula el criterio de homogeneidad expandido segun ISO 13528 §9.2.4, que considera la incertidumbre debida a la precision del metodo (varianza intra-muestra).
+ Calcula el criterio de homogeneidad expandido segun ISO 13528 §9.2.4, que considera la incertidumbre debida a la precision del metodo (varianza intra-muestra) usando coeficientes F1/F2 que dependen del numero de muestras.
 
-**Archivo:** `R/pt_homogeneity.R` (lineas 123-127)
+ **Archivo:** `R/pt_homogeneity.R` (lineas 160-178)
 
-#### Firma
-```r
-calculate_homogeneity_criterion_expanded(sigma_pt, sw_sq)
-```
+ #### Firma
+ ```r
+ calculate_homogeneity_criterion_expanded(sigma_pt, sw, g)
+ ```
 
-#### Formula
-$$c_{expandido} = \sqrt{(0.3 \times \sigma_{pt})^2 \times 1.88 + s_w^2 \times 1.01}$$
+ #### Formula
+ $$c_{exp} = F_1 \times (0.3 \times \sigma_{pt})^2 + F_2 \times s_w^2$$
+
+ Donde $F_1$ y $F_2$ son coeficientes que dependen del numero de muestras $g$ (valores entre 7 y 20). Los valores fuera de este rango son clampados a los extremos.
 
 ---
 

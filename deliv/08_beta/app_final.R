@@ -210,7 +210,7 @@ server <- function(input, output, session) {
     if (!is.null(stats$error)) return(list(error = stats$error))
     
     c_criterion <- calculate_homogeneity_criterion(stats$s_xt)
-    c_expanded <- calculate_homogeneity_criterion_expanded(stats$s_xt, stats$sw_sq)
+     c_expanded <- calculate_homogeneity_criterion_expanded(stats$s_xt, stats$sw, stats$g)
     
     list(
       stats = stats,

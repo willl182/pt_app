@@ -105,7 +105,7 @@ graph LR
 |---------|------------|---------|----------------|
 | `calculate_homogeneity_stats` | `sample_data` (df/matrix) | Lista: `g`, `m`, `grand_mean`, `sw`, `ss`, etc. | 13528:2022 §9.2 |
 | `calculate_homogeneity_criterion` | `sigma_pt` | Valor del criterio (0.3 * sigma_pt) | 13528:2022 §9.2.3 |
-| `calculate_homogeneity_criterion_expanded` | `sigma_pt`, `sw_sq` | Criterio expandido (según §9.2.4) | 13528:2022 §9.2.4 |
+ | `calculate_homogeneity_criterion_expanded` | `sigma_pt`, `sw`, `g` | Criterio expandido (según §9.2.4) | 13528:2022 §9.2.4 |
 | `evaluate_homogeneity` | `ss`, `c_criterion`, `c_expanded` | Lista: `passes_criterion`, `conclusion`, etc. | 13528:2022 §9.2 |
 | `calculate_stability_stats` | `stab_data`, `hom_mean`, `hom_stab_x_pt`, `hom_stab_sigma_pt` | Lista: `stab_grand_mean`, `diff_hom_stab`, `hom_stab_median_of_diffs`, `hom_stab_sigma_pt`, etc. | 13528:2022 §9.3 |
 | `calculate_stability_criterion` | `sigma_pt` | Criterio de estabilidad (0.3 * sigma_pt) | 13528:2022 §9.3.3 |

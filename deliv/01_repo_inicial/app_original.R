@@ -367,7 +367,7 @@ server <- function(input, output, session) {
     hom_sigma_pt <- mad_e
     hom_c_criterion <- calculate_homogeneity_criterion(hom_sigma_pt)
     hom_sigma_allowed_sq <- hom_c_criterion^2
-    hom_c_criterion_expanded <- calculate_homogeneity_criterion_expanded(hom_sigma_pt, hom_sw^2)
+    hom_c_criterion_expanded <- calculate_homogeneity_criterion_expanded(hom_sigma_pt, hom_sw, g)
 
     if (hom_ss <= hom_c_criterion) {
       hom_conclusion1 <- sprintf("ss (%.4f) <= c_criterion (%.4f): CUMPLE CRITERIO HOMOGENEIDAD", hom_ss, hom_c_criterion)

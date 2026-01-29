@@ -203,7 +203,7 @@ test_that("Cálculo de criterio de homogeneidad funciona correctamente", {
 test_that("Cálculo de criterio expandido de homogeneidad funciona correctamente", {
   expect_silent(source(funciones_path))
   
-  c_expanded <- calculate_homogeneity_criterion_expanded(sigma_pt = 0.5, sw_sq = 0.01)
+  c_expanded <- calculate_homogeneity_criterion_expanded(sigma_pt = 0.5, sw = 0.1, g = 10)
   expect_true(is.finite(c_expanded))
   expect_true(c_expanded > 0)
 })
