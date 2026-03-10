@@ -1,6 +1,6 @@
 # ===================================================================
 # Aplicación Shiny para Análisis de Ensayos de Aptitud
-# Implementación ISO 17043:2024 / ISO 13528:2022
+# Implementación ISO 17043:2023 / ISO 13528:2022
 #
 # Esta aplicación implementa procedimientos de ensayos de aptitud en una
 # interfaz web Shiny interactiva.
@@ -940,24 +940,28 @@ server <- function(input, output, session) {
           ),
           div(class = "shadcn-card-content",
             div(class = "upload-grid",
-              div(class = "upload-item",
+              # H8: Zonas de carga visualmente diferenciadas por origen de datos
+              div(class = "upload-item", style = "border-left: 4px solid #3b82f6; padding-left: 12px;",
                 div(class = "upload-label",
                   icon("file-csv"),
-                  span("1. Datos de Homogeneidad")
+                  span("1. Datos de Homogeneidad"),
+                  tags$small(class = "text-muted", "(Origen: muestras de homogeneidad)")
                 ),
                 fileInput("hom_file", NULL, accept = ".csv", placeholder = "homogeneity.csv")
               ),
-              div(class = "upload-item",
+              div(class = "upload-item", style = "border-left: 4px solid #f59e0b; padding-left: 12px;",
                 div(class = "upload-label",
                   icon("file-csv"),
-                  span("2. Datos de Estabilidad")
+                  span("2. Datos de Estabilidad"),
+                  tags$small(class = "text-muted", "(Origen: muestras de estabilidad)")
                 ),
                 fileInput("stab_file", NULL, accept = ".csv", placeholder = "stability.csv")
               ),
-              div(class = "upload-item",
+              div(class = "upload-item", style = "border-left: 4px solid #10b981; padding-left: 12px;",
                 div(class = "upload-label",
                   icon("file-csv"),
-                  span("3. Datos Consolidados de participantes")
+                  span("3. Datos Consolidados de participantes"),
+                  tags$small(class = "text-muted", "(Origen: resultados de laboratorios participantes)")
                 ),
                 fileInput("summary_files", NULL, accept = ".csv", multiple = TRUE, placeholder = "summary_n*.csv")
               )
@@ -1039,9 +1043,18 @@ server <- function(input, output, session) {
                   )
                 ),
                 hr(),
-                h4("Datos de Homogeneidad"),
-                p("Muestras, réplicas, media, rango y diferencias absolutas para cada ítem."),
+                h4("Datos de Homogeneidad (Entrada)"),
+                p("Muestras, réplicas, media, rango y diferencias absolutas para cada ítem.",
+                  tags$br(),
+                  tags$small(class = "text-muted", "Origen: archivo de homogeneidad cargado")),
                 DT::DTOutput("hom_data_table"),
+                hr(),
+                # H9: Tabla de cálculos intermedios ANOVA
+                h4("Cálculos Intermedios ANOVA"),
+                p("Varianza de medias, componentes entre/dentro de muestras, y estimaciones robustas.",
+                  tags$br(),
+                  tags$small(class = "text-muted", "Estos valores alimentan los criterios de homogeneidad.")),
+                tableOutput("variance_components"),
                 hr(),
                 fluidRow(
                   column(width = 6,
@@ -1224,6 +1237,7 @@ server <- function(input, output, session) {
                 tableOutput("scores_parameter_table"),
                 hr(),
                 h4("Resumen de puntajes por participante"),
+                downloadButton("download_scores_csv", "Exportar CSV", class = "btn-sm btn-outline-secondary mb-2"),
                 dataTableOutput("scores_overview_table"),
                 hr(),
                 h4("Resumen de evaluación de puntajes"),
@@ -2472,6 +2486,15 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
     values <- participant_data$result
     n_part <- length(values)
 
+    # H3: Metadata de trazabilidad para esta corrida
+    run_metadata <- list(
+      dataset_fuente = "participantes",
+      serie_usada = target_level,
+      analito = target_pollutant,
+      n_participantes = n_part,
+      timestamp = Sys.time()
+    )
+
     median_val <- median(values, na.rm = TRUE)
     mad_val <- median(abs(values - median_val), na.rm = TRUE)
     sigma_pt_2a <- 1.483 * mad_val
@@ -2479,10 +2502,15 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
     u_xpt2a <- if (is.finite(sigma_pt_2a)) 1.25 * sigma_pt_2a / sqrt(n_part) else NA_real_
     u_xpt2b <- if (is.finite(sigma_pt_2b)) 1.25 * sigma_pt_2b / sqrt(n_part) else NA_real_
 
-    algo_res <- if (n_part >= 3) {
+    # H4: ISO 13528 recomienda Algoritmo A solo para n >= 12;
+    # para n < 12 usar MADe/nIQR directamente
+    algo_res <- if (n_part >= 12) {
       run_algorithm_a(values = values, ids = participant_data$participant_id, max_iter = max_iter)
     } else {
-      list(error = "Se requieren al menos tres participantes para calcular el Algoritmo A.")
+      list(error = paste0(
+        "Algoritmo A requiere n \u2265 12 participantes (n actual = ", n_part,
+        "). Use MADe o nIQR como alternativa."
+      ))
     }
 
     combos <- list()
@@ -2571,7 +2599,8 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
       combos = combos,
       summary = summary_table,
       overview = overview_table,
-      k = k_factor
+      k = k_factor,
+      run_metadata = run_metadata
     )
   }
 
@@ -3738,6 +3767,30 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
     datatable(res$overview, options = list(scrollX = TRUE, pageLength = 12), rownames = FALSE) %>%
       formatRound(columns = c("Resultado", "u(xi)", "Puntaje z", "Puntaje z'", "Puntaje zeta", "Puntaje En"), digits = 3)
   })
+
+  # H7: CSV export con encabezados descriptivos
+  output$download_scores_csv <- downloadHandler(
+    filename = function() {
+      paste0("Puntajes_PT_", Sys.Date(), ".csv")
+    },
+    content = function(file) {
+      res <- scores_results_selected()
+      if (!is.null(res$error)) {
+        write.csv(data.frame(Error = res$error), file, row.names = FALSE)
+      } else {
+        # Header descriptivo
+        header_lines <- c(
+          paste0("# Puntajes de Ensayo de Aptitud - Generado: ", Sys.time()),
+          paste0("# Aplicacion: CALAIRE-APP / ISO 13528:2022"),
+          paste0("# Factor k: ", res$k),
+          "#"
+        )
+        writeLines(header_lines, file)
+        write.table(res$overview, file, sep = ",", row.names = FALSE,
+                    append = TRUE, col.names = TRUE)
+      }
+    }
+  )
 
   output$scores_evaluation_summary <- renderTable(
     {

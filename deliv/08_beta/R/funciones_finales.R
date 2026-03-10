@@ -6,7 +6,7 @@
 # Salida: Funciones exportadas para uso en app_final.R
 # Autor: UNAL/INM
 # Fecha: 2026-01-24
-# Referencia: ISO 13528:2022, ISO 17043:2024
+# Referencia: ISO 13528:2022, ISO 17043:2023
 # ===================================================================
 
 # -------------------------------------------------------------------
@@ -409,8 +409,9 @@ calculate_homogeneity_stats <- function(sample_data) {
   }
 
   sw_sq <- sw^2
-  ss_sq <- abs(s_x_bar_sq - (sw_sq / m))
-  ss <- sqrt(ss_sq)
+  # B.10: si radicando < 0, ss = 0
+  ss_sq <- s_x_bar_sq - (sw_sq / m)
+  ss <- if (ss_sq < 0) 0 else sqrt(ss_sq)
 
   # Mediana de las diferencias absolutas entre medias de muestra
   median_of_diffs <- stats::median(abs(sample_means - stats::median(sample_means)), na.rm = TRUE)
@@ -551,8 +552,9 @@ calculate_stability_stats <- function(stab_data, hom_general_mean_homog, hom_sta
 
   stab_sw_sq <- stab_sw^2
 
-  stab_ss_sq <- abs(stab_s_x_bar_sq - (stab_sw_sq / m_stab))
-  stab_ss <- sqrt(stab_ss_sq)
+  # B.10: si radicando < 0, ss = 0
+  stab_ss_sq <- stab_s_x_bar_sq - (stab_sw_sq / m_stab)
+  stab_ss <- if (stab_ss_sq < 0) 0 else sqrt(stab_ss_sq)
 
   hom_stab_median_of_diffs <- stats::median(abs(stab_data[, 2] - hom_stab_x_pt), na.rm = TRUE)
 
