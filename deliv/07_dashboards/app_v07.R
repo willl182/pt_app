@@ -6,7 +6,7 @@
 # Salida: Tablas de resultados, gráficos, descargas CSV
 # Autor: UNAL/INM
 # Fecha: 2026-01-24
-# Referencia: ISO 13528:2022, ISO 17043:2024
+# Referencia: ISO 13528:2022, ISO 17043:2023
 # ===================================================================
 
 # Cargar librerías necesarias

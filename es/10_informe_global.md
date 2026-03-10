@@ -4,7 +4,7 @@
 
 El módulo de **Informe Global** proporciona una vista consolidada y de alto nivel de los resultados de todo el esquema de ensayos de aptitud (PT). Agrega los resultados de todos los contaminantes, niveles y laboratorios participantes en mapas de calor (heatmaps) interactivos y tablas de resumen estadístico.
 
-Este módulo implementa las directrices de la norma **ISO 13528:2022 Sección 10** (Informe del proveedor de PT) e **ISO 17043:2024 Sección 7** (Presentación de resultados).
+Este módulo implementa las directrices de la norma **ISO 13528:2022 Sección 10** (Informe del proveedor de PT) e **ISO 17043:2023 Sección 7** (Presentación de resultados).
 
 | Propiedad | Valor |
 |-----------|-------|
@@ -163,4 +163,4 @@ Cada una incluye sus propios parámetros ($x_{pt}, \sigma_{pt}, u(x_{pt})$) y un
 
 ## Referencias Normativas
 - **ISO 13528:2022**: Statistical methods for use in proficiency testing by interlaboratory comparison.
-- **ISO/IEC 17043:2024**: Conformity assessment — General requirements for the competence of proficiency testing providers.
+- **ISO/IEC 17043:2023**: Conformity assessment — General requirements for the competence of proficiency testing providers.

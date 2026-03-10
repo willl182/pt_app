@@ -103,14 +103,14 @@ mad_e <- calculate_mad_e(values)
 
 ### run_algorithm_a
 
-Implementa el Algoritmo A de ISO 13528 para calcular la media y desviacion estandar robustas mediante un proceso iterativo con ponderacion de Huber.
+Implementa el Algoritmo A de ISO 13528 para calcular la media y desviacion estandar robustas mediante un proceso iterativo con winsorización.
 
 **Archivo:** `R/pt_robust_stats.R` (lineas 112-246)  
 **Referencia:** ISO 13528:2022, Anexo C
 
 #### Firma
 ```r
-run_algorithm_a(values, ids = NULL, max_iter = 50, tol = 1e-03)
+run_algorithm_a(values, ids = NULL, max_iter = 50)
 ```
 
 #### Parametros
@@ -119,7 +119,6 @@ run_algorithm_a(values, ids = NULL, max_iter = 50, tol = 1e-03)
 | `values` | numeric vector | Si | - | Resultados de los participantes |
 | `ids` | vector | No | `NULL` | Identificadores opcionales de participantes |
 | `max_iter` | integer | No | 50 | Maximo numero de iteraciones permitidas |
-| `tol` | numeric | No | 1e-03 | Tolerancia de convergencia |
 
 #### Retorno
 Una lista que contiene:
@@ -128,21 +127,22 @@ Una lista que contiene:
 | `assigned_value` | numeric | Media robusta final (x*) |
 | `robust_sd` | numeric | Desviacion estandar robusta final (s*) |
 | `iterations` | data.frame | Historial paso a paso de la convergencia |
-| `weights` | data.frame | Pesos y residuos finales por participante |
+| `winsorized_values` | data.frame | Valores originales y winsorizados por participante |
 | `converged` | logical | TRUE si se alcanzo la convergencia dentro de `max_iter` |
-| `effective_weight` | numeric | Suma de los pesos finales asignados |
+| `n_participants` | numeric | Numero de participantes usados |
 | `error` | character | Mensaje de error si el proceso fallo, de lo contrario `NULL` |
 
 #### Algoritmo (Flujo)
 ```mermaid
 graph TD
     A[Inicializar x* = mediana, s* = MADe] --> B{Iterar}
-    B --> C[Calcular u = x - x* / 1.5*s*]
-    D[Pesos: w = 1 si abs u <= 1, else 1/u^2] --> E[Actualizar x* y s* ponderados]
-    C --> D
-    E --> F{Convergio?}
-    F -->|No| B
-    F -->|Si| G[Retornar resultados]
+    B --> C[Calcular δ = 1.5 × s*]
+    C --> D[Winsorizar: clamp valores a x* ± δ]
+    D --> E[Actualizar x* = media(winsorizado)]
+    E --> F[Actualizar s* = 1.134 × sqrt(Sum(x* - x_winsorizado)²/(p-1))]
+    F --> G{Convergio?}
+    G -->|No| B
+    G -->|Si| H[Retornar resultados]
 ```
 
 #### Ejemplo
@@ -485,5 +485,5 @@ cat("En-score:", en_i, "->", evaluate_en_score(en_i), "\n")
 
 ## Referencias
 - **ISO 13528:2022**: Statistical methods for use in proficiency testing by interlaboratory comparison.
-- **ISO 17043:2024**: Conformity assessment — General requirements for the competence of proficiency testing providers.
+- **ISO 17043:2023**: Conformity assessment — General requirements for the competence of proficiency testing providers.
 - **ISO/IEC Guide 98-3 (GUM)**: Guide to the expression of uncertainty in measurement.

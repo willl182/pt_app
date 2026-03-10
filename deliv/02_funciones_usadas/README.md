@@ -128,5 +128,5 @@ Este entregable proporciona el inventario necesario para:
 ## Referencias
 
 - **ISO 13528:2022** - Statistical methods for proficiency testing
-- **ISO 17043:2024** - General requirements for proficiency testing
+- **ISO 17043:2023** - General requirements for proficiency testing
 - **AGENTS.md** - Guía de estilo y convenciones del código

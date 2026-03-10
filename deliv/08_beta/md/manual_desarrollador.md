@@ -385,7 +385,7 @@ Para agregar un nuevo método:
 - **Sección 10.5:** En score
 - **Anexo C:** Algorithm A (robust statistics)
 
-### ISO 17043:2024
+### ISO 17043:2023
 
 **Título:** Conformity assessment — General requirements for proficiency testing
 

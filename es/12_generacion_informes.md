@@ -12,7 +12,7 @@ El módulo de **Generación de Informes** es el componente final del sistema que
 | **Líneas Lógica** | 3748-4500+ (reactivos de reporte, downloadHandler) |
 | **Template Principal** | `reports/report_template.Rmd` |
 | **Dependencias** | `pt_prep_data()`, `scores_results_cache()`, `grubbs_summary()` |
-| **Normas ISO de Referencia** | ISO 13528:2022 Sección 10, ISO 17043:2024 Sección 7 |
+| **Normas ISO de Referencia** | ISO 13528:2022 Sección 10, ISO 17043:2023 Sección 7 |
 
 ---
 

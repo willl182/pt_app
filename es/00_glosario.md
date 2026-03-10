@@ -60,7 +60,7 @@ Este glosario proporciona definiciones y traducciones (español/inglés) para lo
 | MADe | Scaled MAD | MADe | $1.483 \times MAD$, una estimación robusta de la desviación estándar. |
 | Rango intercuartílico | Interquartile range | IQR | Diferencia entre el tercer y el primer cuartil ($Q_3 - Q_1$). |
 | Desviación absoluta mediana | Median absolute deviation | MAD | Mediana de las desviaciones absolutas respecto a la mediana: $\text{median}(|x_i - \text{median}|)$. |
-| Peso | Weight | w | Factor de influencia asignado a cada observación en el Algoritmo A. |
+| Winsorización | Winsorization | - | Técnica robusta que limita valores extremos al intervalo $[x^* - \delta, x^* + \delta]$. |
 | Convergencia | Convergence | - | El punto donde los cálculos iterativos se estabilizan. |
 
 ---
@@ -213,7 +213,7 @@ Este glosario proporciona definiciones y traducciones (español/inglés) para lo
 | Norma | Título | Contenido Clave |
 |----------|-------|-------------|
 | ISO 13528:2022 | Statistical methods for use in proficiency testing | Algoritmos robustos (Algoritmo A), métodos de puntuación, criterios de homogeneidad/estabilidad. |
-| ISO 17043:2024 | Conformity assessment — General requirements for PT | Requisitos para el diseño del esquema de PT, gestión y competencia técnica. |
+| ISO 17043:2023 | Conformity assessment — General requirements for PT | Requisitos para el diseño del esquema de PT, gestión y competencia técnica. |
 | ISO 5725 | Accuracy (trueness and precision) of measurement methods | Procedimientos para determinar la repetibilidad y reproducibilidad. |
 | ISO/IEC 17025 | General requirements for the competence of laboratories | Estándares de acreditación para laboratorios de ensayo y calibración. |
 | GUM (JCGM 100) | Guide to the expression of uncertainty in measurement | Marco internacional para evaluar la incertidumbre de la medición. |

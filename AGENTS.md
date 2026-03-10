@@ -5,10 +5,57 @@ This document provides essential information for AI coding agents working on the
 ## Project Overview
 
 **Type:** R/Shiny web application  
-**Purpose:** Proficiency testing analysis per ISO 13528:2022 and ISO 17043:2024  
+**Purpose:** Proficiency testing analysis per ISO 13528:2022 and ISO 17043:2023  
 **Main Files:** `app.R` (Shiny UI/Server), `ptcalc/` (calculation package)  
 **Architecture:** MVC pattern with reactive programming  
 **License:** MIT (Universidad Nacional de Colombia / Instituto Nacional de Metrología)
+
+## Instrucciones Críticas
+
+1. **Al iniciar cualquier tarea:** Lee AGENTS.md completo para entender el proyecto, convenciones de lenguaje y estructura de archivos.
+
+2. **Al crear un plan de trabajo multi-fase (ej: categorización, migración, sistema de equipos):**
+   - Genera timestamp: `date +"%y%m%d_%H%M"`
+   - Crea slug en kebab-case (5-7 palabras máx)
+   - Crea archivo en `logs/plans/[TIMESTAMP]_plan_[slug].md`
+   - Usa la estructura de "Plan Creation Workflow" (ver abajo)
+
+3. **Al completar cada fase del plan:**
+   - Ejecuta subagente `revisor-fase` para revisar errores, inconsistencias y riesgos
+   - Actualiza el plan con hallazgos del revisor
+   - Usa skill `saver` para persistir estado
+   - Git commit y push
+
+### Plan Creation Workflow
+
+Los planes multi-fase deben seguir esta estructura:
+
+```markdown
+# Plan: [Título descriptivo]
+
+**Timestamp:** YYMMDD_HHMM
+**Slug:** nombre-en-kebab-case
+**Estado:** En progreso | Completado | Pausado
+
+## Objetivo
+Descripción clara del objetivo final del plan.
+
+## Fases
+
+### Fase 1: [Nombre]
+| Item | Estado | Notas |
+|------|--------|-------|
+| Tarea 1 | Pendiente / En progreso / Completado | ... |
+| Tarea 2 | ... | ... |
+
+### Fase 2: [Nombre]
+...
+
+## Log de Ejecución
+- [YYMMDD HH:MM] Inicio Fase 1
+- [YYMMDD HH:MM] Revisión completada - sin errores
+- [YYMMDD HH:MM] Commit: abc1234
+```
 
 ## Quick Reference Commands
 
@@ -321,7 +368,7 @@ evaluate_score_vec <- function(z) {
 ## References
 
 - **ISO 13528:2022** - Statistical methods for proficiency testing
-- **ISO 17043:2024** - General requirements for proficiency testing
+- **ISO 17043:2023** - General requirements for proficiency testing
 - **Tidyverse Style Guide** - https://style.tidyverse.org/
 - **R Packages (2e)** - https://r-pkgs.org/
 

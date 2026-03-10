@@ -1,6 +1,6 @@
 # Guía de Inicio Rápido: Aplicativo de Análisis de Datos de Ensayos de Aptitud (PT)
 
-Esta guía le permitirá poner en marcha el Aplicativo de Ensayos de Aptitud en menos de 5 minutos. Esta aplicación implementa un conjunto completo de herramientas para el análisis de PT para gases contaminantes criterio (CO, SO2, NO, NO2, O3) siguiendo los estándares **ISO 17043:2024** e **ISO 13528:2022**.
+Esta guía le permitirá poner en marcha el Aplicativo de Ensayos de Aptitud en menos de 5 minutos. Esta aplicación implementa un conjunto completo de herramientas para el análisis de PT para gases contaminantes criterio (CO, SO2, NO, NO2, O3) siguiendo los estándares **ISO 17043:2023** e **ISO 13528:2022**.
 
 Desarrollado por el Laboratorio CALAIRE (Universidad Nacional de Colombia) en asociación con el Instituto Nacional de Metrología (INM).
 

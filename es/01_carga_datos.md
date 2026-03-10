@@ -374,7 +374,7 @@ Los inputs de archivo utilizan bordes punteados modernos e iconos mejorados:
 | Estándar | Sección | Aplicación |
 |----------|---------|-------------|
 | **ISO 13528:2022** | 7.2 / 7.3 | Requerimientos para ensayos de homogeneidad y estabilidad. |
-| **ISO 17043:2024** | 5.4 | Requerimientos de gestión de datos para proveedores de PT. |
+| **ISO 17043:2023** | 5.4 | Requerimientos de gestión de datos para proveedores de PT. |
 
 ---
 

@@ -2,7 +2,7 @@
 
 **Version 0.4.0 | January 2026**
 
-This Shiny application provides a comprehensive toolkit for analyzing data from proficiency testing (PT) schemes. It implements statistical methods described in ISO 13528:2022 and ISO 17043:2024 for assessing homogeneity and stability of PT items and for calculating participant performance scores.
+This Shiny application provides a comprehensive toolkit for analyzing data from proficiency testing (PT) schemes. It implements statistical methods described in ISO 13528:2022 and ISO 17043:2023 for assessing homogeneity and stability of PT items and for calculating participant performance scores.
 
 ## 📖 Documentation
 
@@ -222,7 +222,7 @@ The application implements the following standards:
   - PT scores (z, z', zeta, En)
   - Metrological compatibility
 
-- **ISO 17043:2024** - General requirements for proficiency testing
+- **ISO 17043:2023** - General requirements for proficiency testing
 
 ---
 

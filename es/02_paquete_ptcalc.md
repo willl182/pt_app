@@ -7,7 +7,7 @@
 | **Ubicación** | `pt_app/ptcalc/` |
 | **Versión** | 0.1.0 |
 | **Licencia** | MIT |
-| **Estándares** | ISO 13528:2022, ISO 17043:2024 |
+| **Estándares** | ISO 13528:2022, ISO 17043:2023 |
 | **Autor** | Wilson Rafael Salas Chavez (wrsalasc@unal.edu.co) |
 | **Dependencias** | stats, dplyr (>= 1.0.0) |
 
@@ -15,7 +15,7 @@
 
 ## Descripción General
 
-`ptcalc` es un paquete de R que encapsula todas las **funciones matemáticas puras** para el cálculo de ensayos de aptitud según las normas **ISO 13528:2022** e **ISO 17043:2024**. Está diseñado con **cero dependencias de Shiny**, lo que lo hace ideal para:
+`ptcalc` es un paquete de R que encapsula todas las **funciones matemáticas puras** para el cálculo de ensayos de aptitud según las normas **ISO 13528:2022** e **ISO 17043:2023**. Está diseñado con **cero dependencias de Shiny**, lo que lo hace ideal para:
 
 - Uso independiente en scripts de R y procesamiento por lotes.
 - Pruebas unitarias exhaustivas sin la sobrecarga de la interfaz de usuario.
@@ -241,7 +241,7 @@ if (evaluacion$passes_criterion) {
 
 ## Referencias
 1. **ISO 13528:2022** - Statistical methods for use in proficiency testing by interlaboratory comparison.
-2. **ISO 17043:2024** - Conformity assessment — General requirements for proficiency testing.
+2. **ISO 17043:2023** - Conformity assessment — General requirements for proficiency testing.
 3. **Huber, P.J. (1964)** - Robust estimation of a location parameter.
 4. **Thompson, M. (2000)** - Recent trends in internal quality control.
 

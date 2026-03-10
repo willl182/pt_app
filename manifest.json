@@ -2823,7 +2823,7 @@
         "Title": "Proficiency Testing Calculations (ISO 13528/17043)",
         "Version": "0.1.0",
         "Authors@R": "c(\n    person(\"Wilson Rafael\", \"Salas Chavez\", email = \"wrsalasc@unal.edu.co\", \n           role = c(\"aut\", \"cre\"), comment = c(\"Lead Developer\", ORCID = \"0000-0003-4757-117X\")),\n    person(\"Universidad Nacional de Colombia\", \n           role = c(\"cph\", \"fnd\"), comment = \"Laboratorio CALAIRE - Titular de Derechos\"),\n    person(\"Instituto Nacional de Metrología\", \n           role = c(\"fnd\"), comment = \"Entidad Aliada\")\n  )",
-        "Description": "Functions for proficiency testing analysis including robust\n    statistics (Algorithm A, nIQR, MADe), score calculations (z, z', zeta, En),\n    and homogeneity/stability assessments per ISO 13528:2022 and ISO 17043:2024.\n    Developed under contract OSE-282-3065-2025.",
+        "Description": "Functions for proficiency testing analysis including robust\n    statistics (Algorithm A, nIQR, MADe), score calculations (z, z', zeta, En),\n    and homogeneity/stability assessments per ISO 13528:2022 and ISO 17043:2023.\n    Developed under contract OSE-282-3065-2025.",
         "License": "MIT + file LICENSE",
         "Encoding": "UTF-8",
         "Roxygen": "list(markdown = TRUE)",

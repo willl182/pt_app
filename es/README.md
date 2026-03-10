@@ -1,6 +1,6 @@
 # Aplicativo de Ensayos de Aptitud para Gases Contaminantes Criterio
 
-Esta aplicación Shiny proporciona un conjunto completo de herramientas para analizar datos de esquemas de ensayos de aptitud (PT). Implementa los métodos estadísticos descritos en las normas ISO 13528:2022 e ISO 17043:2024 para evaluar la homogeneidad y estabilidad de los ítems de PT y para calcular los puntajes de desempeño de los participantes.
+Esta aplicación Shiny proporciona un conjunto completo de herramientas para analizar datos de esquemas de ensayos de aptitud (PT). Implementa los métodos estadísticos descritos en las normas ISO 13528:2022 e ISO 17043:2023 para evaluar la homogeneidad y estabilidad de los ítems de PT y para calcular los puntajes de desempeño de los participantes.
 
 La aplicación está refactorizada para implementar una **separación de responsabilidades**:
 - **`ptcalc/`**: Paquete de R con funciones matemáticas puras (ISO 13528).
@@ -286,7 +286,7 @@ La función del servidor contiene la lógica para el procesamiento de datos:
 | Estándar | Título | Estado |
 |----------|-------|--------|
 | ISO 13528:2022 | Statistical methods for use in proficiency testing | Implementado |
-| ISO 17043:2024 | Conformity assessment — General requirements for proficiency testing | Implementado |
+| ISO 17043:2023 | Conformity assessment — General requirements for proficiency testing | Implementado |
 
 ---
 

@@ -520,7 +520,7 @@ print(z)
   - Sección 10.5: En score
   - Anexo C: Algorithm A
 
-- **ISO 17043:2024** - Conformity assessment — General requirements for proficiency testing
+- **ISO 17043:2023** - Conformity assessment — General requirements for proficiency testing
 
 ---
 

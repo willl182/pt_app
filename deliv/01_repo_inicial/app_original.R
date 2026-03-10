@@ -1,6 +1,6 @@
 # ===================================================================
 # Aplicación Shiny para Análisis de Ensayos de Aptitud
-# Implementación ISO 17043:2024 / ISO 13528:2022
+# Implementación ISO 17043:2023 / ISO 13528:2022
 #
 # Esta aplicación implementa procedimientos de ensayos de aptitud en una
 # interfaz web Shiny interactiva.

@@ -220,7 +220,7 @@ El módulo implementa un sistema de cacheo con trigger-based reactivity optimiza
 ## Referencias
 
 *   **ISO 13528:2022**: Statistical methods for use in proficiency testing by interlaboratory comparison.
-*   **ISO/IEC 17043:2024**: Conformity assessment — General requirements for the competence of proficiency testing providers.
+*   **ISO/IEC 17043:2023**: Conformity assessment — General requirements for the competence of proficiency testing providers.
 *   **Documentación Relacionada**:
     *   [05_puntajes_pt.md](05_puntajes_pt.md): Teoría de puntajes.
     *   [07_valor_asignado.md](07_valor_asignado.md): Métodos de asignación de valor.

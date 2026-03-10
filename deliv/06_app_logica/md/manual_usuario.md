@@ -20,7 +20,7 @@
 
 ## Introducción
 
-La Aplicación PT Versión 06 es una herramienta web desarrollada en R Shiny para el análisis de ensayos de aptitud según las normas ISO 13528:2022 e ISO 17043:2024. Esta versión se enfoca en la lógica de negocio y cálculos de puntajes, sin incluir visualizaciones gráficas.
+La Aplicación PT Versión 06 es una herramienta web desarrollada en R Shiny para el análisis de ensayos de aptitud según las normas ISO 13528:2022 e ISO 17043:2023. Esta versión se enfoca en la lógica de negocio y cálculos de puntajes, sin incluir visualizaciones gráficas.
 
 ### Características Principales
 
@@ -292,7 +292,7 @@ Los archivos CSV se pueden abrir en:
 ## Referencias Normativas
 
 - **ISO 13528:2022** - Statistical methods for use in proficiency testing
-- **ISO 17043:2024** - Conformity assessment - General requirements for proficiency testing
+- **ISO 17043:2023** - Conformity assessment - General requirements for proficiency testing
 
 ---
 

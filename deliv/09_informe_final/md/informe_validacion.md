@@ -9,7 +9,7 @@
 
 ## Resumen Ejecutivo
 
-Este documento presenta los resultados de la validación de la aplicación PT/ptcalc, diseñada para análisis de pruebas de aptitud según las normas **ISO 13528:2022** e **ISO 17043:2024**.
+Este documento presenta los resultados de la validación de la aplicación PT/ptcalc, diseñada para análisis de pruebas de aptitud según las normas **ISO 13528:2022** e **ISO 17043:2023**.
 
 ### Conclusión General
 
@@ -52,7 +52,7 @@ Este documento presenta los resultados de la validación de la aplicación PT/pt
 | ISO 13528:2022 | 10.4 | Puntaje ζ |
 | ISO 13528:2022 | 10.5 | Puntaje En |
 | ISO 13528:2022 | Anexo C | Algoritmo A |
-| ISO 17043:2024 | - | Requisitos generales de PT |
+| ISO 17043:2023 | - | Requisitos generales de PT |
 
 ---
 
@@ -189,7 +189,7 @@ Este documento presenta los resultados de la validación de la aplicación PT/pt
 
 ---
 
-## 4. Conformidad con ISO 17043:2024
+## 4. Conformidad con ISO 17043:2023
 
 ### 4.1 Requisitos Generales
 
@@ -298,7 +298,7 @@ El anexo `anexo_calculos.md` contiene cálculos paso a paso que pueden replicars
 
 ### 8.1 Conclusiones
 
-1. ✅ **Cumplimiento Normativo:** La aplicación cumple completamente con ISO 13528:2022 e ISO 17043:2024
+1. ✅ **Cumplimiento Normativo:** La aplicación cumple completamente con ISO 13528:2022 e ISO 17043:2023
 2. ✅ **Funcionalidad:** Todos los módulos implementados funcionan correctamente
 3. ✅ **Reproducibilidad:** Los resultados son deterministas y reproducibles
 4. ✅ **Calidad de Código:** Buenas prácticas de programación y documentación
@@ -343,7 +343,7 @@ El anexo `anexo_calculos.md` contiene cálculos paso a paso que pueden replicars
 |------|-------------|
 | Desarrollo | UNAL/INM |
 | Validación técnica | Tests automáticos |
-| Revisión de normas | ISO 13528:2022, ISO 17043:2024 |
+| Revisión de normas | ISO 13528:2022, ISO 17043:2023 |
 
 ### 9.2 Aprobación
 

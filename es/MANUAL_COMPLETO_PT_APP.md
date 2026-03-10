@@ -21,7 +21,7 @@ number-sections: true
 
 ## Resumen Ejecutivo
 
-Este manual completo proporciona una guía integral para el uso, configuración y desarrollo del Aplicativo de Análisis de Ensayos de Aptitud (PT) para gases contaminantes criterio. La aplicación implementa los estándares **ISO 13528:2022** e **ISO 17043:2024**, proporcionando herramientas para evaluar el desempeño de laboratorios mediante comparaciones interlaboratorio.
+Este manual completo proporciona una guía integral para el uso, configuración y desarrollo del Aplicativo de Análisis de Ensayos de Aptitud (PT) para gases contaminantes criterio. La aplicación implementa los estándares **ISO 13528:2022** e **ISO 17043:2023**, proporcionando herramientas para evaluar el desempeño de laboratorios mediante comparaciones interlaboratorio.
 
 ### Propósito del Manual
 
@@ -170,7 +170,7 @@ El Aplicativo de Ensayos de Aptitud es una herramienta web (Shiny) diseñada par
 | Norma | Versión | Aplicación Principal |
 |--------|---------|----------------------|
 | **ISO 13528** | 2022 | Métodos estadísticos para PT (Algoritmo A, MADe, nIQR, puntajes) |
-| **ISO 17043** | 2024 | Requisitos generales para proveedores de PT |
+| **ISO 17043** | 2023 | Requisitos generales para proveedores de PT |
 | **ISO 5725** | - | Exactitud (veracidad y precisión) de métodos de medición |
 | **ISO/IEC 17025** | - | Requisitos generales para competencia de laboratorios |
 | **GUM (JCGM 100)** | - | Guía para expresión de incertidumbre en medición |
@@ -1846,7 +1846,7 @@ Para debuggear la aplicación:
 | Norma | Título | Contenido Clave |
 |----------|-------|-------------|
 | **ISO 13528:2022** | Statistical methods for use in proficiency testing | Algoritmos robustos (Algoritmo A), métodos de puntuación, criterios de homogeneidad/estabilidad. |
-| **ISO 17043:2024** | Conformity assessment — General requirements for PT | Requisitos para el diseño del esquema de PT, gestión y competencia técnica. |
+| **ISO 17043:2023** | Conformity assessment — General requirements for PT | Requisitos para el diseño del esquema de PT, gestión y competencia técnica. |
 | **ISO 5725** | Accuracy (trueness and precision) of measurement methods | Procedimientos para determinar la repetibilidad y reproducibilidad. |
 | **ISO/IEC 17025** | General requirements for the competence of laboratories | Estándares de acreditación para laboratorios de ensayo y calibración. |
 | **GUM (JCGM 100)** | Guide to expression of uncertainty in measurement | Marco internacional para evaluar la incertidumbre de la medición. |
@@ -2034,13 +2034,13 @@ result <- reactive({
 - **Documentación de Shiny:** https://shiny.rstudio.com/
 - **Documentación de ptcalc:** es/02_paquete_ptcalc.md
 - **ISO 13528:2022:** https://www.iso.org/standard/80310.html
-- **ISO 17043:2024:** https://www.iso.org/standard/81418.html
+- **ISO 17043:2023:** https://www.iso.org/standard/81418.html
 - **GUM (JCGM 100):** https://www.bipm.org/en/publications/guides/gum.html
 
 ### F.2 Bibliografía
 
 1. ISO 13528:2022. *Statistical methods for use in proficiency testing by interlaboratory comparison*. International Organization for Standardization.
-2. ISO 17043:2024. *Conformity assessment — General requirements for proficiency testing*. International Organization for Standardization.
+2. ISO 17043:2023. *Conformity assessment — General requirements for proficiency testing*. International Organization for Standardization.
 3. ISO/IEC Guide 98-3 (GUM). *Evaluation of measurement data — Guide to the expression of uncertainty in measurement*. JCGM.
 4. Huber, P.J. (1964). *Robust Estimation of a Location Parameter*. Annals of Mathematical Statistics.
 5. Thompson, M. (2000). *Recent trends in interlaboratory precision*. Journal of AOAC International.
