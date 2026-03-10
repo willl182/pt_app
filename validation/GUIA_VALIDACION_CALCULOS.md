@@ -83,7 +83,7 @@ Para m=2 réplicas:
 ```
 s_x̄² = VAR(medias_por_item)
 sw = √(Σwi² / (2×g))  donde wi = |x1i - x2i|
-ss² = |s_x̄² - (sw²/m)|
+ss² = max(0, s_x̄² - (sw²/m))    # H1: Si radicando < 0, ss = 0
 ss = √(ss²)
 ```
 
@@ -96,7 +96,7 @@ ss = √(ss²)
 | Media general | `=PROMEDIO(medias)` | x̄̄ |
 | s_x̄² | `=VAR(medias)` | Varianza de medias |
 | sw | `=RAIZ(SUMA(rangos²)/(2*g))` | Desv estándar intra-muestra |
-| ss² | `=ABS(s_x̄² - sw²/m)` | Varianza entre muestras |
+| ss² | `=MAX(0, s_x̄² - sw²/m)` | Varianza entre muestras (H1: 0 si negativo) |
 | ss | `=RAIZ(ss²)` | Desv estándar entre muestras |
 
 #### Criterio de Homogeneidad
@@ -424,7 +424,7 @@ Validación de casos especiales para el Algoritmo A:
 
 - ISO 13528:2022 - Statistical methods for use in proficiency testing
   - Annex C.3 - Algorithm A (Winsorization method) for robust estimation
-- ISO 17043:2024 - Conformity assessment — General requirements for proficiency testing
+- ISO 17043:2023 - Conformity assessment — General requirements for proficiency testing
 - `ptcalc/R/pt_robust_stats.R` - Implementación actual en R
 - `es/03_estadisticas_robustas_pt.md` - Documentación detallada del Algoritmo A
 

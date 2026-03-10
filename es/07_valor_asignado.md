@@ -32,8 +32,8 @@ Este módulo gestiona el cálculo del valor asignado ($x_{pt}$) y su incertidumb
 flowchart TD
     START[Inicio] --> Q1{¿Laboratorio de referencia disponible?}
     Q1 -->|Sí| M1[Método 1: Referencia]
-    Q1 -->|No| Q2{¿n >= 3 participantes?}
-    Q2 -->|No| M2[Método 2a o 2b: Consenso]
+    Q1 -->|No| Q2{¿n >= 12 participantes?}
+    Q2 -->|No| M2[Método 2a o 2b: Consenso MADe/nIQR]
     Q2 -->|Sí| Q3{¿Sospecha de outliers o preferencia ISO?}
     Q3 -->|Sí| M3[Método 3: Algoritmo A]
     Q3 -->|No| Q4{¿Preferencia de cálculo?}
@@ -46,9 +46,11 @@ flowchart TD
 | Situación | Método Recomendado | Razón |
 |-----------|-------------------|-----------|
 | Referencia disponible | **Método 1** | Más confiable, utiliza trazabilidad metrológica. |
-| Sin referencia, $n < 3$ | **Método 2a o 2b** | El consenso es la única opción estadística viable. |
-| Sin referencia, $n \geq 3$ | **Método 3 (Algoritmo A)** | La estimación robusta minimiza el sesgo de valores atípicos. |
+| Sin referencia, $n < 12$ | **Método 2a (MADe) o 2b (nIQR)** | Estimadores robustos directos, sin iteración. |
+| Sin referencia, $n \geq 12$ | **Método 3 (Algoritmo A)** | La estimación robusta iterativa minimiza el sesgo de valores atípicos. |
 | Calidad de datos mixta | **Comparar métodos** | Verificar consistencia entre consenso y algoritmo A. |
+
+> **Nota (H4):** El umbral para Algoritmo A se ajustó de $n \geq 3$ a $n \geq 12$ siguiendo la recomendación de ISO 13528:2022. Para $n < 12$, usar MADe o nIQR directamente.
 
 ---
 
@@ -210,7 +212,7 @@ flowchart TD
   - Sección 6.3: Valor asignado por consenso de participantes.
   - Sección 6.5: Incertidumbre del valor asignado.
   - Anexo C: Algoritmo A.
-- **ISO/IEC 17043:2024**: Evaluación de la conformidad — Requisitos generales para los ensayos de aptitud.
+- **ISO/IEC 17043:2023**: Evaluación de la conformidad — Requisitos generales para los ensayos de aptitud.
 
 ---
 

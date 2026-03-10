@@ -67,9 +67,11 @@ Para **$m > 2$ réplicas**:
 $$s_w^2 = \frac{1}{g} \sum_{i=1}^{g} s_i^2$$
 Donde $s_i^2$ es la varianza de las réplicas para la muestra $i$.
 
-#### Desviación Estándar Entre Muestras ($s_s$)
+#### Desviación Estándar Entre Muestras ($s_s$) — Fórmula B.10
 $$s_s^2 = \max\left(0, s_{\bar{x}}^2 - \frac{s_w^2}{m}\right)$$
 Donde $s_{\bar{x}}^2$ es la varianza de las medias de las muestras. La resta de $s_w^2/m$ elimina la contribución del ruido de medición de la variación observada entre muestras.
+
+> **Nota de implementación (H1):** Si el radicando $s_{\bar{x}}^2 - s_w^2/m < 0$, se asigna $s_s = 0$ en lugar de usar `abs()`. Esto refleja que el ruido de medición dentro de las muestras excede la variación observada entre muestras.
 
 ### 4.3 Construcción de la Tabla ANOVA
 
