@@ -1,58 +1,30 @@
-# Session State: PT App — Validacion Downstream Algoritmo A
+# Session State: PT App - Validación Downstream
 
-**Last Updated**: 2026-03-31 17:47 (260331_1747)
+**Last Updated**: 2026-03-31 17:45 -05
 
 ## Session Objective
-
-Revisión de Fase 4 (Cadena de Incertidumbre) completada. Todos los criterios de cierre cumplidos.
+Cerrar implementación y validación de Fase 5 (scores) y completar pipeline downstream 01-05.
 
 ## Current State
+- [x] Fase 3 (estabilidad) cerrada con plan actualizado: `logs/plans/260331_1652_plan_planificacion-fase-3-estabilidad-tripartita.md`.
+- [x] Fase 4 implementada y cerrada con plan actualizado: `logs/plans/260331_1710_plan_planificacion-fase-4-cadena-incertidumbre-tripartita.md`.
+- [x] Fase 5 implementada y cerrada con plan actualizado: `logs/plans/260331_1730_plan_planificacion-fase-5-scores-tripartita.md`.
+- [x] Stage 03 implementado en R/Python e integrado en orquestadores.
+- [x] Stage 04 implementado en R/Python e integrado en orquestadores.
+- [x] Stage 05 implementado en R/Python e integrado en orquestadores.
+- [x] Outputs Stage 03 validados sin `FAIL` (`PASS = 277`, `KNOWN_DISCREPANCY = 8`).
+- [x] Outputs Stage 04 validados sin `FAIL` (`PASS = 594`, `KNOWN_DISCREPANCY = 36`).
+- [x] Outputs Stage 05 validados sin `FAIL` (`PASS = 9504`, `KNOWN_DISCREPANCY = 1296`).
 
-- [x] Fase 0 completada: estructura de carpetas, stubs, helpers, USAGE.md
-- [x] Fase 1 completada: estadísticos robustos validados (90 PASS, 0 FAIL)
-- [x] Fase 2 completada: homogeneidad validada (195 PASS, 0 FAIL)
-- [x] Fase 3 completada: estabilidad validada (195 PASS, 0 FAIL)
-- [x] **Fase 4: Uncertainty Chain** — completada y revisada (420 PASS, 0 FAIL)
-
-## Archivos outputs actuales
-
-```
-validation/outputs/
-  stage_01_robust_stats*.csv, _report.md   # Fase 1: 90 PASS
-  stage_02_homogeneity*.csv, _report.md    # Fase 2: 195 PASS
-  stage_03_stability*.csv, _report.md      # Fase 3: 195 PASS
-  stage_04_uncertainty_chain*.csv, _report.md  # Fase 4: 420 PASS
-```
-
-## Resultados acumulados
-
-| Fase | Métricas/Combo | Total | PASS | FAIL | Max diff |
-|------|----------------|-------|------|------|----------|
-| 1: Robustos | 6 | 90 | 90 | 0 | 3.41e-13 |
-| 2: Homogeneidad | 13 | 195 | 195 | 0 | 2.98e-13 |
-| 3: Estabilidad | 13 | 195 | 195 | 0 | 3.12e-13 |
-| 4: Incertidumbre | 28 | 420 | 420 | 0 | 4.02e-15 |
-| **Total** | **60** | **900** | **900** | **0** | |
-
-## Observaciones Fase 4
-
-- 15 combos × 4 métodos × 7 métricas = 420 comparaciones
-- Métodos: Referencia, Consenso MADe, Consenso nIQR, Algoritmo A
-- u_stab = 0 para todos (diff_hom_stab = 0 en este dataset)
-- Algoritmo A converge para todos los combos
-- Diferencias R vs Python: orden 1e-15 a 1e-17 (muy por debajo de tolerancia 1e-9)
-
-## Criterios de cierre Fase 4 ✅
-
-1. ✅ Los 15 combos se procesan correctamente para los 4 métodos
-2. ✅ Las 7 métricas se calculan correctamente en R y Python
-3. ✅ Todas las métricas coinciden dentro de tolerancia (1e-9)
-4. ✅ u_xpt_def = sqrt(u_xpt^2 + u_hom^2 + u_stab^2)
-5. ✅ U_xpt = k * u_xpt_def (k=2)
-6. ✅ Existe CSV de salida con tabla canónica
-7. ✅ Existe reporte Markdown con resumen PASS/FAIL
+## Critical Technical Context
+- Fuente única de combinaciones: `validation/config/combos_target.csv` (15 combinaciones).
+- Contrato canónico de salida: `validation/config/canonical_columns.csv`.
+- Estados válidos: `validation/config/validation_statuses.txt`.
+- Discrepancia conocida vigente en `ss/ss_sq`:
+  - app-like: trunca radicando negativo a `0`.
+  - implementaciones independientes (R/Python): usan `abs(...)`.
+- Stage 05 clasifica explícitamente la propagación de esa discrepancia como `KNOWN_DISCREPANCY` en métricas derivadas.
 
 ## Next Steps
-
-1. Implementar Fase 5 (Scores)
-2. Git commit y push
+1. Push del commit de Fase 5 a `origin/main` (rebase en progreso tras conflicto resuelto en `CURRENT_SESSION.md`).
+2. Ejecutar verificación final post-push (`git status`, hash remoto) y cerrar sesión.
