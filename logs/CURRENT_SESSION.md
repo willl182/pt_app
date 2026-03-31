@@ -1,10 +1,10 @@
 # Session State: PT App — Validacion Downstream Algoritmo A
 
-**Last Updated**: 2026-03-31 17:38 (260331_1738)
+**Last Updated**: 2026-03-31 17:47 (260331_1747)
 
 ## Session Objective
 
-Fase 4 (Uncertainty Chain) completada exitosamente.
+Revisión de Fase 4 (Cadena de Incertidumbre) completada. Todos los criterios de cierre cumplidos.
 
 ## Current State
 
@@ -12,7 +12,7 @@ Fase 4 (Uncertainty Chain) completada exitosamente.
 - [x] Fase 1 completada: estadísticos robustos validados (90 PASS, 0 FAIL)
 - [x] Fase 2 completada: homogeneidad validada (195 PASS, 0 FAIL)
 - [x] Fase 3 completada: estabilidad validada (195 PASS, 0 FAIL)
-- [x] **Fase 4: Uncertainty Chain** — completada (420 PASS, 0 FAIL)
+- [x] **Fase 4: Uncertainty Chain** — completada y revisada (420 PASS, 0 FAIL)
 
 ## Archivos outputs actuales
 
@@ -21,6 +21,7 @@ validation/outputs/
   stage_01_robust_stats*.csv, _report.md   # Fase 1: 90 PASS
   stage_02_homogeneity*.csv, _report.md    # Fase 2: 195 PASS
   stage_03_stability*.csv, _report.md      # Fase 3: 195 PASS
+  stage_04_uncertainty_chain*.csv, _report.md  # Fase 4: 420 PASS
 ```
 
 ## Resultados acumulados
@@ -30,24 +31,28 @@ validation/outputs/
 | 1: Robustos | 6 | 90 | 90 | 0 | 3.41e-13 |
 | 2: Homogeneidad | 13 | 195 | 195 | 0 | 2.98e-13 |
 | 3: Estabilidad | 13 | 195 | 195 | 0 | 3.12e-13 |
-| **Total** | **32** | **480** | **480** | **0** | |
-
-## Observaciones Fase 3
-
-- diff_hom_stab = 0 para todos (datos stab = datos hom)
-- u_hom_mean calculado con sd de TODOS los valores de homogeneidad
-- Criterio expandido usa fórmula de estabilidad (NO tabla F1/F2)
+| 4: Incertidumbre | 28 | 420 | 420 | 0 | 4.02e-15 |
+| **Total** | **60** | **900** | **900** | **0** | |
 
 ## Observaciones Fase 4
 
-- Plan creado: `logs/plans/260331_1711_plan_fase-4-uncertainty-chain.md`
-- Alcance: 15 combos × 4 métodos × 7 métricas = 420 comparaciones
+- 15 combos × 4 métodos × 7 métricas = 420 comparaciones
 - Métodos: Referencia, Consenso MADe, Consenso nIQR, Algoritmo A
-- Fórmulas clave identificadas en app.R (u_xpt, u_hom, u_stab, u_xpt_def, U_xpt)
-- Archivos stub existentes con TODOs marcados
+- u_stab = 0 para todos (diff_hom_stab = 0 en este dataset)
+- Algoritmo A converge para todos los combos
+- Diferencias R vs Python: orden 1e-15 a 1e-17 (muy por debajo de tolerancia 1e-9)
+
+## Criterios de cierre Fase 4 ✅
+
+1. ✅ Los 15 combos se procesan correctamente para los 4 métodos
+2. ✅ Las 7 métricas se calculan correctamente en R y Python
+3. ✅ Todas las métricas coinciden dentro de tolerancia (1e-9)
+4. ✅ u_xpt_def = sqrt(u_xpt^2 + u_hom^2 + u_stab^2)
+5. ✅ U_xpt = k * u_xpt_def (k=2)
+6. ✅ Existe CSV de salida con tabla canónica
+7. ✅ Existe reporte Markdown con resumen PASS/FAIL
 
 ## Next Steps
 
-1. Ejecutar subagente `revisor-fase` para Fase 4
-2. Implementar Fase 5 (Scores)
-3. Git commit y push
+1. Implementar Fase 5 (Scores)
+2. Git commit y push
