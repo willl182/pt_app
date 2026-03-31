@@ -1,100 +1,60 @@
-# Session State: PT App - Auditoría de Cálculos CO 0-μmol/mol
+# Session State: PT App - POC GPT53CDX Implementacion
 
-**Last Updated**: 2026-02-05 14:41
+**Last Updated**: 2026-03-30 12:16 (260330_1216)
 
 ## Session Objective
 
-Verificar los cálculos de homogeneidad y estabilidad del archivo de auditoría `data/Homogenidad y estabilidad.xlsx` para CO 0-μmol/mol, documentar las fórmulas del Excel, y comparar con las implementaciones del aplicativo usando ptcalc desde GitHub.
+Implementar POC GPT53CDX: validacion downstream post-Algoritmo A con comparacion tripartita (APP vs R independiente vs Python) para 15 combinaciones objetivo, guardando todo en `validation/val3/`.
 
 ## Current State
 
-- [x] Fase 1: Extraer datos crudos del archivo de auditoría
-- [x] Fase 2: Replicar cálculos de homogeneidad paso a paso
-- [x] Fase 2.5: Documentar fórmulas Excel con tidyxl
-- [x] Fase 3: Verificar criterio de homogeneidad
-- [x] Fase 4: Replicar cálculos de estabilidad
-- [x] Fase 5: Comparar con implementación del app (usando source())
-- [x] Fase 6: Clonar ptcalc y verificar funciones (usando devtools::load_all())
-- [x] Fase 7: Documentar hallazgos finales
-
-## Summary of Completion
-
-**Auditoría finalizada exitosamente.** Todos los cálculos del aplicativo son correctos. Informe final generado en `reports/auditoria_co_0_umol_mol_final.md` con fórmulas detalladas del aplicativo.
+- [x] Fase 0: Scaffolding en `validation/val3/`
+- [x] Fase 1: Robust Stats - `Val_01_Robust_Stats.xlsx` generado
+- [x] Fase 2: Homogeneity - `Val_02_Homogeneity.xlsx` generado
+- [x] Fase 3: Stability - `Val_03_Stability.xlsx` generado
+- [x] Fase 4: Uncertainties - `Val_04_Uncertainties.xlsx` generado
+- [x] Fase 5: Scores - `Val_05_Scores.xlsx` generado
+- [x] Fase 6: Python (stdlib puro) genera `poc_gpt53cdx_py_results.csv`
+- [x] Fase 6: Merge Python en R via `--mode merge_py`
+- [x] Master CSV: `poc_gpt53cdx_master.csv` (7665 rows)
+- [x] Runlog: `poc_gpt53cdx_runlog.md`
+- [x] Plan actualizado: `poc_gpt53cdx.md` con estado por fase
+- [ ] **Fase 7: Resolver ~4446 FAIL** (58%). Diagnostico requerido.
 
 ## Critical Technical Context
 
-### Datos Extraídos
-- Datos de homogeneidad guardados en: `data/audit_homog_data.rds`
-- Datos de estabilidad guardados en: `data/audit_stab_data.rds`
-- Gas analizado: CO (monóxido de carbono) nivel 0-μmol/mol
-- g = 10 muestras, m = 2 réplicas
+- **Directorio de salida**: `validation/val3/` (NO `validation/poc_gpt53cdx/`)
+- **Python sin dependencias**: solo stdlib (csv, math, collections). Sin numpy/pandas.
+- **Workbook**: se usa `openxlsx` (NO `openxlsx2`): `createWorkbook()`, `addWorksheet()`, `writeDataTable()`, `saveWorkbook()`.
+- **Columnas master**: `combo_id, pollutant, level, section, participant_id, metric, app_value, r_value, excel_value, py_value, diff_app_r, diff_app_excel, diff_app_py, diff_r_excel, diff_r_py, status, tolerance`
+- **Tolerancias**: `TOL_STRICT=1e-12`, `TOL_LOOSE=1e-9`, `TOL_ALGO=1e-6`
+- **Flujo de ejecucion**:
+  1. `Rscript validation/val3/poc_gpt53cdx_val.R --mode app_r_excel`
+  2. `python3 validation/val3/poc_gpt53cdx_val.py`
+  3. `Rscript validation/val3/poc_gpt53cdx_val.R --mode merge_py`
 
-### Resultados Principales
+## Resultados actuales (requieren diagnostico)
 
-| Estadístico | Auditoría | App (ptcalc) | Estado |
-|-------------|-----------|---------------|--------|
-| Promedio general | -0.020417 | -0.020417 | ✅ COINCIDE |
-| sx (SD promedios) | 0.018363 | 0.018363 | ✅ COINCIDE |
-| sw (SD intra) | 0.036226 | 0.036226 | ✅ COINCIDE |
-| ss (SD entre) | #NUM! | 0.017860 | - (error Excel) |
-| σpt | 0.005788 | 0.039820 | ⚠️ Origen diferente |
+```
+Total: 7665 | PASS: 3219 (42%) | FAIL: 4446 (58%)
 
-### Hallazgo Crítico sobre σpt
+robust_stats  : 480 total, 123 PASS, 357 FAIL
+homogeneity   : 195 total,  77 PASS, 118 FAIL
+stability     :  90 total,  22 PASS,  68 FAIL
+uncertainties : 1140 total, 58 PASS, 1082 FAIL
+scores        : 5760 total, 2939 PASS, 2821 FAIL
+```
 
-El valor σpt = 0.005788 reportado en la auditoría **NO es calculable** desde los datos de homogeneidad usando métodos estándar ISO 13528:
-- MADe (app, col2 - x_pt): 0.039820
-- MADe ISO (todos valores): 0.04009
-- MADe ISO (promedios): 0.00162
-
-**Origen del σpt en auditoría:** Calculado a partir de 3 valores en B110:B112 (`-0.029635, -0.021071, -0.024974`) que NO provienen de los datos de homogeneidad. Origen desconocido - posiblemente datos externos o de otro análisis.
-
-### Aclaración Técnica sobre MADe
-
-**NO es error, es diferente propósito:**
-| Contexto | Fórmula | Estado |
-|----------|---------|--------|
-| **Homogeneidad (app)** | `1.483 × median(\|col2 - median(col1)\|)` | ✅ CORRECTO |
-| **ISO 13528 general** | `1.483 × median(\|xi - median(xi)\|)` | Diferente propósito |
-
-El código actual del app es CORRECTO para el contexto de homogeneidad. Las dos fórmulas tienen diferentes propósitos según el usuario.
-
-### Resultados de Criterios (usando σpt del app = 0.039820)
-
-**Homogeneidad:**
-- c = 0.3 × 0.039820 = 0.011946
-- ss = 0.017860
-- **❌ NO PASA:** 0.017860 > 0.011946
-
-**Estabilidad:**
-- c = 0.3 × 0.039820 = 0.011946
-- D = |media_estab - media_hom| = 0.001841
-- **✅ PASA:** 0.001841 ≤ 0.011946
-
-### ptcalc Repository
-
-- Clonado desde: https://github.com/willl182/ptcalc
-- Ubicación: `ptcalc_repo/`
-- Carga: `devtools::load_all("ptcalc_repo")`
-- Verificación: ✅ Resultados idénticos a cálculos manuales
+Sospechas principales:
+1. Diferencias quantile type-7 R vs Python linear interpolation
+2. Propagacion de esas diferencias a incertidumbres y puntajes
+3. Niveles 0 (sigma_pt ~ 0) no clasificados como NA_EXPECTED
+4. Tolerancia 1e-12 posiblemente demasiado estricta para comparar R vs Python
 
 ## Next Steps
 
-No hay pendientes inmediatos. La auditoría ha sido completada exitosamente.
-
-## Files Modified/Created This Session
-
-- `.opencode/plans/260205_1411_plan_auditoria-verificacion-calculos-homogeneidad-co.md` (plan completado)
-- `logs/plans/260205_1411_plan_auditoria-verificacion-calculos-homogeneidad-co.md` (plan actualizado y completado)
-- `data/audit_homog_data.rds` (datos extraídos de auditoría)
-- `data/audit_stab_data.rds` (datos extraídos de auditoría)
-- `logs/history/260205_1435_findings.md` (hallazgos técnicos guardados)
-- `reports/auditoria_co_0_umol_mol_final.md` (informe final con fórmulas del aplicativo)
-- `logs/CURRENT_SESSION.md` (estado actual)
-
-## Important Notes
-
-- **NO se modificó código del app** - Solo lectura y verificación
-- **ptcalc/ está en .gitignore** - Se clonó en ptcalc_repo/ para verificación
-- **Las funciones de ptcalc calculan correctamente** según las fórmulas implementadas
-- **Los resultados del app son idénticos** a los cálculos manuales
-- **Plan completado:** logs/plans/260205_1411_plan_auditoria-verificacion-calculos-homogeneidad-co.md
+1. Diagnosticar FALLAS en robust_stats: comparar valores APP vs Python directamente
+2. Verificar si tolerancia 1e-12 es demasiado estricta para comparacion R vs Python
+3. Implementar clasificacion NA_EXPECTED para niveles 0
+4. Ajustar tolerancias por seccion segun naturaleza del calculo
+5. Re-ejecutar pipeline completo y verificar conformidad

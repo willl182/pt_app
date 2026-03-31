@@ -124,6 +124,8 @@ ui <- fluidPage(
 # II. Lógica del Servidor
 # ===================================================================
 server <- function(input, output, session) {
+  ALGO_A_TOL <- 1e-04
+
   # --- Carga de datos y Procesamiento ---
   # Esta sección maneja la carga inicial de datos desde archivos subidos por el usuario.
   # Estos reactivos son la base para todos los análisis posteriores.
@@ -879,23 +881,19 @@ server <- function(input, output, session) {
           error = "Se requieren al menos tres participantes para ejecutar el Algoritmo A.",
           input_data = aggregated,
           iterations = tibble(),
-          winsorized_values = tibble(),
+          iteration_detail = tibble(),
+          weights = data.frame(),
           converged = FALSE,
-          n_participants = NA_integer_
+          n_winsorized = NA_integer_,
+          n = nrow(aggregated)
         )
       } else {
         algo_res <- run_algorithm_a(
           values = aggregated$Resultado,
           ids = aggregated$participant_id,
-          max_iter = max_iter
+          max_iter = max_iter,
+          tol = ALGO_A_TOL
         )
-
-        if (!is.null(algo_res$error)) {
-          if (is.null(algo_res$iterations)) algo_res$iterations <- tibble()
-          if (is.null(algo_res$winsorized_values)) algo_res$winsorized_values <- tibble()
-          if (is.null(algo_res$converged)) algo_res$converged <- FALSE
-          if (is.null(algo_res$n_participants)) algo_res$n_participants <- NA_integer_
-        }
 
         algo_res$input_data <- aggregated
       }
@@ -1173,18 +1171,29 @@ server <- function(input, output, session) {
                 h4("Resultados del Algoritmo A"),
                 uiOutput("algoA_result_summary"),
                 hr(),
+                downloadButton("download_algoA_csv", "Exportar Intermedios CSV", class = "btn-sm btn-outline-secondary mb-2"),
+                hr(),
                 h4("Datos de Entrada"),
                 dataTableOutput("algoA_input_table"),
                 hr(),
                 h4("Histograma de Resultados"),
                 plotlyOutput("algoA_histogram"),
                 hr(),
-                h4("Iteraciones"),
+                h4("Resumen de Iteraciones"),
+                p("Valores de ubicación (x*) y escala (s*) en cada iteración, con criterio de convergencia.",
+                  tags$br(),
+                  tags$small(class = "text-muted", "delta = máx(|Δx*|, |Δs*|); convergencia cuando delta < tolerancia")),
                 dataTableOutput("algoA_iterations_table"),
-                # Sección de pesos oculta por solicitud del usuario
-                # hr(),
-                # h4("Pesos Finales por Participante"),
-                # dataTableOutput("algoA_weights_table")
+                hr(),
+                h4("Detalle por Participante por Iteración"),
+                p("Valores originales y winzorizados en cada paso del algoritmo.",
+                  tags$br(),
+                  tags$small(class = "text-muted", "Winsorización: x*_i = clamp(xi, x*−1.5·s*, x*+1.5·s*)")),
+                dataTableOutput("algoA_iteration_detail_table"),
+                hr(),
+                h4("Valores Finales por Participante"),
+                p("Valores originales vs winzorizados tras convergencia del algoritmo."),
+                dataTableOutput("algoA_weights_table")
               ),
               tabPanel(
                 "Valor consenso",
@@ -1418,6 +1427,8 @@ server <- function(input, output, session) {
                     6,
                     textInput("report_coordinator", "Coordinador EA:", value = ""),
                     textInput("report_quality_pro", "Profesional Calidad Aire:", value = ""),
+                    textInput("report_projects_pro", "Profesional Proyectos:", value = ""),
+                    textInput("report_infrastructure_pro", "Profesional Infraestructura:", value = ""),
                     textInput("report_ops_eng", "Ingeniero Operativo:", value = ""),
                     textInput("report_quality_manager", "Profesional Gestión Calidad:", value = "")
                   )
@@ -2505,7 +2516,12 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
     # H4: ISO 13528 recomienda Algoritmo A solo para n >= 12;
     # para n < 12 usar MADe/nIQR directamente
     algo_res <- if (n_part >= 12) {
-      run_algorithm_a(values = values, ids = participant_data$participant_id, max_iter = max_iter)
+      run_algorithm_a(
+        values = values,
+        ids = participant_data$participant_id,
+        max_iter = max_iter,
+        tol = ALGO_A_TOL
+      )
     } else {
       list(error = paste0(
         "Algoritmo A requiere n \u2265 12 participantes (n actual = ", n_part,
@@ -4356,7 +4372,7 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
           # Como run_algorithm_a está definida en el ámbito global de server o ui?
           # Parece estar en el ámbito de server. Intentemos usarla.
           # Nota: run_algorithm_a en app.R toma (values, ids).
-          res_algo <- run_algorithm_a(vals, ids)
+          res_algo <- run_algorithm_a(vals, ids, tol = ALGO_A_TOL)
           if (is.null(res_algo$error)) {
             xpt <- res_algo$assigned_value
             sigma_pt <- res_algo$robust_sd
@@ -4537,7 +4553,11 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
         niqr <- calculate_niqr(vals)
         assigned <- list(xpt = med, u_xpt = 1.25 * niqr / sqrt(length(vals)), sigma = niqr)
       } else if (method_code == "3") {
-        res <- run_algorithm_a(part_data$mean_value, part_data$participant_id)
+        res <- run_algorithm_a(
+          part_data$mean_value,
+          part_data$participant_id,
+          tol = ALGO_A_TOL
+        )
         assigned <- list(xpt = res$assigned_value, u_xpt = 1.25 * res$robust_sd / sqrt(nrow(part_data)), sigma = res$robust_sd)
       }
 
@@ -4960,7 +4980,7 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
       # Para simplicidad de vista previa, ejecutémoslo al vuelo si los datos son pequeños
       vals <- part_data$mean_value
       ids <- part_data$participant_id
-      algo_res <- run_algorithm_a(vals, ids)
+      algo_res <- run_algorithm_a(vals, ids, tol = ALGO_A_TOL)
       if (!is.null(algo_res$error)) {
         return(list(error = paste("Error en Algoritmo A:", algo_res$error)))
       }
@@ -5093,6 +5113,8 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
         period = input$report_period,
         coordinator = input$report_coordinator,
         quality_pro = input$report_quality_pro,
+        projects_pro = input$report_projects_pro,
+        infrastructure_pro = input$report_infrastructure_pro,
         ops_eng = input$report_ops_eng,
         quality_manager = input$report_quality_manager,
         participants_data = participants_instrumentation(),
@@ -5212,6 +5234,8 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
         period = input$report_period,
         coordinator = input$report_coordinator,
         quality_pro = input$report_quality_pro,
+        projects_pro = input$report_projects_pro,
+        infrastructure_pro = input$report_infrastructure_pro,
         ops_eng = input$report_ops_eng,
         quality_manager = input$report_quality_manager,
         # Datos de instrumentaci\u00f3n de participantes
@@ -5328,9 +5352,10 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
         ),
         input_data = tibble(),
         iterations = tibble(),
+        iteration_detail = tibble(),
         weights = tibble(),
         converged = FALSE,
-        effective_weight = NA_real_
+        n_winsorized = NA_integer_
       ))
     }
 
@@ -5347,9 +5372,10 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
         ),
         input_data = tibble(),
         iterations = tibble(),
+        iteration_detail = tibble(),
         weights = tibble(),
         converged = FALSE,
-        effective_weight = NA_real_
+        n_winsorized = NA_integer_
       ))
     }
 
@@ -5364,15 +5390,27 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
       return(div(class = "alert alert-danger", res$error))
     }
 
-    convergence_message <- if (isTRUE(res$converged)) {
-      "El algoritmo convergió cuando los cambios en x* y s* fueron menores que 0.001 (sin variación en la tercera cifra decimal)."
+    n_iter <- if (!is.null(res$iterations) && nrow(res$iterations) > 0) nrow(res$iterations) else 0
+    stabilization_iter <- if (!is.null(res$iterations) && nrow(res$iterations) > 0) {
+      hit <- which(res$iterations$delta_max < res$tolerance)
+      if (length(hit) > 0) hit[1] else NA_integer_
     } else {
-      "El algoritmo alcanzó el número máximo de iteraciones sin estabilizar la tercera cifra decimal de x* y s*."
+      NA_integer_
+    }
+    convergence_message <- if (isTRUE(res$converged)) {
+      paste0("Convergió en ", n_iter, " iteraciones (tolerancia = ", format(res$tolerance, scientific = FALSE), ").")
+    } else {
+      paste0("No convergió tras ", n_iter, " iteraciones (tolerancia = ", format(res$tolerance, scientific = FALSE), ").")
+    }
+    stabilization_message <- if (is.finite(stabilization_iter)) {
+      paste0("Primera iteración que cumple la tolerancia: ", stabilization_iter, ".")
+    } else {
+      "Ninguna iteración visible cumple la tolerancia."
     }
 
-    assigned_value_fmt <- format(res$assigned_value, digits = 9, scientific = FALSE)
-    robust_sd_fmt <- format(res$robust_sd, digits = 9, scientific = FALSE)
-    effective_fmt <- format(res$effective_weight, digits = 9, scientific = FALSE)
+    fmt9 <- function(x) format(x, digits = 9, scientific = FALSE)
+
+    n_wins <- if (!is.null(res$n_winsorized)) res$n_winsorized else 0L
 
     div(
       class = "alert alert-info",
@@ -5380,10 +5418,19 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
         "<strong>Analito:</strong> ", toupper(res$selected$pollutant), "<br>",
         "<strong>Esquema (n):</strong> ", res$selected$n_lab, "<br>",
         "<strong>Nivel:</strong> ", res$selected$level, "<br>",
-        "<strong>Valor asignado (x*):</strong> ", assigned_value_fmt, "<br>",
-        "<strong>Desviación robusta (s*):</strong> ", robust_sd_fmt, "<br>",
-        "<strong>Suma de pesos efectivos:</strong> ", effective_fmt, "<br>",
-        "<em>", convergence_message, "</em>"
+        "<strong>n participantes:</strong> ", res$n, "<br>",
+        "<hr style='margin:4px 0'>",
+        "<strong>Valores iniciales (iteración 0):</strong><br>",
+        "&nbsp;&nbsp;x*₀ = mediana = ", fmt9(res$initial_median), "<br>",
+        "&nbsp;&nbsp;s*₀ = MADe = ", fmt9(res$initial_mad_e), "<br>",
+        "<hr style='margin:4px 0'>",
+        "<strong>Valores finales (winsorización ISO 13528 Anexo C):</strong><br>",
+        "&nbsp;&nbsp;x* (valor asignado) = ", fmt9(res$assigned_value), "<br>",
+        "&nbsp;&nbsp;s* (desviación robusta) = ", fmt9(res$robust_sd), "<br>",
+        "&nbsp;&nbsp;Observaciones winzorizadas = ", n_wins, " de ", res$n, "<br>",
+        "<hr style='margin:4px 0'>",
+        "<em>", convergence_message, "</em><br>",
+        "<strong>", stabilization_message, "</strong>"
       ))
     )
   })
@@ -5431,16 +5478,29 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
       return(datatable(data.frame(Mensaje = res$error)))
     }
 
-    if (nrow(res$iterations) == 0) {
+    if (is.null(res$iterations) || nrow(res$iterations) == 0) {
       return(datatable(data.frame(Mensaje = "No se registraron iteraciones.")))
     }
 
+    iter_display <- res$iterations
+    iter_display$Se_estabiliza <- ifelse(iter_display$delta_max < res$tolerance, "SI", "NO")
+    names(iter_display) <- c("Iter", "x*_prev", "s*_prev", "delta_w", "Lim_inf",
+                              "Lim_sup", "n_winsor", "x*_new", "s*_new",
+                              "delta_x", "delta_s", "delta_max", "Se_estabiliza")
+
     datatable(
-      res$iterations,
-      options = list(pageLength = 10, scrollX = TRUE),
+      iter_display,
+      options = list(pageLength = 50, scrollX = TRUE, dom = "t"),
       rownames = FALSE
     ) %>%
-      formatRound(columns = c("x_star", "s_star", "delta"), digits = 9)
+      formatRound(columns = c("x*_prev", "s*_prev", "delta_w", "Lim_inf",
+                               "Lim_sup", "x*_new", "s*_new",
+                               "delta_x", "delta_s", "delta_max"), digits = 9) %>%
+      formatStyle(
+        "Se_estabiliza",
+        target = "row",
+        backgroundColor = styleEqual("SI", "#DFF0D8")
+      )
   })
 
   output$algoA_weights_table <- renderDataTable({
@@ -5450,13 +5510,96 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
       return(datatable(data.frame(Mensaje = res$error)))
     }
 
+    w_display <- res$weights
+    names(w_display) <- c("Participante", "Valor_original", "Valor_winsorizado_final", "Fue_winsorizado")
+
     datatable(
-      res$weights,
-      options = list(pageLength = 10, scrollX = TRUE),
+      w_display,
+      options = list(pageLength = 25, scrollX = TRUE),
       rownames = FALSE
     ) %>%
-      formatRound(columns = c("Resultado", "Peso", "Residuo estandarizado"), digits = 6)
+      formatRound(columns = c("Valor_original", "Valor_winsorizado_final"), digits = 9)
   })
+
+  # Detalle por participante en cada iteración
+  output$algoA_iteration_detail_table <- renderDataTable({
+    res <- algorithm_a_selected()
+    req(res)
+    if (!is.null(res$error)) {
+      return(datatable(data.frame(Mensaje = res$error)))
+    }
+
+    detail <- res$iteration_detail
+    if (is.null(detail) || nrow(detail) == 0) {
+      return(datatable(data.frame(Mensaje = "No hay detalle de iteraciones disponible.")))
+    }
+
+    detail_display <- detail
+    names(detail_display) <- c("Iter", "Participante", "Valor", "Winsorizado",
+                                "Fue_winsor", "x*", "s*", "delta",
+                                "Lim_inf", "Lim_sup")
+
+    datatable(
+      detail_display,
+      options = list(pageLength = 25, scrollX = TRUE,
+                     search = list(regex = FALSE)),
+      filter = "top",
+      rownames = FALSE
+    ) %>%
+      formatRound(columns = c("Valor", "Winsorizado", "x*", "s*", "delta",
+                               "Lim_inf", "Lim_sup"), digits = 9)
+  })
+
+  # Exportar todos los intermedios del Algoritmo A en CSV
+  output$download_algoA_csv <- downloadHandler(
+    filename = function() {
+      paste0("AlgoritmoA_Intermedios_", Sys.Date(), ".csv")
+    },
+    content = function(file) {
+      res <- algorithm_a_selected()
+      if (!is.null(res$error)) {
+        writeLines(paste("Error:", res$error), file)
+        return()
+      }
+
+      lines <- c(
+        paste0("# Algoritmo A - Resultados Intermedios ISO 13528:2022"),
+        paste0("# Generado: ", Sys.time()),
+        paste0("# Analito: ", toupper(res$selected$pollutant)),
+        paste0("# Esquema: ", res$selected$n_lab, " / Nivel: ", res$selected$level),
+        paste0("# n participantes: ", res$n),
+        paste0("# Valores iniciales: x*_0 (mediana) = ", res$initial_median,
+               ", s*_0 (MADe) = ", res$initial_mad_e),
+        paste0("# Valores finales: x* = ", res$assigned_value,
+               ", s* = ", res$robust_sd),
+        paste0("# Convergencia: ", if (res$converged) "SI" else "NO",
+               ", tolerancia = ", res$tolerance),
+        paste0("# Observaciones winzorizadas: ", res$n_winsorized, " de ", res$n),
+        "#",
+        "# === SECCION 1: RESUMEN DE ITERACIONES ==="
+      )
+      writeLines(lines, file)
+
+      if (!is.null(res$iterations) && nrow(res$iterations) > 0) {
+        write.table(res$iterations, file, sep = ",", row.names = FALSE,
+                    col.names = TRUE, append = TRUE)
+      }
+
+      cat("\n# === SECCION 2: DETALLE POR PARTICIPANTE POR ITERACION ===\n",
+          file = file, append = TRUE)
+      if (!is.null(res$iteration_detail) && nrow(res$iteration_detail) > 0) {
+        write.table(res$iteration_detail, file, sep = ",", row.names = FALSE,
+                    col.names = TRUE, append = TRUE)
+      }
+
+      cat("\n# === SECCION 3: VALORES WINSORIZADOS FINALES ===\n",
+          file = file, append = TRUE)
+      if (!is.null(res$weights) && nrow(res$weights) > 0) {
+        write.table(res$weights, file, sep = ",", row.names = FALSE,
+                    col.names = TRUE, append = TRUE)
+      }
+    }
+  )
 
   # --- Módulo de Valor consenso ---
 
