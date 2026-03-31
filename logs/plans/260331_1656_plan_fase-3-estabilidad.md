@@ -2,7 +2,7 @@
 
 **Timestamp:** 260331_1656
 **Slug:** fase-3-estabilidad
-**Estado:** Pendiente
+**Estado:** Completado
 
 ---
 
@@ -111,60 +111,60 @@ Total: 15 combos × 13 métricas = 195 comparaciones.
 
 | Item | Estado | Notas |
 |------|--------|-------|
-| Cargar stability_n13.csv y pivotear | Pendiente | Reusar load_wide_data() |
-| Cargar resultados de homogeneidad (R) | Pendiente | Leer stage_02_homogeneity_r.csv |
-| Validar que g y m coinciden entre R y Python | Pendiente | |
+| Cargar stability_n13.csv y pivotear | Completado | Reusar load_wide_data() |
+| Cargar resultados de homogeneidad (R) | Completado | Leer stage_02_homogeneity_r.csv |
+| Validar que g y m coinciden entre R y Python | Completado | g=13, m=2 para todos |
 
 ### Fase 3.2: Cálculo independiente en R
 
 | Item | Estado | Notas |
 |------|--------|-------|
-| Calcular g, m | Pendiente | |
-| Calcular sample_means (rowMeans) | Pendiente | |
-| Calcular general_mean_stab | Pendiente | |
-| Calcular x_pt_stab (median de primera réplica) | Pendiente | |
-| Calcular s_x_bar_sq_stab | Pendiente | |
-| Calcular sw_stab (intra-sample SD) | Pendiente | m=2 con rangos |
-| Calcular ss_sq_stab = abs(s_x_bar_sq - sw_sq/m) | Pendiente | abs() |
-| Calcular ss_stab = sqrt(ss_sq_stab) | Pendiente | |
-| Calcular diff_hom_stab = abs(mean_stab - mean_hom) | Pendiente | Requiere hom data |
-| Calcular u_hom_mean | Pendiente | sd de todos los valores hom / sqrt(n) |
-| Calcular u_stab_mean | Pendiente | sd de todos los valores stab / sqrt(n) |
-| Calcular criterio_simple = 0.3 * sigma_pt_hom | Pendiente | |
-| Calcular criterio_expandido | Pendiente | c + 2*sqrt(u_hom^2 + u_stab^2) |
+| Calcular g, m | Completado | |
+| Calcular sample_means (rowMeans) | Completado | |
+| Calcular general_mean_stab | Completado | |
+| Calcular x_pt_stab (median de primera réplica) | Completado | |
+| Calcular s_x_bar_sq_stab | Completado | |
+| Calcular sw_stab (intra-sample SD) | Completado | m=2 con rangos |
+| Calcular ss_sq_stab = abs(s_x_bar_sq - sw_sq/m) | Completado | abs() |
+| Calcular ss_stab = sqrt(ss_sq_stab) | Completado | |
+| Calcular diff_hom_stab = abs(mean_stab - mean_hom) | Completado | diff=0 para todos |
+| Calcular u_hom_mean | Completado | sd de todos los valores hom / sqrt(n) |
+| Calcular u_stab_mean | Completado | sd de todos los valores stab / sqrt(n) |
+| Calcular criterio_simple = 0.3 * sigma_pt_hom | Completado | |
+| Calcular criterio_expandido | Completado | c + 2*sqrt(u_hom^2 + u_stab^2) |
 
 ### Fase 3.3: Cálculo independiente en Python
 
 | Item | Estado | Notas |
 |------|--------|-------|
-| Implementar todas las fórmulas anteriores | Pendiente | Mismo orden, misma lógica |
-| Cargar resultados de homogeneidad (Python) | Pendiente | Leer stage_02_homogeneity_py.csv |
-| Validar contra resultados R | Pendiente | Tolerancia 1e-9 |
+| Implementar todas las fórmulas anteriores | Completado | Mismo orden, misma lógica |
+| Cargar resultados de homogeneidad (Python) | Completado | Leer stage_02_homogeneity_py.csv |
+| Validar contra resultados R | Completado | Max diff 3.12e-13, tol 1e-9 |
 
 ### Fase 3.4: Comparación tripartita
 
 | Item | Estado | Notas |
 |------|--------|-------|
-| Generar filas canónicas por combo | Pendiente | 13 métricas |
-| Aplicar tolerancia 1e-9 | Pendiente | |
-| Clasificar PASS/FAIL | Pendiente | |
-| Identificar EDGE_CASE | Pendiente | |
+| Generar filas canónicas por combo | Completado | 13 métricas × 15 combos = 195 filas |
+| Aplicar tolerancia 1e-9 | Completado | |
+| Clasificar PASS/FAIL | Completado | 195 PASS, 0 FAIL |
+| Identificar EDGE_CASE | Completado | 0 edge cases |
 
 ### Fase 3.5: Outputs
 
 | Item | Estado | Notas |
 |------|--------|-------|
-| Generar `outputs/stage_03_stability.csv` | Pendiente | Tabla canónica |
-| Generar `outputs/stage_03_stability_report.md` | Pendiente | Con resumen PASS/FAIL |
+| Generar `outputs/stage_03_stability.csv` | Completado | Tabla canónica |
+| Generar `outputs/stage_03_stability_report.md` | Completado | Con resumen PASS/FAIL |
 
 ### Fase 3.6: Reporte de etapa
 
 | Item | Estado | Notas |
 |------|--------|-------|
-| Incluir combos procesados | Pendiente | |
-| Incluir métricas evaluadas | Pendiente | |
-| Incluir conteo PASS/FAIL | Pendiente | |
-| Incluir discrepancias | Pendiente | |
+| Incluir combos procesados | Completado | 15 combos |
+| Incluir métricas evaluadas | Completado | 13 métricas |
+| Incluir conteo PASS/FAIL | Completado | 195 PASS, 0 FAIL |
+| Incluir discrepancias | Completado | Sin discrepancias |
 
 ---
 
@@ -194,3 +194,10 @@ La Fase 3 está cerrada cuando:
 ## Log de Ejecución
 
 - [260331 16:56] Plan creado — fase de implementación estabilidad
+- [260331 17:10] Implementación completada — R + Python scripts
+- [260331 17:10] R ejecutado: 15 combos procesados, CSV intermedio generado
+- [260331 17:10] Python ejecutado: 15 combos procesados, comparación tripartita
+- [260331 17:10] Resultados: 195 PASS, 0 FAIL, 0 EDGE_CASE
+- [260331 17:10] Máxima diferencia R vs Python: 3.12e-13 (tolerancia 1e-9)
+- [260331 17:10] Observación: diff_hom_stab = 0 para todos (datos stab = datos hom)
+- [260331 17:10] Fase 3 CERRADA — todos los criterios de cierre cumplidos
