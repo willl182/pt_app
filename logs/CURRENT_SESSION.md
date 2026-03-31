@@ -1,39 +1,60 @@
-# Session State: PT App Opus Track
+# Session State: PT App - POC GPT53CDX Implementacion
 
-**Last Updated**: 2026-03-10 07:34
+**Last Updated**: 2026-03-30 12:16 (260330_1216)
 
 ## Session Objective
 
-Implementar el track `opus` de los ajustes del aplicativo a partir de `mods/`, cubriendo cambios operativos en `app.R` y alineación documental en `es/`.
+Implementar POC GPT53CDX: validacion downstream post-Algoritmo A con comparacion tripartita (APP vs R independiente vs Python) para 15 combinaciones objetivo, guardando todo en `validation/val3/`.
 
 ## Current State
 
-- [x] Rama `opus/ajustes-app-260310` creada desde `main` en `bc3f3ae`
-- [x] Worktree aislado creado en `/tmp/pt_app_opus`
-- [x] `/tmp/pt_app_opus/app.R` actualizado para usar `run` como selector explícito de serie en Valor Asignado, Puntajes PT e Informe Global
-- [x] `/tmp/pt_app_opus/app.R` actualizado para preservar `dataset_fuente` en datos agregados de participantes
-- [x] `/tmp/pt_app_opus/app.R` actualizado para exponer `serie_usada`, `dataset_fuente` y `metodo_recomendado` en tablas y resúmenes
-- [x] Gate operativo aplicado en `opus`: Algoritmo A solo se habilita con `n >= 12`
-- [x] Documentación ajustada en `/tmp/pt_app_opus/es/README.md`
-- [x] Documentación ajustada en `/tmp/pt_app_opus/es/01a_formatos_datos.md`
-- [x] Documentación ajustada en `/tmp/pt_app_opus/es/07_valor_asignado.md`
-- [x] Documentación ajustada en `/tmp/pt_app_opus/es/09_puntajes_pt.md`
-- [x] Documentación ajustada en `/tmp/pt_app_opus/es/MANUAL_COMPLETO_PT_APP.md`
-- [x] Validación sintáctica completada con `Rscript -e "parse(file='/tmp/pt_app_opus/app.R')"`
-- [ ] Pendiente: validación funcional de la app con datos reales en el worktree `opus`
-- [ ] Pendiente: revisar reportes y salidas derivadas para confirmar que todas las rutas ya respetan `run`
-- [ ] Pendiente: transferir al repo real externo `ptcalc` las correcciones puras requeridas por `mods/`, en especial B.10
+- [x] Fase 0: Scaffolding en `validation/val3/`
+- [x] Fase 1: Robust Stats - `Val_01_Robust_Stats.xlsx` generado
+- [x] Fase 2: Homogeneity - `Val_02_Homogeneity.xlsx` generado
+- [x] Fase 3: Stability - `Val_03_Stability.xlsx` generado
+- [x] Fase 4: Uncertainties - `Val_04_Uncertainties.xlsx` generado
+- [x] Fase 5: Scores - `Val_05_Scores.xlsx` generado
+- [x] Fase 6: Python (stdlib puro) genera `poc_gpt53cdx_py_results.csv`
+- [x] Fase 6: Merge Python en R via `--mode merge_py`
+- [x] Master CSV: `poc_gpt53cdx_master.csv` (7665 rows)
+- [x] Runlog: `poc_gpt53cdx_runlog.md`
+- [x] Plan actualizado: `poc_gpt53cdx.md` con estado por fase
+- [ ] **Fase 7: Resolver ~4446 FAIL** (58%). Diagnostico requerido.
 
 ## Critical Technical Context
 
-- El trabajo activo de `opus` está en `/tmp/pt_app_opus`, no en el checkout principal de `/home/w182/w421/pt_app`.
-- El checkout principal sigue con cambios no relacionados; no revertirlos.
-- `ptcalc_repo/` en este workspace es solo referencia local. El repo real `ptcalc` está fuera del directorio actual.
-- Las claves de caché en `app.R` para puntajes y algoritmo ahora incluyen `run`: `pollutant || n_lab || level || run`.
-- La documentación del track `opus` ya quedó alineada con la regla operativa del app: `n < 12` usa consenso robusto, `n >= 12` habilita Algoritmo A.
+- **Directorio de salida**: `validation/val3/` (NO `validation/poc_gpt53cdx/`)
+- **Python sin dependencias**: solo stdlib (csv, math, collections). Sin numpy/pandas.
+- **Workbook**: se usa `openxlsx` (NO `openxlsx2`): `createWorkbook()`, `addWorksheet()`, `writeDataTable()`, `saveWorkbook()`.
+- **Columnas master**: `combo_id, pollutant, level, section, participant_id, metric, app_value, r_value, excel_value, py_value, diff_app_r, diff_app_excel, diff_app_py, diff_r_excel, diff_r_py, status, tolerance`
+- **Tolerancias**: `TOL_STRICT=1e-12`, `TOL_LOOSE=1e-9`, `TOL_ALGO=1e-6`
+- **Flujo de ejecucion**:
+  1. `Rscript validation/val3/poc_gpt53cdx_val.R --mode app_r_excel`
+  2. `python3 validation/val3/poc_gpt53cdx_val.py`
+  3. `Rscript validation/val3/poc_gpt53cdx_val.R --mode merge_py`
+
+## Resultados actuales (requieren diagnostico)
+
+```
+Total: 7665 | PASS: 3219 (42%) | FAIL: 4446 (58%)
+
+robust_stats  : 480 total, 123 PASS, 357 FAIL
+homogeneity   : 195 total,  77 PASS, 118 FAIL
+stability     :  90 total,  22 PASS,  68 FAIL
+uncertainties : 1140 total, 58 PASS, 1082 FAIL
+scores        : 5760 total, 2939 PASS, 2821 FAIL
+```
+
+Sospechas principales:
+1. Diferencias quantile type-7 R vs Python linear interpolation
+2. Propagacion de esas diferencias a incertidumbres y puntajes
+3. Niveles 0 (sigma_pt ~ 0) no clasificados como NA_EXPECTED
+4. Tolerancia 1e-12 posiblemente demasiado estricta para comparar R vs Python
 
 ## Next Steps
 
-1. Ejecutar validación funcional de `/tmp/pt_app_opus/app.R` con archivos `summary_n*.csv`.
-2. Verificar que compatibilidad metrológica, reportes y vistas globales no tengan rutas residuales que ignoren `run`.
-3. Aplicar la corrección normativa pendiente en el repo real externo `ptcalc`.
+1. Diagnosticar FALLAS en robust_stats: comparar valores APP vs Python directamente
+2. Verificar si tolerancia 1e-12 es demasiado estricta para comparacion R vs Python
+3. Implementar clasificacion NA_EXPECTED para niveles 0
+4. Ajustar tolerancias por seccion segun naturaleza del calculo
+5. Re-ejecutar pipeline completo y verificar conformidad

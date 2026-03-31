@@ -82,21 +82,20 @@ calculate_homogeneity_stats <- function(sample_data) {
 
   sw_sq <- sw^2
 
-  # Between-sample variance component
-  ss_sq <- abs(s_x_bar_sq - (sw_sq / m))
-  ss <- sqrt(ss_sq)
+  # Between-sample variance component (ISO 13528:2022, B.10)
+  # If radicand is negative, ss = 0 (measurement noise exceeds between-sample variation)
+  ss_sq <- s_x_bar_sq - (sw_sq / m)
+  ss <- if (ss_sq < 0) 0 else sqrt(ss_sq)
 
-  # Absolute differences from x_pt for each sample (using sample_2)
+  # MADe_hom: robust sigma from HOMOGENEITY data (sample_2 vs x_pt)
+  # NOTE: This is MADe of homogeneity items, NOT of participants.
+  # For sigma_pt used in scores, use MADe/nIQR/AlgoA from participant data.
   abs_diff_from_xpt <- abs(sample_data[, 2] - x_pt)
+  sigma_pt_hom <- stats::median(abs_diff_from_xpt, na.rm = TRUE)
+  MADe_hom <- 1.483 * sigma_pt_hom
 
-  # sigma_pt: median of absolute differences from x_pt
-  sigma_pt <- stats::median(abs_diff_from_xpt, na.rm = TRUE)
-
-  # MADe: robust sigma estimate (1.483 factor for normal distribution)
-  MADe <- 1.483 * sigma_pt
-
-  # Uncertainty of sigma_pt (ISO 13528:2022)
-  u_sigma_pt <- 1.25 * MADe / sqrt(g)
+  # Uncertainty of MADe_hom (ISO 13528:2022)
+  u_sigma_pt <- 1.25 * MADe_hom / sqrt(g)
 
   list(
     g = g,
@@ -111,8 +110,11 @@ calculate_homogeneity_stats <- function(sample_data) {
     ss_sq = ss_sq,
     ss = ss,
     abs_diff_from_xpt = abs_diff_from_xpt,
-    sigma_pt = sigma_pt,
-    MADe = MADe,
+    sigma_pt_hom = sigma_pt_hom,
+    MADe_hom = MADe_hom,
+    # Keep legacy names for backward compat with app.R consumers
+    sigma_pt = MADe_hom,
+    MADe = MADe_hom,
     u_sigma_pt = u_sigma_pt,
     error = NULL
   )
@@ -279,9 +281,9 @@ calculate_stability_stats <- function(stab_sample_data, hom_general_mean_homog, 
 
   stab_sw_sq <- stab_sw^2
 
-  # Between-sample variance component
-  stab_ss_sq <- abs(stab_s_x_bar_sq - (stab_sw_sq / m_stab))
-  stab_ss <- sqrt(stab_ss_sq)
+  # Between-sample variance component (ISO 13528:2022, B.10)
+  stab_ss_sq <- stab_s_x_bar_sq - (stab_sw_sq / m_stab)
+  stab_ss <- if (stab_ss_sq < 0) 0 else sqrt(stab_ss_sq)
 
   # hom_stab_median_of_diffs: Median of absolute differences between 2nd replicate (stability) and hom_stab_x_pt (HOMOGENEITY's x_pt as reference)
   hom_stab_median_of_diffs <- stats::median(abs(stab_sample_data[, 2] - hom_stab_x_pt), na.rm = TRUE)

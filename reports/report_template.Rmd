@@ -33,6 +33,8 @@ params:
   period: "Mes - Mes Año"
   coordinator: "Nombre"
   quality_pro: "Nombre"
+  projects_pro: "Nombre"
+  infrastructure_pro: "Nombre"
   ops_eng: "Nombre"
   quality_manager: "Nombre"
   # Data summaries
@@ -196,6 +198,8 @@ La organización, ejecución y evaluación de este EA se realizó bajo la respon
 
 **Coordinador EA:** `r params$coordinator`  
 **Profesional Calidad Aire:** `r params$quality_pro`  
+**Profesional Proyectos:** `r params$projects_pro`  
+**Profesional Infraestructura:** `r params$infrastructure_pro`  
 **Ingeniero Operativo:** `r params$ops_eng`  
 **Profesional de Gestión de Calidad:** `r params$quality_manager`
 

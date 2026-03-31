@@ -6,7 +6,7 @@
 # Salida: Funciones exportadas para uso en app_final.R
 # Autor: UNAL/INM
 # Fecha: 2026-01-24
-# Referencia: ISO 13528:2022, ISO 17043:2024
+# Referencia: ISO 13528:2022, ISO 17043:2023
 # ===================================================================
 
 # -------------------------------------------------------------------
@@ -80,7 +80,8 @@ calculate_mad_e <- function(x) {
 #' resultado <- run_algorithm_a(valores)
 #'
 #' @export
-run_algorithm_a <- function(values, ids = NULL, max_iter = 50, tol = 1e-03) {
+run_algorithm_a <- function(values, ids = NULL, max_iter = 50, tol = 1e-06) {
+  # ISO 13528:2022, Anexo C - Winsorización iterativa
   mask <- is.finite(values)
   values <- values[mask]
 
@@ -90,8 +91,8 @@ run_algorithm_a <- function(values, ids = NULL, max_iter = 50, tol = 1e-03) {
     ids <- ids[mask]
   }
 
-  n <- length(values)
-  if (n < 3) {
+  p <- length(values)
+  if (p < 3) {
     return(list(
       error = "Se requieren al menos 3 observaciones válidas para el Algoritmo A.",
       assigned_value = NA_real_,
@@ -99,10 +100,11 @@ run_algorithm_a <- function(values, ids = NULL, max_iter = 50, tol = 1e-03) {
       iterations = data.frame(),
       weights = data.frame(),
       converged = FALSE,
-      effective_weight = NA_real_
+      n_winsorized = NA_integer_
     ))
   }
 
+  # Paso 1: Valores iniciales
   x_star <- stats::median(values, na.rm = TRUE)
   s_star <- 1.483 * stats::median(abs(values - x_star), na.rm = TRUE)
 
@@ -116,9 +118,11 @@ run_algorithm_a <- function(values, ids = NULL, max_iter = 50, tol = 1e-03) {
       assigned_value = x_star,
       robust_sd = 0,
       iterations = data.frame(),
-      weights = data.frame(),
+      weights = data.frame(id = ids, valor = values, winsorizado = values,
+                           fue_winsorizado = FALSE, stringsAsFactors = FALSE),
       converged = TRUE,
-      effective_weight = n
+      n_winsorized = 0L,
+      error = NULL
     ))
   }
 
@@ -126,46 +130,43 @@ run_algorithm_a <- function(values, ids = NULL, max_iter = 50, tol = 1e-03) {
   converged <- FALSE
 
   for (iter in seq_len(max_iter)) {
-    u_values <- (values - x_star) / (1.5 * s_star)
-    weights <- ifelse(abs(u_values) <= 1, 1, 1 / (u_values^2))
-    weight_sum <- sum(weights)
+    # Paso 2: delta de winsorización
+    delta <- 1.5 * s_star
 
-    if (!is.finite(weight_sum) || weight_sum <= 0) {
-      return(list(
-        error = "Los pesos calculados son inválidos para el Algoritmo A.",
-        assigned_value = x_star,
-        robust_sd = s_star,
-        iterations = if (length(iteration_records) > 0) do.call(rbind, iteration_records) else data.frame(),
-        weights = data.frame(),
-        converged = FALSE,
-        effective_weight = NA_real_
-      ))
-    }
+    # Paso 3: Winsorizar
+    lower <- x_star - delta
+    upper <- x_star + delta
+    winsorized <- pmax(pmin(values, upper), lower)
+    is_winsorized <- (values < lower) | (values > upper)
 
-    x_new <- sum(weights * values) / weight_sum
-    s_new <- sqrt(sum(weights * (values - x_new)^2) / weight_sum)
+    # Paso 4: Nuevos estimadores
+    x_new <- mean(winsorized)
+    s_new <- 1.134 * sqrt(sum((winsorized - x_new)^2) / (p - 1))
 
     if (!is.finite(s_new) || s_new < .Machine$double.eps) {
       return(list(
-        error = "El Algoritmo A colapsó debido a desviación estándar cero.",
+        error = "El Algoritmo A colapsó: s* convergió a cero.",
         assigned_value = x_new,
         robust_sd = 0,
         iterations = if (length(iteration_records) > 0) do.call(rbind, iteration_records) else data.frame(),
-        weights = data.frame(),
+        weights = data.frame(id = ids, valor = values, winsorizado = winsorized,
+                             fue_winsorizado = is_winsorized, stringsAsFactors = FALSE),
         converged = FALSE,
-        effective_weight = NA_real_
+        n_winsorized = sum(is_winsorized),
+        error = NULL
       ))
     }
 
     delta_x <- abs(x_new - x_star)
     delta_s <- abs(s_new - s_star)
-    delta <- max(delta_x, delta_s)
+    delta_max <- max(delta_x, delta_s)
 
     iteration_records[[iter]] <- data.frame(
       iteracion = iter,
       x_star = x_new,
       s_star = s_new,
-      delta = delta,
+      delta = delta_max,
+      n_winsorizado = sum(is_winsorized),
       stringsAsFactors = FALSE
     )
 
@@ -178,8 +179,10 @@ run_algorithm_a <- function(values, ids = NULL, max_iter = 50, tol = 1e-03) {
     }
   }
 
-  u_final <- (values - x_star) / (1.5 * s_star)
-  weights_final <- ifelse(abs(u_final) <= 1, 1, 1 / (u_final^2))
+  # Valores finales winzorizados
+  delta_final <- 1.5 * s_star
+  winsorized_final <- pmax(pmin(values, x_star + delta_final), x_star - delta_final)
+  is_winsorized_final <- (values < x_star - delta_final) | (values > x_star + delta_final)
 
   iterations_df <- if (length(iteration_records) > 0) {
     do.call(rbind, iteration_records)
@@ -190,8 +193,8 @@ run_algorithm_a <- function(values, ids = NULL, max_iter = 50, tol = 1e-03) {
   weights_df <- data.frame(
     id = ids,
     valor = values,
-    peso = weights_final,
-    residuo_estandarizado = u_final,
+    winsorizado = winsorized_final,
+    fue_winsorizado = is_winsorized_final,
     stringsAsFactors = FALSE
   )
 
@@ -201,7 +204,7 @@ run_algorithm_a <- function(values, ids = NULL, max_iter = 50, tol = 1e-03) {
     iterations = iterations_df,
     weights = weights_df,
     converged = converged,
-    effective_weight = sum(weights_final),
+    n_winsorized = sum(is_winsorized_final),
     error = NULL
   )
 }
@@ -409,8 +412,9 @@ calculate_homogeneity_stats <- function(sample_data) {
   }
 
   sw_sq <- sw^2
-  ss_sq <- abs(s_x_bar_sq - (sw_sq / m))
-  ss <- sqrt(ss_sq)
+  # B.10: si radicando < 0, ss = 0
+  ss_sq <- s_x_bar_sq - (sw_sq / m)
+  ss <- if (ss_sq < 0) 0 else sqrt(ss_sq)
 
   # Mediana de las diferencias absolutas entre medias de muestra
   median_of_diffs <- stats::median(abs(sample_means - stats::median(sample_means)), na.rm = TRUE)
@@ -551,8 +555,9 @@ calculate_stability_stats <- function(stab_data, hom_general_mean_homog, hom_sta
 
   stab_sw_sq <- stab_sw^2
 
-  stab_ss_sq <- abs(stab_s_x_bar_sq - (stab_sw_sq / m_stab))
-  stab_ss <- sqrt(stab_ss_sq)
+  # B.10: si radicando < 0, ss = 0
+  stab_ss_sq <- stab_s_x_bar_sq - (stab_sw_sq / m_stab)
+  stab_ss <- if (stab_ss_sq < 0) 0 else sqrt(stab_ss_sq)
 
   hom_stab_median_of_diffs <- stats::median(abs(stab_data[, 2] - hom_stab_x_pt), na.rm = TRUE)
 

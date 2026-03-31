@@ -186,3 +186,20 @@ test_that("algorithm a converges within max_iter", {
   expect_null(result$error)
   expect_true(nrow(result$iterations) < 100)
 })
+
+test_that("algorithm a accepts explicit tolerance", {
+  old_wd <- setwd("../..")
+  on.exit(setwd(old_wd))
+
+  devtools::load_all("ptcalc")
+
+  values <- c(10.1, 10.2, 9.9, 10.0, 10.3, 50.0)
+  result <- ptcalc::run_algorithm_a(values, tol = 1e-04)
+
+  expect_true(result$converged)
+  expect_null(result$error)
+  expect_equal(result$tolerance, 1e-04)
+  expect_true("weights" %in% names(result))
+  expect_true("iteration_detail" %in% names(result))
+  expect_equal(result$n, length(values))
+})
