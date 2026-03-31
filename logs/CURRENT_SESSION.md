@@ -4,7 +4,7 @@
 
 ## Session Objective
 
-Fase 3 (Estabilidad) completada. Preparar Fase 4 (Uncertainty Chain).
+Fase 4 (Uncertainty Chain) en progreso. Plan creado.
 
 ## Current State
 
@@ -12,7 +12,7 @@ Fase 3 (Estabilidad) completada. Preparar Fase 4 (Uncertainty Chain).
 - [x] Fase 1 completada: estadísticos robustos validados (90 PASS, 0 FAIL)
 - [x] Fase 2 completada: homogeneidad validada (195 PASS, 0 FAIL)
 - [x] Fase 3 completada: estabilidad validada (195 PASS, 0 FAIL)
-- [ ] **Fase 4: Uncertainty Chain** — pendiente de implementación
+- [x] **Fase 4: Uncertainty Chain** — plan creado, implementación pendiente
 
 ## Archivos outputs actuales
 
@@ -38,11 +38,23 @@ validation/outputs/
 - u_hom_mean calculado con sd de TODOS los valores de homogeneidad
 - Criterio expandido usa fórmula de estabilidad (NO tabla F1/F2)
 
+## Observaciones Fase 4
+
+- Plan creado: `logs/plans/260331_1711_plan_fase-4-uncertainty-chain.md`
+- Alcance: 15 combos × 4 métodos × 7 métricas = 420 comparaciones
+- Métodos: Referencia, Consenso MADe, Consenso nIQR, Algoritmo A
+- Fórmulas clave identificadas en app.R (u_xpt, u_hom, u_stab, u_xpt_def, U_xpt)
+- Archivos stub existentes con TODOs marcados
+
 ## Next Steps
 
 1. Implementar Fase 4 (Uncertainty Chain):
-   - Calcular u_def = sqrt(u_xpt^2 + u_hom^2 + u_stab^2)
-   - Validar cadena de incertidumbre completa
-2. Implementar Fase 5 (Scores)
-3. Ejecutar subagente `revisor-fase` para todas las etapas
+   - Fase 4.1: Lectura de datos de etapas anteriores
+   - Fase 4.2: Cálculo independiente en R
+   - Fase 4.3: Cálculo independiente en Python
+   - Fase 4.4: Comparación tripartita
+   - Fase 4.5: Outputs (CSV + reporte)
+   - Fase 4.6: Reporte de etapa
+2. Ejecutar subagente `revisor-fase` para Fase 4
+3. Implementar Fase 5 (Scores)
 4. Git commit y push
