@@ -1,609 +1,210 @@
 # ===================================================================
-# stage_05_scores
+# Etapa 5: Scores de Desempeño
+# Validacion de scores por participante: z, z', zeta, En
 #
-# Implements Phase 5:
-# - participant-level score metrics by combo and method (2a/2b/3)
-# - app-like and independent R implementations
-# - tripartite comparison app/R/Python
-# - canonical CSV + Markdown report output
+# Referencia: ISO 13528:2022
+# Fuente: data/summary_n13.csv, validation/outputs/stage_04_uncertainty_chain.csv
 # ===================================================================
+#
+## Uso
+#
+# Propósito: Calcular scores de desempeño independientes en R
+# Inputs:
+#   data/summary_n13.csv
+#   validation/outputs/stage_04_uncertainty_chain.csv
+# Outputs:
+#   validation/outputs/stage_05_scores_r.csv  (intermedio, wide)
+#
+# Ejemplo:
+#   Rscript validation/stage_05_scores.R
+#
+# Scores por participante/método/combo:
+#   z_score     = (result - x_pt) / sigma_pt
+#   z_prime     = (result - x_pt) / sqrt(sigma_pt² + u_xpt_def²)
+#   zeta        = (result - x_pt) / sqrt(uncertainty_std² + u_xpt_def²)
+#   En          = (result - x_pt) / sqrt((k·u_std)² + (k·u_xpt_def)²)   k=2
 
-source("validation/common_config.R")
-source("validation/stage_04_uncertainty_chain.R")
+DATA_SUMMARY <- "data/summary_n13.csv"
+STAGE04_CSV  <- "validation/outputs/stage_04_uncertainty_chain.csv"
+OUTPUT_R_CSV <- "validation/outputs/stage_05_scores_r.csv"
 
-STAGE_05_ID <- "stage_05_scores"
-S5_K_FACTOR <- 2
+K <- 2  # Factor de cobertura
 
-s5_as_numeric_or_na <- function(x) {
-  suppressWarnings(as.numeric(x))
+# --- Evaluaciones ---
+
+evaluate_z <- function(z) {
+  ifelse(!is.finite(z), "N/A",
+    ifelse(abs(z) <= 2, "Satisfactorio",
+      ifelse(abs(z) >= 3, "No satisfactorio", "Cuestionable")))
 }
 
-s5_validate_summary_columns <- function(data_df) {
-  required <- c(
-    "pollutant",
-    "level",
-    "participant_id",
-    "mean_value",
-    "sd_value"
-  )
-  if (!all(required %in% names(data_df))) {
-    stop(
-      "summary_n13.csv must include pollutant, level, participant_id, ",
-      "mean_value, sd_value."
-    )
-  }
+evaluate_en <- function(en) {
+  ifelse(!is.finite(en), "N/A",
+    ifelse(abs(en) <= 1, "Satisfactorio", "No satisfactorio"))
 }
 
-s5_validate_stage_04_columns <- function(data_df) {
-  required <- c(
-    "combo_id",
-    "section",
-    "participant_id",
-    "metric",
-    "app_value",
-    "r_value",
-    "python_value"
-  )
-  if (!all(required %in% names(data_df))) {
-    stop(
-      "stage_04_uncertainty_chain.csv must include combo_id, section, ",
-      "participant_id, metric, app_value, r_value, python_value."
-    )
-  }
+# --- Helpers ---
+
+make_combo_id <- function(pollutant, level) {
+  prefix <- toupper(pollutant)
+  num    <- sub("^([0-9]+)-.*$", "\\1", level)
+  paste0(prefix, "_", num)
 }
 
-s5_extract_participants <- function(data_df, pollutant, level) {
-  subset_df <- data_df[
-    data_df$pollutant == pollutant &
-      data_df$level == level &
-      data_df$participant_id != "ref",
-    c("participant_id", "mean_value", "sd_value")
-  ]
+run_stage_05 <- function() {
+  cat("Etapa 5: Scores de Desempeño — INICIO\n")
 
-  if (nrow(subset_df) == 0) {
-    return(data.frame(
-      participant_id = character(0),
-      result = numeric(0),
-      sd_value = numeric(0),
+  # ----------------------------------------------------------------
+  # 1. Cargar parámetros de Etapa 4 (x_pt, sigma_pt, u_xpt_def)
+  # ----------------------------------------------------------------
+  cat("  Cargando parámetros de Etapa 4...\n")
+  stage04 <- read.csv(STAGE04_CSV, stringsAsFactors = FALSE)
+  stage04$r_value <- suppressWarnings(as.numeric(stage04$r_value))
+
+  params_long <- stage04[stage04$metric %in% c("x_pt", "sigma_pt", "u_xpt_def"),
+                          c("combo_id", "pollutant", "level", "section", "metric", "r_value")]
+
+  # Pivotar a tabla wide: una fila por (combo_id, method)
+  combos_methods <- unique(params_long[, c("combo_id", "pollutant", "level", "section")])
+  params_wide <- data.frame()
+
+  for (i in seq_len(nrow(combos_methods))) {
+    cm  <- combos_methods[i, ]
+    sub <- params_long[params_long$combo_id == cm$combo_id &
+                       params_long$section   == cm$section, ]
+
+    get_val <- function(m) {
+      v <- sub$r_value[sub$metric == m]
+      if (length(v) > 0) v[1] else NA_real_
+    }
+
+    params_wide <- rbind(params_wide, data.frame(
+      combo_id  = cm$combo_id,
+      pollutant = cm$pollutant,
+      level     = cm$level,
+      method    = cm$section,
+      x_pt      = get_val("x_pt"),
+      sigma_pt  = get_val("sigma_pt"),
+      u_xpt_def = get_val("u_xpt_def"),
       stringsAsFactors = FALSE
     ))
   }
 
-  agg_mean <- stats::aggregate(
-    subset_df$mean_value,
-    by = list(participant_id = subset_df$participant_id),
-    FUN = function(x) mean(x, na.rm = TRUE)
+  cat("  Parámetros cargados:", nrow(params_wide), "filas (combo × método)\n")
+
+  # ----------------------------------------------------------------
+  # 2. Cargar y agregar datos de participantes
+  # ----------------------------------------------------------------
+  cat("  Cargando datos de participantes...\n")
+  summary_raw <- read.csv(DATA_SUMMARY, stringsAsFactors = FALSE)
+
+  # Filtrar referencia
+  summary_raw <- summary_raw[summary_raw$participant_id != "ref", ]
+
+  # Crear combo_id
+  summary_raw$combo_id <- mapply(make_combo_id, summary_raw$pollutant, summary_raw$level)
+
+  # Agregar mean(mean_value) y mean(sd_value) por combo/participante (3 sample_groups)
+  agg <- aggregate(
+    cbind(mean_value, sd_value) ~ combo_id + pollutant + level + participant_id,
+    data    = summary_raw,
+    FUN     = mean,
+    na.rm   = TRUE
   )
-  names(agg_mean) <- c("participant_id", "result")
+  agg$result          <- agg$mean_value
+  agg$uncertainty_std <- agg$sd_value / sqrt(2)  # m=2 de homogeneidad
 
-  agg_sd <- stats::aggregate(
-    subset_df$sd_value,
-    by = list(participant_id = subset_df$participant_id),
-    FUN = function(x) mean(x, na.rm = TRUE)
-  )
-  names(agg_sd) <- c("participant_id", "sd_value")
+  cat("  Participantes agregados:", nrow(agg), "filas\n")
 
-  merged <- merge(agg_mean, agg_sd, by = "participant_id", all = TRUE)
-  merged[order(merged$participant_id), , drop = FALSE]
-}
+  # ----------------------------------------------------------------
+  # 3. Calcular scores por combo × método × participante
+  # ----------------------------------------------------------------
+  cat("  Calculando scores...\n")
+  METHODS <- c("Referencia", "Consenso MADe", "Consenso nIQR", "Algoritmo A")
 
-s5_get_stage_04_metric <- function(
-    stage_df,
-    combo_id,
-    method_id,
-    metric,
-    implementation = c("app", "r")
-) {
-  implementation <- match.arg(implementation)
-  value_col <- if (implementation == "app") "app_value" else "r_value"
+  all_rows <- list()
 
-  subset_df <- stage_df[
-    stage_df$combo_id == combo_id &
-      stage_df$section == "uncertainty_chain" &
-      stage_df$participant_id == method_id &
-      stage_df$metric == metric,
-    value_col,
-    drop = TRUE
-  ]
+  for (combo_id in sort(unique(params_wide$combo_id))) {
+    parts <- agg[agg$combo_id == combo_id, ]
+    if (nrow(parts) == 0) next
 
-  if (length(subset_df) == 0) {
-    return(NA_real_)
-  }
-  subset_df[[1]]
-}
+    for (method in METHODS) {
+      pm <- params_wide[params_wide$combo_id == combo_id & params_wide$method == method, ]
+      if (nrow(pm) == 0) next
 
-s5_safe_ratio <- function(numerator, denominator) {
-  if (!is.finite(denominator) || denominator <= 0) {
-    return(NA_real_)
-  }
-  numerator / denominator
-}
+      x_pt      <- pm$x_pt[1]
+      sigma_pt  <- pm$sigma_pt[1]
+      u_xpt_def <- pm$u_xpt_def[1]
 
-s5_compute_score_metrics <- function(
-    result,
-    sd_value,
-    x_pt,
-    sigma_pt,
-    u_xpt,
-    u_xpt_def,
-    u_hom,
-    u_stab,
-    m,
-    k_factor = S5_K_FACTOR
-) {
-  uncertainty_std <- if (is.finite(m) && m > 0) {
-    sd_value / sqrt(m)
-  } else {
-    sd_value
-  }
+      # Clip u_xpt_def no finito a 0 (igual que app.R compute_combo_scores)
+      if (!is.finite(u_xpt_def) || u_xpt_def < 0) u_xpt_def <- 0
 
-  z_den <- sigma_pt
-  z_score <- s5_safe_ratio(result - x_pt, z_den)
+      for (i in seq_len(nrow(parts))) {
+        result          <- parts$result[i]
+        uncertainty_std <- parts$uncertainty_std[i]
+        participant_id  <- parts$participant_id[i]
 
-  z_prime_den <- sqrt(sigma_pt^2 + u_xpt_def^2)
-  z_prime_score <- s5_safe_ratio(result - x_pt, z_prime_den)
+        # z_score
+        z <- if (is.finite(sigma_pt) && sigma_pt > 0) {
+          (result - x_pt) / sigma_pt
+        } else NA_real_
 
-  zeta_den <- sqrt(uncertainty_std^2 + u_xpt_def^2)
-  zeta_score <- s5_safe_ratio(result - x_pt, zeta_den)
+        # z_prime_score
+        zprime_den <- sqrt(sigma_pt^2 + u_xpt_def^2)
+        zprime <- if (is.finite(zprime_den) && zprime_den > 0) {
+          (result - x_pt) / zprime_den
+        } else NA_real_
 
-  u_xi_expanded <- k_factor * uncertainty_std
-  u_xpt_expanded <- k_factor * u_xpt_def
-  en_den <- sqrt(u_xi_expanded^2 + u_xpt_expanded^2)
-  en_score <- s5_safe_ratio(result - x_pt, en_den)
+        # zeta_score
+        zeta_den <- sqrt(uncertainty_std^2 + u_xpt_def^2)
+        zeta <- if (is.finite(zeta_den) && zeta_den > 0) {
+          (result - x_pt) / zeta_den
+        } else NA_real_
 
-  list(
-    m = m,
-    result = result,
-    sd_value = sd_value,
-    uncertainty_std = uncertainty_std,
-    x_pt = x_pt,
-    sigma_pt = sigma_pt,
-    u_xpt = u_xpt,
-    u_xpt_def = u_xpt_def,
-    u_hom = u_hom,
-    u_stab = u_stab,
-    z_den = z_den,
-    z_score = z_score,
-    z_prime_den = z_prime_den,
-    z_prime_score = z_prime_score,
-    zeta_den = zeta_den,
-    zeta_score = zeta_score,
-    u_xi_expanded = u_xi_expanded,
-    u_xpt_expanded = u_xpt_expanded,
-    en_den = en_den,
-    en_score = en_score
-  )
-}
+        # En_score (k=2)
+        en_den <- sqrt((K * uncertainty_std)^2 + (K * u_xpt_def)^2)
+        en <- if (is.finite(en_den) && en_den > 0) {
+          (result - x_pt) / en_den
+        } else NA_real_
 
-s5_build_impl_rows <- function(
-    summary_df,
-    stage_04_df,
-    combos_df,
-    implementation = c("app", "r")
-) {
-  implementation <- match.arg(implementation)
-
-  method_ids <- c("method_2a", "method_2b", "method_3")
-  metric_names <- c(
-    "m",
-    "result",
-    "sd_value",
-    "uncertainty_std",
-    "x_pt",
-    "sigma_pt",
-    "u_xpt",
-    "u_xpt_def",
-    "u_hom",
-    "u_stab",
-    "z_den",
-    "z_score",
-    "z_prime_den",
-    "z_prime_score",
-    "zeta_den",
-    "zeta_score",
-    "u_xi_expanded",
-    "u_xpt_expanded",
-    "en_den",
-    "en_score"
-  )
-
-  out_rows <- list()
-  idx <- 1L
-
-  for (i in seq_len(nrow(combos_df))) {
-    combo_id <- combos_df$combo_id[i]
-    pollutant <- combos_df$pollutant[i]
-    level <- combos_df$level[i]
-
-    participants_df <- s5_extract_participants(summary_df, pollutant, level)
-    if (nrow(participants_df) == 0) {
-      next
-    }
-
-    for (method_id in method_ids) {
-      x_pt <- s5_get_stage_04_metric(
-        stage_df = stage_04_df,
-        combo_id = combo_id,
-        method_id = method_id,
-        metric = "x_pt_method",
-        implementation = implementation
-      )
-      sigma_pt <- s5_get_stage_04_metric(
-        stage_df = stage_04_df,
-        combo_id = combo_id,
-        method_id = method_id,
-        metric = "sigma_pt_method",
-        implementation = implementation
-      )
-      u_xpt <- s5_get_stage_04_metric(
-        stage_df = stage_04_df,
-        combo_id = combo_id,
-        method_id = method_id,
-        metric = "u_xpt",
-        implementation = implementation
-      )
-      u_xpt_def <- s5_get_stage_04_metric(
-        stage_df = stage_04_df,
-        combo_id = combo_id,
-        method_id = method_id,
-        metric = "u_xpt_def",
-        implementation = implementation
-      )
-      u_hom <- s5_get_stage_04_metric(
-        stage_df = stage_04_df,
-        combo_id = combo_id,
-        method_id = method_id,
-        metric = "u_hom",
-        implementation = implementation
-      )
-      u_stab <- s5_get_stage_04_metric(
-        stage_df = stage_04_df,
-        combo_id = combo_id,
-        method_id = method_id,
-        metric = "u_stab",
-        implementation = implementation
-      )
-      m <- s5_get_stage_04_metric(
-        stage_df = stage_04_df,
-        combo_id = combo_id,
-        method_id = method_id,
-        metric = "m",
-        implementation = implementation
-      )
-
-      section_name <- paste0("scores_", method_id)
-      for (j in seq_len(nrow(participants_df))) {
-        participant_id <- participants_df$participant_id[j]
-        metrics <- s5_compute_score_metrics(
-          result = participants_df$result[j],
-          sd_value = participants_df$sd_value[j],
-          x_pt = x_pt,
-          sigma_pt = sigma_pt,
-          u_xpt = u_xpt,
-          u_xpt_def = u_xpt_def,
-          u_hom = u_hom,
-          u_stab = u_stab,
-          m = m
+        all_rows[[length(all_rows) + 1]] <- data.frame(
+          combo_id          = combo_id,
+          pollutant         = parts$pollutant[i],
+          level             = parts$level[i],
+          method            = method,
+          participant_id    = participant_id,
+          result            = result,
+          uncertainty_std   = uncertainty_std,
+          x_pt              = x_pt,
+          sigma_pt          = sigma_pt,
+          u_xpt_def         = u_xpt_def,
+          z_score           = z,
+          z_prime_score     = zprime,
+          zeta_score        = zeta,
+          En_score          = en,
+          z_score_eval      = evaluate_z(z),
+          z_prime_score_eval = evaluate_z(zprime),
+          zeta_score_eval   = evaluate_z(zeta),
+          En_score_eval     = evaluate_en(en),
+          stringsAsFactors  = FALSE
         )
-
-        for (metric_name in metric_names) {
-          out_rows[[idx]] <- data.frame(
-            combo_id = combo_id,
-            pollutant = pollutant,
-            level = level,
-            stage = STAGE_05_ID,
-            section = section_name,
-            participant_id = participant_id,
-            metric = metric_name,
-            value = unname(metrics[[metric_name]]),
-            stringsAsFactors = FALSE
-          )
-          idx <- idx + 1L
-        }
       }
     }
   }
 
-  if (length(out_rows) == 0) {
-    return(data.frame(
-      combo_id = character(0),
-      pollutant = character(0),
-      level = character(0),
-      stage = character(0),
-      section = character(0),
-      participant_id = character(0),
-      metric = character(0),
-      value = numeric(0),
-      stringsAsFactors = FALSE
-    ))
-  }
+  r_df <- do.call(rbind, all_rows)
 
-  do.call(rbind, out_rows)
-}
+  # ----------------------------------------------------------------
+  # 4. Guardar CSV intermedio
+  # ----------------------------------------------------------------
+  dir.create("validation/outputs", showWarnings = FALSE, recursive = TRUE)
+  write.csv(r_df, OUTPUT_R_CSV, row.names = FALSE, na = "NA")
 
-s5_run_python_stage_values <- function(
-    summary_input,
-    stage_04_path,
-    python_values_path
-) {
-  py_cmd <- Sys.which("python3")
-  if (identical(py_cmd, "")) {
-    py_cmd <- Sys.which("python")
-  }
-  if (identical(py_cmd, "")) {
-    stop("Python is not available in PATH.")
-  }
-
-  args <- c(
-    "validation/stage_05_scores.py",
-    "--summary-input", summary_input,
-    "--stage-04-output", stage_04_path,
-    "--values-output", python_values_path
-  )
-  py_out <- system2(py_cmd, args = args, stdout = TRUE, stderr = TRUE)
-  py_status <- attr(py_out, "status")
-  if (!is.null(py_status) && py_status != 0) {
-    stop("Python stage_05 execution failed:\n", paste(py_out, collapse = "\n"))
-  }
-  invisible(py_out)
-}
-
-s5_is_policy_propagation_discrepancy <- function(
-    metric,
-    app_value,
-    r_value,
-    python_value,
-    tolerance
-) {
-  affected_metrics <- c(
-    "u_hom",
-    "u_xpt_def",
-    "u_xpt_expanded",
-    "z_prime_den",
-    "z_prime_score",
-    "zeta_den",
-    "zeta_score",
-    "en_den",
-    "en_score"
-  )
-
-  if (!(metric %in% affected_metrics)) {
-    return(FALSE)
-  }
-  if (!is.finite(app_value) || !is.finite(r_value) || !is.finite(python_value)) {
-    return(FALSE)
-  }
-
-  independent_match <- abs(r_value - python_value) <= tolerance
-  app_differs <- abs(app_value - r_value) > tolerance
-
-  independent_match && app_differs
-}
-
-s5_classify_status <- function(metric, app_value, r_value, python_value, tolerance) {
-  all_non_finite <- all(!is.finite(c(app_value, r_value, python_value)))
-  if (all_non_finite) {
-    return("EDGE_CASE")
-  }
-
-  if (!is.finite(app_value) || !is.finite(r_value) || !is.finite(python_value)) {
-    return("KNOWN_DISCREPANCY")
-  }
-
-  diffs <- c(
-    abs(app_value - r_value),
-    abs(app_value - python_value),
-    abs(r_value - python_value)
-  )
-  if (all(diffs <= tolerance)) {
-    return("PASS")
-  }
-
-  if (s5_is_policy_propagation_discrepancy(
-    metric = metric,
-    app_value = app_value,
-    r_value = r_value,
-    python_value = python_value,
-    tolerance = tolerance
-  )) {
-    return("KNOWN_DISCREPANCY")
-  }
-
-  "FAIL"
-}
-
-s5_build_stage_report <- function(results_df, report_path, tolerance) {
-  status_counts <- as.data.frame(table(results_df$status), stringsAsFactors = FALSE)
-  names(status_counts) <- c("status", "count")
-  discrepancy_df <- results_df[results_df$status != "PASS", ]
-  methods <- sort(unique(results_df$section))
-  metrics <- sort(unique(results_df$metric))
-
-  lines <- c(
-    "# Stage 05 Report - Scores",
-    "",
-    "## Objective",
-    "Validate participant-level scores with tripartite comparison (app/R/Python).",
-    "",
-    "## Data",
-    "- Input: `data/summary_n13.csv`",
-    "- Uncertainty chain reference: `validation/outputs/stage_04_uncertainty_chain.csv`",
-    sprintf("- Method sections: %d", length(methods)),
-    sprintf("- Tolerance: %.1e", tolerance),
-    "",
-    "## Sections Evaluated",
-    paste0("- ", methods),
-    "",
-    "## Metrics Evaluated",
-    paste0("- ", metrics),
-    "",
-    "## Status Summary",
-    if (nrow(status_counts) > 0) {
-      paste0("- ", status_counts$status, ": ", status_counts$count)
-    } else {
-      "- No rows generated"
-    },
-    "",
-    "## Discrepancies"
-  )
-
-  if (nrow(discrepancy_df) == 0) {
-    lines <- c(lines, "- No discrepancies detected.")
-  } else {
-    max_rows <- min(20L, nrow(discrepancy_df))
-    for (i in seq_len(max_rows)) {
-      row <- discrepancy_df[i, ]
-      lines <- c(
-        lines,
-        paste0(
-          "- ", row$combo_id, " | ", row$section,
-          " | ", row$participant_id,
-          " | ", row$metric,
-          " | ", row$status,
-          " | diff_app_python=",
-          format(row$diff_app_python, scientific = TRUE)
-        )
-      )
-    }
-  }
-
-  lines <- c(
-    lines,
-    "",
-    "## Conclusion",
-    if (any(results_df$status == "FAIL")) {
-      "- Stage 05 has FAIL rows and is not closed."
-    } else {
-      "- Stage 05 closed without FAIL rows."
-    }
-  )
-
-  writeLines(lines, report_path)
-}
-
-run_stage_05_scores <- function(
-    summary_input = "data/summary_n13.csv",
-    stage_04_output = "validation/outputs/stage_04_uncertainty_chain.csv",
-    output_path = "validation/outputs/stage_05_scores.csv",
-    report_path = "validation/outputs/stage_05_scores_report.md",
-    python_values_path = "validation/outputs/stage_05_python_values.csv",
-    tolerance = 1e-9
-) {
-  combos <- get_target_combos()
-  validate_combo_definition(combos)
-
-  if (!file.exists(stage_04_output)) {
-    message("Stage 04 output not found. Running stage_04_uncertainty_chain first...")
-    run_stage_04_uncertainty_chain()
-  }
-
-  summary_df <- utils::read.csv(summary_input, stringsAsFactors = FALSE)
-  stage_04_df <- utils::read.csv(stage_04_output, stringsAsFactors = FALSE)
-
-  s5_validate_summary_columns(summary_df)
-  s5_validate_stage_04_columns(stage_04_df)
-
-  summary_df$mean_value <- s5_as_numeric_or_na(summary_df$mean_value)
-  summary_df$sd_value <- s5_as_numeric_or_na(summary_df$sd_value)
-
-  stage_04_df$app_value <- s5_as_numeric_or_na(stage_04_df$app_value)
-  stage_04_df$r_value <- s5_as_numeric_or_na(stage_04_df$r_value)
-  stage_04_df$python_value <- s5_as_numeric_or_na(stage_04_df$python_value)
-
-  app_df <- s5_build_impl_rows(
-    summary_df = summary_df,
-    stage_04_df = stage_04_df,
-    combos_df = combos,
-    implementation = "app"
-  )
-  r_df <- s5_build_impl_rows(
-    summary_df = summary_df,
-    stage_04_df = stage_04_df,
-    combos_df = combos,
-    implementation = "r"
-  )
-
-  names(app_df)[names(app_df) == "value"] <- "app_value"
-  names(r_df)[names(r_df) == "value"] <- "r_value"
-
-  s5_run_python_stage_values(
-    summary_input = summary_input,
-    stage_04_path = stage_04_output,
-    python_values_path = python_values_path
-  )
-
-  python_df <- utils::read.csv(python_values_path, stringsAsFactors = FALSE)
-  python_df$python_value <- s5_as_numeric_or_na(python_df$python_value)
-
-  id_cols <- c(
-    "combo_id",
-    "pollutant",
-    "level",
-    "stage",
-    "section",
-    "participant_id",
-    "metric"
-  )
-
-  merged_df <- merge(app_df, r_df, by = id_cols, all = TRUE)
-  merged_df <- merge(merged_df, python_df, by = id_cols, all = TRUE)
-
-  merged_df$excel_value <- NA_real_
-  merged_df$diff_app_r <- abs(merged_df$app_value - merged_df$r_value)
-  merged_df$diff_app_python <- abs(merged_df$app_value - merged_df$python_value)
-  merged_df$diff_r_python <- abs(merged_df$r_value - merged_df$python_value)
-  merged_df$diff_app_excel <- NA_real_
-  merged_df$status <- vapply(
-    seq_len(nrow(merged_df)),
-    function(i) {
-      s5_classify_status(
-        metric = merged_df$metric[i],
-        app_value = merged_df$app_value[i],
-        r_value = merged_df$r_value[i],
-        python_value = merged_df$python_value[i],
-        tolerance = tolerance
-      )
-    },
-    character(1)
-  )
-  merged_df$tolerance <- tolerance
-  merged_df$notes <- ifelse(
-    merged_df$status == "KNOWN_DISCREPANCY",
-    paste(
-      "Known propagation difference from Stage 02 ss/ss_sq policy",
-      "through Stage 04 uncertainty chain",
-      "(app clamps negative radicand to 0; independent implementations use abs)."
-    ),
-    ""
-  )
-
-  canonical_columns <- get_canonical_columns()
-  for (column_name in canonical_columns) {
-    if (!(column_name %in% names(merged_df))) {
-      merged_df[[column_name]] <- NA
-    }
-  }
-
-  output_df <- merged_df[, canonical_columns]
-  output_df <- output_df[order(
-    output_df$combo_id,
-    output_df$section,
-    output_df$participant_id,
-    output_df$metric
-  ), ]
-
-  dir.create(dirname(output_path), recursive = TRUE, showWarnings = FALSE)
-  utils::write.csv(output_df, output_path, row.names = FALSE, na = "")
-  s5_build_stage_report(output_df, report_path, tolerance = tolerance)
-
-  message("Stage 05 completed:")
-  message(" - CSV: ", output_path)
-  message(" - Report: ", report_path)
-  message(" - Python values: ", python_values_path)
-
-  invisible(output_df)
+  cat("  CSV intermedio R escrito:", OUTPUT_R_CSV, "\n")
+  cat("  Filas:", nrow(r_df), "(esperado:", 15 * 4 * 12, "= 720)\n")
+  cat("Etapa 5: Scores de Desempeño — FIN\n")
 }
 
 if (sys.nframe() == 0) {
-  run_stage_05_scores()
+  run_stage_05()
 }

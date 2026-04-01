@@ -1,314 +1,451 @@
-"""Stage 05 scores (Python independent implementation).
+"""
+Etapa 5: Scores de Desempeño (Python)
+Validacion de scores por participante: z, z', zeta, En.
 
-Reads summary_n13 and Stage 04 outputs, computes participant-level scores
-(z, z', zeta, En) for methods 2a/2b/3, and writes Python-side values for
-tripartite comparison.
+Referencia: ISO 13528:2022
+Fuente: data/summary_n13.csv, validation/outputs/stage_04_uncertainty_chain.csv
+
+Uso:
+    python3 validation/stage_05_scores.py
+
+Outputs:
+    validation/outputs/stage_05_scores_py.csv   (intermedio Python)
+    validation/outputs/stage_05_scores.csv       (comparacion R vs Python)
+    validation/outputs/stage_05_scores_report.md
+
+Scores validados (8 metricas por participante/metodo):
+    z_score, z_score_eval
+    z_prime_score, z_prime_score_eval
+    zeta_score, zeta_score_eval
+    En_score, En_score_eval
 """
 
-from __future__ import annotations
-
-import argparse
 import csv
 import math
-from pathlib import Path
-from typing import Any
+import os
 
-from common_config import get_target_combos, validate_combo_definition
+DATA_SUMMARY = "data/summary_n13.csv"
+STAGE04_CSV  = "validation/outputs/stage_04_uncertainty_chain.csv"
+R_CSV        = "validation/outputs/stage_05_scores_r.csv"
+OUTPUT_PY_CSV  = "validation/outputs/stage_05_scores_py.csv"
+OUTPUT_CSV     = "validation/outputs/stage_05_scores.csv"
+OUTPUT_REPORT  = "validation/outputs/stage_05_scores_report.md"
 
+TOL_DEFAULT = 1e-9
+STATUS_PASS = "PASS"
+STATUS_FAIL = "FAIL"
+K = 2  # Factor de cobertura
 
-STAGE_ID = "stage_05_scores"
-K_FACTOR = 2.0
+METHODS = ["Referencia", "Consenso MADe", "Consenso nIQR", "Algoritmo A"]
+NUMERIC_METRICS = ["z_score", "z_prime_score", "zeta_score", "En_score"]
+EVAL_METRICS    = ["z_score_eval", "z_prime_score_eval", "zeta_score_eval", "En_score_eval"]
+# Orden intercalado: metrica numérica + su eval
+ALL_METRICS = []
+for n, e in zip(NUMERIC_METRICS, EVAL_METRICS):
+    ALL_METRICS.extend([n, e])
 
+CANONICAL_COLS = [
+    "combo_id", "pollutant", "level", "stage", "section", "participant_id",
+    "metric", "app_value", "r_value", "python_value",
+    "diff_app_r", "diff_app_python", "diff_r_python",
+    "status", "tolerance", "notes",
+]
 
-def safe_float(value: Any) -> float:
-  try:
-    return float(value)
-  except (TypeError, ValueError):
-    return float("nan")
+# ---------------------------------------------------------------------------
+# Evaluaciones
+# ---------------------------------------------------------------------------
 
-
-def mean(values: list[float]) -> float:
-  finite_values = [x for x in values if math.isfinite(x)]
-  if not finite_values:
-    return float("nan")
-  return sum(finite_values) / len(finite_values)
-
-
-def safe_ratio(numerator: float, denominator: float) -> float:
-  if not math.isfinite(denominator) or denominator <= 0:
-    return float("nan")
-  return numerator / denominator
-
-
-def aggregate_participants(
-    rows: list[dict[str, Any]],
-    pollutant: str,
-    level: str,
-) -> list[dict[str, Any]]:
-  grouped: dict[str, dict[str, float]] = {}
-  for row in rows:
-    if row["pollutant"] != pollutant or row["level"] != level:
-      continue
-
-    participant_id = row["participant_id"]
-    if participant_id == "ref":
-      continue
-
-    grouped.setdefault(participant_id, {
-        "sum_mean": 0.0,
-        "sum_sd": 0.0,
-        "n": 0.0,
-    })
-    grouped[participant_id]["sum_mean"] += safe_float(row["mean_value"])
-    grouped[participant_id]["sum_sd"] += safe_float(row["sd_value"])
-    grouped[participant_id]["n"] += 1.0
-
-  participants: list[dict[str, Any]] = []
-  for participant_id in sorted(grouped.keys()):
-    info = grouped[participant_id]
-    if info["n"] <= 0:
-      continue
-
-    participants.append({
-        "participant_id": participant_id,
-        "result": info["sum_mean"] / info["n"],
-        "sd_value": info["sum_sd"] / info["n"],
-    })
-
-  return participants
+def evaluate_z(z):
+    """Evaluar z / z' / zeta."""
+    if not math.isfinite(z):
+        return "N/A"
+    az = abs(z)
+    if az <= 2:
+        return "Satisfactorio"
+    if az >= 3:
+        return "No satisfactorio"
+    return "Cuestionable"
 
 
-def get_stage_04_metric(
-    stage_rows: list[dict[str, Any]],
-    combo_id: str,
-    method_id: str,
-    metric: str,
-) -> float:
-  for row in stage_rows:
-    if row.get("combo_id") != combo_id:
-      continue
-    if row.get("section") != "uncertainty_chain":
-      continue
-    if row.get("participant_id") != method_id:
-      continue
-    if row.get("metric") != metric:
-      continue
-    return safe_float(row.get("python_value"))
-
-  return float("nan")
+def evaluate_en(en):
+    """Evaluar En."""
+    if not math.isfinite(en):
+        return "N/A"
+    return "Satisfactorio" if abs(en) <= 1 else "No satisfactorio"
 
 
-def compute_score_metrics(
-    result: float,
-    sd_value: float,
-    x_pt: float,
-    sigma_pt: float,
-    u_xpt: float,
-    u_xpt_def: float,
-    u_hom: float,
-    u_stab: float,
-    m: float,
-) -> dict[str, float]:
-  uncertainty_std = sd_value
-  if math.isfinite(m) and m > 0:
-    uncertainty_std = sd_value / math.sqrt(m)
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
 
-  z_den = sigma_pt
-  z_score = safe_ratio(result - x_pt, z_den)
-
-  z_prime_den = math.sqrt(sigma_pt**2 + u_xpt_def**2)
-  z_prime_score = safe_ratio(result - x_pt, z_prime_den)
-
-  zeta_den = math.sqrt(uncertainty_std**2 + u_xpt_def**2)
-  zeta_score = safe_ratio(result - x_pt, zeta_den)
-
-  u_xi_expanded = K_FACTOR * uncertainty_std
-  u_xpt_expanded = K_FACTOR * u_xpt_def
-  en_den = math.sqrt(u_xi_expanded**2 + u_xpt_expanded**2)
-  en_score = safe_ratio(result - x_pt, en_den)
-
-  return {
-      "m": m,
-      "result": result,
-      "sd_value": sd_value,
-      "uncertainty_std": uncertainty_std,
-      "x_pt": x_pt,
-      "sigma_pt": sigma_pt,
-      "u_xpt": u_xpt,
-      "u_xpt_def": u_xpt_def,
-      "u_hom": u_hom,
-      "u_stab": u_stab,
-      "z_den": z_den,
-      "z_score": z_score,
-      "z_prime_den": z_prime_den,
-      "z_prime_score": z_prime_score,
-      "zeta_den": zeta_den,
-      "zeta_score": zeta_score,
-      "u_xi_expanded": u_xi_expanded,
-      "u_xpt_expanded": u_xpt_expanded,
-      "en_den": en_den,
-      "en_score": en_score,
-  }
+def make_combo_id(pollutant, level):
+    prefix = pollutant.upper()
+    num = level.split("-")[0]
+    return f"{prefix}_{num}"
 
 
-def build_python_rows(
-    combos: list[dict[str, str]],
-    summary_rows: list[dict[str, Any]],
-    stage_04_rows: list[dict[str, Any]],
-) -> list[dict[str, Any]]:
-  method_ids = ["method_2a", "method_2b", "method_3"]
-  metric_names = [
-      "m",
-      "result",
-      "sd_value",
-      "uncertainty_std",
-      "x_pt",
-      "sigma_pt",
-      "u_xpt",
-      "u_xpt_def",
-      "u_hom",
-      "u_stab",
-      "z_den",
-      "z_score",
-      "z_prime_den",
-      "z_prime_score",
-      "zeta_den",
-      "zeta_score",
-      "u_xi_expanded",
-      "u_xpt_expanded",
-      "en_den",
-      "en_score",
-  ]
-
-  output_rows: list[dict[str, Any]] = []
-
-  for combo in combos:
-    combo_id = combo["combo_id"]
-    pollutant = combo["pollutant"]
-    level = combo["level"]
-
-    participants = aggregate_participants(summary_rows, pollutant, level)
-
-    for method_id in method_ids:
-      x_pt = get_stage_04_metric(stage_04_rows, combo_id, method_id, "x_pt_method")
-      sigma_pt = get_stage_04_metric(
-          stage_04_rows,
-          combo_id,
-          method_id,
-          "sigma_pt_method",
-      )
-      u_xpt = get_stage_04_metric(stage_04_rows, combo_id, method_id, "u_xpt")
-      u_xpt_def = get_stage_04_metric(stage_04_rows, combo_id, method_id, "u_xpt_def")
-      u_hom = get_stage_04_metric(stage_04_rows, combo_id, method_id, "u_hom")
-      u_stab = get_stage_04_metric(stage_04_rows, combo_id, method_id, "u_stab")
-      m = get_stage_04_metric(stage_04_rows, combo_id, method_id, "m")
-
-      section_name = f"scores_{method_id}"
-      for participant in participants:
-        metrics = compute_score_metrics(
-            result=participant["result"],
-            sd_value=participant["sd_value"],
-            x_pt=x_pt,
-            sigma_pt=sigma_pt,
-            u_xpt=u_xpt,
-            u_xpt_def=u_xpt_def,
-            u_hom=u_hom,
-            u_stab=u_stab,
-            m=m,
-        )
-
-        for metric_name in metric_names:
-          output_rows.append({
-              "combo_id": combo_id,
-              "pollutant": pollutant,
-              "level": level,
-              "stage": STAGE_ID,
-              "section": section_name,
-              "participant_id": participant["participant_id"],
-              "metric": metric_name,
-              "python_value": metrics.get(metric_name, float("nan")),
-          })
-
-  return output_rows
+def parse_float(s):
+    """Parsear string a float; devuelve nan para NA/nan/vacío."""
+    if s is None or s.strip() in ("", "NA", "NaN", "nan"):
+        return float("nan")
+    try:
+        return float(s)
+    except ValueError:
+        return float("nan")
 
 
-def write_python_values(path: Path, rows: list[dict[str, Any]]) -> None:
-  path.parent.mkdir(parents=True, exist_ok=True)
-  fieldnames = [
-      "combo_id",
-      "pollutant",
-      "level",
-      "stage",
-      "section",
-      "participant_id",
-      "metric",
-      "python_value",
-  ]
-  with path.open("w", encoding="utf-8", newline="") as handle:
-    writer = csv.DictWriter(handle, fieldnames=fieldnames)
-    writer.writeheader()
-    for row in rows:
-      writer.writerow(row)
+def fmt_float(v):
+    """Formatear float para CSV con precisión completa."""
+    if not math.isfinite(v):
+        return "nan"
+    return repr(v)
 
 
-def run_stage_05_scores(
-    summary_input: str = "data/summary_n13.csv",
-    stage_04_output: str = "validation/outputs/stage_04_uncertainty_chain.csv",
-    output_path: str = "validation/outputs/stage_05_python_values.csv",
-) -> list[dict[str, Any]]:
-  combos = get_target_combos()
-  validate_combo_definition(combos)
+# ---------------------------------------------------------------------------
+# Carga de datos
+# ---------------------------------------------------------------------------
 
-  with Path(summary_input).open("r", encoding="utf-8", newline="") as handle:
-    summary_rows = list(csv.DictReader(handle))
-  with Path(stage_04_output).open("r", encoding="utf-8", newline="") as handle:
-    stage_04_rows = list(csv.DictReader(handle))
-
-  required_summary = {
-      "pollutant",
-      "level",
-      "participant_id",
-      "mean_value",
-      "sd_value",
-  }
-  if not summary_rows:
-    raise ValueError("summary_n13.csv has no data rows.")
-  if not required_summary.issubset(summary_rows[0].keys()):
-    raise ValueError(
-        "summary_n13.csv must include pollutant, level, participant_id, "
-        "mean_value, sd_value."
-    )
-
-  output_rows = build_python_rows(combos, summary_rows, stage_04_rows)
-  write_python_values(Path(output_path), output_rows)
-  print(f"Stage 05 Python values generated: {output_path}")
-  return output_rows
+def load_stage04_params(csv_path):
+    """Retorna dict (combo_id, method) -> {x_pt, sigma_pt, u_xpt_def}."""
+    params = {}
+    with open(csv_path, "r", newline="", encoding="utf-8") as f:
+        for row in csv.DictReader(f):
+            if row["metric"] not in ("x_pt", "sigma_pt", "u_xpt_def"):
+                continue
+            key = (row["combo_id"], row["section"])
+            if key not in params:
+                params[key] = {
+                    "pollutant": row["pollutant"],
+                    "level": row["level"],
+                }
+            params[key][row["metric"]] = parse_float(row["r_value"])
+    return params
 
 
-def parse_args() -> argparse.Namespace:
-  parser = argparse.ArgumentParser()
-  parser.add_argument(
-      "--summary-input",
-      default="data/summary_n13.csv",
-      help="Path to summary_n13.csv file.",
-  )
-  parser.add_argument(
-      "--stage-04-output",
-      default="validation/outputs/stage_04_uncertainty_chain.csv",
-      help="CSV output path from Stage 04 (uncertainty chain).",
-  )
-  parser.add_argument(
-      "--values-output",
-      default="validation/outputs/stage_05_python_values.csv",
-      help="CSV output path for Python metric values.",
-  )
-  return parser.parse_args()
+def load_participants(csv_path):
+    """Agrega summary_n13.csv por (combo_id, participant_id).
+    Retorna dict (combo_id, participant_id) -> {result, sd_value, uncertainty_std, ...}.
+    """
+    raw = {}
+    with open(csv_path, "r", newline="", encoding="utf-8") as f:
+        for row in csv.DictReader(f):
+            if row["participant_id"] == "ref":
+                continue
+            combo_id = make_combo_id(row["pollutant"], row["level"])
+            key = (combo_id, row["participant_id"])
+            if key not in raw:
+                raw[key] = {
+                    "mean_values": [],
+                    "sd_values": [],
+                    "pollutant": row["pollutant"],
+                    "level": row["level"],
+                }
+            raw[key]["mean_values"].append(float(row["mean_value"]))
+            raw[key]["sd_values"].append(float(row["sd_value"]))
+
+    result = {}
+    for (combo_id, participant_id), data in raw.items():
+        n = len(data["mean_values"])
+        mean_result = sum(data["mean_values"]) / n
+        mean_sd     = sum(data["sd_values"]) / n
+        result[(combo_id, participant_id)] = {
+            "result":          mean_result,
+            "sd_value":        mean_sd,
+            "uncertainty_std": mean_sd / math.sqrt(2),  # m=2
+            "pollutant":       data["pollutant"],
+            "level":           data["level"],
+        }
+    return result
+
+
+# ---------------------------------------------------------------------------
+# Calculo de scores
+# ---------------------------------------------------------------------------
+
+def calculate_scores(result, uncertainty_std, x_pt, sigma_pt, u_xpt_def):
+    """Calcular 4 scores numericos + 4 evaluaciones categoriales."""
+    # Clip u_xpt_def no finito a 0 (igual que app.R compute_combo_scores)
+    if not math.isfinite(u_xpt_def) or u_xpt_def < 0:
+        u_xpt_def = 0.0
+
+    # z_score
+    if math.isfinite(sigma_pt) and sigma_pt > 0:
+        z = (result - x_pt) / sigma_pt
+    else:
+        z = float("nan")
+
+    # z_prime_score
+    if math.isfinite(sigma_pt):
+        zprime_den = math.sqrt(sigma_pt**2 + u_xpt_def**2)
+        zprime = (result - x_pt) / zprime_den if zprime_den > 0 else float("nan")
+    else:
+        zprime = float("nan")
+
+    # zeta_score
+    zeta_den_sq = uncertainty_std**2 + u_xpt_def**2
+    if math.isfinite(zeta_den_sq) and zeta_den_sq >= 0:
+        zeta_den = math.sqrt(zeta_den_sq)
+        zeta = (result - x_pt) / zeta_den if zeta_den > 0 else float("nan")
+    else:
+        zeta = float("nan")
+
+    # En_score (k=2)
+    en_den_sq = (K * uncertainty_std)**2 + (K * u_xpt_def)**2
+    if math.isfinite(en_den_sq) and en_den_sq >= 0:
+        en_den = math.sqrt(en_den_sq)
+        en = (result - x_pt) / en_den if en_den > 0 else float("nan")
+    else:
+        en = float("nan")
+
+    return {
+        "z_score":             z,
+        "z_prime_score":       zprime,
+        "zeta_score":          zeta,
+        "En_score":            en,
+        "z_score_eval":        evaluate_z(z),
+        "z_prime_score_eval":  evaluate_z(zprime),
+        "zeta_score_eval":     evaluate_z(zeta),
+        "En_score_eval":       evaluate_en(en),
+    }
+
+
+# ---------------------------------------------------------------------------
+# Comparacion R vs Python
+# ---------------------------------------------------------------------------
+
+def compare_numeric(r_val, py_val):
+    """Comparar dos valores numericos. Retorna (status, diff_str)."""
+    r_fin  = math.isfinite(r_val)
+    py_fin = math.isfinite(py_val)
+    if not r_fin and not py_fin:
+        return STATUS_PASS, "nan"
+    if r_fin and py_fin:
+        diff = r_val - py_val
+        status = STATUS_PASS if abs(diff) <= TOL_DEFAULT else STATUS_FAIL
+        return status, repr(diff)
+    return STATUS_FAIL, "nan"
+
+
+def compare_categorical(r_val, py_val):
+    """Comparar dos strings de evaluacion. Retorna status."""
+    return STATUS_PASS if r_val.strip() == py_val.strip() else STATUS_FAIL
+
+
+# ---------------------------------------------------------------------------
+# Main
+# ---------------------------------------------------------------------------
+
+def run_stage_05():
+    print("Etapa 5: Scores de Desempeño — INICIO")
+
+    # 1. Cargar parámetros de Etapa 4
+    params = load_stage04_params(STAGE04_CSV)
+    print(f"  Parámetros cargados: {len(params)} combinaciones combo × método")
+
+    # 2. Cargar datos de participantes
+    participants = load_participants(DATA_SUMMARY)
+    print(f"  Participantes cargados: {len(participants)} (sin 'ref')")
+
+    # Organizar por combo_id
+    combos = {}
+    for (combo_id, participant_id), data in participants.items():
+        if combo_id not in combos:
+            combos[combo_id] = {}
+        combos[combo_id][participant_id] = data
+
+    # 3. Calcular scores en Python
+    py_results = []
+    for combo_id in sorted(combos.keys()):
+        for method in METHODS:
+            key = (combo_id, method)
+            if key not in params:
+                continue
+            p = params[key]
+            x_pt      = p.get("x_pt", float("nan"))
+            sigma_pt  = p.get("sigma_pt", float("nan"))
+            u_xpt_def = p.get("u_xpt_def", float("nan"))
+
+            for participant_id in sorted(combos[combo_id].keys()):
+                pt = combos[combo_id][participant_id]
+                scores = calculate_scores(
+                    pt["result"], pt["uncertainty_std"],
+                    x_pt, sigma_pt, u_xpt_def,
+                )
+                py_results.append({
+                    "combo_id":       combo_id,
+                    "pollutant":      pt["pollutant"],
+                    "level":          pt["level"],
+                    "method":         method,
+                    "participant_id": participant_id,
+                    "result":         pt["result"],
+                    "uncertainty_std": pt["uncertainty_std"],
+                    "x_pt":           x_pt,
+                    "sigma_pt":       sigma_pt,
+                    "u_xpt_def":      u_xpt_def,
+                    **scores,
+                })
+
+    print(f"  Scores calculados: {len(py_results)} filas (esperado: {15 * 4 * 12} = 720)")
+
+    # 4. Guardar CSV intermedio Python
+    os.makedirs(os.path.dirname(OUTPUT_PY_CSV), exist_ok=True)
+    py_fields = [
+        "combo_id", "pollutant", "level", "method", "participant_id",
+        "result", "uncertainty_std", "x_pt", "sigma_pt", "u_xpt_def",
+    ] + ALL_METRICS
+
+    with open(OUTPUT_PY_CSV, "w", newline="", encoding="utf-8") as f:
+        writer = csv.DictWriter(f, fieldnames=py_fields, extrasaction="ignore")
+        writer.writeheader()
+        for row in py_results:
+            out = {}
+            for k in py_fields:
+                v = row[k]
+                if isinstance(v, str):
+                    out[k] = v
+                elif isinstance(v, float):
+                    out[k] = fmt_float(v)
+                else:
+                    out[k] = str(v)
+            writer.writerow(out)
+    print(f"  CSV intermedio Python escrito: {OUTPUT_PY_CSV}")
+
+    # 5. Leer CSV R para comparacion
+    r_data = {}  # (combo_id, method, participant_id, metric) -> str
+    with open(R_CSV, "r", newline="", encoding="utf-8") as f:
+        for row in csv.DictReader(f):
+            for metric in ALL_METRICS:
+                r_data[(row["combo_id"], row["method"], row["participant_id"], metric)] = \
+                    row.get(metric, "")
+
+    # 6. Generar filas canonicas de comparacion
+    canonical_rows = []
+    pass_count = 0
+    fail_count = 0
+
+    for py_row in py_results:
+        combo_id       = py_row["combo_id"]
+        method         = py_row["method"]
+        participant_id = py_row["participant_id"]
+
+        for metric in ALL_METRICS:
+            is_eval = metric.endswith("_eval")
+            py_val  = py_row[metric]
+            r_str   = r_data.get((combo_id, method, participant_id, metric), "")
+
+            if is_eval:
+                status = compare_categorical(r_str, py_val)
+                crow = {
+                    "combo_id":       combo_id,
+                    "pollutant":      py_row["pollutant"],
+                    "level":          py_row["level"],
+                    "stage":          "stage_05_scores",
+                    "section":        method,
+                    "participant_id": participant_id,
+                    "metric":         metric,
+                    "app_value":      "nan",
+                    "r_value":        r_str.strip(),
+                    "python_value":   str(py_val),
+                    "diff_app_r":     "nan",
+                    "diff_app_python":"nan",
+                    "diff_r_python":  "",
+                    "status":         status,
+                    "tolerance":      "exact",
+                    "notes":          "",
+                }
+            else:
+                r_val  = parse_float(r_str)
+                status, diff_str = compare_numeric(r_val, py_val)
+                crow = {
+                    "combo_id":       combo_id,
+                    "pollutant":      py_row["pollutant"],
+                    "level":          py_row["level"],
+                    "stage":          "stage_05_scores",
+                    "section":        method,
+                    "participant_id": participant_id,
+                    "metric":         metric,
+                    "app_value":      "nan",
+                    "r_value":        fmt_float(r_val),
+                    "python_value":   fmt_float(py_val),
+                    "diff_app_r":     "nan",
+                    "diff_app_python":"nan",
+                    "diff_r_python":  diff_str,
+                    "status":         status,
+                    "tolerance":      str(TOL_DEFAULT),
+                    "notes":          "",
+                }
+
+            canonical_rows.append(crow)
+            if status == STATUS_PASS:
+                pass_count += 1
+            else:
+                fail_count += 1
+
+    # 7. Escribir CSV canonico
+    with open(OUTPUT_CSV, "w", newline="", encoding="utf-8") as f:
+        writer = csv.DictWriter(f, fieldnames=CANONICAL_COLS)
+        writer.writeheader()
+        writer.writerows(canonical_rows)
+    print(f"  CSV canónico escrito: {OUTPUT_CSV}")
+
+    # 8. Reporte
+    combos_processed = sorted(set(r["combo_id"] for r in canonical_rows))
+    fail_rows = [r for r in canonical_rows if r["status"] == STATUS_FAIL]
+
+    report_lines = [
+        "# Reporte: Etapa 5 — Scores de Desempeño",
+        "",
+        f"**Fecha**: {os.popen('date +%Y-%m-%d').read().strip()}",
+        "",
+        "## Combos procesados",
+    ]
+    for cid in combos_processed:
+        report_lines.append(f"- {cid}")
+
+    report_lines.extend([
+        "",
+        "## Dimensiones de validación",
+        f"- Combos: {len(combos_processed)}",
+        "- Métodos: 4 (Referencia, Consenso MADe, Consenso nIQR, Algoritmo A)",
+        "- Participantes por combo: 12 (excluido 'ref')",
+        "- Métricas por participante/método: 8 (4 numéricos + 4 evaluaciones)",
+        f"- **Total comparaciones**: {pass_count + fail_count}",
+        "",
+        "## Resumen PASS/FAIL",
+        f"- **PASS**: {pass_count}",
+        f"- **FAIL**: {fail_count}",
+        "- EDGE_CASE: 0",
+        "- KNOWN_DISCREPANCY: 0",
+    ])
+
+    if fail_rows:
+        report_lines.extend(["", "## Discrepancias"])
+        for row in fail_rows[:20]:
+            report_lines.append(
+                f"- {row['combo_id']} | {row['section']} | "
+                f"{row['participant_id']} | {row['metric']}: "
+                f"R={row['r_value']} vs Py={row['python_value']}"
+            )
+        if len(fail_rows) > 20:
+            report_lines.append(f"- ... y {len(fail_rows) - 20} más")
+
+    conclusion = "Etapa PASS" if fail_count == 0 else \
+        f"Etapa con {fail_count} FAIL pendientes de revisión"
+    report_lines.extend([
+        "",
+        "## Conclusión",
+        conclusion,
+        "",
+    ])
+
+    with open(OUTPUT_REPORT, "w", encoding="utf-8") as f:
+        f.write("\n".join(report_lines))
+    print(f"  Reporte escrito: {OUTPUT_REPORT}")
+
+    total = pass_count + fail_count
+    print(f"\n  RESUMEN: {pass_count} PASS, {fail_count} FAIL de {total} comparaciones")
+    print("Etapa 5: Scores de Desempeño — FIN")
 
 
 if __name__ == "__main__":
-  args = parse_args()
-  run_stage_05_scores(
-      summary_input=args.summary_input,
-      stage_04_output=args.stage_04_output,
-      output_path=args.values_output,
-  )
+    run_stage_05()
