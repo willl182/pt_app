@@ -152,7 +152,6 @@ calcular_puntajes_participante <- function(datos_participante, x_pt, sigma_pt, u
     level = datos_participante$level,
     participant_id = datos_participante$participant_id,
     replicate = datos_participante$replicate,
-    sample_group = datos_participante$sample_group,
     x = datos_participante$mean_value,
     x_pt = x_pt,
     sigma_pt = sigma_pt,

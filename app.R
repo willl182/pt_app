@@ -124,7 +124,9 @@ ui <- fluidPage(
 # II. Lógica del Servidor
 # ===================================================================
 server <- function(input, output, session) {
-  ALGO_A_TOL <- 1e-04
+  # Guardia numérica para convergencia; el criterio primario es signif3
+  # según ISO 13528:2022 NOTE 1.
+  ALGO_A_TOL <- 1e-10
 
   # --- Carga de datos y Procesamiento ---
   # Esta sección maneja la carga inicial de datos desde archivos subidos por el usuario.
@@ -181,6 +183,13 @@ server <- function(input, output, session) {
       )
     )
 
+    if ("sample_group" %in% names(raw_data)) {
+      showNotification(
+        "La columna 'sample_group' está presente pero ha sido deprecada y será ignorada. El formato actual no la requiere.",
+        type = "warning", duration = 8
+      )
+    }
+
     # Almacenar datos crudos en un valor reactivo para uso en cálculo de sigma_pt_1
     rv$raw_summary_data <- raw_data
 
@@ -203,11 +212,79 @@ server <- function(input, output, session) {
   # Valores reactivos para almacenar datos crudos para cálculos específicos
   rv <- reactiveValues(raw_summary_data = NULL, raw_summary_data_list = NULL)
 
-  format_num <- function(x) {
+  format_num <- function(x, n_sig = 3) {
     if (length(x) == 0) {
       return(NA_character_)
     }
-    ifelse(is.na(x), NA_character_, sprintf("%.5f", x))
+
+    vapply(x, function(value) {
+      if (is.na(value)) {
+        return(NA_character_)
+      }
+      if (!is.finite(value)) {
+        return(as.character(value))
+      }
+      if (value == 0) {
+        return("0")
+      }
+
+      value_sig <- signif(value, n_sig)
+      abs_sig <- abs(value_sig)
+
+      if (abs_sig < 0.001 || abs_sig >= 1000) {
+        return(formatC(value_sig, format = "g", digits = n_sig, flag = "#"))
+      }
+      if (abs_sig < 10) {
+        return(sprintf("%.2f", value_sig))
+      }
+      if (abs_sig < 100) {
+        return(sprintf("%.1f", value_sig))
+      }
+
+      sprintf("%.0f", value_sig)
+    }, FUN.VALUE = character(1))
+  }
+
+  format_numeric_columns <- function(df, columns = NULL) {
+    if (is.null(columns)) {
+      columns <- names(df)[vapply(df, is.numeric, logical(1))]
+    }
+    if (length(columns) == 0) {
+      return(df)
+    }
+
+    df %>%
+      mutate(across(all_of(columns), ~ format_num(.x)))
+  }
+
+  get_algo_a_stabilization_iter <- function(res) {
+    if (is.null(res$iterations) || nrow(res$iterations) == 0) {
+      return(NA_integer_)
+    }
+
+    if ("signif3_converged" %in% names(res$iterations)) {
+      hit <- which(res$iterations$signif3_converged)
+    } else {
+      hit <- which(res$iterations$delta_max < res$tolerance)
+    }
+
+    if (length(hit) > 0) {
+      hit[1]
+    } else {
+      NA_integer_
+    }
+  }
+
+  format_convergence_method <- function(method) {
+    if (is.null(method) || length(method) == 0 || is.na(method)) {
+      return("no disponible")
+    }
+
+    dplyr::case_when(
+      method == "signif3" ~ "3 cifras significativas",
+      method == "numerical_guard" ~ "guardia numérica",
+      TRUE ~ as.character(method)
+    )
   }
 
   # Rastrear cuándo el análisis ha sido ejecutado explícitamente
@@ -415,10 +492,18 @@ server <- function(input, output, session) {
 
     # Conclusions for MADe method
     if (!is.na(hom_ss) && length(hom_c_criterion) > 0 && hom_ss <= hom_c_criterion) {
-      hom_conclusion1_made <- sprintf("ss (%.4f) <= c_MADe (%.4f): CUMPLE CRITERIO HOMOGENEIDAD (MADe)", hom_ss, hom_c_criterion)
+      hom_conclusion1_made <- paste0(
+        "ss (", format_num(hom_ss), ") <= c_MADe (",
+        format_num(hom_c_criterion),
+        "): CUMPLE CRITERIO HOMOGENEIDAD (MADe)"
+      )
       hom_conclusion_class_made = "alert alert-success"
     } else if (!is.na(hom_ss) && length(hom_c_criterion) > 0) {
-      hom_conclusion1_made <- sprintf("ss (%.4f) > c_MADe (%.4f): NO CUMPLE CRITERIO HOMOGENEIDAD (MADe)", hom_ss, hom_c_criterion)
+      hom_conclusion1_made <- paste0(
+        "ss (", format_num(hom_ss), ") > c_MADe (",
+        format_num(hom_c_criterion),
+        "): NO CUMPLE CRITERIO HOMOGENEIDAD (MADe)"
+      )
       hom_conclusion_class_made = "alert alert-warning"
     } else {
       hom_conclusion1_made <- "MADe no disponible: No se puede evaluar criterio"
@@ -426,9 +511,17 @@ server <- function(input, output, session) {
     }
 
     if (!is.na(hom_ss) && length(hom_c_criterion_expanded) > 0 && hom_ss <= hom_c_criterion_expanded) {
-      hom_conclusion2_made <- sprintf("ss (%.4f) <= c_MADe_exp (%.4f): CUMPLE CRITERIO EXP HOMOGENEIDAD (MADe)", hom_ss, hom_c_criterion_expanded)
+      hom_conclusion2_made <- paste0(
+        "ss (", format_num(hom_ss), ") <= c_MADe_exp (",
+        format_num(hom_c_criterion_expanded),
+        "): CUMPLE CRITERIO EXP HOMOGENEIDAD (MADe)"
+      )
     } else if (!is.na(hom_ss) && length(hom_c_criterion_expanded) > 0) {
-      hom_conclusion2_made <- sprintf("ss (%.4f) > c_MADe_exp (%.4f): NO CUMPLE CRITERIO EXP HOMOGENEIDAD (MADe)", hom_ss, hom_c_criterion_expanded)
+      hom_conclusion2_made <- paste0(
+        "ss (", format_num(hom_ss), ") > c_MADe_exp (",
+        format_num(hom_c_criterion_expanded),
+        "): NO CUMPLE CRITERIO EXP HOMOGENEIDAD (MADe)"
+      )
     } else if (is.na(hom_ss)) {
       hom_conclusion2_made <- "ss no disponible: No se puede evaluar criterio expandido"
     } else {
@@ -440,10 +533,18 @@ server <- function(input, output, session) {
 
     # Conclusions for nIQR method
     if (!is.na(hom_ss) && length(hom_c_criterion_niqr) > 0 && !is.na(hom_c_criterion_niqr) && hom_ss <= hom_c_criterion_niqr) {
-      hom_conclusion1_niqr = sprintf("ss (%.4f) <= c_nIQR (%.4f): CUMPLE CRITERIO HOMOGENEIDAD (nIQR)", hom_ss, hom_c_criterion_niqr)
+      hom_conclusion1_niqr = paste0(
+        "ss (", format_num(hom_ss), ") <= c_nIQR (",
+        format_num(hom_c_criterion_niqr),
+        "): CUMPLE CRITERIO HOMOGENEIDAD (nIQR)"
+      )
       hom_conclusion_class_niqr = "alert alert-success"
     } else if (!is.na(hom_ss) && length(hom_c_criterion_niqr) > 0 && !is.na(hom_c_criterion_niqr)) {
-      hom_conclusion1_niqr = sprintf("ss (%.4f) > c_nIQR (%.4f): NO CUMPLE CRITERIO HOMOGENEIDAD (nIQR)", hom_ss, hom_c_criterion_niqr)
+      hom_conclusion1_niqr = paste0(
+        "ss (", format_num(hom_ss), ") > c_nIQR (",
+        format_num(hom_c_criterion_niqr),
+        "): NO CUMPLE CRITERIO HOMOGENEIDAD (nIQR)"
+      )
       hom_conclusion_class_niqr = "alert alert-warning"
     } else if (is.na(hom_ss)) {
       hom_conclusion1_niqr = "ss no disponible: No se puede evaluar criterio"
@@ -454,9 +555,17 @@ server <- function(input, output, session) {
     }
 
     if (!is.na(hom_ss) && length(hom_c_criterion_expanded_niqr) > 0 && !is.na(hom_c_criterion_expanded_niqr) && hom_ss <= hom_c_criterion_expanded_niqr) {
-      hom_conclusion2_niqr = sprintf("ss (%.4f) <= c_nIQR_exp (%.4f): CUMPLE CRITERIO EXP HOMOGENEIDAD (nIQR)", hom_ss, hom_c_criterion_expanded_niqr)
+      hom_conclusion2_niqr = paste0(
+        "ss (", format_num(hom_ss), ") <= c_nIQR_exp (",
+        format_num(hom_c_criterion_expanded_niqr),
+        "): CUMPLE CRITERIO EXP HOMOGENEIDAD (nIQR)"
+      )
     } else if (!is.na(hom_ss) && length(hom_c_criterion_expanded_niqr) > 0 && !is.na(hom_c_criterion_expanded_niqr)) {
-      hom_conclusion2_niqr = sprintf("ss (%.4f) > c_nIQR_exp (%.4f): NO CUMPLE CRITERIO EXP HOMOGENEIDAD (nIQR)", hom_ss, hom_c_criterion_expanded_niqr)
+      hom_conclusion2_niqr = paste0(
+        "ss (", format_num(hom_ss), ") > c_nIQR_exp (",
+        format_num(hom_c_criterion_expanded_niqr),
+        "): NO CUMPLE CRITERIO EXP HOMOGENEIDAD (nIQR)"
+      )
     } else if (is.na(hom_ss)) {
       hom_conclusion2_niqr = "ss no disponible: No se puede evaluar criterio expandido"
     } else {
@@ -665,10 +774,18 @@ server <- function(input, output, session) {
 
     # Conclusions for MADe method
     if (!is.na(diff_hom_stab) && length(stab_c_criterion) > 0 && diff_hom_stab <= stab_c_criterion) {
-      stab_conclusion1_made = sprintf("ss (%.4f) <= c_MADe (%.4f): CUMPLE CRITERIO ESTABILIDAD (MADe)", diff_hom_stab, stab_c_criterion)
+      stab_conclusion1_made = paste0(
+        "ss (", format_num(diff_hom_stab), ") <= c_MADe (",
+        format_num(stab_c_criterion),
+        "): CUMPLE CRITERIO ESTABILIDAD (MADe)"
+      )
       stab_conclusion_class_made = "alert alert-success"
     } else if (!is.na(diff_hom_stab) && length(stab_c_criterion) > 0) {
-      stab_conclusion1_made = sprintf("ss (%.4f) > c_MADe (%.4f): NO CUMPLE CRITERIO ESTABILIDAD (MADe)", diff_hom_stab, stab_c_criterion)
+      stab_conclusion1_made = paste0(
+        "ss (", format_num(diff_hom_stab), ") > c_MADe (",
+        format_num(stab_c_criterion),
+        "): NO CUMPLE CRITERIO ESTABILIDAD (MADe)"
+      )
       stab_conclusion_class_made = "alert alert-warning"
     } else if (is.na(diff_hom_stab)) {
       stab_conclusion1_made = "ss no disponible: No se puede evaluar criterio"
@@ -679,9 +796,17 @@ server <- function(input, output, session) {
     }
 
     if (!is.na(diff_hom_stab) && length(stab_c_criterion_expanded) > 0 && diff_hom_stab <= stab_c_criterion_expanded) {
-      stab_conclusion2_made = sprintf("ss (%.4f) <= c_MADe_exp (%.4f): CUMPLE CRITERIO EXP ESTABILIDAD (MADe)", diff_hom_stab, stab_c_criterion_expanded)
+      stab_conclusion2_made = paste0(
+        "ss (", format_num(diff_hom_stab), ") <= c_MADe_exp (",
+        format_num(stab_c_criterion_expanded),
+        "): CUMPLE CRITERIO EXP ESTABILIDAD (MADe)"
+      )
     } else if (!is.na(diff_hom_stab) && length(stab_c_criterion_expanded) > 0) {
-      stab_conclusion2_made = sprintf("ss (%.4f) > c_MADe_exp (%.4f): NO CUMPLE CRITERIO EXP ESTABILIDAD (MADe)", diff_hom_stab, stab_c_criterion_expanded)
+      stab_conclusion2_made = paste0(
+        "ss (", format_num(diff_hom_stab), ") > c_MADe_exp (",
+        format_num(stab_c_criterion_expanded),
+        "): NO CUMPLE CRITERIO EXP ESTABILIDAD (MADe)"
+      )
     } else {
       stab_conclusion2_made = "ss no disponible: No se puede evaluar criterio expandido"
     }
@@ -691,10 +816,18 @@ server <- function(input, output, session) {
 
     # Conclusions for nIQR method
     if (!is.na(diff_hom_stab) && length(stab_c_criterion_niqr) > 0 && !is.na(stab_c_criterion_niqr) && diff_hom_stab <= stab_c_criterion_niqr) {
-      stab_conclusion1_niqr = sprintf("ss (%.4f) <= c_nIQR (%.4f): CUMPLE CRITERIO ESTABILIDAD (nIQR)", diff_hom_stab, stab_c_criterion_niqr)
+      stab_conclusion1_niqr = paste0(
+        "ss (", format_num(diff_hom_stab), ") <= c_nIQR (",
+        format_num(stab_c_criterion_niqr),
+        "): CUMPLE CRITERIO ESTABILIDAD (nIQR)"
+      )
       stab_conclusion_class_niqr = "alert alert-success"
     } else if (!is.na(diff_hom_stab) && length(stab_c_criterion_niqr) > 0 && !is.na(stab_c_criterion_niqr)) {
-      stab_conclusion1_niqr = sprintf("ss (%.4f) > c_nIQR (%.4f): NO CUMPLE CRITERIO ESTABILIDAD (nIQR)", diff_hom_stab, stab_c_criterion_niqr)
+      stab_conclusion1_niqr = paste0(
+        "ss (", format_num(diff_hom_stab), ") > c_nIQR (",
+        format_num(stab_c_criterion_niqr),
+        "): NO CUMPLE CRITERIO ESTABILIDAD (nIQR)"
+      )
       stab_conclusion_class_niqr = "alert alert-warning"
     } else if (is.na(diff_hom_stab)) {
       stab_conclusion1_niqr = "ss no disponible: No se puede evaluar criterio"
@@ -705,9 +838,17 @@ server <- function(input, output, session) {
     }
 
     if (!is.na(diff_hom_stab) && length(stab_c_criterion_expanded_niqr) > 0 && !is.na(stab_c_criterion_expanded_niqr) && diff_hom_stab <= stab_c_criterion_expanded_niqr) {
-      stab_conclusion2_niqr = sprintf("ss (%.4f) <= c_nIQR_exp (%.4f): CUMPLE CRITERIO EXP ESTABILIDAD (nIQR)", diff_hom_stab, stab_c_criterion_expanded_niqr)
+      stab_conclusion2_niqr = paste0(
+        "ss (", format_num(diff_hom_stab), ") <= c_nIQR_exp (",
+        format_num(stab_c_criterion_expanded_niqr),
+        "): CUMPLE CRITERIO EXP ESTABILIDAD (nIQR)"
+      )
     } else if (!is.na(diff_hom_stab) && length(stab_c_criterion_expanded_niqr) > 0 && !is.na(stab_c_criterion_expanded_niqr)) {
-      stab_conclusion2_niqr = sprintf("ss (%.4f) > c_nIQR_exp (%.4f): NO CUMPLE CRITERIO EXP ESTABILIDAD (nIQR)", diff_hom_stab, stab_c_criterion_expanded_niqr)
+      stab_conclusion2_niqr = paste0(
+        "ss (", format_num(diff_hom_stab), ") > c_nIQR_exp (",
+        format_num(stab_c_criterion_expanded_niqr),
+        "): NO CUMPLE CRITERIO EXP ESTABILIDAD (nIQR)"
+      )
     } else if (is.na(diff_hom_stab)) {
       stab_conclusion2_niqr = "ss no disponible: No se puede evaluar criterio expandido"
     } else {
@@ -1182,7 +1323,7 @@ server <- function(input, output, session) {
                 h4("Resumen de Iteraciones"),
                 p("Valores de ubicación (x*) y escala (s*) en cada iteración, con criterio de convergencia.",
                   tags$br(),
-                  tags$small(class = "text-muted", "delta = máx(|Δx*|, |Δs*|); convergencia cuando delta < tolerancia")),
+                  tags$small(class = "text-muted", "Criterio primario: sin cambio en la 3ra cifra significativa de x* y s*; delta y tolerancia quedan como trazabilidad y guardia numérica.")),
                 dataTableOutput("algoA_iterations_table"),
                 hr(),
                 h4("Detalle por Participante por Iteración"),
@@ -1532,22 +1673,26 @@ server <- function(input, output, session) {
       stab_criterion_value_niqr <- NA_real_
     }
 
-    # Formato dinámico para decimales
-    fmt <- "%.5f"
-
-    details_text <- sprintf(
-      paste("Media de los datos de homogeneidad (y1):", fmt, "
-Media de los datos de estabilidad (y2):", fmt, "
-Diferencia absoluta observada:", fmt, "
-Criterio de estabilidad (0.3 * sigma_pt):", fmt),
-      y1, y2, diff_observed, stab_criterion_value
+    details_text <- paste(
+      "Media de los datos de homogeneidad (y1):", format_num(y1),
+      "\nMedia de los datos de estabilidad (y2):", format_num(y2),
+      "\nDiferencia absoluta observada:", format_num(diff_observed),
+      "\nCriterio de estabilidad (0.3 * sigma_pt):", format_num(stab_criterion_value)
     )
 
     if (!is.na(diff_observed) && diff_observed <= stab_criterion_value) {
-      conclusion <- sprintf("|y1 - y2| (%.4f) <= c_MADe (%.4f): CUMPLE CRITERIO ESTABILIDAD (MADe)", diff_observed, stab_criterion_value)
+      conclusion <- paste0(
+        "|y1 - y2| (", format_num(diff_observed), ") <= c_MADe (",
+        format_num(stab_criterion_value),
+        "): CUMPLE CRITERIO ESTABILIDAD (MADe)"
+      )
       conclusion_class <- "alert alert-success"
     } else if (!is.na(diff_observed)) {
-      conclusion <- sprintf("|y1 - y2| (%.4f) > c_MADe (%.4f): NO CUMPLE CRITERIO ESTABILIDAD (MADe)", diff_observed, stab_criterion_value)
+      conclusion <- paste0(
+        "|y1 - y2| (", format_num(diff_observed), ") > c_MADe (",
+        format_num(stab_criterion_value),
+        "): NO CUMPLE CRITERIO ESTABILIDAD (MADe)"
+      )
       conclusion_class <- "alert alert-warning"
     } else {
       conclusion <- "Conclusión: no se puede evaluar estabilidad (datos insuficientes)."
@@ -1555,10 +1700,18 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
     }
 
     if (is.finite(stab_criterion_value_niqr) && !is.na(diff_observed) && diff_observed <= stab_criterion_value_niqr) {
-      conclusion_niqr <- sprintf("|y1 - y2| (%.4f) <= c_nIQR (%.4f): CUMPLE CRITERIO ESTABILIDAD (nIQR)", diff_observed, stab_criterion_value_niqr)
+      conclusion_niqr <- paste0(
+        "|y1 - y2| (", format_num(diff_observed), ") <= c_nIQR (",
+        format_num(stab_criterion_value_niqr),
+        "): CUMPLE CRITERIO ESTABILIDAD (nIQR)"
+      )
       conclusion_class_niqr <- "alert alert-success"
     } else if (is.finite(stab_criterion_value_niqr) && !is.na(diff_observed)) {
-      conclusion_niqr <- sprintf("|y1 - y2| (%.4f) > c_nIQR (%.4f): NO CUMPLE CRITERIO ESTABILIDAD (nIQR)", diff_observed, stab_criterion_value_niqr)
+      conclusion_niqr <- paste0(
+        "|y1 - y2| (", format_num(diff_observed), ") > c_nIQR (",
+        format_num(stab_criterion_value_niqr),
+        "): NO CUMPLE CRITERIO ESTABILIDAD (nIQR)"
+      )
       conclusion_class_niqr <- "alert alert-warning"
     } else if (is.na(diff_observed)) {
       conclusion_niqr <- "Conclusión: no se puede evaluar estabilidad (nIQR) por datos insuficientes."
@@ -1644,8 +1797,11 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
 
   output$u_hom_table <- renderDataTable({
     req(u_hom_data())
-    datatable(u_hom_data(), options = list(pageLength = 10), rownames = FALSE) %>%
-      formatRound(columns = "u_hom", digits = 5)
+    datatable(
+      format_numeric_columns(u_hom_data(), "u_hom"),
+      options = list(pageLength = 10),
+      rownames = FALSE
+    )
   })
 
   u_stab_data <- reactive({
@@ -1700,8 +1856,11 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
 
   output$u_stab_table <- renderDataTable({
     req(u_stab_data())
-    datatable(u_stab_data(), options = list(pageLength = 10), rownames = FALSE) %>%
-      formatRound(columns = c("Dmax", "u_stab"), digits = 5)
+    datatable(
+      format_numeric_columns(u_stab_data(), c("Dmax", "u_stab")),
+      options = list(pageLength = 10),
+      rownames = FALSE
+    )
   })
 
   # --- Salidas ---
@@ -1710,20 +1869,14 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
   output$raw_data_preview <- renderDataTable({
     req(raw_data())
     df <- head(raw_data(), 10)
-    numeric_cols <- names(df)[sapply(df, is.numeric)]
-    fmt <- "%.9f"
-    df <- df %>%
-      mutate(across(all_of(numeric_cols), ~ sprintf("%.5f", .x)))
+    df <- format_numeric_columns(df)
     datatable(df, options = list(scrollX = TRUE))
   })
 
   output$stability_data_preview <- renderDataTable({
     req(stability_data_raw())
     df <- head(stability_data_raw(), 10)
-    numeric_cols <- names(df)[sapply(df, is.numeric)]
-    fmt <- "%.9f"
-    df <- df %>%
-      mutate(across(all_of(numeric_cols), ~ sprintf("%.5f", .x)))
+    df <- format_numeric_columns(df)
     datatable(df, options = list(scrollX = TRUE))
   })
 
@@ -1807,7 +1960,7 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
     first_sample_col <- names(homogeneity_data)[grep("sample_", names(homogeneity_data))][1]
     homogeneity_data %>%
       filter(level == input$target_level) %>%
-      mutate(across(where(is.numeric), ~ round(.x, 5))) %>%
+      format_numeric_columns() %>%
       select(level, all_of(first_sample_col))
   })
 
@@ -1818,7 +1971,7 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
       if (is.null(res$error)) {
         data.frame(
           Estadístico = c("Mediana (x_pt)", "Diferencia absoluta mediana", "MADe (sigma_pt)", "nIQR"),
-          Valor = sprintf("%.5f", c(res$median_val, res$median_abs_diff, res$sigma_pt, res$n_iqr))
+          Valor = format_num(c(res$median_val, res$median_abs_diff, res$sigma_pt, res$n_iqr))
         )
       }
     },
@@ -1829,10 +1982,10 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
   output$robust_stats_summary <- renderPrint({
     res <- homogeneity_run()
     if (is.null(res$error)) {
-      cat(sprintf("Valor mediano: %.5f\n", res$median_val))
-      cat(sprintf("Diferencia absoluta mediana: %.5f\n", res$median_abs_diff))
-      cat(sprintf("MADe (sigma_pt): %.5f\n", res$sigma_pt))
-      cat(sprintf("nIQR: %.5f\n", res$n_iqr))
+      cat("Valor mediano:", format_num(res$median_val), "\n")
+      cat("Diferencia absoluta mediana:", format_num(res$median_abs_diff), "\n")
+      cat("MADe (sigma_pt):", format_num(res$sigma_pt), "\n")
+      cat("nIQR:", format_num(res$n_iqr), "\n")
     }
   })
 
@@ -1947,8 +2100,7 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
       return(DT::datatable(data.frame(Error = res$error)))
     }
     
-    data_table <- res$intermediate_df %>%
-      mutate(across(where(is.numeric), ~ round(.x, 5)))
+    data_table <- format_numeric_columns(res$intermediate_df)
     
     DT::datatable(
       data_table,
@@ -2057,11 +2209,11 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
     {
       res <- homogeneity_run()
       if (is.null(res$error)) {
-        res$intermediate_df %>% mutate(across(where(is.numeric), ~ round(.x, 5)))
+        format_numeric_columns(res$intermediate_df)
       }
     },
     spacing = "l",
-    digits = 5
+    digits = 3
   )
 
   # Salida: Tabla de estadísticos resumidos
@@ -2249,8 +2401,7 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
       return(DT::datatable(data.frame(Error = res$error)))
     }
 
-    data_table <- res$stab_intermediate_df %>%
-      mutate(across(where(is.numeric), ~ round(.x, 5)))
+    data_table <- format_numeric_columns(res$stab_intermediate_df)
 
     DT::datatable(
       data_table,
@@ -3463,9 +3614,9 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
         summary_row %>%
           select(Combinación, `x_pt`, `sigma_pt`, `u(x_pt)`) %>%
           mutate(
-            `x_pt` = sprintf("%.5f", `x_pt`),
-            `sigma_pt` = sprintf("%.5f", `sigma_pt`),
-            `u(x_pt)` = sprintf("%.5f", `u(x_pt)`)
+            `x_pt` = format_num(`x_pt`),
+            `sigma_pt` = format_num(`sigma_pt`),
+            `u(x_pt)` = format_num(`u(x_pt)`)
           )
       },
       striped = TRUE,
@@ -3541,21 +3692,23 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
     if (nrow(filtered) == 0) {
       return(datatable(data.frame(Mensaje = "No hay información x_pt para la selección actual.")))
     }
+    filtered_display <- filtered %>%
+      select(
+        Combinación = combination,
+        `Etiqueta de combinación` = combination_label,
+        Nivel = level,
+        `x_pt`,
+        `u(x_pt)_def` = u_xpt_def,
+        `Incertidumbre expandida` = expanded_uncertainty,
+        `sigma_pt`
+      ) %>%
+      format_numeric_columns(c("x_pt", "u(x_pt)_def", "Incertidumbre expandida", "sigma_pt"))
+
     datatable(
-      filtered %>%
-        select(
-          Combinación = combination,
-          `Etiqueta de combinación` = combination_label,
-          Nivel = level,
-          `x_pt`,
-          `u(x_pt)_def` = u_xpt_def,
-          `Incertidumbre expandida` = expanded_uncertainty,
-          `sigma_pt`
-        ),
+      filtered_display,
       options = list(pageLength = 10, scrollX = TRUE),
       rownames = FALSE
-    ) %>%
-      formatRound(columns = c("x_pt", "u(x_pt)_def", "Incertidumbre expandida", "sigma_pt"), digits = 5)
+    )
   })
 
   output$global_level_summary_table <- renderTable(
@@ -4293,7 +4446,7 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
         Contaminante = pol,
         Nivel = lev,
         Participantes_Evaluados = n_eval,
-        Valor_p = ifelse(is.na(p_val), "NA", sprintf("%.4f", p_val)),
+        Valor_p = ifelse(is.na(p_val), "NA", format_num(p_val)),
         Atipicos_detectados = outliers_detected,
         Participante = outlier_participant,
         Valor_Atipico = outlier_value,
@@ -5045,16 +5198,17 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
     cat(sprintf("Esquema PT (n): %s\n", scores$n_lab))
     cat("\n--- Homogeneidad ---\n")
     cat(sprintf("Conclusión: %s\n", gsub("<br>", " | ", hom$conclusion)))
-    cat(sprintf("ss = %.4f | c = %.4f | c_exp = %.4f\n", hom$ss, hom$c_criterion, hom$c_criterion_expanded))
-    cat(sprintf("MADe = %.4f | nIQR = %.4f\n", hom$sigma_pt, hom$n_iqr))
+    cat("ss =", format_num(hom$ss), "| c =", format_num(hom$c_criterion),
+        "| c_exp =", format_num(hom$c_criterion_expanded), "\n")
+    cat("MADe =", format_num(hom$sigma_pt), "| nIQR =", format_num(hom$n_iqr), "\n")
     cat("\n--- Estabilidad ---\n")
     cat(sprintf("Conclusión: %s\n", stab$stab_conclusion))
-    cat(sprintf("|y1 - y2| = %.4f | c = %.4f\n", stab$diff_hom_stab, stab$stab_c_criterion))
+    cat("|y1 - y2| =", format_num(stab$diff_hom_stab),
+        "| c =", format_num(stab$stab_c_criterion), "\n")
     cat("\n--- Puntajes PT ---\n")
-    cat(sprintf(
-      "x_pt = %.4f | sigma_pt = %.4f | u_xpt = %.4f | k = %s\n",
-      scores$x_pt, scores$sigma_pt, scores$u_xpt, scores$k
-    ))
+    cat("x_pt =", format_num(scores$x_pt), "| sigma_pt =",
+        format_num(scores$sigma_pt), "| u_xpt =",
+        format_num(scores$u_xpt), "| k =", scores$k, "\n")
     cat(sprintf("Participantes evaluados: %d\n", nrow(scores$scores)))
   })
 
@@ -5391,24 +5545,25 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
     }
 
     n_iter <- if (!is.null(res$iterations) && nrow(res$iterations) > 0) nrow(res$iterations) else 0
-    stabilization_iter <- if (!is.null(res$iterations) && nrow(res$iterations) > 0) {
-      hit <- which(res$iterations$delta_max < res$tolerance)
-      if (length(hit) > 0) hit[1] else NA_integer_
-    } else {
-      NA_integer_
-    }
+    stabilization_iter <- get_algo_a_stabilization_iter(res)
+    convergence_method <- format_convergence_method(res$convergence_method)
     convergence_message <- if (isTRUE(res$converged)) {
-      paste0("Convergió en ", n_iter, " iteraciones (tolerancia = ", format(res$tolerance, scientific = FALSE), ").")
+      paste0(
+        "Convergió en ", n_iter, " iteraciones con criterio ",
+        convergence_method, " (guardia numérica = ",
+        format(res$tolerance, scientific = FALSE), ")."
+      )
     } else {
-      paste0("No convergió tras ", n_iter, " iteraciones (tolerancia = ", format(res$tolerance, scientific = FALSE), ").")
+      paste0(
+        "No convergió tras ", n_iter, " iteraciones; la guardia numérica fue ",
+        format(res$tolerance, scientific = FALSE), "."
+      )
     }
     stabilization_message <- if (is.finite(stabilization_iter)) {
-      paste0("Primera iteración que cumple la tolerancia: ", stabilization_iter, ".")
+      paste0("Primera iteración que estabiliza la 3ra cifra significativa: ", stabilization_iter, ".")
     } else {
-      "Ninguna iteración visible cumple la tolerancia."
+      "Ninguna iteración visible estabiliza la 3ra cifra significativa."
     }
-
-    fmt9 <- function(x) format(x, digits = 9, scientific = FALSE)
 
     n_wins <- if (!is.null(res$n_winsorized)) res$n_winsorized else 0L
 
@@ -5421,12 +5576,12 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
         "<strong>n participantes:</strong> ", res$n, "<br>",
         "<hr style='margin:4px 0'>",
         "<strong>Valores iniciales (iteración 0):</strong><br>",
-        "&nbsp;&nbsp;x*₀ = mediana = ", fmt9(res$initial_median), "<br>",
-        "&nbsp;&nbsp;s*₀ = MADe = ", fmt9(res$initial_mad_e), "<br>",
+        "&nbsp;&nbsp;x*₀ = mediana = ", format_num(res$initial_median), "<br>",
+        "&nbsp;&nbsp;s*₀ = MADe = ", format_num(res$initial_mad_e), "<br>",
         "<hr style='margin:4px 0'>",
         "<strong>Valores finales (winsorización ISO 13528 Anexo C):</strong><br>",
-        "&nbsp;&nbsp;x* (valor asignado) = ", fmt9(res$assigned_value), "<br>",
-        "&nbsp;&nbsp;s* (desviación robusta) = ", fmt9(res$robust_sd), "<br>",
+        "&nbsp;&nbsp;x* (valor asignado) = ", format_num(res$assigned_value), "<br>",
+        "&nbsp;&nbsp;s* (desviación robusta) = ", format_num(res$robust_sd), "<br>",
         "&nbsp;&nbsp;Observaciones winzorizadas = ", n_wins, " de ", res$n, "<br>",
         "<hr style='margin:4px 0'>",
         "<em>", convergence_message, "</em><br>",
@@ -5483,10 +5638,29 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
     }
 
     iter_display <- res$iterations
-    iter_display$Se_estabiliza <- ifelse(iter_display$delta_max < res$tolerance, "SI", "NO")
-    names(iter_display) <- c("Iter", "x*_prev", "s*_prev", "delta_w", "Lim_inf",
-                              "Lim_sup", "n_winsor", "x*_new", "s*_new",
-                              "delta_x", "delta_s", "delta_max", "Se_estabiliza")
+    iter_display$Se_estabiliza <- ifelse(iter_display$signif3_converged, "SI", "NO")
+    iter_display <- iter_display %>%
+      rename(
+        Iter = iteration,
+        `x*_prev` = x_star_prev,
+        `s*_prev` = s_star_prev,
+        delta_w = delta_winsor,
+        Lim_inf = lower_bound,
+        Lim_sup = upper_bound,
+        n_winsor = n_winsorized,
+        `x*_new` = x_star_new,
+        `s*_new` = s_star_new,
+        `signif3 x*_prev` = signif3_x_prev,
+        `signif3 s*_prev` = signif3_s_prev,
+        `signif3 x*_new` = signif3_x_new,
+        `signif3 s*_new` = signif3_s_new
+      ) %>%
+      select(
+        Iter, `x*_prev`, `s*_prev`, delta_w, Lim_inf, Lim_sup, n_winsor,
+        `x*_new`, `s*_new`, delta_x, delta_s, delta_max,
+        `signif3 x*_prev`, `signif3 s*_prev`,
+        `signif3 x*_new`, `signif3 s*_new`, Se_estabiliza
+      )
 
     datatable(
       iter_display,
@@ -5573,7 +5747,8 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
         paste0("# Valores finales: x* = ", res$assigned_value,
                ", s* = ", res$robust_sd),
         paste0("# Convergencia: ", if (res$converged) "SI" else "NO",
-               ", tolerancia = ", res$tolerance),
+               ", metodo = ", res$convergence_method,
+               ", guardia_numerica = ", res$tolerance),
         paste0("# Observaciones winzorizadas: ", res$n_winsorized, " de ", res$n),
         "#",
         "# === SECCION 1: RESUMEN DE ITERACIONES ==="
@@ -5791,13 +5966,17 @@ Criterio de estabilidad (0.3 * sigma_pt):", fmt),
       return(datatable(data.frame(Mensaje = "No hay datos suficientes para calcular la compatibilidad metrológica (se requiere Referencia y al menos un método de Consenso).")))
     }
     datatable(
-      data,
+      format_numeric_columns(
+        data,
+        c("x_pt_ref", "u_ref", "x_pt_2a", "Diff_Ref_2a", "Crit_Ref_2a",
+          "x_pt_2b", "Diff_Ref_2b", "Crit_Ref_2b", "x_pt_3",
+          "Diff_Ref_3", "Crit_Ref_3")
+      ),
       options = list(pageLength = 10, scrollX = TRUE),
       colnames = c("Contaminante", "N_Lab", "Nivel", "Valor Ref", "u_ref", "Valor 2a", "Dif 2a", "Crit 2a", "Eval 2a", "Valor 2b", "Dif 2b", "Crit 2b", "Eval 2b", "Valor 3", "Dif 3", "Crit 3", "Eval 3"),
       rownames = FALSE,
       caption = "Tabla. Compatibilidad Metrológica: Diferencias entre Valor de Referencia y Consenso"
-    ) %>%
-      formatRound(columns = c("x_pt_ref", "u_ref", "x_pt_2a", "Diff_Ref_2a", "Crit_Ref_2a", "x_pt_2b", "Diff_Ref_2b", "Crit_Ref_2b", "x_pt_3", "Diff_Ref_3", "Crit_Ref_3"), digits = 5)
+    )
   })
 
   output$grubbs_summary_table <- renderDataTable({

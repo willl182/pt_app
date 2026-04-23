@@ -206,10 +206,10 @@ Contiene resultados agregados de cada laboratorio participante.
 **Patrón de nombre**: `summary_n(\d+).csv`. El número se extrae como `n_lab` (ej. `summary_n04.csv` -> `n_lab = 4`).
 
 ```csv
-"pollutant","run","level","participant_id","replicate","sample_group","mean_value","sd_value"
-"co","corrida_1","2-umol/mol","part_1",2,"1-10",2.025,0.012
-"co","corrida_1","2-umol/mol","ref",1,"1-10",2.015,0.005
-"so2","corrida_2","20-nmol/mol","part_2",1,"1-5",19.72,0.08
+"pollutant","run","level","participant_id","replicate","mean_value","sd_value"
+"co","corrida_1","2-umol/mol","part_1",2,2.025,0.012
+"co","corrida_1","2-umol/mol","ref",1,2.015,0.005
+"so2","corrida_2","20-nmol/mol","part_2",1,19.72,0.08
 ```
 
 **Notas:**

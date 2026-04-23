@@ -1,50 +1,43 @@
-# Session State: PT App — Validacion Downstream Algoritmo A
+# Session State: pt_app — Aplicativo Estadístico PT
 
-**Last Updated**: 2026-03-31 19:30 (260331_1930)
+**Last Updated**: 2026-04-22 19:58
 
 ## Session Objective
 
-Fase 5 (Scores de Desempeño) completada — 5,760 PASS, 0 FAIL.
+Deprecar la columna `sample_group` del contrato de entrada de la app y el paquete
+`ptcalc`. La columna era funcionalmente muerta pero sobrevivía en datos de prueba,
+documentación y un script de entrega.
 
 ## Current State
 
-- [x] Fase 0 completada: estructura de carpetas, stubs, helpers, USAGE.md
-- [x] Fase 1 completada: estadísticos robustos validados (90 PASS, 0 FAIL)
-- [x] Fase 2 completada: homogeneidad validada (195 PASS, 0 FAIL)
-- [x] Fase 3 completada: estabilidad validada (195 PASS, 0 FAIL)
-- [x] Fase 4: Uncertainty Chain — completada y revisada (420 PASS, 0 FAIL)
-- [x] **Fase 5: Scores de Desempeño — completada (5,760 PASS, 0 FAIL)**
+- [x] Fase 1 — `app.R`: advertencia `showNotification` si se detecta `sample_group`
+- [x] Fase 2 — `ptcalc`: bump versión 0.1.0 → 0.1.1 + `NEWS.md`
+- [x] Fase 3 — `deliv/04_puntajes/`: eliminar propagación de columna y ajustar test
+- [x] Fase 4 — `data/summary_n{4,7,10,13}.csv`: columna removida
+- [x] Fase 5 — Documentación `es/` (4 archivos): tabla y ejemplos CSV actualizados
+- [x] Fase 6 — Smoke test: CSVs limpios confirmados; 3 FAILs pre-existentes ignorados
 
-## Archivos outputs actuales
+## Critical Technical Context
 
-```
-validation/outputs/
-  stage_01_robust_stats*.csv, _report.md   # Fase 1: 90 PASS
-  stage_02_homogeneity*.csv, _report.md    # Fase 2: 195 PASS
-  stage_03_stability*.csv, _report.md      # Fase 3: 195 PASS
-  stage_04_uncertainty_chain*.csv, _report.md  # Fase 4: 420 PASS
-  stage_05_scores*.csv, _report.md         # Fase 5: 5,760 PASS
-```
+### Fallas pre-existentes en `test_04_puntajes.R` (NO tocar)
+- **Línea 82**: test de `calcular_puntaje_zeta` con valor esperado ≈ 1.58, pero
+  la fórmula ISO 13528:2022 produce ≈ 2.24 con los inputs dados. Bug en el test.
+- **Línea 94**: test de `calcular_puntaje_en` espera 1.0, real ≈ 1.12. Bug en el test.
+- **Línea 370**: `generar_reporte_estadisticas_globales` retorna lista en lugar de
+  data.frame. Bug independiente en la función.
+- Usuario decidió dejar estos 3 FAILs como están.
 
-## Resultados acumulados
+### Estado del paquete `ptcalc`
+- Versión actual: `0.1.1`
+- `devtools::document("ptcalc")` pendiente desde sesión anterior (cifras significativas)
+- `ptcalc` no tiene testthat propio; los tests de integración viven en `deliv/04_puntajes/tests/`
 
-| Fase | Métricas/Combo | Total | PASS | FAIL | Max diff |
-|------|----------------|-------|------|------|----------|
-| 1: Robustos | 6 | 90 | 90 | 0 | 3.41e-13 |
-| 2: Homogeneidad | 13 | 195 | 195 | 0 | 2.98e-13 |
-| 3: Estabilidad | 13 | 195 | 195 | 0 | 3.12e-13 |
-| 4: Incertidumbre | 28 | 420 | 420 | 0 | 4.02e-15 |
-| 5: Scores | 8×12 | 5,760 | 5,760 | 0 | ~0 |
-| **Total** | | **6,660** | **6,660** | **0** | |
-
-## Notas Fase 5
-
-- summary_n13.csv tiene 13 participantes incluyendo "ref"; filtrar da 12 por combo
-- uncertainty_std = sd_value / sqrt(2) (m=2 de homogeneidad, constante)
-- Parámetros x_pt, sigma_pt, u_xpt_def leídos de stage_04_uncertainty_chain.csv
-- u_xpt_def no finito → clippeado a 0 (igual que app.R)
-- Scripts auto-contenidos (no dependen de helpers.R / helpers.py)
+### Pendiente de sesión anterior (cifras significativas)
+- Fase 4.6: comentario inline `app.R:127` para constante `ALGO_A_TOL`
+- Fases 5-6 del plan de cifras significativas: tests y validación cruzada
 
 ## Next Steps
 
-Todas las fases implementadas. Próxima: revisión final / documentación de resultados acumulados.
+1. Opcionalmente: corregir los 3 FAILs pre-existentes en `test_04_puntajes.R`
+2. Retomar plan de cifras significativas (`logs/plans/260420_1459_plan_cifras-significativas-implementacion.md`)
+3. `devtools::document("ptcalc")` para regenerar Rd desde roxygen

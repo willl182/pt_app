@@ -236,6 +236,20 @@ The application implements the following standards:
 
 ## Changelog
 
+### v0.4.1 (April 2026)
+
+**Algorithm A Convergence — Technical Update:**
+- **Breaking Change**: Algoritmo A ahora usa **comparación de 3ª cifra significativa** como criterio primario de convergencia (`signif(x, 3)`), reemplazando la tolerancia absoluta anterior. La guardia numérica (`tol = 1e-10`) opera solo como respaldo ante colapso de precisión de máquina.
+- **Reference**: ISO 13528:2022, Annex C, NOTE 1 — "Convergence is judged by examining the third significant figure of the robust mean and robust standard deviation."
+- **Impact**: Resultados numéricamente idénticos en la mayoría de casos; menor número de iteraciones para datos de magnitud ~10–100; convergencia robusta independiente de la escala de los datos.
+- **Trazabilidad**: El output de `run_algorithm_a()` ahora incluye `convergence_method` ("signif3" | "numerical_guard" | `NA`) y columnas `signif3_*` en el registro de iteraciones para auditoría.
+
+**Display Format:**
+- Todas las tablas y previews numéricos migrados a formato de **3 cifras significativas** a través de `format_num()`.
+- Reglas de formato por rango: `< 0.001` → notación científica; `0.001–10` → 2 decimales; `10–100` → 1 decimal; `≥ 100` → entero.
+
+---
+
 ### v0.4.0 (January 2026)
 
 **Documentation:**

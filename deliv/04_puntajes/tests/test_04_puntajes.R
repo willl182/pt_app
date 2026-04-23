@@ -208,7 +208,7 @@ test_that("calcular_puntajes_participante incluye todas las columnas", {
   resultado <- calcular_puntajes_participante(datos_part, x_pt, sigma_pt)
 
   columnas_esperadas <- c("pollutant", "run", "level", "participant_id",
-                          "replicate", "sample_group", "x", "x_pt", "sigma_pt",
+                          "replicate", "x", "x_pt", "sigma_pt",
                           "z", "evaluacion_z", "z_prima", "evaluacion_z_prima",
                           "zeta", "evaluacion_zeta", "en", "evaluacion_en")
   expect_true(all(columnas_esperadas %in% names(resultado)))

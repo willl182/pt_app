@@ -83,7 +83,9 @@ calculate_mad_e <- function(x) {
 #' 2. Compute delta = 1.5 * s*
 #' 3. Winsorize: x*_i = clamp(xi, x* - delta, x* + delta)
 #' 4. Update: x* = mean(x*_i), s* = 1.134 * sd(x*_i)
-#' 5. Repeat until convergence (changes < tolerance)
+#' 5. Repeat until no change in 3rd significant figure of x* and s*
+#'    (ISO 13528:2022 NOTE 1). A numerical guard (tol = 1e-10) catches
+#'    machine-precision stalls.
 #'
 #' The factor 1.134 corrects the bias introduced by winsorization.
 #' The sd() uses (p-1) denominator (sample standard deviation).
@@ -93,14 +95,18 @@ calculate_mad_e <- function(x) {
 #' @param values A numeric vector of participant results.
 #' @param ids Optional vector of participant identifiers (same length as values).
 #' @param max_iter Maximum number of iterations (default: 50).
-#' @param tol Convergence tolerance for x* and s* (default: 1e-06).
+#' @param tol Numerical guard tolerance for x* and s* (default: 1e-10). The
+#'   primary convergence criterion is 3rd significant figure comparison per
+#'   ISO 13528:2022 NOTE 1; tol only catches machine-precision stalls.
 #' @return A list containing:
 #'   - assigned_value: Robust mean (x*)
 #'   - robust_sd: Robust standard deviation (s*)
-#'   - iterations: Data frame of iteration history
+#'   - iterations: Data frame of iteration history (includes signif3_* columns)
 #'   - iteration_detail: Data frame with per-participant detail per iteration
 #'   - weights: Data frame with final winsorized values per participant
 #'   - converged: Logical indicating convergence
+#'   - convergence_method: `"signif3"` (ISO 13528:2022 NOTE 1) or
+#'     `"numerical_guard"` (machine-precision stall) or `NA` if not converged
 #'   - n_winsorized: Number of winsorized observations in final iteration
 #'   - error: Error message or NULL if successful
 #'
@@ -113,7 +119,7 @@ calculate_mad_e <- function(x) {
 #'
 #' @seealso \code{\link{calculate_niqr}}, \code{\link{calculate_mad_e}}
 #' @export
-run_algorithm_a <- function(values, ids = NULL, max_iter = 50, tol = 1e-06) {
+run_algorithm_a <- function(values, ids = NULL, max_iter = 50, tol = 1e-10) {
   # Remove non-finite values
   mask <- is.finite(values)
   values <- values[mask]
@@ -175,6 +181,7 @@ run_algorithm_a <- function(values, ids = NULL, max_iter = 50, tol = 1e-06) {
   iteration_records <- list()
   iteration_detail <- list()
   converged <- FALSE
+  convergence_method <- NA_character_
 
   for (iter in seq_len(max_iter)) {
     # Step 2: Compute delta (ISO 13528, Annex C, step 2)
@@ -235,6 +242,12 @@ run_algorithm_a <- function(values, ids = NULL, max_iter = 50, tol = 1e-06) {
       delta_x = delta_x,
       delta_s = delta_s,
       delta_max = delta_max,
+      signif3_x_prev = signif(x_star, 3),
+      signif3_s_prev = signif(s_star, 3),
+      signif3_x_new = signif(x_new, 3),
+      signif3_s_new = signif(s_new, 3),
+      signif3_converged = signif(x_new, 3) == signif(x_star, 3) &&
+                          signif(s_new, 3) == signif(s_star, 3),
       stringsAsFactors = FALSE
     )
 
@@ -253,11 +266,19 @@ run_algorithm_a <- function(values, ids = NULL, max_iter = 50, tol = 1e-06) {
       stringsAsFactors = FALSE
     )
 
+    # Primary: ISO 13528:2022 NOTE 1 — 3rd significant figure
+    # Must compare before updating x_star/s_star
+    sig_converged <- signif(x_new, 3) == signif(x_star, 3) &&
+                     signif(s_new, 3) == signif(s_star, 3)
+    # Secondary: numerical guard against machine-precision stall
+    num_converged <- delta_x < tol && delta_s < tol
+
     x_star <- x_new
     s_star <- s_new
 
-    if (delta_x < tol && delta_s < tol) {
+    if (sig_converged || num_converged) {
       converged <- TRUE
+      convergence_method <- if (sig_converged) "signif3" else "numerical_guard"
       break
     }
   }
@@ -294,6 +315,7 @@ run_algorithm_a <- function(values, ids = NULL, max_iter = 50, tol = 1e-06) {
     iteration_detail = iteration_detail_df,
     weights = weights_df,
     converged = converged,
+    convergence_method = convergence_method,
     n_winsorized = sum(is_winsorized_final),
     n = p,
     initial_median = initial_median,

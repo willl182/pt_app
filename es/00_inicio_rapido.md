@@ -137,8 +137,8 @@ La aplicación requiere formatos CSV específicos. Se incluyen archivos de datos
 
 #### 2. Archivos Resumen de Participantes (`summary_n*.csv`)
 ```csv
-"pollutant","level","participant_id","replicate","sample_group","mean_value","sd_value"
-"co","0-umol/mol","part_1",2,"1-10",-0.0271,0.0278
+"pollutant","level","participant_id","replicate","mean_value","sd_value"
+"co","0-umol/mol","part_1",2,-0.0271,0.0278
 ```
 
 #### 3. Instrumentación de Participantes (`participants_data.csv`)

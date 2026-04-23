@@ -70,7 +70,6 @@ Se utiliza para los archivos `summary_n*.csv`. Contiene resultados agregados de 
 | `mean_value` | **Sí** | Flotante | Media reportada por el participante | `2.0121508274` |
 | `sd_value` | **Sí** | Flotante | Desviación estándar reportada por el participante | `0.0035971898` |
 | `replicate` | No | Entero | Número de réplicas utilizadas por el laboratorio | `2`, `3`, `4` |
-| `sample_group` | No | Cadena | Identificador del grupo de muestras | `1-10`, `11-20`, `21-30` |
 
 #### Identificadores Especiales de Participantes
 
