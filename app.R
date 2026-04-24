@@ -210,30 +210,47 @@ server <- function(input, output, session) {
   })
 
   # Incertidumbre estándar reportada por cada participante (u_i)
-  # Fuente: data/uncertainty_n13.csv — una fila por participante × (pollutant, level)
-  # El participante reporta su propio presupuesto de incertidumbre; la app no puede
-  # recalcularlo internamente. sd_value queda solo para verificación de consistencia.
+  # Fuente preferida: archivo subido por el usuario (input$uncertainty_file).
+  # Fallback: data/uncertainty_n13.csv en disco si no se subió ningún archivo.
   uncertainty_df <- reactive({
-    path <- file.path("data", "uncertainty_n13.csv")
-    if (!file.exists(path)) {
-      showNotification(
-        "Archivo 'data/uncertainty_n13.csv' no encontrado. Se usará sd_value como fallback para uncertainty_std.",
-        type = "warning", duration = 10
-      )
-      return(NULL)
-    }
-    df <- vroom::vroom(path, show_col_types = FALSE)
     required_cols <- c("participant_id", "pollutant", "level", "u_i")
-    if (!all(required_cols %in% names(df))) {
-      showNotification(
-        paste0("'uncertainty_n13.csv' debe contener: ",
-               paste(required_cols, collapse = ", "),
-               ". Se usará sd_value como fallback."),
-        type = "warning", duration = 10
-      )
-      return(NULL)
+
+    # Prioridad 1: archivo subido por el usuario
+    if (!is.null(input$uncertainty_file)) {
+      df <- vroom::vroom(input$uncertainty_file$datapath, show_col_types = FALSE)
+      if (!all(required_cols %in% names(df))) {
+        showNotification(
+          paste0("El archivo de incertidumbre debe contener: ",
+                 paste(required_cols, collapse = ", "), "."),
+          type = "error", duration = 10
+        )
+        return(NULL)
+      }
+      return(df |> dplyr::select(participant_id, pollutant, level, u_i))
     }
-    df |> dplyr::select(participant_id, pollutant, level, u_i)
+
+    # Prioridad 2: archivo en disco (data/uncertainty_n13.csv)
+    path <- file.path("data", "uncertainty_n13.csv")
+    if (file.exists(path)) {
+      df <- vroom::vroom(path, show_col_types = FALSE)
+      if (!all(required_cols %in% names(df))) {
+        showNotification(
+          paste0("'uncertainty_n13.csv' debe contener: ",
+                 paste(required_cols, collapse = ", "),
+                 ". Se usará sd_value como fallback."),
+          type = "warning", duration = 10
+        )
+        return(NULL)
+      }
+      return(df |> dplyr::select(participant_id, pollutant, level, u_i))
+    }
+
+    # Sin fuente disponible
+    showNotification(
+      "No se encontró archivo de incertidumbre. Suba 'uncertainty_n*.csv' en Carga de datos o coloque el archivo en data/. Se usará sd_value como fallback.",
+      type = "warning", duration = 12
+    )
+    NULL
   })
 
   # Valores reactivos para almacenar datos crudos para cálculos específicos
@@ -956,7 +973,10 @@ server <- function(input, output, session) {
       rename(result = mean_value)
     if (!is.null(u_df)) {
       participant_data <- participant_data %>%
-        dplyr::left_join(u_df |> dplyr::select(participant_id, u_i), by = "participant_id") %>%
+        dplyr::left_join(
+          u_df |> dplyr::select(participant_id, pollutant, level, u_i),
+          by = c("participant_id", "pollutant", "level")
+        ) %>%
         mutate(
           uncertainty_std = dplyr::coalesce(u_i, sd_value),
           # Chequeo de consistencia interna: u_i vs sd(mean_values)/sqrt(3)
@@ -1178,6 +1198,14 @@ server <- function(input, output, session) {
                   tags$small(class = "text-muted", "(Origen: resultados de laboratorios participantes)")
                 ),
                 fileInput("summary_files", NULL, accept = ".csv", multiple = TRUE, placeholder = "summary_n*.csv")
+              ),
+              div(class = "upload-item", style = "border-left: 4px solid #8b5cf6; padding-left: 12px;",
+                div(class = "upload-label",
+                  icon("file-csv"),
+                  span("4. Incertidumbre de participantes"),
+                  tags$small(class = "text-muted", "(u_i reportada por cada participante — uncertainty_n*.csv)")
+                ),
+                fileInput("uncertainty_file", NULL, accept = ".csv", placeholder = "uncertainty_n13.csv")
               )
             )
           )
@@ -2696,7 +2724,10 @@ server <- function(input, output, session) {
     u_df <- uncertainty_df()
     if (!is.null(u_df)) {
       participant_data <- participant_data %>%
-        dplyr::left_join(u_df |> dplyr::select(participant_id, u_i), by = "participant_id") %>%
+        dplyr::left_join(
+          u_df |> dplyr::select(participant_id, pollutant, level, u_i),
+          by = c("participant_id", "pollutant", "level")
+        ) %>%
         mutate(
           uncertainty_std = dplyr::coalesce(u_i, sd_value),
           u_i_check       = sd_value / sqrt(3)
@@ -4805,6 +4836,20 @@ server <- function(input, output, session) {
       ref_data <- subset_data %>% filter(participant_id == "ref")
       part_data <- subset_data %>% filter(participant_id != "ref")
 
+      # Enriquecer con u_i reportada (presupuesto propio del participante)
+      u_df <- uncertainty_df()
+      if (!is.null(u_df)) {
+        part_data <- part_data %>%
+          dplyr::left_join(
+            u_df |> dplyr::select(participant_id, pollutant, level, u_i),
+            by = c("participant_id", "pollutant", "level")
+          ) %>%
+          dplyr::mutate(uncertainty_std = dplyr::coalesce(u_i, sd_value))
+      } else {
+        part_data <- part_data %>%
+          dplyr::mutate(u_i = NA_real_, uncertainty_std = sd_value)
+      }
+
       # Calcular Valor Asignado
       assigned <- list(xpt = NA, u_xpt = NA, sigma = NA)
 
@@ -4854,8 +4899,8 @@ server <- function(input, output, session) {
           sigma_pt = final_sigma,
           z_score = (mean_value - assigned$xpt) / final_sigma,
           z_prime_score = (mean_value - assigned$xpt) / sqrt(final_sigma^2 + assigned$u_xpt^2),
-          zeta_score = (mean_value - assigned$xpt) / sqrt(sd_value^2 + assigned$u_xpt^2),
-          En_score = (mean_value - assigned$xpt) / sqrt((k * sd_value)^2 + (k * assigned$u_xpt)^2)
+          zeta_score = (mean_value - assigned$xpt) / sqrt(uncertainty_std^2 + assigned$u_xpt^2),
+          En_score = (mean_value - assigned$xpt) / sqrt((k * uncertainty_std)^2 + (k * assigned$u_xpt)^2)
         ) %>%
         select(participant_id, pollutant, level, mean_value, sd_value, x_pt, u_xpt, sigma_pt, z_score, z_prime_score, zeta_score, En_score)
 
