@@ -1,43 +1,53 @@
-# Session State: pt_app — Aplicativo Estadístico PT
+# Session State: pt_app
 
-**Last Updated**: 2026-04-22 19:58
+**Last Updated**: 2026-04-24 17:23
 
 ## Session Objective
 
-Deprecar la columna `sample_group` del contrato de entrada de la app y el paquete
-`ptcalc`. La columna era funcionalmente muerta pero sobrevivía en datos de prueba,
-documentación y un script de entrega.
+Implementar corrección del cálculo de `uncertainty_std` del participante:
+leer `u_i` directamente desde `uncertainty_n13.csv` en lugar de derivar `sd_value/sqrt(m)`.
 
 ## Current State
 
-- [x] Fase 1 — `app.R`: advertencia `showNotification` si se detecta `sample_group`
-- [x] Fase 2 — `ptcalc`: bump versión 0.1.0 → 0.1.1 + `NEWS.md`
-- [x] Fase 3 — `deliv/04_puntajes/`: eliminar propagación de columna y ajustar test
-- [x] Fase 4 — `data/summary_n{4,7,10,13}.csv`: columna removida
-- [x] Fase 5 — Documentación `es/` (4 archivos): tabla y ejemplos CSV actualizados
-- [x] Fase 6 — Smoke test: CSVs limpios confirmados; 3 FAILs pre-existentes ignorados
+- [x] Revisado el bug: `sd_value / sqrt(2)` con m hardcodeado en app.R y scripts de validación
+- [x] Creado `data/uncertainty_n13.csv` (372 filas: 12 participantes × 31 combos)
+  - Columnas: `participant_id, pollutant, level, x_i, u_i`
+  - `u_i` sintético = `mean(sd_value) * 1.5` (reemplazar con valores reales cuando estén disponibles)
+- [x] `app.R`: nuevo reactive `uncertainty_df()` carga el CSV automáticamente desde `data/`
+- [x] `app.R`: `compute_scores_metrics` (antigua L927) → join + `u_i` + fallback + alerta Fase 4
+- [x] `app.R`: `compute_combo_scores` (antigua L2616) → mismo ajuste
+- [x] `validation/stage_05_scores.py`: nueva `load_uncertainty()`; `load_participants()` recibe `u_map`
+- [x] `validation/stage_05_scores.R`: merge con `uncertainty_n13.csv` reemplaza `sd/sqrt(2)`
+- [x] Alerta de consistencia implementada: `>50% diferencia relativa` entre `u_i` y `sd/√3`
+- [x] Commit `10d5b43` con todos los cambios
+- [ ] Fase 5: correr suite de validación y confirmar PASS
 
 ## Critical Technical Context
 
-### Fallas pre-existentes en `test_04_puntajes.R` (NO tocar)
-- **Línea 82**: test de `calcular_puntaje_zeta` con valor esperado ≈ 1.58, pero
-  la fórmula ISO 13528:2022 produce ≈ 2.24 con los inputs dados. Bug en el test.
-- **Línea 94**: test de `calcular_puntaje_en` espera 1.0, real ≈ 1.12. Bug en el test.
-- **Línea 370**: `generar_reporte_estadisticas_globales` retorna lista en lugar de
-  data.frame. Bug independiente en la función.
-- Usuario decidió dejar estos 3 FAILs como están.
+**Arquitectura de incertidumbre (correcta):**
+- `summary_n13.csv`: 3 filas por participante × combo → `sd_value` = SD intra-réplica (solo verificación)
+- `uncertainty_n13.csv`: 1 fila por participante × combo → `u_i` = presupuesto propio del participante
+- `u_i_check = sd_value/√3` → solo para chequeo de consistencia, nunca fluye a scores
+- Homogeneidad y estabilidad son exclusivas del lado de referencia
 
-### Estado del paquete `ptcalc`
-- Versión actual: `0.1.1`
-- `devtools::document("ptcalc")` pendiente desde sesión anterior (cifras significativas)
-- `ptcalc` no tiene testthat propio; los tests de integración viven en `deliv/04_puntajes/tests/`
+**Join en app.R:**
+- Se usa `dplyr::left_join(u_df |> dplyr::select(participant_id, u_i), by = "participant_id")`
+- `u_df` tiene `participant_id, pollutant, level, u_i` pero se hace `select(participant_id, u_i)` antes
+  del join para evitar columnas duplicadas (pollutant.x/pollutant.y)
+- `participant_data` ya viene filtrado por `pollutant` y `level` en ambos contextos
 
-### Pendiente de sesión anterior (cifras significativas)
-- Fase 4.6: comentario inline `app.R:127` para constante `ALGO_A_TOL`
-- Fases 5-6 del plan de cifras significativas: tests y validación cruzada
+**Alerta de consistencia (Fase 4):**
+- Umbral: `abs(u_i - u_i_check) / u_i > 0.50`
+- Tipo `"message"` (azul), duración 12s — nunca bloquea el cálculo
+
+**Datos sintéticos:**
+- Los `u_i` en `uncertainty_n13.csv` son `mean(sd_value) * 1.5`
+- Cuando el laboratorio entregue presupuestos reales, solo reemplazar la columna `u_i`
 
 ## Next Steps
 
-1. Opcionalmente: corregir los 3 FAILs pre-existentes en `test_04_puntajes.R`
-2. Retomar plan de cifras significativas (`logs/plans/260420_1459_plan_cifras-significativas-implementacion.md`)
-3. `devtools::document("ptcalc")` para regenerar Rd desde roxygen
+1. (Incertidumbre) Reemplazar `u_i` sintéticos por valores reales de los participantes.
+2. (Incertidumbre) Correr `python3 validation/stage_05_scores.py` → confirmar PASS (Fase 5).
+3. (Preprocessing) Retomar plan `260424_1624_plan_preprocesamiento-calaire.md`:
+   - Crear estructura `R/preprocessing/` y `scripts/preprocesar_calaire.R`
+   - Definir `data/metadata/niveles_calaire.csv` y `data/metadata/diseno_estabilidad_homogeneidad.csv`
