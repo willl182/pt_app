@@ -24,9 +24,10 @@
 #   zeta        = (result - x_pt) / sqrt(uncertainty_std² + u_xpt_def²)
 #   En          = (result - x_pt) / sqrt((k·u_std)² + (k·u_xpt_def)²)   k=2
 
-DATA_SUMMARY <- "data/summary_n13.csv"
-STAGE04_CSV  <- "validation/outputs/stage_04_uncertainty_chain.csv"
-OUTPUT_R_CSV <- "validation/outputs/stage_05_scores_r.csv"
+DATA_SUMMARY    <- "data/summary_n13.csv"
+DATA_UNCERTAINTY <- "data/uncertainty_n13.csv"
+STAGE04_CSV     <- "validation/outputs/stage_04_uncertainty_chain.csv"
+OUTPUT_R_CSV    <- "validation/outputs/stage_05_scores_r.csv"
 
 K <- 2  # Factor de cobertura
 
@@ -111,8 +112,32 @@ run_stage_05 <- function() {
     FUN     = mean,
     na.rm   = TRUE
   )
-  agg$result          <- agg$mean_value
-  agg$uncertainty_std <- agg$sd_value / sqrt(2)  # m=2 de homogeneidad
+  agg$result <- agg$mean_value
+
+  # Incorporar u_i reportada por el participante (presupuesto propio).
+  # El participante conoce su propio presupuesto; la app no puede recalcularlo.
+  # Fallback a sd_value si el CSV no existe o la fila no está presente.
+  if (file.exists(DATA_UNCERTAINTY)) {
+    u_df <- read.csv(DATA_UNCERTAINTY, stringsAsFactors = FALSE)
+    u_df$combo_id <- mapply(make_combo_id, u_df$pollutant, u_df$level)
+    u_df <- u_df[, c("participant_id", "combo_id", "u_i")]
+    agg <- merge(agg, u_df, by = c("participant_id", "combo_id"), all.x = TRUE)
+    # Chequeo de consistencia interna (sólo trazabilidad, nunca bloquea)
+    agg$u_i_check <- agg$sd_value / sqrt(3)
+    agg$uncertainty_std <- ifelse(!is.na(agg$u_i), agg$u_i, agg$sd_value)
+    missing <- agg$participant_id[is.na(agg$u_i)]
+    if (length(missing) > 0) {
+      warning("u_i no encontrado en 'uncertainty_n13.csv' para: ",
+              paste(unique(missing), collapse = ", "),
+              ". Se usó sd_value como fallback.")
+    }
+  } else {
+    warning("Archivo '", DATA_UNCERTAINTY, "' no encontrado. ",
+            "Se usará sd_value como fallback para uncertainty_std.")
+    agg$u_i             <- NA_real_
+    agg$u_i_check       <- agg$sd_value / sqrt(3)
+    agg$uncertainty_std <- agg$sd_value
+  }
 
   cat("  Participantes agregados:", nrow(agg), "filas\n")
 

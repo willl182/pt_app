@@ -209,6 +209,33 @@ server <- function(input, output, session) {
       )
   })
 
+  # Incertidumbre estándar reportada por cada participante (u_i)
+  # Fuente: data/uncertainty_n13.csv — una fila por participante × (pollutant, level)
+  # El participante reporta su propio presupuesto de incertidumbre; la app no puede
+  # recalcularlo internamente. sd_value queda solo para verificación de consistencia.
+  uncertainty_df <- reactive({
+    path <- file.path("data", "uncertainty_n13.csv")
+    if (!file.exists(path)) {
+      showNotification(
+        "Archivo 'data/uncertainty_n13.csv' no encontrado. Se usará sd_value como fallback para uncertainty_std.",
+        type = "warning", duration = 10
+      )
+      return(NULL)
+    }
+    df <- vroom::vroom(path, show_col_types = FALSE)
+    required_cols <- c("participant_id", "pollutant", "level", "u_i")
+    if (!all(required_cols %in% names(df))) {
+      showNotification(
+        paste0("'uncertainty_n13.csv' debe contener: ",
+               paste(required_cols, collapse = ", "),
+               ". Se usará sd_value como fallback."),
+        type = "warning", duration = 10
+      )
+      return(NULL)
+    }
+    df |> dplyr::select(participant_id, pollutant, level, u_i)
+  })
+
   # Valores reactivos para almacenar datos crudos para cálculos específicos
   rv <- reactiveValues(raw_summary_data = NULL, raw_summary_data_list = NULL)
 
@@ -922,9 +949,57 @@ server <- function(input, output, session) {
     participant_data <- data
 
 
+    # Enriquecer con u_i reportada por cada participante (presupuesto propio).
+    # Fallback a sd_value si uncertainty_df() no está disponible o falta la fila.
+    u_df <- uncertainty_df()
     participant_data <- participant_data %>%
-      rename(result = mean_value) %>%
-      mutate(uncertainty_std = if (!is.null(m) && m > 0) sd_value / sqrt(m) else sd_value)
+      rename(result = mean_value)
+    if (!is.null(u_df)) {
+      participant_data <- participant_data %>%
+        dplyr::left_join(u_df |> dplyr::select(participant_id, u_i), by = "participant_id") %>%
+        mutate(
+          uncertainty_std = dplyr::coalesce(u_i, sd_value),
+          # Chequeo de consistencia interna: u_i vs sd(mean_values)/sqrt(3)
+          # Solo para trazabilidad — nunca bloquea el cálculo
+          u_i_check = sd_value / sqrt(3)
+        )
+      # Advertencia si algún participante no tiene u_i
+      missing_ui <- participant_data %>% filter(is.na(u_i)) %>% pull(participant_id)
+      if (length(missing_ui) > 0) {
+        showNotification(
+          paste0("u_i no encontrado en 'uncertainty_n13.csv' para: ",
+                 paste(missing_ui, collapse = ", "),
+                 ". Se usó sd_value como fallback."),
+          type = "warning", duration = 8
+        )
+      }
+      # Fase 4: alerta de consistencia interna (umbral 50% diferencia relativa)
+      # u_i_check = sd_value/√3 es una estimación interna; u_i es el presupuesto reportado.
+      # Si difieren >50%, puede indicar un presupuesto inusual — nunca bloquea el cálculo.
+      inconsistent_ui <- participant_data %>%
+        filter(
+          is.finite(u_i) & is.finite(u_i_check) & u_i > 0,
+          abs(u_i - u_i_check) / u_i > 0.50
+        ) %>%
+        pull(participant_id)
+      if (length(inconsistent_ui) > 0) {
+        showNotification(
+          paste0(
+            "Chequeo de consistencia: u_i difiere >50% del estimado interno (sd/√3) ",
+            "para: ", paste(inconsistent_ui, collapse = ", "), ".",
+            " Verifique el presupuesto de incertidumbre reportado."
+          ),
+          type = "message", duration = 12
+        )
+      }
+    } else {
+      participant_data <- participant_data %>%
+        mutate(
+          uncertainty_std = sd_value,
+          u_i             = NA_real_,
+          u_i_check       = sd_value / sqrt(3)
+        )
+    }
 
     final_scores <- participant_data %>%
       mutate(
@@ -2605,16 +2680,60 @@ server <- function(input, output, session) {
       filter(participant_id != "ref") %>%
       group_by(participant_id) %>%
       summarise(
-        result = mean(mean_value, na.rm = TRUE),
+        result   = mean(mean_value, na.rm = TRUE),
         sd_value = mean(sd_value, na.rm = TRUE),
-        .groups = "drop"
+        .groups  = "drop"
       ) %>%
       mutate(
         pollutant = target_pollutant,
-        n_lab = target_n_lab,
-        level = target_level,
-        uncertainty_std = if (!is.null(hom_res$m) && hom_res$m > 0) sd_value / sqrt(hom_res$m) else sd_value
+        n_lab     = target_n_lab,
+        level     = target_level
       )
+
+    # Incorporar u_i reportada por el participante desde uncertainty_n13.csv.
+    # El participante conoce su propio presupuesto; la app no puede recalcularlo.
+    # Fallback a sd_value si el CSV no está disponible o la fila no existe.
+    u_df <- uncertainty_df()
+    if (!is.null(u_df)) {
+      participant_data <- participant_data %>%
+        dplyr::left_join(u_df |> dplyr::select(participant_id, u_i), by = "participant_id") %>%
+        mutate(
+          uncertainty_std = dplyr::coalesce(u_i, sd_value),
+          u_i_check       = sd_value / sqrt(3)
+        )
+      missing_ui <- participant_data %>% filter(is.na(u_i)) %>% pull(participant_id)
+      if (length(missing_ui) > 0) {
+        showNotification(
+          paste0("u_i no encontrado para: ", paste(missing_ui, collapse = ", "),
+                 ". Se usó sd_value como fallback."),
+          type = "warning", duration = 8
+        )
+      }
+      # Fase 4: alerta de consistencia interna (umbral 50% diferencia relativa)
+      inconsistent_ui <- participant_data %>%
+        filter(
+          is.finite(u_i) & is.finite(u_i_check) & u_i > 0,
+          abs(u_i - u_i_check) / u_i > 0.50
+        ) %>%
+        pull(participant_id)
+      if (length(inconsistent_ui) > 0) {
+        showNotification(
+          paste0(
+            "Chequeo de consistencia: u_i difiere >50% del estimado interno (sd/√3) ",
+            "para: ", paste(inconsistent_ui, collapse = ", "), ".",
+            " Verifique el presupuesto de incertidumbre reportado."
+          ),
+          type = "message", duration = 12
+        )
+      }
+    } else {
+      participant_data <- participant_data %>%
+        mutate(
+          uncertainty_std = sd_value,
+          u_i             = NA_real_,
+          u_i_check       = sd_value / sqrt(3)
+        )
+    }
 
     if (nrow(participant_data) == 0) {
       return(list(error = "No se encontraron participantes (distintos al valor de referencia) para la combinación seleccionada."))
