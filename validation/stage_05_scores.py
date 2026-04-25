@@ -25,7 +25,7 @@ import math
 import os
 
 DATA_SUMMARY     = "data/summary_n13.csv"
-DATA_UNCERTAINTY = "data/uncertainty_n13.csv"
+DATA_PT_DATA     = "data/pt_data_n13.csv"
 STAGE04_CSV      = "validation/outputs/stage_04_uncertainty_chain.csv"
 R_CSV            = "validation/outputs/stage_05_scores_r.csv"
 OUTPUT_PY_CSV    = "validation/outputs/stage_05_scores_py.csv"
@@ -123,13 +123,13 @@ def load_stage04_params(csv_path):
     return params
 
 
-def load_uncertainty(csv_path):
-    """Carga uncertainty_n13.csv. Retorna dict (combo_id, participant_id) -> u_i."""
+def load_pt_data(csv_path):
+    """Carga pt_data_n13.csv. Retorna dict (combo_id, participant_id) -> u_i."""
     u_map = {}
     if not os.path.exists(csv_path):
         import warnings
         warnings.warn(
-            f"Archivo '{csv_path}' no encontrado. Se usará sd_value como fallback."
+            f"Archivo '{csv_path}' no encontrado. zeta y En no se calcularán sin u_i."
         )
         return u_map
     with open(csv_path, "r", newline="", encoding="utf-8") as f:
@@ -144,7 +144,7 @@ def load_participants(csv_path, u_map):
     """Agrega summary_n13.csv por (combo_id, participant_id).
     Retorna dict (combo_id, participant_id) -> {result, sd_value, uncertainty_std, ...}.
     uncertainty_std = u_i reportada por el participante (presupuesto propio).
-    Fallback a sd_value si u_i no está disponible.
+    Sin u_i, zeta y En quedan no calculables.
     """
     raw = {}
     with open(csv_path, "r", newline="", encoding="utf-8") as f:
@@ -173,7 +173,6 @@ def load_participants(csv_path, u_map):
         u_i = u_map.get((combo_id, participant_id), float("nan"))
         if not math.isfinite(u_i):
             missing_ui.append(f"{participant_id}@{combo_id}")
-            u_i = mean_sd  # fallback a sd_value
         result[(combo_id, participant_id)] = {
             "result":          mean_result,
             "sd_value":        mean_sd,
@@ -186,9 +185,22 @@ def load_participants(csv_path, u_map):
     if missing_ui:
         import warnings
         warnings.warn(
-            "u_i no encontrado en 'uncertainty_n13.csv' para: "
+            "u_i no encontrado en 'pt_data_n13.csv' para: "
             + ", ".join(missing_ui)
-            + ". Se usó sd_value como fallback."
+            + ". zeta y En no se calcularán para esas filas."
+        )
+    inconsistent = [
+        f"{pid}@{cid}"
+        for (cid, pid), pt in result.items()
+        if math.isfinite(pt["u_i"]) and pt["u_i"] > 0
+        and abs(pt["u_i"] - pt["u_i_check"]) / pt["u_i"] > 0.50
+    ]
+    if inconsistent:
+        import warnings
+        warnings.warn(
+            "Chequeo de consistencia: u_i difiere >50% del estimado interno (sd/√3) para: "
+            + ", ".join(inconsistent)
+            + ". Verificar presupuesto reportado."
         )
     return result
 
@@ -277,8 +289,8 @@ def run_stage_05():
     params = load_stage04_params(STAGE04_CSV)
     print(f"  Parámetros cargados: {len(params)} combinaciones combo × método")
 
-    # 2. Cargar u_i desde uncertainty_n13.csv
-    u_map = load_uncertainty(DATA_UNCERTAINTY)
+    # 2. Cargar u_i desde pt_data_n13.csv
+    u_map = load_pt_data(DATA_PT_DATA)
     print(f"  u_i cargados: {len(u_map)} entradas (combo × participante)")
 
     # 3. Cargar datos de participantes

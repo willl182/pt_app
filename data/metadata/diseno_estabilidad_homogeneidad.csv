@@ -1,0 +1,13 @@
+source,pollutant,instrument,level,replicate,sample_id,study_type,start_timestamp,end_timestamp,source_column,unit,notes
+estabilidad_homogeneidad,co,co_tapi,0-ppm,1,1,stability_homogeneity,2026-04-22 13:30,2026-04-22 16:28,co_tapi_ppm,ppm,nivel_cero_co_rep1
+estabilidad_homogeneidad,so2,so2,0-ppb,1,2,stability_homogeneity,2026-04-22 13:30,2026-04-22 16:28,so2_ppb,ppb,nivel_cero_so2_rep1
+estabilidad_homogeneidad,co,co_tapi,6.3-ppm,1,3,stability_homogeneity,2026-04-22 16:38,2026-04-22 19:32,co_tapi_ppm,ppm,nivel_6.3ppm_co
+estabilidad_homogeneidad,so2,so2,179-ppb,1,4,stability_homogeneity,2026-04-22 16:38,2026-04-22 19:32,so2_ppb,ppb,nivel_179ppb_so2
+estabilidad_homogeneidad,co,co_tapi,4.2-ppm,1,5,stability_homogeneity,2026-04-22 19:36,2026-04-22 22:35,co_tapi_ppm,ppm,nivel_4.2ppm_co
+estabilidad_homogeneidad,so2,so2,119-ppb,1,6,stability_homogeneity,2026-04-22 19:36,2026-04-22 22:35,so2_ppb,ppb,nivel_119ppb_so2
+estabilidad_homogeneidad,co,co_tapi,2.8-ppm,1,7,stability_homogeneity,2026-04-22 22:39,2026-04-23 01:30,co_tapi_ppm,ppm,nivel_2.8ppm_co
+estabilidad_homogeneidad,so2,so2,80-ppb,1,8,stability_homogeneity,2026-04-22 22:39,2026-04-23 01:30,so2_ppb,ppb,nivel_80ppb_so2
+estabilidad_homogeneidad,co,co_tapi,1.4-ppm,1,9,stability_homogeneity,2026-04-23 01:34,2026-04-23 04:30,co_tapi_ppm,ppm,nivel_1.4ppm_co
+estabilidad_homogeneidad,so2,so2,40-ppb,1,10,stability_homogeneity,2026-04-23 01:34,2026-04-23 04:30,so2_ppb,ppb,nivel_40ppb_so2
+estabilidad_homogeneidad,co,co_tapi,0-ppm,2,11,stability_homogeneity,2026-04-23 04:34,2026-04-23 06:27,co_tapi_ppm,ppm,nivel_cero_co_rep2_insuf
+estabilidad_homogeneidad,so2,so2,0-ppb,2,12,stability_homogeneity,2026-04-23 04:34,2026-04-23 06:27,so2_ppb,ppb,nivel_cero_so2_rep2_insuf

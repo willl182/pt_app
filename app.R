@@ -209,18 +209,18 @@ server <- function(input, output, session) {
       )
   })
 
-  # Incertidumbre estándar reportada por cada participante (u_i)
-  # Fuente preferida: archivo subido por el usuario (input$uncertainty_file).
-  # Fallback: data/uncertainty_n13.csv en disco si no se subió ningún archivo.
-  uncertainty_df <- reactive({
+  # Datos PT reportados por cada participante, incluyendo u_i.
+  # Fuente preferida: archivo subido por el usuario (input$pt_data_file).
+  # Fallback: data/pt_data_n13.csv en disco si no se subió ningún archivo.
+  pt_data_df <- reactive({
     required_cols <- c("participant_id", "pollutant", "level", "u_i")
 
     # Prioridad 1: archivo subido por el usuario
-    if (!is.null(input$uncertainty_file)) {
-      df <- vroom::vroom(input$uncertainty_file$datapath, show_col_types = FALSE)
+    if (!is.null(input$pt_data_file)) {
+      df <- vroom::vroom(input$pt_data_file$datapath, show_col_types = FALSE)
       if (!all(required_cols %in% names(df))) {
         showNotification(
-          paste0("El archivo de incertidumbre debe contener: ",
+          paste0("El archivo pt_data debe contener: ",
                  paste(required_cols, collapse = ", "), "."),
           type = "error", duration = 10
         )
@@ -229,16 +229,16 @@ server <- function(input, output, session) {
       return(df |> dplyr::select(participant_id, pollutant, level, u_i))
     }
 
-    # Prioridad 2: archivo en disco (data/uncertainty_n13.csv)
-    path <- file.path("data", "uncertainty_n13.csv")
+    # Prioridad 2: archivo en disco (data/pt_data_n13.csv)
+    path <- file.path("data", "pt_data_n13.csv")
     if (file.exists(path)) {
       df <- vroom::vroom(path, show_col_types = FALSE)
       if (!all(required_cols %in% names(df))) {
         showNotification(
-          paste0("'uncertainty_n13.csv' debe contener: ",
+          paste0("'pt_data_n13.csv' debe contener: ",
                  paste(required_cols, collapse = ", "),
-                 ". Se usará sd_value como fallback."),
-          type = "warning", duration = 10
+                 ". No se calcularán zeta ni En para filas sin u_i."),
+          type = "error", duration = 10
         )
         return(NULL)
       }
@@ -247,8 +247,8 @@ server <- function(input, output, session) {
 
     # Sin fuente disponible
     showNotification(
-      "No se encontró archivo de incertidumbre. Suba 'uncertainty_n*.csv' en Carga de datos o coloque el archivo en data/. Se usará sd_value como fallback.",
-      type = "warning", duration = 12
+      "No se encontró archivo pt_data. Suba 'pt_data_n*.csv' en Carga de datos o coloque el archivo en data/. No se calcularán zeta ni En.",
+      type = "error", duration = 12
     )
     NULL
   })
@@ -967,8 +967,8 @@ server <- function(input, output, session) {
 
 
     # Enriquecer con u_i reportada por cada participante (presupuesto propio).
-    # Fallback a sd_value si uncertainty_df() no está disponible o falta la fila.
-    u_df <- uncertainty_df()
+    # Sin u_i no se calculan zeta ni En; sd_value queda solo como chequeo interno.
+    u_df <- pt_data_df()
     participant_data <- participant_data %>%
       rename(result = mean_value)
     if (!is.null(u_df)) {
@@ -978,19 +978,21 @@ server <- function(input, output, session) {
           by = c("participant_id", "pollutant", "level")
         ) %>%
         mutate(
-          uncertainty_std = dplyr::coalesce(u_i, sd_value),
+          uncertainty_std = u_i,
           # Chequeo de consistencia interna: u_i vs sd(mean_values)/sqrt(3)
           # Solo para trazabilidad — nunca bloquea el cálculo
           u_i_check = sd_value / sqrt(3)
         )
       # Advertencia si algún participante no tiene u_i
-      missing_ui <- participant_data %>% filter(is.na(u_i)) %>% pull(participant_id)
+      missing_ui <- participant_data %>%
+        filter(participant_id != "ref", is.na(u_i)) %>%
+        pull(participant_id)
       if (length(missing_ui) > 0) {
         showNotification(
-          paste0("u_i no encontrado en 'uncertainty_n13.csv' para: ",
+          paste0("u_i no encontrado en 'pt_data_n13.csv' para: ",
                  paste(missing_ui, collapse = ", "),
-                 ". Se usó sd_value como fallback."),
-          type = "warning", duration = 8
+                 ". No se calcularán zeta ni En."),
+          type = "error", duration = 8
         )
       }
       # Fase 4: alerta de consistencia interna (umbral 50% diferencia relativa)
@@ -1015,7 +1017,7 @@ server <- function(input, output, session) {
     } else {
       participant_data <- participant_data %>%
         mutate(
-          uncertainty_std = sd_value,
+          uncertainty_std = NA_real_,
           u_i             = NA_real_,
           u_i_check       = sd_value / sqrt(3)
         )
@@ -1203,9 +1205,9 @@ server <- function(input, output, session) {
                 div(class = "upload-label",
                   icon("file-csv"),
                   span("4. Incertidumbre de participantes"),
-                  tags$small(class = "text-muted", "(u_i reportada por cada participante — uncertainty_n*.csv)")
+                  tags$small(class = "text-muted", "(u_i reportada por cada participante — pt_data_n*.csv)")
                 ),
-                fileInput("uncertainty_file", NULL, accept = ".csv", placeholder = "uncertainty_n13.csv")
+                fileInput("pt_data_file", NULL, accept = ".csv", placeholder = "pt_data_n13.csv")
               )
             )
           )
@@ -2718,10 +2720,10 @@ server <- function(input, output, session) {
         level     = target_level
       )
 
-    # Incorporar u_i reportada por el participante desde uncertainty_n13.csv.
+    # Incorporar u_i reportada por el participante desde pt_data_n13.csv.
     # El participante conoce su propio presupuesto; la app no puede recalcularlo.
-    # Fallback a sd_value si el CSV no está disponible o la fila no existe.
-    u_df <- uncertainty_df()
+    # Sin u_i no se calculan zeta ni En; sd_value queda solo como chequeo interno.
+    u_df <- pt_data_df()
     if (!is.null(u_df)) {
       participant_data <- participant_data %>%
         dplyr::left_join(
@@ -2729,15 +2731,15 @@ server <- function(input, output, session) {
           by = c("participant_id", "pollutant", "level")
         ) %>%
         mutate(
-          uncertainty_std = dplyr::coalesce(u_i, sd_value),
+          uncertainty_std = u_i,
           u_i_check       = sd_value / sqrt(3)
         )
       missing_ui <- participant_data %>% filter(is.na(u_i)) %>% pull(participant_id)
       if (length(missing_ui) > 0) {
         showNotification(
           paste0("u_i no encontrado para: ", paste(missing_ui, collapse = ", "),
-                 ". Se usó sd_value como fallback."),
-          type = "warning", duration = 8
+                 ". No se calcularán zeta ni En."),
+          type = "error", duration = 8
         )
       }
       # Fase 4: alerta de consistencia interna (umbral 50% diferencia relativa)
@@ -2760,7 +2762,7 @@ server <- function(input, output, session) {
     } else {
       participant_data <- participant_data %>%
         mutate(
-          uncertainty_std = sd_value,
+          uncertainty_std = NA_real_,
           u_i             = NA_real_,
           u_i_check       = sd_value / sqrt(3)
         )
@@ -4837,17 +4839,17 @@ server <- function(input, output, session) {
       part_data <- subset_data %>% filter(participant_id != "ref")
 
       # Enriquecer con u_i reportada (presupuesto propio del participante)
-      u_df <- uncertainty_df()
+      u_df <- pt_data_df()
       if (!is.null(u_df)) {
         part_data <- part_data %>%
           dplyr::left_join(
             u_df |> dplyr::select(participant_id, pollutant, level, u_i),
             by = c("participant_id", "pollutant", "level")
           ) %>%
-          dplyr::mutate(uncertainty_std = dplyr::coalesce(u_i, sd_value))
+          dplyr::mutate(uncertainty_std = u_i)
       } else {
         part_data <- part_data %>%
-          dplyr::mutate(u_i = NA_real_, uncertainty_std = sd_value)
+          dplyr::mutate(u_i = NA_real_, uncertainty_std = NA_real_)
       }
 
       # Calcular Valor Asignado
@@ -4902,7 +4904,7 @@ server <- function(input, output, session) {
           zeta_score = (mean_value - assigned$xpt) / sqrt(uncertainty_std^2 + assigned$u_xpt^2),
           En_score = (mean_value - assigned$xpt) / sqrt((k * uncertainty_std)^2 + (k * assigned$u_xpt)^2)
         ) %>%
-        select(participant_id, pollutant, level, mean_value, sd_value, x_pt, u_xpt, sigma_pt, z_score, z_prime_score, zeta_score, En_score)
+        select(participant_id, pollutant, level, mean_value, sd_value, u_i, uncertainty_std, x_pt, u_xpt, sigma_pt, z_score, z_prime_score, zeta_score, En_score)
 
       all_scores[[i]] <- scores
     }
@@ -5164,7 +5166,7 @@ server <- function(input, output, session) {
           Contaminante = pol,
           Nivel = lev,
           Resultado = p_data$mean_value[i],
-          Incertidumbre = p_data$sd_value[i],
+          Incertidumbre = p_data$u_i[i],
           Valor_Asignado = p_data$x_pt[i],
           Incertidumbre_VA = p_data$u_xpt[i],
           Score = score_val,

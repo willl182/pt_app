@@ -1,6 +1,6 @@
 # Reporte: Etapa 5 — Scores de Desempeño
 
-**Fecha**: 2026-03-31
+**Fecha**: 2026-04-25
 
 ## Combos procesados
 - CO_0
