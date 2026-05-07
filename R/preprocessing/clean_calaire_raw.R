@@ -7,13 +7,19 @@
     date              = "^Date",
     time              = "^Time",
     co_tapi_ppm       = "^CO\\.TAPI|^CO-TAPI",
-    co_gen_ppm        = "^CO\\.ppm$|^CO\\.generado|^CO\\.gen$",
-    co_calaire_ppm    = "^CO\\.CALAIRE",
+    co_gen_ppm        = "^CO\\.ppm$|^CO\\.generado|^CO\\.gen$|^CO_gen$",
+    co_calaire_ppm    = "^CO\\.CALAIRE|^CO_ref$|^CO\\.ref$",
     co_invitado1_ppm  = "^CO\\.\\.Invitado|^CO\\.Invitado",
     so2_ppb           = "^SO2$",
-    so2_gen_ppb       = "^SO2\\.ppb$|^SO2\\.Generado|^SO2\\.gen$",
-    so2_calaire_ppb   = "^SO2\\.CALAIRE",
-    so2_invitado1_ppb = "^SO2\\.\\.Invitado|^SO2\\.Invitado"
+    so2_gen_ppb       = "^SO2\\.ppb$|^SO2\\.Generado|^SO2\\.gen$|^SO2_gen$",
+    so2_calaire_ppb   = "^SO2\\.CALAIRE|^SO2_ref$|^SO2\\.ref$",
+    so2_invitado1_ppb = "^SO2\\.\\.Invitado|^SO2\\.Invitado",
+    no_gen_ppb        = "^NO_gen$|^NO\\.gen$",
+    no_calaire_ppb    = "^NO_ref$|^NO\\.ref$|^NO\\.CALAIRE",
+    no2_gen_ppb       = "^NO2_gen$|^NO2\\.gen$",
+    no2_calaire_ppb   = "^NO2_ref$|^NO2\\.ref$|^NO2\\.CALAIRE",
+    o3_gen_ppb        = "^O3_gen$|^O3\\.gen$",
+    o3_calaire_ppb    = "^O3_ref$|^O3\\.ref$|^O3\\.CALAIRE"
   )
 
   for (target in names(patterns)) {

@@ -36,18 +36,18 @@ check_units_row_excluded <- function(clean_data, units_values) {
   }
 }
 
-check_hourly_n <- function(hourly_df) {
+check_hourly_n <- function(hourly_df, min_n = 60L, check_name = "hourly_n60") {
   if (nrow(hourly_df) == 0) {
-    return(.vcheck("hourly_n60", "FAIL", "No hourly rows produced"))
+    return(.vcheck(check_name, "FAIL", "No hourly rows produced"))
   }
   valid_hrs <- hourly_df[hourly_df$valid_hour == TRUE, ]
-  bad <- valid_hrs[!is.na(valid_hrs$n) & valid_hrs$n != 60, ]
+  bad <- valid_hrs[!is.na(valid_hrs$n) & valid_hrs$n < min_n, ]
   if (nrow(bad) > 0) {
-    .vcheck("hourly_n60", "FAIL",
-            paste(nrow(bad), "valid hours with n != 60"))
+    .vcheck(check_name, "FAIL",
+            paste(nrow(bad), "valid hours with n <", min_n))
   } else {
     n_valid <- sum(hourly_df$valid_hour == TRUE, na.rm = TRUE)
-    .vcheck("hourly_n60", "PASS", paste(n_valid, "valid hours with n=60"))
+    .vcheck(check_name, "PASS", paste(n_valid, "valid hours with n >=", min_n))
   }
 }
 
@@ -148,8 +148,12 @@ run_ronda_checks <- function(paths, raw_result, clean_result, hourly_df, levels_
   }
   checks[[length(checks) + 1]] <- check_separator(paths$ronda, expected_sep = ";")
   checks[[length(checks) + 1]] <- check_units_row_excluded(clean_result$data, raw_result$units)
-  checks[[length(checks) + 1]] <- check_hourly_n(hourly_df)
-  checks[[length(checks) + 1]] <- check_decimal_output(hourly_df, "h_datos_ronda")
+  checks[[length(checks) + 1]] <- check_hourly_n(
+    hourly_df,
+    min_n = 45L,
+    check_name = "hourly_n75pct"
+  )
+  checks[[length(checks) + 1]] <- check_decimal_output(hourly_df, "h_referencia_ronda")
   checks[[length(checks) + 1]] <- check_ronda_level_coverage(hourly_df)
   checks[[length(checks) + 1]] <- check_row_counts(
     raw_n    = raw_result$n_rows,
@@ -189,7 +193,11 @@ run_all_checks <- function(paths, raw_result, clean_result,
   checks[[length(checks) + 1]] <-
     check_units_row_excluded(clean_result$data, raw_result$units)
 
-  checks[[length(checks) + 1]] <- check_hourly_n(hourly_df)
+  checks[[length(checks) + 1]] <- check_hourly_n(
+    hourly_df,
+    min_n = 45L,
+    check_name = "hourly_n75pct"
+  )
   checks[[length(checks) + 1]] <- check_mm_n(mm_df)
   checks[[length(checks) + 1]] <- check_mm_block_count(mm_df, design)
   checks[[length(checks) + 1]] <- check_decimal_output(hourly_df, "hourly")

@@ -2,11 +2,13 @@ run_pipeline_ronda <- function(
     data_dir     = "data/raw",
     metadata_dir = "data/metadata",
     output_dir   = "data/processed",
-    tz           = "America/Bogota"
+    tz           = "America/Bogota",
+    pollutants   = NULL
 ) {
   path_ronda      <- file.path(data_dir,     "datos_ronda.csv")
   path_levels     <- file.path(metadata_dir, "niveles_calaire.csv")
-  path_hourly_out <- file.path(output_dir,   "h_datos_ronda.csv")
+  path_hourly_out <- file.path(output_dir,   "h_referencia_ronda.csv")
+  path_final_out  <- file.path(output_dir,   "referencia_ronda.csv")
   path_log_out    <- file.path(metadata_dir, "preprocesamiento_log_ronda.csv")
 
   required <- c(path_ronda, path_levels)
@@ -26,11 +28,20 @@ run_pipeline_ronda <- function(
   message("  Filas tras limpieza: ", nrow(cleaned$data))
 
   message("--- [Ronda] Paso 3: Promedios horarios ---")
-  hourly    <- compute_hourly_averages_ronda(cleaned$data, levels, tz = tz)
+  hourly <- compute_hourly_averages_ronda(
+    cleaned$data,
+    levels,
+    tz = tz,
+    pollutants = pollutants
+  )
   n_valid_h <- sum(hourly$valid_hour == TRUE, na.rm = TRUE)
   message("  Horas evaluadas: ", nrow(hourly), " | Validas: ", n_valid_h)
 
-  message("--- [Ronda] Paso 4: Validacion cruzada ---")
+  message("--- [Ronda] Paso 4: Consolidacion por nivel ---")
+  final <- summarise_reference_levels(hourly)
+  message("  Niveles consolidados: ", nrow(final))
+
+  message("--- [Ronda] Paso 5: Validacion cruzada ---")
   val_log <- run_ronda_checks(
     paths        = list(ronda = path_ronda, levels = path_levels),
     raw_result   = raw,
@@ -42,9 +53,11 @@ run_pipeline_ronda <- function(
   write.csv(val_log, path_log_out, row.names = FALSE)
   message("  Log escrito en: ", path_log_out)
 
-  message("--- [Ronda] Paso 5: Escribiendo salidas ---")
+  message("--- [Ronda] Paso 6: Escribiendo salidas ---")
   write.csv(hourly, path_hourly_out, row.names = FALSE)
-  message("  Salida: ", path_hourly_out)
+  write.csv(final,  path_final_out,  row.names = FALSE)
+  message("  Salida horaria: ", path_hourly_out)
+  message("  Salida final: ", path_final_out)
 
   fails <- val_log[val_log$status == "FAIL", ]
   warns <- val_log[val_log$status == "WARN", ]
@@ -57,6 +70,7 @@ run_pipeline_ronda <- function(
     raw     = raw,
     cleaned = cleaned,
     hourly  = hourly,
+    final   = final,
     log     = val_log,
     success = nrow(fails) == 0
   ))
@@ -66,7 +80,8 @@ run_pipeline_calaire <- function(
     data_dir     = "data/raw",
     metadata_dir = "data/metadata",
     output_dir   = "data/processed",
-    tz           = "America/Bogota"
+    tz           = "America/Bogota",
+    pollutants   = NULL
 ) {
   # Resolve paths
   path_estabilidad <- file.path(data_dir, "datos_estabilidad_homogeneidad.csv")
@@ -90,6 +105,10 @@ run_pipeline_calaire <- function(
   raw     <- read_calaire_raw(path_estabilidad)
   design  <- read.csv(path_design,  stringsAsFactors = FALSE)
   levels  <- read.csv(path_levels,  stringsAsFactors = FALSE)
+  if (!is.null(pollutants)) {
+    pollutants <- tolower(pollutants)
+    design <- design[tolower(design$pollutant) %in% pollutants, , drop = FALSE]
+  }
   message("  Filas leidas: ", raw$n_rows)
 
   message("--- Paso 2: Limpieza y normalizacion ---")
@@ -97,7 +116,12 @@ run_pipeline_calaire <- function(
   message("  Filas tras limpieza: ", nrow(cleaned$data))
 
   message("--- Paso 3: Promedios horarios ---")
-  hourly  <- compute_hourly_averages(cleaned$data, design, tz = tz)
+  hourly <- compute_hourly_averages(
+    cleaned$data,
+    design,
+    tz = tz,
+    pollutants = pollutants
+  )
   n_valid_h <- sum(hourly$valid_hour == TRUE, na.rm = TRUE)
   message("  Horas evaluadas: ", nrow(hourly), " | Validas: ", n_valid_h)
 

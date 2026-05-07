@@ -4,12 +4,14 @@ read_calaire_raw <- function(path) {
   lines <- readLines(path, warn = FALSE, encoding = "UTF-8")
   lines <- lines[nchar(trimws(lines)) > 0]
 
-  if (length(lines) < 3) stop("File has fewer than 3 non-empty lines: ", path)
+  if (length(lines) < 2) stop("File has fewer than 2 non-empty lines: ", path)
 
   header_raw <- strsplit(lines[1], ";")[[1]]
-  units_raw  <- strsplit(lines[2], ";")[[1]]
+  second_raw <- strsplit(lines[2], ";")[[1]]
+  has_units_row <- !grepl("^[0-9]{1,2}/[0-9]{1,2}/[0-9]{4}$", trimws(second_raw[1]))
+  units_raw <- if (has_units_row) second_raw else rep(NA_character_, length(header_raw))
 
-  data_lines <- lines[-(1:2)]
+  data_lines <- if (has_units_row) lines[-(1:2)] else lines[-1]
   con <- textConnection(paste(data_lines, collapse = "\n"))
   df <- tryCatch({
     read.table(con, sep = ";", header = FALSE, stringsAsFactors = FALSE,
