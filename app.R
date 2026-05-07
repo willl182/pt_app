@@ -156,6 +156,64 @@ server <- function(input, output, session) {
     df
   })
 
+  # Referencia CALAIRE procesada para la ronda PT.
+  # Fuente: salida consolidada del preprocesador CALAIRE.
+  calaire_reference_df <- reactive({
+    path <- file.path("data", "processed", "referencia_ronda.csv")
+    if (!file.exists(path)) {
+      return(NULL)
+    }
+
+    df <- vroom::vroom(path, show_col_types = FALSE)
+    required_cols <- c("pollutant", "level", "mean_value", "u_value")
+    if (!all(required_cols %in% names(df))) {
+      showNotification(
+        paste0(
+          "'referencia_ronda.csv' debe contener: ",
+          paste(required_cols, collapse = ", "), "."
+        ),
+        type = "error", duration = 10
+      )
+      return(NULL)
+    }
+
+    df %>%
+      mutate(
+        participant_id = "ref",
+        reference_source = "CALAIRE",
+        sd_value = u_value
+      ) %>%
+      select(
+        participant_id,
+        pollutant,
+        level,
+        mean_value,
+        sd_value,
+        u_value,
+        n_hours,
+        unit,
+        reference_source,
+        everything()
+      )
+  })
+
+  get_calaire_reference_for_combo <- function(target_pollutant, target_level) {
+    ref_df <- calaire_reference_df()
+    if (is.null(ref_df) || nrow(ref_df) == 0) {
+      return(NULL)
+    }
+
+    ref_df %>%
+      filter(
+        pollutant == target_pollutant,
+        level == target_level
+      )
+  }
+
+  use_calaire_reference <- reactive({
+    isTRUE(input$use_calaire_reference)
+  })
+
   # Datos de preparación PT
   pt_prep_data <- reactive({
     req(input$summary_files)
@@ -200,13 +258,35 @@ server <- function(input, output, session) {
     rv$raw_summary_data_list <- data_list
 
     # Agregar los datos crudos para obtener un único valor medio por participante/nivel
-    raw_data %>%
+    summary_data <- raw_data %>%
       group_by(participant_id, pollutant, level, run, n_lab) %>%
       summarise(
         mean_value = mean(mean_value, na.rm = TRUE),
         sd_value = mean(sd_value, na.rm = TRUE),
         .groups = "drop"
       )
+
+    if (use_calaire_reference()) {
+      ref_df <- calaire_reference_df()
+      if (!is.null(ref_df) && nrow(ref_df) > 0) {
+        n_labs <- sort(unique(summary_data$n_lab))
+        available_combos <- summary_data %>%
+          distinct(pollutant, level)
+        ref_rows <- ref_df %>%
+          semi_join(available_combos, by = c("pollutant", "level")) %>%
+          tidyr::crossing(n_lab = n_labs) %>%
+          mutate(run = "calaire_ref") %>%
+          select(participant_id, pollutant, level, run, n_lab, mean_value, sd_value)
+
+        if (nrow(ref_rows) > 0) {
+          summary_data <- summary_data %>%
+            filter(participant_id != "ref") %>%
+            bind_rows(ref_rows)
+        }
+      }
+    }
+
+    summary_data
   })
 
   # Datos PT reportados por cada participante, incluyendo u_i.
@@ -1208,6 +1288,22 @@ server <- function(input, output, session) {
                   tags$small(class = "text-muted", "(u_i reportada por cada participante — pt_data_n*.csv)")
                 ),
                 fileInput("pt_data_file", NULL, accept = ".csv", placeholder = "pt_data_n13.csv")
+              ),
+              div(class = "upload-item", style = "border-left: 4px solid #0ea5e9; padding-left: 12px;",
+                div(class = "upload-label",
+                  icon("vial-circle-check"),
+                  span("5. Referencia CALAIRE procesada"),
+                  tags$small(class = "text-muted", "(data/processed/referencia_ronda.csv)")
+                ),
+                checkboxInput(
+                  "use_calaire_reference",
+                  "Usar referencia CALAIRE como valor asignado de ronda",
+                  value = TRUE
+                ),
+                tags$small(
+                  class = "text-muted",
+                  "Reemplaza las filas participant_id='ref' cuando exista coincidencia exacta de analito y nivel."
+                )
               )
             )
           )
@@ -1454,8 +1550,16 @@ server <- function(input, output, session) {
               tabPanel(
                 "Valor de referencia",
                 h4("Resultados de Referencia"),
-                p("Visualiza los resultados declarados como referencia en los archivos summary_n*.csv."),
-                dataTableOutput("reference_table")
+                p("Visualiza la referencia usada por el análisis. Si está activo, CALAIRE reemplaza las filas 'ref' con coincidencia exacta de analito y nivel."),
+                dataTableOutput("reference_table"),
+                hr(),
+                h4("Referencia CALAIRE consolidada"),
+                p("Salida final del preprocesador: data/processed/referencia_ronda.csv."),
+                dataTableOutput("calaire_reference_table"),
+                hr(),
+                h4("Referencia CALAIRE horaria"),
+                p("Detalle horario auditado: data/processed/h_referencia_ronda.csv."),
+                dataTableOutput("calaire_hourly_reference_table")
               ),
               tabPanel(
                 "Compatibilidad Metrológica",
@@ -2777,8 +2881,12 @@ server <- function(input, output, session) {
       return(list(error = "No se encontró información del participante de referencia para esta combinación."))
     }
     x_pt1 <- mean(ref_data$mean_value, na.rm = TRUE)
-
-    x_pt1 <- mean(ref_data$mean_value, na.rm = TRUE)
+    if (use_calaire_reference()) {
+      calaire_ref <- get_calaire_reference_for_combo(target_pollutant, target_level)
+      if (!is.null(calaire_ref) && nrow(calaire_ref) > 0) {
+        u_xpt1 <- mean(calaire_ref$u_value, na.rm = TRUE)
+      }
+    }
 
     # Calcular u_hom
     u_hom_val <- hom_res$ss
@@ -5609,6 +5717,17 @@ server <- function(input, output, session) {
     } else {
       cat("- Resumen: No cargado.\n")
     }
+
+    calaire_ref <- calaire_reference_df()
+    if (!is.null(calaire_ref)) {
+      cat(sprintf(
+        "- Referencia CALAIRE: disponible (%d combinaciones). Uso en análisis: %s.\n",
+        nrow(calaire_ref),
+        ifelse(use_calaire_reference(), "activo", "inactivo")
+      ))
+    } else {
+      cat("- Referencia CALAIRE: no disponible. Ejecute scripts/preprocesar_calaire.R.\n")
+    }
   })
 
   # --- Módulo de Algoritmo A ---
@@ -6103,12 +6222,57 @@ server <- function(input, output, session) {
         Analito = toupper(pollutant),
         `Esquema (n)` = n_lab,
         Nivel = level,
+        Fuente = ifelse(run == "calaire_ref", "CALAIRE", "summary_n"),
         `Valor medio` = mean_value,
-        `Desviación estándar declarada` = sd_value
+        `u(xpt) / sd declarada` = sd_value
       )
 
     datatable(display, options = list(pageLength = 10, scrollX = TRUE), rownames = FALSE) %>%
-      formatRound(columns = c("Valor medio", "Desviación estándar declarada"), digits = 6)
+      formatRound(columns = c("Valor medio", "u(xpt) / sd declarada"), digits = 6)
+  })
+
+  output$calaire_reference_table <- renderDataTable({
+    data <- calaire_reference_df()
+    if (is.null(data) || nrow(data) == 0) {
+      return(datatable(data.frame(Mensaje = "No existe data/processed/referencia_ronda.csv.")))
+    }
+
+    display <- data %>%
+      transmute(
+        Analito = toupper(pollutant),
+        Nivel = level,
+        Unidad = unit,
+        `Valor asignado CALAIRE` = mean_value,
+        `u(xpt) CALAIRE` = u_value,
+        `Horas usadas` = n_hours
+      )
+
+    datatable(display, options = list(pageLength = 10, scrollX = TRUE), rownames = FALSE) %>%
+      formatRound(columns = c("Valor asignado CALAIRE", "u(xpt) CALAIRE"), digits = 6)
+  })
+
+  output$calaire_hourly_reference_table <- renderDataTable({
+    path <- file.path("data", "processed", "h_referencia_ronda.csv")
+    if (!file.exists(path)) {
+      return(datatable(data.frame(Mensaje = "No existe data/processed/h_referencia_ronda.csv.")))
+    }
+
+    data <- vroom::vroom(path, show_col_types = FALSE)
+    display <- data %>%
+      transmute(
+        Analito = toupper(pollutant),
+        Nivel = level,
+        Hora = hour_start,
+        Media = mean_value,
+        `s horario` = sd_value,
+        `u horario` = u_value,
+        n = n,
+        Válida = valid_hour,
+        Flags = validation_flags
+      )
+
+    datatable(display, options = list(pageLength = 10, scrollX = TRUE), rownames = FALSE) %>%
+      formatRound(columns = c("Media", "s horario", "u horario"), digits = 6)
   })
 
   # --- Módulo de Preparación PT ---
