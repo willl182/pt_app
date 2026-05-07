@@ -35,10 +35,11 @@ Integrar las salidas del preprocesador CALAIRE de referencia en la interfaz Shin
 | Item | Estado | Notas |
 |------|--------|-------|
 | Actualizar logs | Completado | `CURRENT_SESSION.md` e histórico `260506_2112_findings.md` |
-| Commit y push | Pendiente | Cerrar integración |
+| Commit y push | Completado | Commit `5626e5f` subido a `origin/main` |
 
 ## Log de Ejecución
 - [260506 21:08] Plan creado.
 - [260506 21:18] Implementada integración en `app.R`: checkbox de uso, lectura de referencia CALAIRE, tablas de auditoría y conexión con cálculo de puntajes por referencia.
 - [260506 21:19] Validación: parse de `app.R` y módulos preprocessing OK; `Rscript scripts/preprocesar_calaire.R` OK; `testthat::test_dir()` no ejecutó por dependencia ausente (`testthat`).
-- [260506 21:12] Logs persistidos con saver; pendiente commit/push.
+- [260506 21:12] Logs persistidos con saver.
+- [260506 21:13] Commit/push completado: `5626e5f feat: integrar referencia CALAIRE en app`.
