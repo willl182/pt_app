@@ -1,3 +1,63 @@
+run_pipeline_participant_ronda <- function(
+    data_dir       = "data/raw",
+    metadata_dir   = "data/metadata",
+    output_dir     = "data/processed",
+    participant_id = "part_1",
+    input_file     = "datos_ronda_part.csv",
+    tz             = "America/Bogota",
+    pollutants     = NULL
+) {
+  path_ronda      <- file.path(data_dir, input_file)
+  path_levels     <- file.path(metadata_dir, "niveles_calaire.csv")
+  path_hourly_out <- file.path(output_dir, paste0("h_", participant_id, "_ronda.csv"))
+  path_final_out  <- file.path(output_dir, paste0(participant_id, "_ronda.csv"))
+
+  required <- c(path_ronda, path_levels)
+  missing  <- required[!file.exists(required)]
+  if (length(missing) > 0)
+    stop("Required input files missing:\n  ", paste(missing, collapse = "\n  "))
+
+  dir.create(output_dir, showWarnings = FALSE, recursive = TRUE)
+
+  message("--- [", participant_id, "] Paso 1: Leyendo datos ---")
+  raw    <- read_calaire_raw(path_ronda)
+  levels <- read.csv(path_levels, stringsAsFactors = FALSE)
+  message("  Filas leidas: ", raw$n_rows)
+
+  message("--- [", participant_id, "] Paso 2: Limpieza y normalizacion ---")
+  cleaned <- clean_calaire_raw(raw, tz = tz)
+  message("  Filas tras limpieza: ", nrow(cleaned$data))
+
+  message("--- [", participant_id, "] Paso 3: Promedios horarios ---")
+  hourly <- compute_hourly_averages_participant_ronda(
+    cleaned$data,
+    levels,
+    participant_id = participant_id,
+    tz = tz,
+    pollutants = pollutants
+  )
+  n_valid_h <- sum(hourly$valid_hour == TRUE, na.rm = TRUE)
+  message("  Horas evaluadas: ", nrow(hourly), " | Validas: ", n_valid_h)
+
+  message("--- [", participant_id, "] Paso 4: Consolidacion por nivel ---")
+  final <- summarise_reference_levels(hourly)
+  message("  Niveles consolidados: ", nrow(final))
+
+  message("--- [", participant_id, "] Paso 5: Escribiendo salidas ---")
+  write.csv(hourly, path_hourly_out, row.names = FALSE)
+  write.csv(final,  path_final_out,  row.names = FALSE)
+  message("  Salida horaria: ", path_hourly_out)
+  message("  Salida final: ", path_final_out)
+
+  invisible(list(
+    raw     = raw,
+    cleaned = cleaned,
+    hourly  = hourly,
+    final   = final,
+    success = TRUE
+  ))
+}
+
 run_pipeline_ronda <- function(
     data_dir     = "data/raw",
     metadata_dir = "data/metadata",

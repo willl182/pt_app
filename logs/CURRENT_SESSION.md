@@ -1,35 +1,32 @@
 # Session State: PT Analysis Application
 
-**Last Updated**: 2026-05-06 21:12
+**Last Updated**: 2026-05-06 21:19
 
 ## Session Objective
 
-Integrar la referencia CALAIRE procesada en la interfaz Shiny (`app.R`) y en el flujo de análisis/puntajes de la aplicación.
+Procesar el archivo de ensayo `data/raw/datos_ronda_part.csv` para generar salidas equivalentes a la referencia de ronda, pero para el participante `part_1`.
 
 ## Current State
 
-- [x] Plan creado: `logs/plans/260506_2108_plan_integracion-referencia-calaire-app.md`.
-- [x] `app.R` carga `data/processed/referencia_ronda.csv` mediante `calaire_reference_df()`.
-- [x] Se agregó checkbox `use_calaire_reference` en Carga de datos.
-- [x] Si el checkbox está activo, `pt_prep_data()` reemplaza filas `participant_id == "ref"` por la referencia CALAIRE cuando hay coincidencia exacta de `pollutant` y `level`.
-- [x] La pestaña Valor asignado muestra:
-  - referencia usada por el análisis,
-  - referencia CALAIRE consolidada (`referencia_ronda.csv`),
-  - referencia CALAIRE horaria (`h_referencia_ronda.csv`).
-- [x] `compute_scores_for_selection()` usa `u_value` de CALAIRE como `u_xpt` del método de referencia cuando hay coincidencia exacta.
-- [x] `data_upload_status` reporta disponibilidad y estado de uso de la referencia CALAIRE.
-- [x] Validación: parse de `app.R` y módulos preprocessing OK.
-- [x] Validación: `Rscript scripts/preprocesar_calaire.R` OK.
-- [ ] Tests `testthat` no ejecutados porque el paquete `testthat` no está instalado en el entorno.
+- [x] Plan creado y completado: `logs/plans/260506_2117_plan_procesamiento-ensayo-part-1.md`.
+- [x] `clean_calaire_raw()` ahora normaliza columnas `*_p1` para CO, SO2, NO, NO2 y O3.
+- [x] Agregada función `compute_hourly_averages_participant_ronda()`.
+- [x] Agregado pipeline separado `run_pipeline_participant_ronda()`.
+- [x] Agregado script `scripts/preprocesar_part_1.R`.
+- [x] Ejecutado `Rscript scripts/preprocesar_part_1.R` exitosamente.
+- [x] Salida horaria generada: `data/processed/h_part_1_ronda.csv`.
+- [x] Salida consolidada generada: `data/processed/part_1_ronda.csv`.
+- [x] Resultado: 26 horas válidas y 10 niveles consolidados.
+- [x] Validación parse de R preprocessing y script part_1 OK.
 
 ## Critical Technical Context
 
-- El reemplazo CALAIRE es conservador: solo usa coincidencia exacta de `pollutant` y `level`; no interpola ni remapea niveles.
-- Los niveles actuales de `summary_n13.csv` no necesariamente coinciden con `referencia_ronda.csv` (`μmol/mol` vs `ppm`, niveles nominales diferentes). En esos casos, la app conserva la referencia del summary.
-- El preprocesador CALAIRE sigue siendo solo referencia; no debe procesar `data/raw/datos_ronda_part.csv` ni datos de participantes.
-- Hay un archivo no rastreado creado fuera de esta integración: `data/raw/datos_ronda_part.csv`. No fue incluido porque contradice el alcance del preprocesador de referencia.
+- Este flujo es de ensayo para `part_1` y está separado del preprocesador CALAIRE de referencia.
+- Usa el mismo criterio horario que referencia: `n >= 45`, nivel 0 = 1 hora, niveles no-cero = máximo 3 horas.
+- `data/raw/datos_ronda_part.csv` contiene columnas `CO_p1`, `SO2_p1`, `CO_gen`, `SO2_gen`.
+- Las salidas tienen estructura equivalente a `h_referencia_ronda.csv` y `referencia_ronda.csv`, con `source = "ronda_participante"` e `instrument = "part_1"`.
 
 ## Next Steps
 
-1. Si se requiere usar `datos_ronda_part.csv`, crear un plan separado para datos de participantes; no mezclarlo con el preprocesador CALAIRE de referencia.
-2. Instalar `testthat` si se quieren ejecutar tests automatizados.
+1. Si se requiere usar estas salidas en `app.R`, definir si `part_1_ronda.csv` debe anexarse a `summary_n*.csv` o mostrarse solo como auditoría.
+2. Commit y push de los cambios de procesamiento `part_1`.
