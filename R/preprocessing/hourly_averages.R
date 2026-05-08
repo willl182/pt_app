@@ -109,6 +109,8 @@ compute_hourly_averages_ronda <- function(clean_data, levels_table,
          unit = "ppb", instrument = "calaire_ref"),
     list(pollutant = "no2", col = "no2_calaire_ppb", gen_col = "no2_gen_ppb",
          unit = "ppb", instrument = "calaire_ref"),
+    list(pollutant = "nox", col = "nox_calaire_ppb", gen_col = "nox_gen_ppb",
+         unit = "ppb", instrument = "calaire_ref"),
     list(pollutant = "o3",  col = "o3_calaire_ppb",  gen_col = "o3_gen_ppb",
          unit = "ppb", instrument = "calaire_ref")
   )
@@ -217,6 +219,8 @@ compute_hourly_averages_participant_ronda <- function(clean_data, levels_table,
     list(pollutant = "no",  col = "no_part_1_ppb",  gen_col = "no_gen_ppb",
          unit = "ppb", instrument = participant_id),
     list(pollutant = "no2", col = "no2_part_1_ppb", gen_col = "no2_gen_ppb",
+         unit = "ppb", instrument = participant_id),
+    list(pollutant = "nox", col = "nox_part_1_ppb", gen_col = "nox_gen_ppb",
          unit = "ppb", instrument = participant_id),
     list(pollutant = "o3",  col = "o3_part_1_ppb",  gen_col = "o3_gen_ppb",
          unit = "ppb", instrument = participant_id)

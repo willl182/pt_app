@@ -22,6 +22,9 @@
     no2_gen_ppb       = "^NO2_gen$|^NO2\\.gen$",
     no2_calaire_ppb   = "^NO2_ref$|^NO2\\.ref$|^NO2\\.CALAIRE",
     no2_part_1_ppb    = "^NO2_p1$|^NO2\\.p1$|^NO2_part_1$",
+    nox_gen_ppb       = "^Nox_gen$|^Nox\\.gen$|^NOx_gen$|^NOx\\.gen$",
+    nox_calaire_ppb   = "^Nox_ref$|^Nox\\.ref$|^Nox\\.CALAIRE|^NOx_ref$|^NOx\\.ref$|^NOx\\.CALAIRE",
+    nox_part_1_ppb    = "^Nox_p1$|^Nox\\.p1$|^Nox_part_1$|^NOx_p1$|^NOx\\.p1$|^NOx_part_1$",
     o3_gen_ppb        = "^O3_gen$|^O3\\.gen$",
     o3_calaire_ppb    = "^O3_ref$|^O3\\.ref$|^O3\\.CALAIRE",
     o3_part_1_ppb     = "^O3_p1$|^O3\\.p1$|^O3_part_1$"
@@ -96,7 +99,22 @@ clean_calaire_raw <- function(raw, tz = "America/Bogota") {
   date_col <- if (any(norm_names == "date")) df[["date"]] else stop("No date column")
   time_col <- if (any(norm_names == "time")) df[["time"]] else stop("No time column")
   ts_str   <- paste(date_col, time_col)
-  ts       <- as.POSIXct(ts_str, format = "%m/%d/%Y %H:%M", tz = tz)
+  short_year <- grepl("^[0-9]{1,2}/[0-9]{1,2}/[0-9]{2}\\s", ts_str)
+  ts <- rep(as.POSIXct(NA_real_, origin = "1970-01-01", tz = tz), length(ts_str))
+  if (any(!short_year)) {
+    ts[!short_year] <- as.POSIXct(
+      ts_str[!short_year],
+      format = "%m/%d/%Y %H:%M",
+      tz = tz
+    )
+  }
+  if (any(short_year)) {
+    ts[short_year] <- as.POSIXct(
+      ts_str[short_year],
+      format = "%m/%d/%y %H:%M",
+      tz = tz
+    )
+  }
 
   n_failed <- sum(is.na(ts))
   if (n_failed > 0) {
