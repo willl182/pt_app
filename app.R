@@ -214,22 +214,76 @@ server <- function(input, output, session) {
     isTRUE(input$use_calaire_reference)
   })
 
-  # Datos de preparación PT
-  pt_prep_data <- reactive({
-    req(input$summary_files)
+  # Cargar participantes desde data/processed/ cuando no se suben archivos manualmente.
+  # Busca CSVs con las columnas requeridas y normaliza nombres de columnas.
+  auto_load_participants <- function(processed_dir = "data/processed") {
+    if (!dir.exists(processed_dir)) return(list(data_list = list(), raw_data = NULL))
 
-    data_list <- lapply(seq_len(nrow(input$summary_files)), function(i) {
-      df <- vroom::vroom(input$summary_files$datapath[i], show_col_types = FALSE)
-      n <- as.integer(stringr::str_extract(input$summary_files$name[i], "\\d+"))
-      df$n_lab <- n
-      return(df)
-    })
+    files <- list.files(processed_dir, pattern = "\\.csv$", full.names = TRUE)
+    # Excluir archivos horarios, referencia, y reportes
+    exclude_patterns <- "^h_|referencia_ronda|incertidumbre\\.md|preprocesamiento_log"
+    files <- files[!grepl(exclude_patterns, basename(files))]
 
-    if (length(data_list) == 0) {
-      return(NULL)
+    data_list <- list()
+    for (f in files) {
+      df <- tryCatch(
+        vroom::vroom(f, show_col_types = FALSE),
+        error = function(e) NULL
+      )
+      if (is.null(df) || nrow(df) == 0) next
+
+      required <- c("pollutant", "level", "mean_value", "sd_value")
+      if (!all(required %in% names(df))) next
+
+      # Normalizar: instrument -> participant_id
+      if (!"participant_id" %in% names(df) && "instrument" %in% names(df)) {
+        df$participant_id <- df$instrument
+      }
+      if (!"participant_id" %in% names(df)) next
+
+      # Extraer n_lab del nombre de archivo (part_1_ronda.csv -> 1)
+      if (!"n_lab" %in% names(df)) {
+        n <- as.integer(stringr::str_extract(basename(f), "\\d+"))
+        df$n_lab <- if (!is.na(n)) n else NA_integer_
+      }
+
+      data_list[[length(data_list) + 1]] <- df
     }
 
+    if (length(data_list) == 0) return(list(data_list = list(), raw_data = NULL))
+
     raw_data <- do.call(rbind, data_list)
+    list(data_list = data_list, raw_data = raw_data)
+  }
+
+  # Datos de preparación PT
+  pt_prep_data <- reactive({
+    manual_files <- !is.null(input$summary_files) && nrow(input$summary_files) > 0
+
+    if (manual_files) {
+      data_list <- lapply(seq_len(nrow(input$summary_files)), function(i) {
+        df <- vroom::vroom(input$summary_files$datapath[i], show_col_types = FALSE)
+        n <- as.integer(stringr::str_extract(input$summary_files$name[i], "\\d+"))
+        df$n_lab <- n
+        return(df)
+      })
+      raw_data <- do.call(rbind, data_list)
+      rv$raw_summary_data_list <- data_list
+    } else {
+      auto <- auto_load_participants()
+      if (is.null(auto$raw_data)) {
+        return(NULL)
+      }
+      data_list <- auto$data_list
+      raw_data <- auto$raw_data
+      rv$raw_summary_data_list <- data_list
+      showNotification(
+        paste0("Participantes auto-cargados desde data/processed/: ",
+               length(data_list), " archivo(s)."),
+        type = "message", duration = 5
+      )
+    }
+
     if (is.null(raw_data) || nrow(raw_data) == 0) {
       return(NULL)
     }
@@ -250,12 +304,6 @@ server <- function(input, output, session) {
 
     # Almacenar datos crudos en un valor reactivo para uso en cálculo de sigma_pt_1
     rv$raw_summary_data <- raw_data
-
-    # También almacenar la lista de archivos para cálculos de consenso
-    data_list <- lapply(seq_len(nrow(input$summary_files)), function(i) {
-      vroom::vroom(input$summary_files$datapath[i], show_col_types = FALSE)
-    })
-    rv$raw_summary_data_list <- data_list
 
     # Agregar los datos crudos para obtener un único valor medio por participante/nivel
     summary_data <- raw_data %>%
@@ -1279,7 +1327,7 @@ server <- function(input, output, session) {
                   span("3. Datos Consolidados de participantes"),
                   tags$small(class = "text-muted", "(Origen: resultados de laboratorios participantes)")
                 ),
-                fileInput("summary_files", NULL, accept = ".csv", multiple = TRUE, placeholder = "summary_n*.csv")
+                fileInput("summary_files", NULL, accept = ".csv", multiple = TRUE, placeholder = "summary_n*.csv (opcional si hay archivos en data/processed/)")
               ),
               div(class = "upload-item", style = "border-left: 4px solid #8b5cf6; padding-left: 12px;",
                 div(class = "upload-label",
@@ -5712,10 +5760,15 @@ server <- function(input, output, session) {
       cat("- Estabilidad: No cargado.\n")
     }
 
-    if (!is.null(input$summary_files)) {
+    if (!is.null(input$summary_files) && nrow(input$summary_files) > 0) {
       cat(sprintf("- Resumen: %d archivo(s) cargado(s) (%d filas en total).\n", nrow(input$summary_files), nrow(pt_prep_data())))
     } else {
-      cat("- Resumen: No cargado.\n")
+      auto <- auto_load_participants()
+      if (!is.null(auto$raw_data)) {
+        cat(sprintf("- Resumen: %d participante(s) auto-cargado(s) desde data/processed/ (%d filas en total).\n", length(auto$data_list), nrow(auto$raw_data)))
+      } else {
+        cat("- Resumen: No cargado.\n")
+      }
     }
 
     calaire_ref <- calaire_reference_df()

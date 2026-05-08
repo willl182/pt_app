@@ -32,6 +32,17 @@ To run the application, you need to have R and required packages installed.
 
 The application will start and can be accessed in your web browser, typically at `http://127.0.0.1:XXXX` (the port `XXXX` will be displayed in the console).
 
+### Preprocesamiento de datos
+
+Si se requiere procesar los datos antes de usar la app, no es necesario reinstalar R ni paquetes. Primero se puede validar que los scripts R parsean correctamente y luego ejecutar el preprocesador correspondiente:
+
+```bash
+Rscript -e 'for (f in c(list.files("R/preprocessing", full.names=TRUE, pattern="[.]R$"), "scripts/preprocesar_part_1.R")) invisible(parse(file=f)); cat("parse OK\n")'
+Rscript scripts/preprocesar_part_1.R
+```
+
+La salida consolidada queda en `data/processed/part_1_ronda.csv` y el detalle horario auditado en `data/processed/h_part_1_ronda.csv`.
+
 ---
 
 ## Application Modules

@@ -337,10 +337,15 @@ summarise_reference_levels <- function(hourly_df) {
       ,
       drop = FALSE
     ]
+    rows <- rows[order(rows$hour_start), , drop = FALSE]
     n_hours <- nrow(rows)
     final_mean <- mean(rows$mean_value)
     final_sd <- if (n_hours > 1) sd(rows$mean_value) else NA_real_
     final_u <- if (n_hours > 1) final_sd / sqrt(n_hours) else rows$u_value[1]
+
+    mean_h1 <- if (n_hours >= 1) rows$mean_value[1] else NA_real_
+    mean_h2 <- if (n_hours >= 2) rows$mean_value[2] else NA_real_
+    mean_h3 <- if (n_hours >= 3) rows$mean_value[3] else NA_real_
 
     results[[i]] <- data.frame(
       source = g$source,
@@ -348,6 +353,9 @@ summarise_reference_levels <- function(hourly_df) {
       level = g$level,
       unit = g$unit,
       instrument = g$instrument,
+      mean_h1 = mean_h1,
+      mean_h2 = mean_h2,
+      mean_h3 = mean_h3,
       mean_value = final_mean,
       sd_value = final_sd,
       u_value = final_u,
