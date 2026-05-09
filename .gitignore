@@ -21,6 +21,7 @@ manifest.json
 # === Artefactos generados por la app ===
 final_reports/
 www/preview/
+validation/
 
 # === Paquete ptcalc (repo independiente) ===
 ptcalc/
