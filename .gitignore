@@ -14,8 +14,7 @@ Thumbs.db
 .gemini/
 *.code-workspace
 
-# === Despliegue (específico de cuenta) ===
-manifest.json
+
 
 # === Artefactos generados por la app ===
 final_reports/
