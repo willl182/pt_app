@@ -1,6 +1,33 @@
+# === Temporales y sistema ===
 *.log
 __pycache__/
 *.pyc
+.DS_Store
+Thumbs.db
+*~
+.~lock.*
+
+# === IDE y editores ===
+.vscode/
+.codex
+.opencode/
+.gemini/
+*.code-workspace
+
+# === Despliegue (específico de cuenta) ===
+rsconnect/
+manifest.json
+
+# === Artefactos generados por la app ===
+final_reports/
+www/preview/
+
+# === Paquete ptcalc (repo independiente) ===
+ptcalc/
+
+# === Archivos movidos fuera del repo ===
+mover/
+
+# === Archivos específicos históricos ===
 20251020 Propuesta Desarrollo.md
 conductor/abkvQAu7TAaaXEzihB08_WOL-web.jpg
-ptcalc/
