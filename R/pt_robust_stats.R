@@ -145,8 +145,8 @@ run_algorithm_a <- function(values, ids = NULL, max_iter = 50, tol = 1e-10) {
   }
 
   # Step 1: Initial estimates (ISO 13528:2022, Annex C, step 1)
-  x_star <- stats::median(values, na.rm = TRUE)
-  s_star <- 1.483 * stats::median(abs(values - x_star), na.rm = TRUE)
+  x_star <- signif(stats::median(values, na.rm = TRUE), 3)
+  s_star <- signif(1.483 * stats::median(abs(values - x_star), na.rm = TRUE), 3)
 
   initial_median <- x_star
   initial_mad_e <- s_star
@@ -197,11 +197,12 @@ run_algorithm_a <- function(values, ids = NULL, max_iter = 50, tol = 1e-10) {
     is_winsorized <- (values < lower) | (values > upper)
 
     # Step 4: Update estimates (ISO 13528, Annex C, step 4)
-    # x* = (1/p) * sum(x*_i)
-    x_new <- mean(winsorized)
+    # x* = (1/p) * sum(x*_i), rounded to 3 significant figures
+    x_new <- signif(mean(winsorized), 3)
     # s* = 1.134 * sqrt( (1/(p-1)) * sum((x*_i - x*)^2) )
     # The 1.134 factor corrects for winsorization bias
-    s_new <- 1.134 * sqrt(sum((winsorized - x_new)^2) / (p - 1))
+    # Rounded to 3 significant figures per ISO 13528:2022 NOTE 1
+    s_new <- signif(1.134 * sqrt(sum((winsorized - x_new)^2) / (p - 1)), 3)
 
     if (!is.finite(s_new) || s_new < .Machine$double.eps) {
       return(list(
