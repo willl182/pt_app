@@ -721,10 +721,10 @@ write_validation_final <- function(wb, styles) {
     estado = c(
       "Implementado",
       "Implementado",
+      NA_character_,
       "Implementado",
       "Implementado",
-      "Implementado",
-      "Implementado",
+      NA_character_,
       "Implementado",
       "Implementado",
       "Implementado",
@@ -752,6 +752,24 @@ write_validation_final <- function(wb, styles) {
     start_row = 1,
     table_name = "validacion_final_resumen"
   )
+  write_formula_cell(
+    wb,
+    sheet,
+    4,
+    2,
+    'IF(COUNTIF(\'resultado_homogeneidad\'!$G:$G,"FALLA")>0,"FALLA",IF(COUNTIF(\'resultado_homogeneidad\'!$G:$G,"Pendiente")>0,"PENDIENTE","OK"))',
+    styles,
+    "control"
+  )
+  write_formula_cell(
+    wb,
+    sheet,
+    7,
+    2,
+    'IF(COUNTIF(\'resultado_estabilidad\'!$G:$G,"FALLA")>0,"FALLA",IF(COUNTIF(\'resultado_estabilidad\'!$G:$G,"Pendiente")>0,"PENDIENTE","OK"))',
+    styles,
+    "control"
+  )
   writeData(wb, sheet, "Estado global", startRow = nrow(summary) + 4, startCol = 1)
   write_formula_cell(
     wb,
@@ -766,13 +784,44 @@ write_validation_final <- function(wb, styles) {
     styles,
     "control"
   )
-  writeData(wb, sheet, "Errores Excel a escanear tras recalculo", startRow = nrow(summary) + 6, startCol = 1)
-  writeData(
+  error_start <- nrow(summary) + 6
+  errors <- data.frame(
+    error_excel = formula_errors,
+    etiqueta = formula_error_labels,
+    conteo = NA_integer_,
+    stringsAsFactors = FALSE
+  )
+  write_styled_table(
     wb,
     sheet,
-    paste(formula_error_labels, collapse = ", "),
-    startRow = nrow(summary) + 6,
-    startCol = 2
+    errors,
+    styles,
+    start_row = error_start,
+    table_name = "validacion_final_errores"
+  )
+  result_ranges <- c(
+    "'resultado_homogeneidad'!$A:$G",
+    "'resultado_estabilidad'!$A:$G",
+    "'calc_homogeneidad'!$A:$C",
+    "'calc_estabilidad'!$A:$C"
+  )
+  for (i in seq_len(nrow(errors))) {
+    row <- error_start + i
+    count_formula <- paste(
+      sprintf("COUNTIF(%s,A%d)", result_ranges, row),
+      collapse = "+"
+    )
+    write_formula_cell(wb, sheet, row, 3, count_formula, styles, "control")
+  }
+  writeData(wb, sheet, "Total errores Excel", startRow = error_start + nrow(errors) + 2, startCol = 1)
+  write_formula_cell(
+    wb,
+    sheet,
+    error_start + nrow(errors) + 2,
+    2,
+    sprintf("SUM(C%d:C%d)", error_start + 1, error_start + nrow(errors)),
+    styles,
+    "control"
   )
   freezePane(wb, sheet, firstRow = TRUE)
   invisible(TRUE)

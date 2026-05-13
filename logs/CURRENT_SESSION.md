@@ -25,6 +25,13 @@ snapshot congelado.
 - [x] Recalculado con LibreOffice en `/tmp/pt_o3_formula_recalc`: los tres
   libros tienen 14/14 comparaciones OK en homogeneidad y 14/14 OK en
   estabilidad.
+- [x] Tras revision de fase, los libros finales bajo
+  `validation_1/validation/excel/validacion_o3/formulas/` fueron reemplazados
+  por copias recalculadas; `validacion_final` queda en `OK` directamente en
+  esos artefactos.
+- [x] `validacion_final` ahora resume estados reales de
+  `resultado_homogeneidad` y `resultado_estabilidad`, y cuenta errores Excel
+  en hojas de calculo/resultado.
 - [ ] Queda pendiente Fase 5: `valor_asignado`, `algoritmo_A_iteraciones` y
   `algoritmo_A`.
 - [ ] Queda pendiente Fase 6: `puntajes_EA` e `informe_global`.
@@ -49,6 +56,9 @@ snapshot congelado.
   conserva `median_abs_diff` trazable por separado.
 - `resultado_estabilidad` mantiene la regla confirmada: repite la tabla
   visible MADe/nIQR de homogeneidad.
+- Los libros finales deben guardarse post-recalculo. El generador `openxlsx`
+  escribe formulas, pero no valores calculados; el cierre de fase usa
+  LibreOffice headless y copia los xlsx recalculados de vuelta a `formulas/`.
 - `validation_1/validation/...` esta ignorado por `.gitignore` via patron
   `validation/`; para commitear estos artefactos se requiere `git add -f`.
 - El worktree ya estaba sucio antes; no revertir cambios ajenos.
