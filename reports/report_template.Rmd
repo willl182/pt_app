@@ -326,6 +326,8 @@ if (method == "2a") {
   cat("Se evaluó la compatibilidad metrológica calculando las diferencias entre el valor de referencia ($x_{pt,ref}$) y el valor de consenso ($x_{pt,2b}$) para cada contaminante y nivel.")
 } else if (method == "3") {
   cat("Se evaluó la compatibilidad metrológica calculando las diferencias entre el valor de referencia ($x_{pt,ref}$) y el valor de consenso ($x_{pt,3}$) para cada contaminante y nivel.")
+} else if (method == "4") {
+  cat("Se evaluó la compatibilidad metrológica para el método de expertos, usando el valor de referencia como $x_{pt}$ y la desviación para evaluación de aptitud calculada con la ecuación operativa por contaminante.")
 } else {
   cat("Se evaluó la compatibilidad metrológica calculando las diferencias entre el valor de referencia ($x_{pt,ref}$) y los valores de consenso ($x_{pt,2a}$, $x_{pt,2b}$ y $x_{pt,3}$) para cada contaminante y nivel.")
 }
@@ -347,6 +349,9 @@ if (!is.null(params$metrological_compatibility) && is.data.frame(params$metrolog
   } else if (method == "3") {
     mc_df <- mc_df %>% select(pollutant, n_lab, level, x_pt_ref, x_pt_3, Diff_Ref_3)
     colnames(mc_df) <- c("Contaminante", "N_Lab", "Nivel", "Valor Ref", "Valor Consenso 3 (Alg A)", "Dif (Ref - 3)")
+  } else if (method == "4") {
+    mc_df <- mc_df %>% select(pollutant, n_lab, level, x_pt_ref, x_pt_4, sigma_pt_4, Diff_Ref_4)
+    colnames(mc_df) <- c("Contaminante", "N_Lab", "Nivel", "Valor Ref", "Valor Expertos 4", "sigma_pt Expertos", "Dif (Ref - 4)")
   } else {
     # Fallback: Show all
     colnames(mc_df) <- c("Contaminante", "N_Lab", "Nivel", "Valor Ref", "Valor Consenso 2a", "Valor Consenso 2b", "Valor Consenso 3 (Alg A)", "Dif (Ref - 2a)", "Dif (Ref - 2b)", "Dif (Ref - 3)")

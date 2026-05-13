@@ -384,7 +384,7 @@ server <- function(input, output, session) {
   # Valores reactivos para almacenar datos crudos para cálculos específicos
   rv <- reactiveValues(raw_summary_data = NULL, raw_summary_data_list = NULL)
 
-  format_num <- function(x, n_sig = 3) {
+  format_num <- function(x, n_digits = 4) {
     if (length(x) == 0) {
       return(NA_character_)
     }
@@ -397,27 +397,21 @@ server <- function(input, output, session) {
         return(as.character(value))
       }
       if (value == 0) {
-        return("0")
+        return(sprintf(paste0("%.", n_digits, "f"), 0))
       }
 
-      value_sig <- signif(value, n_sig)
-      abs_sig <- abs(value_sig)
-
-      if (abs_sig < 0.001 || abs_sig >= 1000) {
-        return(formatC(value_sig, format = "g", digits = n_sig, flag = "#"))
-      }
-      if (abs_sig < 10) {
-        return(sprintf("%.2f", value_sig))
-      }
-      if (abs_sig < 100) {
-        return(sprintf("%.1f", value_sig))
-      }
-
-      sprintf("%.0f", value_sig)
+      sprintf(paste0("%.", n_digits, "f"), round(value, n_digits))
     }, FUN.VALUE = character(1))
   }
 
   format_numeric_columns <- function(df, columns = NULL) {
+    if (inherits(df, "htmlwidget")) {
+      if (is.null(columns)) {
+        return(df)
+      }
+      return(DT::formatRound(df, columns = columns, digits = 4))
+    }
+
     if (is.null(columns)) {
       columns <- names(df)[vapply(df, is.numeric, logical(1))]
     }
@@ -1572,7 +1566,7 @@ server <- function(input, output, session) {
                 h4("Resumen de Iteraciones"),
                 p("Valores de ubicación (x*) y escala (s*) en cada iteración, con criterio de convergencia.",
                   tags$br(),
-                  tags$small(class = "text-muted", "Criterio primario: sin cambio en la 3ra cifra significativa de x* y s*; delta y tolerancia quedan como trazabilidad y guardia numérica.")),
+                tags$small(class = "text-muted", "Criterio primario: sin cambio en la 4ta cifra significativa de x* y s*; delta y tolerancia quedan como trazabilidad y guardia numérica.")),
                 dataTableOutput("algoA_iterations_table"),
                 hr(),
                 h4("Detalle por Participante por Iteración"),
@@ -1756,6 +1750,23 @@ server <- function(input, output, session) {
                   column(6, plotlyOutput("global_heatmap_zeta_algo", height = "350px")),
                   column(6, plotlyOutput("global_heatmap_en_algo", height = "350px"))
                 )
+              ),
+              tabPanel(
+                "Expertos (4)",
+                h4("Parámetros principales"),
+                tableOutput("global_params_expert"),
+                hr(),
+                h4("Resultados por participante"),
+                dataTableOutput("global_overview_expert"),
+                hr(),
+                fluidRow(
+                  column(6, plotlyOutput("global_heatmap_z_expert", height = "350px")),
+                  column(6, plotlyOutput("global_heatmap_zprime_expert", height = "350px"))
+                ),
+                fluidRow(
+                  column(6, plotlyOutput("global_heatmap_zeta_expert", height = "350px")),
+                  column(6, plotlyOutput("global_heatmap_en_expert", height = "350px"))
+                )
               )
             )
           )
@@ -1791,8 +1802,8 @@ server <- function(input, output, session) {
             hr(),
             h4("3. Parámetros"),
             selectInput("report_metric", "Métrica:", choices = c("z", "z'", "zeta", "En")),
-            selectInput("report_method", "Método:", choices = c("Referencia (1)" = "1", "Consenso MADe (2a)" = "2a", "Consenso nIQR (2b)" = "2b", "Algoritmo A (3)" = "3")),
-            selectInput("report_metrological_compatibility", "Compatibilidad Metrológica (Consenso):", choices = c("Consenso MADe (2a)" = "2a", "Consenso nIQR (2b)" = "2b", "Algoritmo A (3)" = "3"), selected = "2a"),
+            selectInput("report_method", "Método:", choices = c("Referencia (1)" = "1", "Consenso MADe (2a)" = "2a", "Consenso nIQR (2b)" = "2b", "Algoritmo A (3)" = "3", "Expertos (4)" = "4")),
+            selectInput("report_metrological_compatibility", "Compatibilidad Metrológica (Consenso):", choices = c("Consenso MADe (2a)" = "2a", "Consenso nIQR (2b)" = "2b", "Algoritmo A (3)" = "3", "Expertos (4)" = "4"), selected = "2a"),
             numericInput("report_k", "Factor de cobertura (k):", value = 2, min = 1, max = 3, step = 0.1),
             hr(),
             h4("Datos de Participantes"),
@@ -2470,7 +2481,7 @@ server <- function(input, output, session) {
       }
     },
     spacing = "l",
-    digits = 3
+    digits = 4
   )
 
   # Salida: Tabla de estadísticos resumidos
@@ -2703,15 +2714,51 @@ server <- function(input, output, session) {
     ref = list(title = "Referencia (1)", label = "1"),
     consensus_ma = list(title = "Consenso MADe (2a)", label = "2a"),
     consensus_niqr = list(title = "Consenso nIQR (2b)", label = "2b"),
-    algo = list(title = "Algoritmo A (3)", label = "3")
+    algo = list(title = "Algoritmo A (3)", label = "3"),
+    expert = list(title = "Expertos (4)", label = "4")
   )
 
   global_combo_specs <- list(
     ref = list(title = "Referencia (1)", label = "1", tab = "z1 - Referencia (1)"),
     consensus_ma = list(title = "Consenso MADe (2a)", label = "2a", tab = "z2a - Consenso MADe (2a)"),
     consensus_niqr = list(title = "Consenso nIQR (2b)", label = "2b", tab = "z2b - Consenso nIQR (2b)"),
-    algo = list(title = "Algoritmo A (3)", label = "3", tab = "z3 - Algoritmo A (3)")
+    algo = list(title = "Algoritmo A (3)", label = "3", tab = "z3 - Algoritmo A (3)"),
+    expert = list(title = "Expertos (4)", label = "4", tab = "z4 - Expertos (4)")
   )
+
+  expert_sigma_params <- tibble::tribble(
+    ~pollutant, ~a, ~b,
+    "SO2", 0.022, 1.0,
+    "CO", 0.024, 0.100,
+    "O3", 0.020, 1.0,
+    "NO", 0.024, 1.0,
+    "NO2", 0.028, 1.4
+  )
+
+  normalize_pollutant_code <- function(pollutant) {
+    pollutant %>%
+      as.character() %>%
+      toupper() %>%
+      stringr::str_replace_all(c(
+        "₀" = "0", "₁" = "1", "₂" = "2", "₃" = "3", "₄" = "4",
+        "₅" = "5", "₆" = "6", "₇" = "7", "₈" = "8", "₉" = "9"
+      )) %>%
+      stringr::str_replace_all("[^A-Z0-9]", "")
+  }
+
+  calculate_expert_sigma_pt <- function(pollutant, x_pt) {
+    if (!is.finite(x_pt)) {
+      return(NA_real_)
+    }
+
+    code <- normalize_pollutant_code(pollutant)
+    params <- expert_sigma_params %>% filter(.data$pollutant == code)
+    if (nrow(params) == 0) {
+      return(NA_real_)
+    }
+
+    params$a[[1]] * x_pt + params$b[[1]]
+  }
 
   ensure_classification_columns <- function(df) {
     required_cols <- c(
@@ -2855,7 +2902,6 @@ server <- function(input, output, session) {
     if (!is.null(hom_res$error)) {
       return(list(error = paste("Error obteniendo parámetros de homogeneidad:", hom_res$error)))
     }
-    sigma_pt1 <- hom_res$sigma_pt
     u_xpt1 <- hom_res$u_xpt
 
     participant_data <- subset_data %>%
@@ -2929,6 +2975,7 @@ server <- function(input, output, session) {
       return(list(error = "No se encontró información del participante de referencia para esta combinación."))
     }
     x_pt1 <- mean(ref_data$mean_value, na.rm = TRUE)
+    sigma_pt1 <- calculate_expert_sigma_pt(target_pollutant, x_pt1)
     if (use_calaire_reference()) {
       calaire_ref <- get_calaire_reference_for_combo(target_pollutant, target_level)
       if (!is.null(calaire_ref) && nrow(calaire_ref) > 0) {
@@ -2971,6 +3018,7 @@ server <- function(input, output, session) {
     sigma_pt_2b <- calculate_niqr(values)
     u_xpt2a <- if (is.finite(sigma_pt_2a)) 1.25 * sigma_pt_2a / sqrt(n_part) else NA_real_
     u_xpt2b <- if (is.finite(sigma_pt_2b)) 1.25 * sigma_pt_2b / sqrt(n_part) else NA_real_
+    sigma_pt_expert <- calculate_expert_sigma_pt(target_pollutant, x_pt1)
 
     # H4: ISO 13528 recomienda Algoritmo A solo para n >= 12;
     # para n < 12 usar MADe/nIQR directamente
@@ -2992,6 +3040,7 @@ server <- function(input, output, session) {
     combos$ref <- compute_combo_scores(participant_data, x_pt1, sigma_pt1, u_xpt1, score_combo_info$ref, k = k_factor, u_hom = u_hom_val, u_stab = u_stab_val)
     combos$consensus_ma <- compute_combo_scores(participant_data, median_val, sigma_pt_2a, u_xpt2a, score_combo_info$consensus_ma, k = k_factor, u_hom = u_hom_val, u_stab = u_stab_val)
     combos$consensus_niqr <- compute_combo_scores(participant_data, median_val, sigma_pt_2b, u_xpt2b, score_combo_info$consensus_niqr, k = k_factor, u_hom = u_hom_val, u_stab = u_stab_val)
+    combos$expert <- compute_combo_scores(participant_data, x_pt1, sigma_pt_expert, u_xpt1, score_combo_info$expert, k = k_factor, u_hom = u_hom_val, u_stab = u_stab_val)
 
     if (is.null(algo_res$error)) {
       u_xpt3 <- 1.25 * algo_res$robust_sd / sqrt(n_part)
@@ -3602,14 +3651,21 @@ server <- function(input, output, session) {
         u_xpt_def_3 <- sqrt(u_xpt_3^2 + u_hom^2 + u_stab^2)
         if(!is.na(u_ref)) crit_3 <- sqrt(u_xpt_def_3^2 + u_ref^2)
       }
+
+      # Método 4: sigma_pt por laboratorios expertos, x_pt de referencia
+      sigma_pt_4 <- calculate_expert_sigma_pt(p, row$x_pt_ref)
+      u_xpt_def_4 <- if(!is.na(row$sd_ref)) sqrt(row$sd_ref^2 + u_hom^2 + u_stab^2) else NA_real_
+      crit_4 <- if(!is.na(u_ref) && !is.na(u_xpt_def_4)) sqrt(u_xpt_def_4^2 + u_ref^2) else NA_real_
       
       row$x_pt_2a <- row$x_pt_consensus
       row$x_pt_2b <- row$x_pt_consensus
       row$x_pt_3 <- row$x_pt_algo
+      row$x_pt_4 <- row$x_pt_ref
       
       row$Diff_Ref_2a <- if(!is.na(row$x_pt_ref) && !is.na(row$x_pt_2a)) abs(row$x_pt_ref - row$x_pt_2a) else NA_real_
       row$Diff_Ref_2b <- if(!is.na(row$x_pt_ref) && !is.na(row$x_pt_2b)) abs(row$x_pt_ref - row$x_pt_2b) else NA_real_
       row$Diff_Ref_3 <- if(!is.na(row$x_pt_ref) && !is.na(row$x_pt_3)) abs(row$x_pt_ref - row$x_pt_3) else NA_real_
+      row$Diff_Ref_4 <- if(!is.na(row$x_pt_ref) && !is.na(row$x_pt_4)) abs(row$x_pt_ref - row$x_pt_4) else NA_real_
       
       row$Eval_Ref_2a <- if(!is.na(row$Diff_Ref_2a) && !is.na(crit_2a)) {
         if(row$Diff_Ref_2a <= crit_2a) "Compatible" else "No Compatible"
@@ -3622,10 +3678,16 @@ server <- function(input, output, session) {
       row$Eval_Ref_3 <- if(!is.na(row$Diff_Ref_3) && !is.na(crit_3)) {
         if(row$Diff_Ref_3 <= crit_3) "Compatible" else "No Compatible"
       } else NA_character_
+
+      row$Eval_Ref_4 <- if(!is.na(row$Diff_Ref_4) && !is.na(crit_4) && is.finite(sigma_pt_4)) {
+        if(row$Diff_Ref_4 <= crit_4) "Compatible" else "No Compatible"
+      } else NA_character_
       
       row$Crit_Ref_2a <- crit_2a
       row$Crit_Ref_2b <- crit_2b
       row$Crit_Ref_3 <- crit_3
+      row$Crit_Ref_4 <- crit_4
+      row$sigma_pt_4 <- sigma_pt_4
       
       row$u_ref <- u_ref
       
@@ -3633,7 +3695,7 @@ server <- function(input, output, session) {
     }
     
     final_df <- bind_rows(results_list) %>%
-      select(pollutant, n_lab, level, x_pt_ref, u_ref, x_pt_2a, Diff_Ref_2a, Crit_Ref_2a, Eval_Ref_2a, x_pt_2b, Diff_Ref_2b, Crit_Ref_2b, Eval_Ref_2b, x_pt_3, Diff_Ref_3, Crit_Ref_3, Eval_Ref_3) %>%
+      select(pollutant, n_lab, level, x_pt_ref, u_ref, x_pt_2a, Diff_Ref_2a, Crit_Ref_2a, Eval_Ref_2a, x_pt_2b, Diff_Ref_2b, Crit_Ref_2b, Eval_Ref_2b, x_pt_3, Diff_Ref_3, Crit_Ref_3, Eval_Ref_3, x_pt_4, sigma_pt_4, Diff_Ref_4, Crit_Ref_4, Eval_Ref_4) %>%
       arrange(pollutant, n_lab, level)
       
     final_df
@@ -3942,7 +4004,9 @@ server <- function(input, output, session) {
         options = list(scrollX = TRUE, pageLength = 12),
         rownames = FALSE
       ) %>%
-        formatRound(columns = c("Resultado", "u(xi)", "Puntaje z", "Puntaje z'", "Puntaje zeta", "Puntaje En"), digits = 3)
+        format_numeric_columns(
+          c("Resultado", "u(xi)", "Puntaje z", "Puntaje z'", "Puntaje zeta", "Puntaje En")
+        )
     })
 
     render_global_score_heatmap(
@@ -4230,7 +4294,7 @@ server <- function(input, output, session) {
       }
       res$summary
     },
-    digits = 6,
+    digits = 4,
     striped = TRUE,
     spacing = "l",
     rownames = FALSE
@@ -4242,7 +4306,7 @@ server <- function(input, output, session) {
       return(datatable(data.frame(Mensaje = res$error)))
     }
     datatable(res$overview, options = list(scrollX = TRUE, pageLength = 12), rownames = FALSE) %>%
-      formatRound(columns = c("Resultado", "u(xi)", "Puntaje z", "Puntaje z'", "Puntaje zeta", "Puntaje En"), digits = 3)
+      format_numeric_columns(c("Resultado", "u(xi)", "Puntaje z", "Puntaje z'", "Puntaje zeta", "Puntaje En"))
   })
 
   # H7: CSV export con encabezados descriptivos
@@ -4405,7 +4469,7 @@ server <- function(input, output, session) {
           options = list(scrollX = TRUE, pageLength = 10),
           rownames = FALSE
         ) %>%
-          formatRound(columns = c("Resultado", "u(xi)", "Puntaje z"), digits = 3)
+          format_numeric_columns(c("Resultado", "u(xi)", "Puntaje z"))
       })
 
       output[[paste0("z_plot_", combo_key)]] <- renderPlotly({
@@ -4434,7 +4498,7 @@ server <- function(input, output, session) {
           options = list(scrollX = TRUE, pageLength = 10),
           rownames = FALSE
         ) %>%
-          formatRound(columns = c("Resultado", "u(xi)", "Puntaje z'"), digits = 3)
+          format_numeric_columns(c("Resultado", "u(xi)", "Puntaje z'"))
       })
 
       output[[paste0("zprime_plot_", combo_key)]] <- renderPlotly({
@@ -4463,7 +4527,7 @@ server <- function(input, output, session) {
           options = list(scrollX = TRUE, pageLength = 10),
           rownames = FALSE
         ) %>%
-          formatRound(columns = c("Resultado", "u(xi)", "Puntaje zeta"), digits = 3)
+          format_numeric_columns(c("Resultado", "u(xi)", "Puntaje zeta"))
       })
 
       output[[paste0("zeta_plot_", combo_key)]] <- renderPlotly({
@@ -4492,7 +4556,7 @@ server <- function(input, output, session) {
           options = list(scrollX = TRUE, pageLength = 10),
           rownames = FALSE
         ) %>%
-          formatRound(columns = c("Resultado", "u(xi)", "Puntaje En"), digits = 3)
+          format_numeric_columns(c("Resultado", "u(xi)", "Puntaje En"))
       })
 
       output[[paste0("en_plot_", combo_key)]] <- renderPlotly({
@@ -4556,7 +4620,7 @@ server <- function(input, output, session) {
             `Puntaje En Eval` = En_score_eval
           )
         datatable(table_df, options = list(scrollX = TRUE, pageLength = 10), rownames = FALSE) %>%
-          formatRound(columns = c("Resultado", "x_pt", "sigma_pt", "u(x_pt)", "Puntaje z", "Puntaje z'", "Puntaje zeta", "Puntaje En"), digits = 3)
+          format_numeric_columns(c("Resultado", "x_pt", "sigma_pt", "u(x_pt)", "Puntaje z", "Puntaje z'", "Puntaje zeta", "Puntaje En"))
       })
 
       output[[plot_id]] <- renderPlotly({
@@ -4698,20 +4762,35 @@ server <- function(input, output, session) {
     req(pt_prep_data())
     data <- pt_prep_data()
 
+    scalar_or_default <- function(x, default) {
+      if (length(x) == 0 || all(is.na(x))) {
+        return(default)
+      }
+      x[[1]]
+    }
+
     if (nrow(data) == 0) {
-      return(NULL)
+      return(data.frame())
     }
 
     # Obtener todas las combinaciones
     combos <- data %>%
       distinct(pollutant, n_lab, level)
 
+    if (nrow(combos) == 0) {
+      return(data.frame())
+    }
+
     results_list <- list()
 
-    for (i in 1:nrow(combos)) {
-      pol <- combos$pollutant[i]
-      n <- combos$n_lab[i]
-      lev <- combos$level[i]
+    for (i in seq_len(nrow(combos))) {
+      pol <- combos$pollutant[[i]]
+      n <- combos$n_lab[[i]]
+      lev <- combos$level[[i]]
+
+      if (length(pol) == 0 || length(n) == 0 || length(lev) == 0) {
+        next
+      }
 
       subset_data <- data %>%
         filter(pollutant == pol, n_lab == n, level == lev, participant_id != "ref")
@@ -4739,9 +4818,11 @@ server <- function(input, output, session) {
               sd_val <- sd(vals)
               z_vals <- abs(vals - mean_val) / sd_val
               idx_max <- which.max(z_vals)
-              outlier_val_num <- vals[idx_max]
-              outlier_participant <- subset_data$participant_id[idx_max]
-              outlier_value <- as.character(round(outlier_val_num, 3))
+              if (length(idx_max) > 0 && !is.na(idx_max)) {
+                outlier_val_num <- vals[idx_max]
+                outlier_participant <- subset_data$participant_id[idx_max]
+                outlier_value <- as.character(round(outlier_val_num, 3))
+              }
             }
           },
           error = function(e) {
@@ -4750,14 +4831,19 @@ server <- function(input, output, session) {
         )
       }
 
+      valor_p_txt <- format_num(p_val)
+      if (length(valor_p_txt) == 0 || is.na(valor_p_txt)) {
+        valor_p_txt <- "NA"
+      }
+
       results_list[[i]] <- data.frame(
-        Contaminante = pol,
-        Nivel = lev,
-        Participantes_Evaluados = n_eval,
-        Valor_p = ifelse(is.na(p_val), "NA", format_num(p_val)),
-        Atipicos_detectados = outliers_detected,
-        Participante = outlier_participant,
-        Valor_Atipico = outlier_value,
+        Contaminante = scalar_or_default(pol, "NA"),
+        Nivel = scalar_or_default(lev, "NA"),
+        Participantes_Evaluados = scalar_or_default(n_eval, 0L),
+        Valor_p = scalar_or_default(valor_p_txt, "NA"),
+        Atipicos_detectados = scalar_or_default(outliers_detected, 0L),
+        Participante = scalar_or_default(outlier_participant, "NA"),
+        Valor_Atipico = scalar_or_default(outlier_value, "NA"),
         stringsAsFactors = FALSE
       )
     }
@@ -4772,7 +4858,7 @@ server <- function(input, output, session) {
     method <- input$report_method
 
     if (nrow(data) == 0) {
-      return(NULL)
+      return(data.frame())
     }
 
     # Nota: calculate_niqr ahora se obtiene de R/pt_robust_stats.R
@@ -4781,12 +4867,20 @@ server <- function(input, output, session) {
     combos <- data %>%
       distinct(pollutant, n_lab, level)
 
+    if (nrow(combos) == 0) {
+      return(data.frame())
+    }
+
     results_list <- list()
 
-    for (i in 1:nrow(combos)) {
-      pol <- combos$pollutant[i]
-      n <- combos$n_lab[i]
-      lev <- combos$level[i]
+    for (i in seq_len(nrow(combos))) {
+      pol <- combos$pollutant[[i]]
+      n <- combos$n_lab[[i]]
+      lev <- combos$level[[i]]
+
+      if (length(pol) == 0 || length(n) == 0 || length(lev) == 0) {
+        next
+      }
 
       subset_data <- data %>%
         filter(pollutant == pol, n_lab == n, level == lev)
@@ -4803,7 +4897,7 @@ server <- function(input, output, session) {
         if (nrow(ref_data) > 0) {
           xpt <- mean(ref_data$mean_value, na.rm = TRUE)
           u_xpt <- mean(ref_data$sd_value, na.rm = TRUE)
-          sigma_pt <- mean(ref_data$sd_value, na.rm = TRUE)
+          sigma_pt <- calculate_expert_sigma_pt(pol, xpt)
           source_method <- "Referencia"
         }
       } else if (method == "2a") { # Consenso MADe
@@ -4841,6 +4935,13 @@ server <- function(input, output, session) {
             source_method <- "Algoritmo A"
           }
         }
+      } else if (method == "4") { # Expertos
+        if (nrow(ref_data) > 0) {
+          xpt <- mean(ref_data$mean_value, na.rm = TRUE)
+          u_xpt <- mean(ref_data$sd_value, na.rm = TRUE)
+          sigma_pt <- calculate_expert_sigma_pt(pol, xpt)
+          source_method <- "Expertos"
+        }
       }
 
       results_list[[i]] <- data.frame(
@@ -4849,6 +4950,11 @@ server <- function(input, output, session) {
         Metodo = source_method,
         x_pt = ifelse(is.na(xpt), NA, xpt),
         u_xpt = ifelse(is.na(u_xpt), NA, u_xpt),
+        u_ref_check = if (nrow(ref_data) > 1) {
+          stats::sd(ref_data$mean_value, na.rm = TRUE) / sqrt(nrow(ref_data))
+        } else {
+          NA_real_
+        },
         sigma_pt = ifelse(is.na(sigma_pt), NA, sigma_pt),
         stringsAsFactors = FALSE
       )
@@ -5012,10 +5118,11 @@ server <- function(input, output, session) {
       assigned <- list(xpt = NA, u_xpt = NA, sigma = NA)
 
       if (method_code == "1") {
+        ref_xpt <- mean(ref_data$mean_value, na.rm = TRUE)
         assigned <- list(
-          xpt = mean(ref_data$mean_value, na.rm = TRUE),
+          xpt = ref_xpt,
           u_xpt = mean(ref_data$sd_value, na.rm = TRUE),
-          sigma = mean(ref_data$sd_value, na.rm = TRUE)
+          sigma = calculate_expert_sigma_pt(pol, ref_xpt)
         )
       } else if (method_code == "2a") {
         vals <- part_data$mean_value
@@ -5034,6 +5141,13 @@ server <- function(input, output, session) {
           tol = ALGO_A_TOL
         )
         assigned <- list(xpt = res$assigned_value, u_xpt = 1.25 * res$robust_sd / sqrt(nrow(part_data)), sigma = res$robust_sd)
+      } else if (method_code == "4") {
+        ref_xpt <- mean(ref_data$mean_value, na.rm = TRUE)
+        assigned <- list(
+          xpt = ref_xpt,
+          u_xpt = mean(ref_data$sd_value, na.rm = TRUE),
+          sigma = calculate_expert_sigma_pt(pol, ref_xpt)
+        )
       }
 
       # Determinar Sigma
@@ -5155,13 +5269,17 @@ server <- function(input, output, session) {
   score_criteria_summary_3 <- reactive({
     summarize_scores(calculate_method_scores_df("3"))
   })
+  score_criteria_summary_4 <- reactive({
+    summarize_scores(calculate_method_scores_df("4"))
+  })
 
   report_score_summary <- reactive({
     res <- switch(input$report_method,
       "1" = score_criteria_summary_1(),
       "2a" = score_criteria_summary_2a(),
       "2b" = score_criteria_summary_2b(),
-      "3" = score_criteria_summary_3()
+      "3" = score_criteria_summary_3(),
+      "4" = score_criteria_summary_4()
     )
 
     if (is.null(res)) {
@@ -5432,9 +5550,7 @@ server <- function(input, output, session) {
       if (nrow(ref_data) > 0) {
         x_pt <- mean(ref_data$mean_value, na.rm = TRUE)
         u_xpt <- mean(ref_data$sd_value, na.rm = TRUE) # Asumiendo que sd_value es la incertidumbre para ref
-        # Para sigma_pt en método 1, usualmente usar hom_res$sigma_pt o un valor fijo.
-        # Aquí por defecto usamos hom_res$sigma_pt si está disponible, sino 0.
-        sigma_pt <- if (!is.null(hom_res$sigma_pt)) hom_res$sigma_pt else 0
+        sigma_pt <- calculate_expert_sigma_pt(first_pollutant, x_pt)
       } else {
         return(list(error = "No hay datos de referencia para el método seleccionado."))
       }
@@ -5462,6 +5578,14 @@ server <- function(input, output, session) {
       x_pt <- algo_res$assigned_value
       sigma_pt <- algo_res$robust_sd
       u_xpt <- 1.25 * sigma_pt / sqrt(length(vals))
+    } else if (method == "4") { # Expertos
+      if (nrow(ref_data) > 0) {
+        x_pt <- mean(ref_data$mean_value, na.rm = TRUE)
+        u_xpt <- mean(ref_data$sd_value, na.rm = TRUE)
+        sigma_pt <- calculate_expert_sigma_pt(first_pollutant, x_pt)
+      } else {
+        return(list(error = "No hay datos de referencia para el método de expertos."))
+      }
     }
 
     u_hom_val <- if(is.null(hom_res$error)) hom_res$ss else 0
@@ -5916,6 +6040,8 @@ server <- function(input, output, session) {
         "<strong>Valores iniciales (iteración 0):</strong><br>",
         "&nbsp;&nbsp;x*₀ = mediana = ", format_num(res$initial_median), "<br>",
         "&nbsp;&nbsp;s*₀ = MADe = ", format_num(res$initial_mad_e), "<br>",
+        "&nbsp;&nbsp;s* inicial usado = ", format_num(res$initial_s_star),
+        " (", res$initial_s_star_source, ")<br>",
         "<hr style='margin:4px 0'>",
         "<strong>Valores finales (winsorización ISO 13528 Anexo C):</strong><br>",
         "&nbsp;&nbsp;x* (valor asignado) = ", format_num(res$assigned_value), "<br>",
@@ -5940,7 +6066,7 @@ server <- function(input, output, session) {
       options = list(pageLength = 10, scrollX = TRUE),
       rownames = FALSE
     ) %>%
-      formatRound(columns = "Resultado", digits = 6)
+      format_numeric_columns("Resultado")
   })
 
   output$algoA_histogram <- renderPlotly({
@@ -5976,7 +6102,13 @@ server <- function(input, output, session) {
     }
 
     iter_display <- res$iterations
-    iter_display$Se_estabiliza <- ifelse(iter_display$signif3_converged, "SI", "NO")
+    if ("signif3_converged" %in% names(iter_display)) {
+      iter_display$Se_estabiliza <- ifelse(iter_display$signif3_converged, "SI", "NO")
+    } else if ("delta_max" %in% names(iter_display) && !is.null(res$tolerance)) {
+      iter_display$Se_estabiliza <- ifelse(iter_display$delta_max < res$tolerance, "SI", "NO")
+    } else {
+      iter_display$Se_estabiliza <- rep("NO", nrow(iter_display))
+    }
     iter_display <- iter_display %>%
       rename(
         Iter = iteration,
@@ -5993,6 +6125,13 @@ server <- function(input, output, session) {
         `signif3 x*_new` = signif3_x_new,
         `signif3 s*_new` = signif3_s_new
       ) %>%
+      mutate(
+        across(
+          all_of(c("x*_prev", "s*_prev", "delta_w", "Lim_inf", "Lim_sup",
+                   "x*_new", "s*_new", "delta_x", "delta_s", "delta_max")),
+          ~ format_num(.x)
+        )
+      ) %>%
       select(
         Iter, `x*_prev`, `s*_prev`, delta_w, Lim_inf, Lim_sup, n_winsor,
         `x*_new`, `s*_new`, delta_x, delta_s, delta_max,
@@ -6005,9 +6144,6 @@ server <- function(input, output, session) {
       options = list(pageLength = 50, scrollX = TRUE, dom = "t"),
       rownames = FALSE
     ) %>%
-      formatRound(columns = c("x*_prev", "s*_prev", "delta_w", "Lim_inf",
-                               "Lim_sup", "x*_new", "s*_new",
-                               "delta_x", "delta_s", "delta_max"), digits = 9) %>%
       formatStyle(
         "Se_estabiliza",
         target = "row",
@@ -6024,13 +6160,17 @@ server <- function(input, output, session) {
 
     w_display <- res$weights
     names(w_display) <- c("Participante", "Valor_original", "Valor_winsorizado_final", "Fue_winsorizado")
+    w_display <- w_display %>%
+      mutate(
+        across(c(Valor_original, Valor_winsorizado_final), ~ format_num(.x)),
+        Fue_winsorizado = ifelse(Fue_winsorizado, "SI", "NO")
+      )
 
     datatable(
       w_display,
       options = list(pageLength = 25, scrollX = TRUE),
       rownames = FALSE
-    ) %>%
-      formatRound(columns = c("Valor_original", "Valor_winsorizado_final"), digits = 9)
+    )
   })
 
   # Detalle por participante en cada iteración
@@ -6050,6 +6190,12 @@ server <- function(input, output, session) {
     names(detail_display) <- c("Iter", "Participante", "Valor", "Winsorizado",
                                 "Fue_winsor", "x*", "s*", "delta",
                                 "Lim_inf", "Lim_sup")
+    detail_display <- detail_display %>%
+      mutate(
+        across(all_of(c("Valor", "Winsorizado", "x*", "s*", "delta", "Lim_inf", "Lim_sup")),
+               ~ format_num(.x)),
+        Fue_winsor = ifelse(Fue_winsor, "SI", "NO")
+      )
 
     datatable(
       detail_display,
@@ -6057,9 +6203,7 @@ server <- function(input, output, session) {
                      search = list(regex = FALSE)),
       filter = "top",
       rownames = FALSE
-    ) %>%
-      formatRound(columns = c("Valor", "Winsorizado", "x*", "s*", "delta",
-                               "Lim_inf", "Lim_sup"), digits = 9)
+    )
   })
 
   # Exportar todos los intermedios del Algoritmo A en CSV
@@ -6067,50 +6211,27 @@ server <- function(input, output, session) {
     filename = function() {
       paste0("AlgoritmoA_Intermedios_", Sys.Date(), ".csv")
     },
+    contentType = "text/csv",
     content = function(file) {
       res <- algorithm_a_selected()
       if (!is.null(res$error)) {
-        writeLines(paste("Error:", res$error), file)
+        write.csv(data.frame(Error = res$error), file, row.names = FALSE)
         return()
       }
 
-      lines <- c(
-        paste0("# Algoritmo A - Resultados Intermedios ISO 13528:2022"),
-        paste0("# Generado: ", Sys.time()),
-        paste0("# Analito: ", toupper(res$selected$pollutant)),
-        paste0("# Esquema: ", res$selected$n_lab, " / Nivel: ", res$selected$level),
-        paste0("# n participantes: ", res$n),
-        paste0("# Valores iniciales: x*_0 (mediana) = ", res$initial_median,
-               ", s*_0 (MADe) = ", res$initial_mad_e),
-        paste0("# Valores finales: x* = ", res$assigned_value,
-               ", s* = ", res$robust_sd),
-        paste0("# Convergencia: ", if (res$converged) "SI" else "NO",
-               ", metodo = ", res$convergence_method,
-               ", guardia_numerica = ", res$tolerance),
-        paste0("# Observaciones winzorizadas: ", res$n_winsorized, " de ", res$n),
-        "#",
-        "# === SECCION 1: RESUMEN DE ITERACIONES ==="
-      )
-      writeLines(lines, file)
-
-      if (!is.null(res$iterations) && nrow(res$iterations) > 0) {
-        write.table(res$iterations, file, sep = ",", row.names = FALSE,
-                    col.names = TRUE, append = TRUE)
+      if (is.null(res$iterations) || nrow(res$iterations) == 0) {
+        write.csv(data.frame(Mensaje = "No se registraron iteraciones."), file, row.names = FALSE)
+        return()
       }
 
-      cat("\n# === SECCION 2: DETALLE POR PARTICIPANTE POR ITERACION ===\n",
-          file = file, append = TRUE)
-      if (!is.null(res$iteration_detail) && nrow(res$iteration_detail) > 0) {
-        write.table(res$iteration_detail, file, sep = ",", row.names = FALSE,
-                    col.names = TRUE, append = TRUE)
+      iter_export <- res$iterations
+      if ("signif3_converged" %in% names(iter_export)) {
+        iter_export$Se_estabiliza <- ifelse(iter_export$signif3_converged, "SI", "NO")
+      } else {
+        iter_export$Se_estabiliza <- rep("NO", nrow(iter_export))
       }
 
-      cat("\n# === SECCION 3: VALORES WINSORIZADOS FINALES ===\n",
-          file = file, append = TRUE)
-      if (!is.null(res$weights) && nrow(res$weights) > 0) {
-        write.table(res$weights, file, sep = ",", row.names = FALSE,
-                    col.names = TRUE, append = TRUE)
-      }
+      write.csv(iter_export, file, row.names = FALSE, fileEncoding = "UTF-8")
     }
   )
 
@@ -6231,7 +6352,7 @@ server <- function(input, output, session) {
       }
       res$summary
     },
-    digits = 6,
+    digits = 4,
     striped = TRUE,
     spacing = "l",
     rownames = FALSE
@@ -6248,7 +6369,7 @@ server <- function(input, output, session) {
       options = list(pageLength = 10, scrollX = TRUE),
       rownames = FALSE
     ) %>%
-      formatRound(columns = "Resultado", digits = 6)
+      format_numeric_columns("Resultado")
   })
 
   # --- Módulo de Valor de referencia ---
@@ -6281,7 +6402,7 @@ server <- function(input, output, session) {
       )
 
     datatable(display, options = list(pageLength = 10, scrollX = TRUE), rownames = FALSE) %>%
-      formatRound(columns = c("Valor medio", "u(xpt) / sd declarada"), digits = 6)
+      format_numeric_columns(c("Valor medio", "u(xpt) / sd declarada"))
   })
 
   output$calaire_reference_table <- renderDataTable({
@@ -6301,7 +6422,7 @@ server <- function(input, output, session) {
       )
 
     datatable(display, options = list(pageLength = 10, scrollX = TRUE), rownames = FALSE) %>%
-      formatRound(columns = c("Valor asignado CALAIRE", "u(xpt) CALAIRE"), digits = 6)
+      format_numeric_columns(c("Valor asignado CALAIRE", "u(xpt) CALAIRE"))
   })
 
   output$calaire_hourly_reference_table <- renderDataTable({
@@ -6325,7 +6446,7 @@ server <- function(input, output, session) {
       )
 
     datatable(display, options = list(pageLength = 10, scrollX = TRUE), rownames = FALSE) %>%
-      formatRound(columns = c("Media", "s horario", "u horario"), digits = 6)
+      format_numeric_columns(c("Media", "s horario", "u horario"))
   })
 
   # --- Módulo de Preparación PT ---
@@ -6340,7 +6461,7 @@ server <- function(input, output, session) {
       options = list(scrollX = TRUE, pageLength = 12),
       rownames = FALSE
     ) %>%
-      formatRound(columns = c("Resultado", "u(xi)", "Puntaje z", "Puntaje z'", "Puntaje zeta", "Puntaje En"), digits = 3)
+      format_numeric_columns(c("Resultado", "u(xi)", "Puntaje z", "Puntaje z'", "Puntaje zeta", "Puntaje En"))
   })
 
   output$metrological_compatibility_table <- renderDataTable({
@@ -6353,10 +6474,11 @@ server <- function(input, output, session) {
         data,
         c("x_pt_ref", "u_ref", "x_pt_2a", "Diff_Ref_2a", "Crit_Ref_2a",
           "x_pt_2b", "Diff_Ref_2b", "Crit_Ref_2b", "x_pt_3",
-          "Diff_Ref_3", "Crit_Ref_3")
+          "Diff_Ref_3", "Crit_Ref_3", "x_pt_4", "sigma_pt_4",
+          "Diff_Ref_4", "Crit_Ref_4")
       ),
       options = list(pageLength = 10, scrollX = TRUE),
-      colnames = c("Contaminante", "N_Lab", "Nivel", "Valor Ref", "u_ref", "Valor 2a", "Dif 2a", "Crit 2a", "Eval 2a", "Valor 2b", "Dif 2b", "Crit 2b", "Eval 2b", "Valor 3", "Dif 3", "Crit 3", "Eval 3"),
+      colnames = c("Contaminante", "N_Lab", "Nivel", "Valor Ref", "u_ref", "Valor 2a", "Dif 2a", "Crit 2a", "Eval 2a", "Valor 2b", "Dif 2b", "Crit 2b", "Eval 2b", "Valor 3", "Dif 3", "Crit 3", "Eval 3", "Valor 4", "sigma 4", "Dif 4", "Crit 4", "Eval 4"),
       rownames = FALSE,
       caption = "Tabla. Compatibilidad Metrológica: Diferencias entre Valor de Referencia y Consenso"
     )

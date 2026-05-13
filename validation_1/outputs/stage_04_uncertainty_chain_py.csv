@@ -1,0 +1,85 @@
+combo_id,pollutant,level,method,metric,value,edge_case
+O3_0,o3,0-nmol/mol,Referencia,x_pt,0.0,False
+O3_0,o3,0-nmol/mol,Referencia,sigma_pt,0.0,False
+O3_0,o3,0-nmol/mol,Referencia,u_xpt,0.0,False
+O3_0,o3,0-nmol/mol,Referencia,u_hom,0.0,False
+O3_0,o3,0-nmol/mol,Referencia,u_stab,0.0,False
+O3_0,o3,0-nmol/mol,Referencia,u_xpt_def,0.0,False
+O3_0,o3,0-nmol/mol,Referencia,U_xpt,0.0,False
+O3_0,o3,0-nmol/mol,Consenso MADe,x_pt,0.0,False
+O3_0,o3,0-nmol/mol,Consenso MADe,sigma_pt,0.0,False
+O3_0,o3,0-nmol/mol,Consenso MADe,u_xpt,0.0,False
+O3_0,o3,0-nmol/mol,Consenso MADe,u_hom,0.0,False
+O3_0,o3,0-nmol/mol,Consenso MADe,u_stab,0.0,False
+O3_0,o3,0-nmol/mol,Consenso MADe,u_xpt_def,0.0,False
+O3_0,o3,0-nmol/mol,Consenso MADe,U_xpt,0.0,False
+O3_0,o3,0-nmol/mol,Consenso nIQR,x_pt,0.0,False
+O3_0,o3,0-nmol/mol,Consenso nIQR,sigma_pt,0.0,False
+O3_0,o3,0-nmol/mol,Consenso nIQR,u_xpt,0.0,False
+O3_0,o3,0-nmol/mol,Consenso nIQR,u_hom,0.0,False
+O3_0,o3,0-nmol/mol,Consenso nIQR,u_stab,0.0,False
+O3_0,o3,0-nmol/mol,Consenso nIQR,u_xpt_def,0.0,False
+O3_0,o3,0-nmol/mol,Consenso nIQR,U_xpt,0.0,False
+O3_0,o3,0-nmol/mol,Algoritmo A,x_pt,0.0,False
+O3_0,o3,0-nmol/mol,Algoritmo A,sigma_pt,0.0,False
+O3_0,o3,0-nmol/mol,Algoritmo A,u_xpt,0.0,False
+O3_0,o3,0-nmol/mol,Algoritmo A,u_hom,0.0,False
+O3_0,o3,0-nmol/mol,Algoritmo A,u_stab,0.0,False
+O3_0,o3,0-nmol/mol,Algoritmo A,u_xpt_def,0.0,False
+O3_0,o3,0-nmol/mol,Algoritmo A,U_xpt,0.0,False
+O3_80,o3,80-nmol/mol,Referencia,x_pt,79.535,False
+O3_80,o3,80-nmol/mol,Referencia,sigma_pt,0.0585000000000022,False
+O3_80,o3,80-nmol/mol,Referencia,u_xpt,0.01218750000000046,False
+O3_80,o3,80-nmol/mol,Referencia,u_hom,0.199307899715207,False
+O3_80,o3,80-nmol/mol,Referencia,u_stab,0.32899781534229,False
+O3_80,o3,80-nmol/mol,Referencia,u_xpt_def,0.38485287649326017,False
+O3_80,o3,80-nmol/mol,Referencia,U_xpt,0.7697057529865203,False
+O3_80,o3,80-nmol/mol,Consenso MADe,x_pt,80.1045,False
+O3_80,o3,80-nmol/mol,Consenso MADe,sigma_pt,0.15868099999998847,False
+O3_80,o3,80-nmol/mol,Consenso MADe,u_xpt,0.03305854166666427,False
+O3_80,o3,80-nmol/mol,Consenso MADe,u_hom,0.199307899715207,False
+O3_80,o3,80-nmol/mol,Consenso MADe,u_stab,0.32899781534229,False
+O3_80,o3,80-nmol/mol,Consenso MADe,u_xpt_def,0.3860778011826284,False
+O3_80,o3,80-nmol/mol,Consenso MADe,U_xpt,0.7721556023652568,False
+O3_80,o3,80-nmol/mol,Consenso nIQR,x_pt,80.1045,False
+O3_80,o3,80-nmol/mol,Consenso nIQR,sigma_pt,0.16345665000000092,False
+O3_80,o3,80-nmol/mol,Consenso nIQR,u_xpt,0.0340534687500002,False
+O3_80,o3,80-nmol/mol,Consenso nIQR,u_hom,0.199307899715207,False
+O3_80,o3,80-nmol/mol,Consenso nIQR,u_stab,0.32899781534229,False
+O3_80,o3,80-nmol/mol,Consenso nIQR,u_xpt_def,0.3861642657248257,False
+O3_80,o3,80-nmol/mol,Consenso nIQR,U_xpt,0.7723285314496514,False
+O3_80,o3,80-nmol/mol,Algoritmo A,x_pt,80.1045,False
+O3_80,o3,80-nmol/mol,Algoritmo A,sigma_pt,0.11341999999999175,False
+O3_80,o3,80-nmol/mol,Algoritmo A,u_xpt,0.02362916666666495,False
+O3_80,o3,80-nmol/mol,Algoritmo A,u_hom,0.199307899715207,False
+O3_80,o3,80-nmol/mol,Algoritmo A,u_stab,0.32899781534229,False
+O3_80,o3,80-nmol/mol,Algoritmo A,u_xpt_def,0.3853849230396119,False
+O3_80,o3,80-nmol/mol,Algoritmo A,U_xpt,0.7707698460792238,False
+O3_180,o3,180-nmol/mol,Referencia,x_pt,176.538,False
+O3_180,o3,180-nmol/mol,Referencia,sigma_pt,1.93249999999999,False
+O3_180,o3,180-nmol/mol,Referencia,u_xpt,0.4026041666666646,False
+O3_180,o3,180-nmol/mol,Referencia,u_hom,1.34309248668057,False
+O3_180,o3,180-nmol/mol,Referencia,u_stab,1.13420860809053,False
+O3_180,o3,180-nmol/mol,Referencia,u_xpt_def,1.8034457877801078,False
+O3_180,o3,180-nmol/mol,Referencia,U_xpt,3.6068915755602156,False
+O3_180,o3,180-nmol/mol,Consenso MADe,x_pt,178.08249999999998,False
+O3_180,o3,180-nmol/mol,Consenso MADe,sigma_pt,0.7785749999999874,False
+O3_180,o3,180-nmol/mol,Consenso MADe,u_xpt,0.16220312499999737,False
+O3_180,o3,180-nmol/mol,Consenso MADe,u_hom,1.34309248668057,False
+O3_180,o3,180-nmol/mol,Consenso MADe,u_stab,1.13420860809053,False
+O3_180,o3,180-nmol/mol,Consenso MADe,u_xpt_def,1.7653997984038117,False
+O3_180,o3,180-nmol/mol,Consenso MADe,U_xpt,3.5307995968076233,False
+O3_180,o3,180-nmol/mol,Consenso nIQR,x_pt,178.08249999999998,False
+O3_180,o3,180-nmol/mol,Consenso nIQR,sigma_pt,0.5989704000000157,False
+O3_180,o3,180-nmol/mol,Consenso nIQR,u_xpt,0.12478550000000327,False
+O3_180,o3,180-nmol/mol,Consenso nIQR,u_hom,1.34309248668057,False
+O3_180,o3,180-nmol/mol,Consenso nIQR,u_stab,1.13420860809053,False
+O3_180,o3,180-nmol/mol,Consenso nIQR,u_xpt_def,1.7623558140893982,False
+O3_180,o3,180-nmol/mol,Consenso nIQR,U_xpt,3.5247116281787965,False
+O3_180,o3,180-nmol/mol,Algoritmo A,x_pt,178.08249999999998,False
+O3_180,o3,180-nmol/mol,Algoritmo A,sigma_pt,0.556499999999991,False
+O3_180,o3,180-nmol/mol,Algoritmo A,u_xpt,0.11593749999999813,False
+O3_180,o3,180-nmol/mol,Algoritmo A,u_hom,1.34309248668057,False
+O3_180,o3,180-nmol/mol,Algoritmo A,u_stab,1.13420860809053,False
+O3_180,o3,180-nmol/mol,Algoritmo A,u_xpt_def,1.7617514292177272,False
+O3_180,o3,180-nmol/mol,Algoritmo A,U_xpt,3.5235028584354544,False

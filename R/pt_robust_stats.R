@@ -120,6 +120,17 @@ calculate_mad_e <- function(x) {
 #' @seealso \code{\link{calculate_niqr}}, \code{\link{calculate_mad_e}}
 #' @export
 run_algorithm_a <- function(values, ids = NULL, max_iter = 50, tol = 1e-10) {
+  algo_a_significant_figures <- 3L
+
+  stable_sigfig_value <- function(x, digits = algo_a_significant_figures) {
+    if (!is.finite(x) || x == 0) {
+      return(x)
+    }
+
+    decimal_places <- max(digits - 1L - floor(log10(abs(x))), 0L)
+    round(x, digits = decimal_places)
+  }
+
   # Remove non-finite values
   mask <- is.finite(values)
   values <- values[mask]
@@ -150,28 +161,40 @@ run_algorithm_a <- function(values, ids = NULL, max_iter = 50, tol = 1e-10) {
 
   initial_median <- x_star
   initial_mad_e <- s_star
+  initial_s_star_source <- "MADe"
 
-  # Handle zero or near-zero dispersion
+  # ISO 13528: if the initial robust scale is zero, use sample SD.
   if (!is.finite(s_star) || s_star < .Machine$double.eps) {
     s_star <- stats::sd(values, na.rm = TRUE)
+    initial_s_star_source <- "Desviacion tipica aritmetica"
   }
+  initial_s_star <- s_star
 
   if (!is.finite(s_star) || s_star < .Machine$double.eps) {
+    weights_df <- data.frame(
+      id = ids,
+      value = values,
+      winsorized = values,
+      is_winsorized = FALSE,
+      original = values,
+      stringsAsFactors = FALSE
+    )
+
     return(list(
-      error = "Data dispersion is insufficient for Algorithm A.",
       assigned_value = x_star,
       robust_sd = 0,
       iterations = data.frame(),
       iteration_detail = data.frame(),
-      weights = data.frame(
-        id = ids, value = values, winsorized = values,
-        is_winsorized = FALSE, stringsAsFactors = FALSE
-      ),
+      weights = weights_df,
+      winsorized_values = weights_df[, c("id", "original", "winsorized"), drop = FALSE],
       converged = TRUE,
       n_winsorized = 0L,
       n = p,
+      n_participants = p,
       initial_median = initial_median,
       initial_mad_e = initial_mad_e,
+      initial_s_star = initial_s_star,
+      initial_s_star_source = initial_s_star_source,
       tolerance = tol,
       error = NULL
     ))
@@ -212,13 +235,17 @@ run_algorithm_a <- function(values, ids = NULL, max_iter = 50, tol = 1e-10) {
         iteration_detail = if (length(iteration_detail) > 0) do.call(rbind, iteration_detail) else data.frame(),
         weights = data.frame(
           id = ids, value = values, winsorized = winsorized,
-          is_winsorized = is_winsorized, stringsAsFactors = FALSE
+          is_winsorized = is_winsorized, original = values,
+          stringsAsFactors = FALSE
         ),
         converged = FALSE,
         n_winsorized = sum(is_winsorized),
         n = p,
+        n_participants = p,
         initial_median = initial_median,
         initial_mad_e = initial_mad_e,
+        initial_s_star = initial_s_star,
+        initial_s_star_source = initial_s_star_source,
         tolerance = tol,
         error = NULL
       ))
@@ -242,12 +269,14 @@ run_algorithm_a <- function(values, ids = NULL, max_iter = 50, tol = 1e-10) {
       delta_x = delta_x,
       delta_s = delta_s,
       delta_max = delta_max,
-      signif3_x_prev = signif(x_star, 3),
-      signif3_s_prev = signif(s_star, 3),
-      signif3_x_new = signif(x_new, 3),
-      signif3_s_new = signif(s_new, 3),
-      signif3_converged = signif(x_new, 3) == signif(x_star, 3) &&
-                          signif(s_new, 3) == signif(s_star, 3),
+      x_star = x_new,
+      s_star = s_new,
+      signif3_x_prev = stable_sigfig_value(x_star),
+      signif3_s_prev = stable_sigfig_value(s_star),
+      signif3_x_new = stable_sigfig_value(x_new),
+      signif3_s_new = stable_sigfig_value(s_new),
+      signif3_converged = stable_sigfig_value(x_new) == stable_sigfig_value(x_star) &&
+                          stable_sigfig_value(s_new) == stable_sigfig_value(s_star),
       stringsAsFactors = FALSE
     )
 
@@ -268,8 +297,8 @@ run_algorithm_a <- function(values, ids = NULL, max_iter = 50, tol = 1e-10) {
 
     # Primary: ISO 13528:2022 NOTE 1 — 3rd significant figure
     # Must compare before updating x_star/s_star
-    sig_converged <- signif(x_new, 3) == signif(x_star, 3) &&
-                     signif(s_new, 3) == signif(s_star, 3)
+    sig_converged <- stable_sigfig_value(x_new) == stable_sigfig_value(x_star) &&
+                     stable_sigfig_value(s_new) == stable_sigfig_value(s_star)
     # Secondary: numerical guard against machine-precision stall
     num_converged <- delta_x < tol && delta_s < tol
 
@@ -305,6 +334,7 @@ run_algorithm_a <- function(values, ids = NULL, max_iter = 50, tol = 1e-10) {
     value = values,
     winsorized = winsorized_final,
     is_winsorized = is_winsorized_final,
+    original = values,
     stringsAsFactors = FALSE
   )
 
@@ -314,12 +344,16 @@ run_algorithm_a <- function(values, ids = NULL, max_iter = 50, tol = 1e-10) {
     iterations = iterations_df,
     iteration_detail = iteration_detail_df,
     weights = weights_df,
+    winsorized_values = weights_df[, c("id", "original", "winsorized"), drop = FALSE],
     converged = converged,
     convergence_method = convergence_method,
     n_winsorized = sum(is_winsorized_final),
     n = p,
+    n_participants = p,
     initial_median = initial_median,
     initial_mad_e = initial_mad_e,
+    initial_s_star = initial_s_star,
+    initial_s_star_source = initial_s_star_source,
     tolerance = tol,
     error = NULL
   )
