@@ -98,6 +98,10 @@ calculate_mad_e <- function(x) {
 #' @param tol Numerical guard tolerance for x* and s* (default: 1e-10). The
 #'   primary convergence criterion is 3rd significant figure comparison per
 #'   ISO 13528:2022 NOTE 1; tol only catches machine-precision stalls.
+#' @param preprocess Logical. If TRUE (default), values are pre-rounded via
+#'   \code{round(signif(x, 3), 3)} before the algorithm runs. This eliminates
+#'   sub-instrumental noise (e.g. 3.65e-05 → 0.000 for a level of 0 nmol/mol)
+#'   and ensures the algorithm operates on physically meaningful values.
 #' @return A list containing:
 #'   - assigned_value: Robust mean (x*)
 #'   - robust_sd: Robust standard deviation (s*)
@@ -119,10 +123,18 @@ calculate_mad_e <- function(x) {
 #'
 #' @seealso \code{\link{calculate_niqr}}, \code{\link{calculate_mad_e}}
 #' @export
-run_algorithm_a <- function(values, ids = NULL, max_iter = 50, tol = 1e-10) {
+run_algorithm_a <- function(values, ids = NULL, max_iter = 50, tol = 1e-10,
+                           preprocess = TRUE) {
   # Remove non-finite values
   mask <- is.finite(values)
   values <- values[mask]
+
+  # Step 0: Pre-process — 3 significant figures, then cap at 3 decimal places.
+  # Eliminates sub-instrumental noise (e.g. 3.65e-05 → 0.000 for a zero level).
+  # Applied BEFORE the algorithm so it operates on physically meaningful values.
+  if (preprocess) {
+    values <- round(signif(values, 3), 3)
+  }
 
   if (is.null(ids)) {
     ids <- seq_along(values)
