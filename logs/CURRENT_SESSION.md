@@ -1,32 +1,48 @@
 # Session State: PT Analysis Application
 
-**Last Updated**: 2026-05-06 21:19
+**Last Updated**: 2026-05-13 15:09 -05
 
 ## Session Objective
 
-Procesar el archivo de ensayo `data/raw/datos_ronda_part.csv` para generar salidas equivalentes a la referencia de ronda, pero para el participante `part_1`.
+Implementar la Fase 1 del plan de Excel con formulas para validacion O3.
 
 ## Current State
 
-- [x] Plan creado y completado: `logs/plans/260506_2117_plan_procesamiento-ensayo-part-1.md`.
-- [x] `clean_calaire_raw()` ahora normaliza columnas `*_p1` para CO, SO2, NO, NO2 y O3.
-- [x] Agregada función `compute_hourly_averages_participant_ronda()`.
-- [x] Agregado pipeline separado `run_pipeline_participant_ronda()`.
-- [x] Agregado script `scripts/preprocesar_part_1.R`.
-- [x] Ejecutado `Rscript scripts/preprocesar_part_1.R` exitosamente.
-- [x] Salida horaria generada: `data/processed/h_part_1_ronda.csv`.
-- [x] Salida consolidada generada: `data/processed/part_1_ronda.csv`.
-- [x] Resultado: 26 horas válidas y 10 niveles consolidados.
-- [x] Validación parse de R preprocessing y script part_1 OK.
+- [x] Fase 1 completada con inventario en
+  `validation_1/validation/excel/validacion_o3/formulas/inventario_fase1_o3.md`.
+- [x] El mapeo snapshot-hojas, funciones R a formulas Excel, heat maps,
+  tolerancias y cuantiles quedaron documentados.
+- [x] Revisor de fase ejecutado; hallazgos incorporados.
+- [x] `generar_valores_validacion_o3.R` corregido para que `Referencia (1)` y
+  `Expertos (4)` usen `sigma_pt = 0.020*x_pt + 1.0` y `u_xpt` reportado por
+  referencia.
+- [x] Regenerados `valores_validacion_o3.csv` y los tres libros hardcodeados
+  O3 desde el snapshot corregido.
+- [x] Verificacion ejecutada: parse de scripts y checks del snapshot OK.
+- [ ] Queda pendiente continuar con Fase 2: diseno tecnico del generador de
+  libros con formulas.
 
 ## Critical Technical Context
 
-- Este flujo es de ensayo para `part_1` y está separado del preprocesador CALAIRE de referencia.
-- Usa el mismo criterio horario que referencia: `n >= 45`, nivel 0 = 1 hora, niveles no-cero = máximo 3 horas.
-- `data/raw/datos_ronda_part.csv` contiene columnas `CO_p1`, `SO2_p1`, `CO_gen`, `SO2_gen`.
-- Las salidas tienen estructura equivalente a `h_referencia_ronda.csv` y `referencia_ronda.csv`, con `source = "ronda_participante"` e `instrument = "part_1"`.
+- Regla vigente para la referencia:
+  - `x_pt` viene de la fila `ref`.
+  - `u_xpt` viene de la incertidumbre reportada por la referencia.
+  - `sigma_pt` viene de `calculate_expert_sigma_pt()`.
+  - `sd(ref mean_value) / sqrt(n_ref)` es solo chequeo interno.
+- El snapshot corregido ahora incluye cinco metodos:
+  `Referencia (1)`, `Consenso MADe (2a)`, `Consenso nIQR (2b)`,
+  `Algoritmo A (3)` y `Expertos (4)`.
+- El plan activo para Excel con formulas es:
+  [logs/plans/260513_1304_plan_excel-formulas-validacion-o3.md](/home/w182/w421/pt_app/logs/plans/260513_1304_plan_excel-formulas-validacion-o3.md).
+- `validation_1/validation/...` esta ignorado por `.gitignore` via patron
+  `validation/`; para commitear estos artefactos se requiere `git add -f`.
+- El worktree ya estaba sucio antes; no revertir cambios ajenos.
 
 ## Next Steps
 
-1. Si se requiere usar estas salidas en `app.R`, definir si `part_1_ronda.csv` debe anexarse a `summary_n*.csv` o mostrarse solo como auditoría.
-2. Commit y push de los cambios de procesamiento `part_1`.
+1. Iniciar Fase 2 creando
+   `validation_1/validation/excel/validacion_o3/script_excel_formulas_validacion_o3.R`.
+2. Implementar helpers para rangos nombrados, comparacion contra snapshot y
+   estilos.
+3. Usar `git add -f` para los archivos bajo `validation_1/validation/...` si
+   se va a crear commit.
