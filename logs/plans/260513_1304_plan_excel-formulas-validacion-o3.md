@@ -290,11 +290,11 @@ formulas, trazabilidad y controles de diferencia.
 ### Fase 6: Puntajes e informe global
 | Item | Estado | Notas |
 |------|--------|-------|
-| Implementar `puntajes_EA` | Pendiente | z, z', zeta, En y evaluaciones por metodo/participante. |
-| Implementar manejo de denominadores cero | Pendiente | Producir `N/A` textual donde app.R produce no finito evaluado como `N/A`. |
-| Implementar tabla resumen de `informe_global` | Pendiente | Tabla prioritaria: conteos por metodo, score y categoria para z, z', zeta y En. |
-| Implementar bloque de valor asignado en `informe_global` | Pendiente | Links a `valor_asignado`, si el snapshot/app.R lo requiere en la misma hoja. |
-| Comparar contra snapshot | Pendiente | Validar numericos y textos por llave estable. |
+| Implementar `puntajes_EA` | Completado | Hoja con formulas para z, z', zeta, En y evaluaciones por metodo/participante; 60/60 OK por libro. |
+| Implementar manejo de denominadores cero | Completado | Denominadores no numericos o cero devuelven celda vacia y evaluacion `N/A`, coincidiendo con snapshot; zeta/En usan `u_i` reportado. |
+| Implementar tabla resumen de `informe_global` | Completado | Conteos por metodo, score y categoria calculados con `COUNTIFS` desde `puntajes_EA`; 25/25 OK por libro. |
+| Implementar bloque de valor asignado en `informe_global` | Completado | Links a `valor_asignado` para `x_pt`, `sigma_pt`, `u_xpt`, `u_hom`, `u_stab`, `u_xpt_def`, `U_xpt` y `n_participants`. |
+| Comparar contra snapshot | Completado | Numericos y textos validados contra `validacion_snapshot`; los tres libros recalculados quedaron `Estado global = OK`. |
 | Hardcodear resumen global en libros actuales | Completado | Worker `Schrodinger` agrego `Resumen global de evaluaciones` al snapshot hardcodeado y regenero los tres xlsx actuales. |
 
 ### Fase 7: Heat maps y validacion visual
@@ -388,6 +388,9 @@ formulas, trazabilidad y controles de diferencia.
 - [260513 17:27] Recalculo LibreOffice completado en `/tmp/pt_o3_formula_recalc`: los tres libros quedaron con 14/14 comparaciones OK en `resultado_homogeneidad` y 14/14 OK en `resultado_estabilidad`; sin errores literales `#REF!`, `#DIV/0!`, `#VALUE!`, `#N/A`, `#NAME?` en XML.
 - [260513 17:27] Decision tecnica Fase 4: usar formulas Excel compatibles con LibreOffice `VAR` y `QUARTILE` en lugar de `VAR.S` y `QUARTILE.INC`, porque el recalc externo devolvia celdas vacias para esas funciones.
 - [260513 17:35] Revisor de Fase 4 encontro bloqueantes: los xlsx finales bajo `formulas/` no estaban recalculados, `validacion_final` no miraba los estados reales y el conteo de errores Excel era solo texto.
+- [260513 18:39] Fase 6 completada: agregadas hojas `puntajes_EA` e `informe_global` con formulas auditables y controles contra snapshot.
+- [260513 18:39] Recalculo LibreOffice completado en `/tmp/pt_o3_formula_recalc_phase6_*`; los tres libros quedaron `Estado global = OK`, `puntajes_EA` 60/60 OK, `informe_global` 25/25 OK y cero errores Excel.
+- [260513 18:39] Correcciones de revision local Fase 6: usar `method` visible en lugar de `method_key` vacio para `puntajes_EA`, y usar `u_i` reportado desde `pt_data_n13.csv` en lugar de `u_i_check`.
 - [260513 17:35] Corregido `validacion_final`: ahora resume `resultado_homogeneidad!G:G` y `resultado_estabilidad!G:G`, calcula estado global real y cuenta errores `#REF!`, `#DIV/0!`, `#VALUE!`, `#N/A`, `#NAME?` en hojas de resultados/calculo.
 - [260513 17:35] Regenerados y reemplazados los tres libros finales por copias recalculadas con LibreOffice en `validation_1/validation/excel/validacion_o3/formulas/`; verificacion directa de esos artefactos: `validacion_final = OK`, 14/14 OK en homogeneidad, 14/14 OK en estabilidad y conteos de errores Excel en cero.
 - [260513 18:14] Fase 5 implementada: agregadas hojas `valor_asignado`, `algoritmo_A_iteraciones` y `algoritmo_A` al generador de libros con formulas O3.

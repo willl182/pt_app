@@ -950,6 +950,301 @@ write_algorithm_summary_sheet <- function(wb, combo, snapshot_combo, styles) {
   invisible(TRUE)
 }
 
+score_value_formula <- function(result_ref, x_pt_ref, denom_ref) {
+  sprintf(
+    'IF(OR(NOT(ISNUMBER(%s)),NOT(ISNUMBER(%s)),NOT(ISNUMBER(%s)),%s=0),"",(%s-%s)/%s)',
+    result_ref,
+    x_pt_ref,
+    denom_ref,
+    denom_ref,
+    result_ref,
+    x_pt_ref,
+    denom_ref
+  )
+}
+
+score_eval_formula <- function(score_ref, score_type = "standard") {
+  if (score_type == "en") {
+    return(sprintf(
+      'IF(%s="","N/A",IF(ABS(%s)<=1,"Satisfactorio","No satisfactorio"))',
+      score_ref,
+      score_ref
+    ))
+  }
+  sprintf(
+    'IF(%s="","N/A",IF(ABS(%s)<=2,"Satisfactorio",IF(ABS(%s)<3,"Cuestionable","No satisfactorio")))',
+    score_ref,
+    score_ref,
+    score_ref
+  )
+}
+
+score_delta_formula <- function(calc_ref, expected_ref) {
+  sprintf(
+    'IF(AND(%s="",%s=""),0,IFERROR(ABS(%s-%s),1E99))',
+    calc_ref,
+    expected_ref,
+    calc_ref,
+    expected_ref
+  )
+}
+
+write_scores_sheet <- function(wb, snapshot_combo, styles) {
+  sheet <- "puntajes_EA"
+  addWorksheet(wb, sheet)
+  snapshot_rows <- which(snapshot_combo$section == sheet)
+  rows <- snapshot_combo[snapshot_rows, c(
+    "method_key", "method", "participant_id", "result", "u_xi",
+    "z_score", "z_score_eval", "z_prime_score", "z_prime_score_eval",
+    "zeta_score", "zeta_score_eval", "En_score", "En_score_eval"
+  ), drop = FALSE]
+  rows$estado <- NA_character_
+  write_styled_table(wb, sheet, rows, styles, table_name = sheet)
+
+  for (i in seq_len(nrow(rows))) {
+    row <- i + 1
+    snapshot_row <- snapshot_rows[[i]] + 1
+    method_row <- sprintf("MATCH(B%d,'valor_asignado'!$B:$B,0)", row)
+    participant_row <- sprintf(
+      "MATCH(C%d,'datos_participantes'!$A:$A,0)",
+      row
+    )
+    result_ref <- sprintf("D%d", row)
+    u_xi_ref <- sprintf("E%d", row)
+    x_pt_ref <- sprintf("INDEX('valor_asignado'!$C:$C,%s)", method_row)
+    sigma_ref <- sprintf("INDEX('valor_asignado'!$D:$D,%s)", method_row)
+    u_xpt_def_ref <- sprintf("INDEX('valor_asignado'!$H:$H,%s)", method_row)
+
+    write_formula_cell(
+      wb,
+      sheet,
+      row,
+      4,
+      sprintf("INDEX('datos_participantes'!$D:$D,%s)", participant_row),
+      styles
+    )
+    write_formula_cell(
+      wb,
+      sheet,
+      row,
+      5,
+      sprintf("INDEX('datos_participantes'!$F:$F,%s)", participant_row),
+      styles
+    )
+    write_formula_cell(
+      wb,
+      sheet,
+      row,
+      6,
+      score_value_formula(result_ref, x_pt_ref, sigma_ref),
+      styles
+    )
+    write_formula_cell(
+      wb,
+      sheet,
+      row,
+      7,
+      score_eval_formula(sprintf("F%d", row)),
+      styles,
+      "control"
+    )
+    write_formula_cell(
+      wb,
+      sheet,
+      row,
+      8,
+      score_value_formula(
+        result_ref,
+        x_pt_ref,
+        sprintf("SQRT(%s^2+%s^2)", sigma_ref, u_xpt_def_ref)
+      ),
+      styles
+    )
+    write_formula_cell(
+      wb,
+      sheet,
+      row,
+      9,
+      score_eval_formula(sprintf("H%d", row)),
+      styles,
+      "control"
+    )
+    write_formula_cell(
+      wb,
+      sheet,
+      row,
+      10,
+      score_value_formula(
+        result_ref,
+        x_pt_ref,
+        sprintf("SQRT(%s^2+%s^2)", u_xi_ref, u_xpt_def_ref)
+      ),
+      styles
+    )
+    write_formula_cell(
+      wb,
+      sheet,
+      row,
+      11,
+      score_eval_formula(sprintf("J%d", row)),
+      styles,
+      "control"
+    )
+    write_formula_cell(
+      wb,
+      sheet,
+      row,
+      12,
+      score_value_formula(
+        result_ref,
+        x_pt_ref,
+        sprintf("SQRT((2*%s)^2+(2*%s)^2)", u_xi_ref, u_xpt_def_ref)
+      ),
+      styles
+    )
+    write_formula_cell(
+      wb,
+      sheet,
+      row,
+      13,
+      score_eval_formula(sprintf("L%d", row), score_type = "en"),
+      styles,
+      "control"
+    )
+    numeric_checks <- c(
+      score_delta_formula(sprintf("D%d", row), cell_ref("validacion_snapshot", snapshot_row, 21)),
+      score_delta_formula(sprintf("E%d", row), cell_ref("validacion_snapshot", snapshot_row, 22)),
+      score_delta_formula(sprintf("F%d", row), cell_ref("validacion_snapshot", snapshot_row, 23)),
+      score_delta_formula(sprintf("H%d", row), cell_ref("validacion_snapshot", snapshot_row, 25)),
+      score_delta_formula(sprintf("J%d", row), cell_ref("validacion_snapshot", snapshot_row, 27)),
+      score_delta_formula(sprintf("L%d", row), cell_ref("validacion_snapshot", snapshot_row, 29))
+    )
+    text_checks <- sprintf(
+      "%s=%s",
+      c(sprintf("G%d", row), sprintf("I%d", row), sprintf("K%d", row), sprintf("M%d", row)),
+      c(
+        cell_ref("validacion_snapshot", snapshot_row, 24),
+        cell_ref("validacion_snapshot", snapshot_row, 26),
+        cell_ref("validacion_snapshot", snapshot_row, 28),
+        cell_ref("validacion_snapshot", snapshot_row, 30)
+      )
+    )
+    write_formula_cell(
+      wb,
+      sheet,
+      row,
+      14,
+      sprintf(
+        'IF(AND(SUM(%s)<=1E-8,%s),"OK","FALLA")',
+        paste(numeric_checks, collapse = ","),
+        paste(text_checks, collapse = ",")
+      ),
+      styles,
+      "control"
+    )
+  }
+  conditionalFormatting(wb, sheet, cols = 14, rows = 2:(nrow(rows) + 1), rule = '=="OK"', style = styles$ok)
+  conditionalFormatting(wb, sheet, cols = 14, rows = 2:(nrow(rows) + 1), rule = '=="FALLA"', style = styles$fail)
+  freezePane(wb, sheet, firstRow = TRUE)
+  invisible(TRUE)
+}
+
+score_eval_column <- function(score) {
+  switch(
+    score,
+    "z" = "$G:$G",
+    "z_prime" = "$I:$I",
+    "zeta" = "$K:$K",
+    "En" = "$M:$M",
+    "$G:$G"
+  )
+}
+
+write_global_report_sheet <- function(wb, snapshot_combo, styles) {
+  sheet <- "informe_global"
+  addWorksheet(wb, sheet)
+  snapshot_rows <- which(snapshot_combo$section == sheet)
+  rows <- snapshot_combo[snapshot_rows, c(
+    "tabla", "bloque", "method_key", "method", "x_pt", "sigma_pt",
+    "u_xpt", "u_hom", "u_stab", "u_xpt_def", "U_xpt",
+    "n_participants", "score", "N/A", "Satisfactorio", "Cuestionable",
+    "No satisfactorio"
+  ), drop = FALSE]
+  rows$estado <- NA_character_
+  write_styled_table(wb, sheet, rows, styles, table_name = sheet)
+
+  for (i in seq_len(nrow(rows))) {
+    row <- i + 1
+    snapshot_row <- snapshot_rows[[i]] + 1
+    if (rows$tabla[[i]] == "Valores asignados e incertidumbre") {
+      method_row <- sprintf("MATCH(D%d,'valor_asignado'!$B:$B,0)", row)
+      for (col in 5:12) {
+        write_formula_cell(
+          wb,
+          sheet,
+          row,
+          col,
+          sprintf("INDEX('valor_asignado'!$%s:$%s,%s)", int2col(col - 2), int2col(col - 2), method_row),
+          styles
+        )
+      }
+      checks <- sprintf(
+        "ABS(%s%d-%s)",
+        int2col(5:12),
+        row,
+        vapply(11:18, function(col) cell_ref("validacion_snapshot", snapshot_row, col), character(1))
+      )
+      write_formula_cell(
+        wb,
+        sheet,
+        row,
+        18,
+        sprintf('IF(SUM(%s)<=1E-8,"OK","FALLA")', paste(checks, collapse = ",")),
+        styles,
+        "control"
+      )
+    } else {
+      eval_col <- score_eval_column(rows$score[[i]])
+      categories <- c("N/A", "Satisfactorio", "Cuestionable", "No satisfactorio")
+      for (j in seq_along(categories)) {
+        write_formula_cell(
+          wb,
+          sheet,
+          row,
+          13 + j,
+          sprintf(
+            'COUNTIFS(\'puntajes_EA\'!$B:$B,D%d,\'puntajes_EA\'!%s,"%s")',
+            row,
+            eval_col,
+            categories[[j]]
+          ),
+          styles,
+          "control"
+        )
+      }
+      checks <- sprintf(
+        "ABS(%s%d-%s)",
+        int2col(14:17),
+        row,
+        vapply(32:35, function(col) cell_ref("validacion_snapshot", snapshot_row, col), character(1))
+      )
+      write_formula_cell(
+        wb,
+        sheet,
+        row,
+        18,
+        sprintf('IF(SUM(%s)=0,"OK","FALLA")', paste(checks, collapse = ",")),
+        styles,
+        "control"
+      )
+    }
+  }
+  conditionalFormatting(wb, sheet, cols = 18, rows = 2:(nrow(rows) + 1), rule = '=="OK"', style = styles$ok)
+  conditionalFormatting(wb, sheet, cols = 18, rows = 2:(nrow(rows) + 1), rule = '=="FALLA"', style = styles$fail)
+  freezePane(wb, sheet, firstRow = TRUE)
+  invisible(TRUE)
+}
+
 write_validation_final <- function(wb, styles) {
   sheet <- "validacion_final"
   addWorksheet(wb, sheet)
@@ -966,6 +1261,8 @@ write_validation_final <- function(wb, styles) {
       "valor_asignado",
       "algoritmo_A_iteraciones",
       "algoritmo_A",
+      "puntajes_EA",
+      "informe_global",
       "validacion_snapshot",
       "validacion_final"
     ),
@@ -980,6 +1277,8 @@ write_validation_final <- function(wb, styles) {
       "Implementado",
       NA_character_,
       "Implementado",
+      NA_character_,
+      NA_character_,
       NA_character_,
       "Implementado",
       NA_character_
@@ -996,6 +1295,8 @@ write_validation_final <- function(wb, styles) {
       "Parametros por metodo con incertidumbres compuestas.",
       "Traza de 50 iteraciones del Algoritmo A.",
       "Resumen visible app.R y comparacion contra snapshot.",
+      "Puntajes z, z', zeta y En por metodo y participante.",
+      "Conteos globales por metodo, score y categoria.",
       "Snapshot congelado del combo.",
       "Resumen de comparacion de estado del libro."
     ),
@@ -1048,9 +1349,27 @@ write_validation_final <- function(wb, styles) {
   write_formula_cell(
     wb,
     sheet,
+    13,
+    2,
+    'IF(COUNTIF(\'puntajes_EA\'!$N:$N,"FALLA")>0,"FALLA",IF(COUNTIF(\'puntajes_EA\'!$N:$N,"Pendiente")>0,"PENDIENTE","OK"))',
+    styles,
+    "control"
+  )
+  write_formula_cell(
+    wb,
+    sheet,
     14,
     2,
-    'IF(SUM(C20:C24)>0,"FALLA","OK")',
+    'IF(COUNTIF(\'informe_global\'!$R:$R,"FALLA")>0,"FALLA",IF(COUNTIF(\'informe_global\'!$R:$R,"Pendiente")>0,"PENDIENTE","OK"))',
+    styles,
+    "control"
+  )
+  write_formula_cell(
+    wb,
+    sheet,
+    16,
+    2,
+    'IF(SUM(C22:C26)>0,"FALLA","OK")',
     styles,
     "control"
   )
@@ -1090,7 +1409,9 @@ write_validation_final <- function(wb, styles) {
     "'calc_estabilidad'!$A:$C",
     "'valor_asignado'!$A:$K",
     "'algoritmo_A_iteraciones'!$A:$Z",
-    "'algoritmo_A'!$A:$E"
+    "'algoritmo_A'!$A:$E",
+    "'puntajes_EA'!$A:$N",
+    "'informe_global'!$A:$R"
   )
   for (i in seq_len(nrow(errors))) {
     row <- error_start + i
@@ -1166,6 +1487,8 @@ write_formula_workbook <- function(combo, snapshot) {
   write_algorithm_iterations_sheet(wb, combo, participants, styles)
   write_assigned_value_sheet(wb, snapshot_combo, styles)
   write_algorithm_summary_sheet(wb, combo, snapshot_combo, styles)
+  write_scores_sheet(wb, snapshot_combo, styles)
+  write_global_report_sheet(wb, snapshot_combo, styles)
   write_snapshot_sheet(wb, snapshot_combo, styles)
   write_validation_final(wb, styles)
 
@@ -1189,8 +1512,8 @@ run_generator <- function() {
   summary <- data.frame(
     workbook = basename(outputs),
     path = outputs,
-    fase = "Fase 5",
-    estado = "valor_asignado_algoritmo_a_formulas",
+    fase = "Fase 6",
+    estado = "puntajes_ea_informe_global_formulas",
     stringsAsFactors = FALSE
   )
   write.csv(
