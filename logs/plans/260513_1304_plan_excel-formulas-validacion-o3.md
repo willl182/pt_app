@@ -262,21 +262,21 @@ formulas, trazabilidad y controles de diferencia.
 ### Fase 3: Datos crudos y hojas base
 | Item | Estado | Notas |
 |------|--------|-------|
-| Escribir `datos_homogeneidad` por combo | Pendiente | Filtrar fuente por O3/nivel y pivotear replicas como en `wide_data()`. |
-| Escribir `datos_estabilidad` por combo | Pendiente | Misma estructura que homogeneidad. |
-| Escribir `datos_participantes` por combo | Pendiente | Excluir `participant_id == "ref"` y agregar `u_i`. |
-| Escribir `datos_referencia` por combo | Pendiente | Separar `u_ref_reportada` de `u_ref_check = sd(ref mean_value)/sqrt(n_ref)`; nunca usar esta incertidumbre como `sigma_pt`. |
-| Escribir `validacion_snapshot` por combo | Pendiente | Copiar solo filas del combo desde `valores_validacion_o3.csv`. |
-| Agregar rangos nombrados | Pendiente | Para matrices, participantes, parametros y snapshot. |
+| Escribir `datos_homogeneidad` por combo | Completado | Fuente filtrada por O3/nivel con columnas crudas y fórmulas de control `promedio_muestra` y `rango_absoluto`. |
+| Escribir `datos_estabilidad` por combo | Completado | Misma estructura que homogeneidad. |
+| Escribir `datos_participantes` por combo | Completado | Excluye `participant_id == "ref"` y agrega control `u_i_check`. |
+| Escribir `datos_referencia` por combo | Completado | Mantiene `x_pt_ref` y `u_ref_check` como controles trazables. |
+| Escribir `validacion_snapshot` por combo | Completado | Copia solo filas del combo desde `valores_validacion_o3.csv`. |
+| Agregar rangos nombrados | Completado | Se conservan los rangos de tabla para las hojas base y snapshot. |
 
 ### Fase 4: Homogeneidad y estabilidad con formulas
 | Item | Estado | Notas |
 |------|--------|-------|
-| Implementar `calc_homogeneidad` | Pendiente | Reproducir `calculate_homogeneity_stats()` y criterios. |
-| Implementar `resultado_homogeneidad` | Pendiente | Tabla visible app.R con comparacion contra snapshot. |
-| Implementar `calc_estabilidad` | Pendiente | Reproducir `calculate_stability_stats()` y criterios. |
-| Implementar `resultado_estabilidad` | Pendiente | Repetir la primera tabla MADe/nIQR de homogeneidad, segun comportamiento app.R confirmado. |
-| Validar ceros O3 0 | Pendiente | Evitar `#DIV/0!`; los resultados visibles deben coincidir con snapshot. |
+| Implementar `calc_homogeneidad` | Completado | Hoja creada con formulas Excel para `g`, `m`, media general, `x_pt`, `sw`, `ss`, MADe, nIQR, incertidumbres y criterios. |
+| Implementar `resultado_homogeneidad` | Completado | Tabla visible app.R con comparacion contra snapshot; 14/14 OK por libro tras recalculo LibreOffice. |
+| Implementar `calc_estabilidad` | Completado | Hoja creada con formulas Excel para estadisticos internos, `diff_hom_stab`, incertidumbres de medias y criterios. |
+| Implementar `resultado_estabilidad` | Completado | Repite la tabla MADe/nIQR de homogeneidad, segun comportamiento app.R confirmado; 14/14 OK por libro. |
+| Validar ceros O3 0 | Completado | O3 0 recalculado sin `#DIV/0!`; homogeneidad y estabilidad quedaron 14/14 OK. |
 
 ### Fase 5: Valor asignado y Algoritmo A
 | Item | Estado | Notas |
@@ -382,3 +382,8 @@ formulas, trazabilidad y controles de diferencia.
 - [260513 15:25] Ejecutado generador de Fase 2; creados libros de andamiaje `validacion_formula_o3_0.xlsx`, `validacion_formula_o3_80.xlsx`, `validacion_formula_o3_180.xlsx` y `resumen_validacion_formulas_o3.csv`.
 - [260513 15:30] Revisor de fase encontro riesgos en Fase 2: `NA` escrito como `#N/A`, referencias incompletas en helper de comparacion, `validacion_final` sin ruta a `OK` y auto-ejecucion al hacer `source()`.
 - [260513 15:30] Corregidos hallazgos del revisor: `NA` se escribe como celda vacia, formulas de comparacion usan referencias con fila, `validacion_final` puede devolver `OK`, el script solo auto-ejecuta via `Rscript`, y los libros regenerados no contienen celdas de error Excel en XML.
+- [260513 15:58] Fase 3 completada: `script_excel_formulas_validacion_o3.R` ahora escribe `datos_homogeneidad`, `datos_estabilidad`, `datos_participantes`, `datos_referencia`, `validacion_snapshot` y `validacion_final` con formulas de control visibles.
+- [260513 15:58] Regenerados `valores_validacion_o3.csv` y los tres libros `validacion_formula_o3_*.xlsx` con la nueva estructura de hojas.
+- [260513 17:27] Fase 4 implementada: datos de homogeneidad/estabilidad corregidos a formato ancho `sample_1`/`sample_2`; agregadas hojas `calc_homogeneidad`, `resultado_homogeneidad`, `calc_estabilidad` y `resultado_estabilidad`.
+- [260513 17:27] Recalculo LibreOffice completado en `/tmp/pt_o3_formula_recalc`: los tres libros quedaron con 14/14 comparaciones OK en `resultado_homogeneidad` y 14/14 OK en `resultado_estabilidad`; sin errores literales `#REF!`, `#DIV/0!`, `#VALUE!`, `#N/A`, `#NAME?` en XML.
+- [260513 17:27] Decision tecnica Fase 4: usar formulas Excel compatibles con LibreOffice `VAR` y `QUARTILE` en lugar de `VAR.S` y `QUARTILE.INC`, porque el recalc externo devolvia celdas vacias para esas funciones.

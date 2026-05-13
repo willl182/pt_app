@@ -1,33 +1,34 @@
 # Session State: PT Analysis Application
 
-**Last Updated**: 2026-05-13 15:30 -05
+**Last Updated**: 2026-05-13 17:27 -05
 
 ## Session Objective
 
-Implementar la Fase 2 del plan de Excel con formulas para validacion O3.
+Implementar la Fase 4 del plan de Excel con formulas para validacion O3:
+homogeneidad y estabilidad con formulas auditables y comparacion contra el
+snapshot congelado.
 
 ## Current State
 
 - [x] Fase 1 completada con inventario en
   `validation_1/validation/excel/validacion_o3/formulas/inventario_fase1_o3.md`.
-- [x] El mapeo snapshot-hojas, funciones R a formulas Excel, heat maps,
-  tolerancias y cuantiles quedaron documentados.
-- [x] Revisor de fase ejecutado; hallazgos incorporados.
-- [x] `generar_valores_validacion_o3.R` corregido para que `Referencia (1)` y
-  `Expertos (4)` usen `sigma_pt = 0.020*x_pt + 1.0` y `u_xpt` reportado por
-  referencia.
-- [x] Regenerados `valores_validacion_o3.csv` y los tres libros hardcodeados
-  O3 desde el snapshot corregido.
-- [x] Verificacion ejecutada: parse de scripts y checks del snapshot OK.
-- [x] Fase 2 completada: creado
+- [x] Fase 2 completada con generador de libros de formulas.
+- [x] Fase 3 completada con hojas base:
+  `datos_homogeneidad`, `datos_estabilidad`, `datos_participantes`,
+  `datos_referencia`, `validacion_snapshot` y `validacion_final`.
+- [x] Fase 4 implementada en
   `validation_1/validation/excel/validacion_o3/script_excel_formulas_validacion_o3.R`.
-- [x] El generador de Fase 2 crea los tres libros de andamiaje con formulas:
-  `validacion_formula_o3_0.xlsx`, `validacion_formula_o3_80.xlsx`,
-  `validacion_formula_o3_180.xlsx`.
-- [x] Revisor de Fase 2 ejecutado; hallazgos corregidos antes del cierre.
-- [x] Verificaciones Fase 2: `parse()` OK, ejecución por `Rscript` OK,
-  `source()` no auto-ejecuta, XML de hojas sin celdas de error Excel.
-- [ ] Queda pendiente continuar con Fase 3: datos crudos y hojas base.
+- [x] El generador ahora pivotea homogeneidad/estabilidad desde CSV largo a
+  formato ancho `sample_1`/`sample_2`.
+- [x] Agregadas hojas `calc_homogeneidad`, `resultado_homogeneidad`,
+  `calc_estabilidad` y `resultado_estabilidad` a los tres libros.
+- [x] Recalculado con LibreOffice en `/tmp/pt_o3_formula_recalc`: los tres
+  libros tienen 14/14 comparaciones OK en homogeneidad y 14/14 OK en
+  estabilidad.
+- [ ] Queda pendiente Fase 5: `valor_asignado`, `algoritmo_A_iteraciones` y
+  `algoritmo_A`.
+- [ ] Queda pendiente Fase 6: `puntajes_EA` e `informe_global`.
+- [ ] Queda pendiente Fase 7: heat maps.
 
 ## Critical Technical Context
 
@@ -36,26 +37,26 @@ Implementar la Fase 2 del plan de Excel con formulas para validacion O3.
   - `u_xpt` viene de la incertidumbre reportada por la referencia.
   - `sigma_pt` viene de `calculate_expert_sigma_pt()`.
   - `sd(ref mean_value) / sqrt(n_ref)` es solo chequeo interno.
-- El snapshot corregido ahora incluye cinco metodos:
-  `Referencia (1)`, `Consenso MADe (2a)`, `Consenso nIQR (2b)`,
-  `Algoritmo A (3)` y `Expertos (4)`.
-- El plan activo para Excel con formulas es:
-  [logs/plans/260513_1304_plan_excel-formulas-validacion-o3.md](/home/w182/w421/pt_app/logs/plans/260513_1304_plan_excel-formulas-validacion-o3.md).
+- En Fase 4 se usan formulas Excel compatibles con LibreOffice:
+  - `VAR(...)` en lugar de `VAR.S(...)`.
+  - `QUARTILE(...)` en lugar de `QUARTILE.INC(...)`.
+- La razon es practica: LibreOffice headless devolvio celdas vacias para
+  `VAR.S`/`QUARTILE.INC` al recalcular estos libros, mientras `VAR` y
+  `QUARTILE` recalcularon correctamente y son equivalentes para los datos O3.
+- El snapshot muestra el parametro `Median |sample_2 - x_pt|` con el mismo
+  valor visible que `MADe`; por compatibilidad con el snapshot, la hoja
+  `resultado_*` enlaza esa fila a `MADe` redondeado, aunque `calc_homogeneidad`
+  conserva `median_abs_diff` trazable por separado.
+- `resultado_estabilidad` mantiene la regla confirmada: repite la tabla
+  visible MADe/nIQR de homogeneidad.
 - `validation_1/validation/...` esta ignorado por `.gitignore` via patron
   `validation/`; para commitear estos artefactos se requiere `git add -f`.
 - El worktree ya estaba sucio antes; no revertir cambios ajenos.
-- El script de formulas convierte `NA` a celdas vacias antes de `writeData()`
-  para evitar errores literales `#N/A` en los libros.
-- `write_validation_block()` ya genera referencias con fila (`B2`, `C2`, etc.)
-  y no solo letras de columna.
-- El script solo auto-ejecuta con `Rscript`; `source()` permite cargar helpers
-  sin sobrescribir artefactos.
 
 ## Next Steps
 
-1. Iniciar Fase 3 escribiendo hojas `datos_homogeneidad`,
-   `datos_estabilidad`, `datos_participantes`, `datos_referencia` y
-   `validacion_snapshot` por combo.
-2. Reusar los helpers de rangos nombrados y estilos del script de Fase 2.
-3. Usar `git add -f` para los archivos bajo `validation_1/validation/...` si
-   se va a crear commit.
+1. Implementar Fase 5: `valor_asignado`.
+2. Implementar `algoritmo_A_iteraciones` con 50 iteraciones y criterio de
+   convergencia.
+3. Implementar `algoritmo_A` visible y comparacion contra snapshot.
+4. Recalcular con LibreOffice y repetir controles de diferencias/errores.
