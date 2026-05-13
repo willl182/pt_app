@@ -281,11 +281,11 @@ formulas, trazabilidad y controles de diferencia.
 ### Fase 5: Valor asignado y Algoritmo A
 | Item | Estado | Notas |
 |------|--------|-------|
-| Implementar `valor_asignado` | Pendiente | Referencia usa `x_pt` y `u_xpt` de referencia, pero `sigma_pt` del metodo de expertos; incluir tambien consenso MADe, consenso nIQR, Algoritmo A y Expertos (4). |
-| Implementar `algoritmo_A_iteraciones` | Pendiente | Iteraciones 1:50 con winsorizacion y convergencia. |
-| Implementar `algoritmo_A` | Pendiente | Resumen visible y comparacion contra snapshot. |
-| Resolver formula de 3 cifras significativas | Pendiente | Definir formula Excel robusta para equivaler a `signif(x, 3)`. |
-| Regla especial O3 0 | Pendiente | Mantener resumen en cero como en snapshot congelado. |
+| Implementar `valor_asignado` | Completado | Referencia y Expertos usan `x_pt`/`u_xpt` de referencia y `sigma_pt = 0.02*x_pt+1`; MADe, nIQR y Algoritmo A se recalculan con formulas y validan 5/5 OK por libro. |
+| Implementar `algoritmo_A_iteraciones` | Completado | Hoja con inicializacion, 50 iteraciones, winsorizacion, convergencia, guardia numerica y seleccion final. |
+| Implementar `algoritmo_A` | Completado | Resumen visible y comparacion contra snapshot; 14/14 OK por libro tras recalculo LibreOffice. |
+| Resolver formula de 3 cifras significativas | Completado | Helper `sig3_formula()` usa `ROUND(x, MAX(3-1-INT(LOG10(ABS(x))), 0))` con guardia para cero/no numericos. |
+| Regla especial O3 0 | Completado | `algoritmo_A` devuelve ceros para O3 0, preservando el snapshot congelado. |
 
 ### Fase 6: Puntajes e informe global
 | Item | Estado | Notas |
@@ -390,3 +390,7 @@ formulas, trazabilidad y controles de diferencia.
 - [260513 17:35] Revisor de Fase 4 encontro bloqueantes: los xlsx finales bajo `formulas/` no estaban recalculados, `validacion_final` no miraba los estados reales y el conteo de errores Excel era solo texto.
 - [260513 17:35] Corregido `validacion_final`: ahora resume `resultado_homogeneidad!G:G` y `resultado_estabilidad!G:G`, calcula estado global real y cuenta errores `#REF!`, `#DIV/0!`, `#VALUE!`, `#N/A`, `#NAME?` en hojas de resultados/calculo.
 - [260513 17:35] Regenerados y reemplazados los tres libros finales por copias recalculadas con LibreOffice en `validation_1/validation/excel/validacion_o3/formulas/`; verificacion directa de esos artefactos: `validacion_final = OK`, 14/14 OK en homogeneidad, 14/14 OK en estabilidad y conteos de errores Excel en cero.
+- [260513 18:14] Fase 5 implementada: agregadas hojas `valor_asignado`, `algoritmo_A_iteraciones` y `algoritmo_A` al generador de libros con formulas O3.
+- [260513 18:14] Decision tecnica Fase 5: usar `STDEV` en lugar de `STDEV.S` para `s_new` del Algoritmo A, por compatibilidad con el recalc de LibreOffice ya observada en Fase 4.
+- [260513 18:14] Revision de fase: intento de subagente `revisor-fase` no disponible por limite de uso; revision local encontro un bloqueo en `validacion_final`, donde `Estado global` no dependia de errores Excel. Se corrigio agregando estado de errores en la fila `validacion_final` del resumen.
+- [260513 18:14] Verificacion Fase 5: generador ejecutado, tres libros recalculados con LibreOffice en `/tmp/pt_o3_formula_recalc_phase5_*`; artefactos finales quedaron `validacion_final = OK`, `valor_asignado` 5/5 OK, `algoritmo_A` 14/14 OK y cero errores `#REF!`, `#DIV/0!`, `#VALUE!`, `#N/A`, `#NAME?`.

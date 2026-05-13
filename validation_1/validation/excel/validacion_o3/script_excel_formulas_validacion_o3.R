@@ -702,6 +702,254 @@ write_result_section <- function(wb, sheet, snapshot_combo, section, styles) {
   invisible(TRUE)
 }
 
+write_assigned_value_sheet <- function(wb, snapshot_combo, styles) {
+  sheet <- "valor_asignado"
+  addWorksheet(wb, sheet)
+  rows <- snapshot_combo[snapshot_combo$section == sheet, , drop = FALSE]
+  rows <- rows[, c(
+    "method_key", "method", "x_pt", "sigma_pt", "u_xpt", "u_hom",
+    "u_stab", "u_xpt_def", "U_xpt", "n_participants"
+  ), drop = FALSE]
+  rows$estado <- NA_character_
+  write_styled_table(wb, sheet, rows, styles, table_name = sheet)
+
+  participant_values <- range_ref(
+    "datos_participantes", 2, 4, nrow(rows) + 8, 4
+  )
+  n_participants <- "COUNT('datos_participantes'!$D:$D)"
+  ref_x_pt <- "'datos_referencia'!$D$2"
+  ref_u_xpt <- "'datos_referencia'!$E$2"
+  u_hom <- "'calc_homogeneidad'!$B$9"
+  u_stab <- "'calc_estabilidad'!$B$10/SQRT(3)"
+  algo_x_pt <- "'algoritmo_A_iteraciones'!$B$7"
+  algo_s_pt <- "'algoritmo_A_iteraciones'!$B$8"
+
+  calculated <- list(
+    ref = list(
+      x_pt = ref_x_pt,
+      sigma_pt = sprintf("0.02*%s+1", ref_x_pt),
+      u_xpt = ref_u_xpt
+    ),
+    consensus_ma = list(
+      x_pt = sprintf("MEDIAN(%s)", participant_values),
+      sigma_pt = "'algoritmo_A_iteraciones'!$B$3",
+      u_xpt = sprintf("1.25*D3/SQRT(%s)", n_participants)
+    ),
+    consensus_niqr = list(
+      x_pt = sprintf("MEDIAN(%s)", participant_values),
+      sigma_pt = sprintf(
+        "0.7413*(QUARTILE(%s,3)-QUARTILE(%s,1))",
+        participant_values,
+        participant_values
+      ),
+      u_xpt = sprintf("1.25*D4/SQRT(%s)", n_participants)
+    ),
+    algo = list(
+      x_pt = algo_x_pt,
+      sigma_pt = algo_s_pt,
+      u_xpt = sprintf("1.25*D5/SQRT(%s)", n_participants)
+    ),
+    expert = list(
+      x_pt = ref_x_pt,
+      sigma_pt = sprintf("0.02*%s+1", ref_x_pt),
+      u_xpt = ref_u_xpt
+    )
+  )
+
+  for (i in seq_len(nrow(rows))) {
+    row <- i + 1
+    key <- rows$method_key[[i]]
+    write_formula_cell(wb, sheet, row, 3, calculated[[key]]$x_pt, styles)
+    write_formula_cell(wb, sheet, row, 4, calculated[[key]]$sigma_pt, styles)
+    write_formula_cell(wb, sheet, row, 5, calculated[[key]]$u_xpt, styles)
+    write_formula_cell(wb, sheet, row, 6, u_hom, styles)
+    write_formula_cell(wb, sheet, row, 7, u_stab, styles)
+    write_formula_cell(wb, sheet, row, 8, sprintf("SQRT(E%d^2+F%d^2+G%d^2)", row, row, row), styles)
+    write_formula_cell(wb, sheet, row, 9, sprintf("2*H%d", row), styles)
+    write_formula_cell(wb, sheet, row, 10, n_participants, styles)
+    write_formula_cell(
+      wb,
+      sheet,
+      row,
+      11,
+      sprintf(
+        'IF(SUM(ABS(C%d-%s),ABS(D%d-%s),ABS(E%d-%s),ABS(F%d-%s),ABS(G%d-%s),ABS(H%d-%s),ABS(I%d-%s),ABS(J%d-%s))<=1E-8,"OK","FALLA")',
+        row, cell_ref("validacion_snapshot", which(snapshot_combo$section == sheet)[[i]] + 1, 11),
+        row, cell_ref("validacion_snapshot", which(snapshot_combo$section == sheet)[[i]] + 1, 12),
+        row, cell_ref("validacion_snapshot", which(snapshot_combo$section == sheet)[[i]] + 1, 13),
+        row, cell_ref("validacion_snapshot", which(snapshot_combo$section == sheet)[[i]] + 1, 14),
+        row, cell_ref("validacion_snapshot", which(snapshot_combo$section == sheet)[[i]] + 1, 15),
+        row, cell_ref("validacion_snapshot", which(snapshot_combo$section == sheet)[[i]] + 1, 16),
+        row, cell_ref("validacion_snapshot", which(snapshot_combo$section == sheet)[[i]] + 1, 17),
+        row, cell_ref("validacion_snapshot", which(snapshot_combo$section == sheet)[[i]] + 1, 18)
+      ),
+      styles,
+      "control"
+    )
+  }
+  conditionalFormatting(wb, sheet, cols = 11, rows = 2:(nrow(rows) + 1), rule = '=="OK"', style = styles$ok)
+  conditionalFormatting(wb, sheet, cols = 11, rows = 2:(nrow(rows) + 1), rule = '=="FALLA"', style = styles$fail)
+  freezePane(wb, sheet, firstRow = TRUE)
+  invisible(TRUE)
+}
+
+sig3_formula <- function(ref) {
+  sprintf("IF(OR(NOT(ISNUMBER(%s)),%s=0),%s,ROUND(%s,MAX(3-1-INT(LOG10(ABS(%s))),0)))", ref, ref, ref, ref, ref)
+}
+
+write_algorithm_iterations_sheet <- function(wb, combo, participants, styles) {
+  sheet <- "algoritmo_A_iteraciones"
+  addWorksheet(wb, sheet)
+  values_last_row <- nrow(participants) + 10
+  value_range <- range_ref(sheet, 11, 2, values_last_row, 2, absolute = FALSE)
+  metadata <- data.frame(
+    metrica = c(
+      "x0_mediana", "s0_MADe", "tolerancia", "n_participantes",
+      "iteracion_final", "x_final", "s_final", "n_winsorizadas_final"
+    ),
+    valor = NA_real_,
+    stringsAsFactors = FALSE
+  )
+  write_styled_table(wb, sheet, metadata, styles, start_row = 1)
+  write_formula_cell(wb, sheet, 2, 2, sprintf("MEDIAN(%s)", value_range), styles)
+  write_formula_cell(wb, sheet, 3, 2, sprintf("1.483*MEDIAN(C11:C%d)", values_last_row), styles)
+  writeData(wb, sheet, 1e-10, startRow = 4, startCol = 2)
+  write_formula_cell(wb, sheet, 5, 2, sprintf("COUNT(%s)", value_range), styles)
+
+  participant_block <- participants[, c("participant_id", "mean_value"), drop = FALSE]
+  names(participant_block) <- c("participant_id", "xi")
+  participant_block$abs_xi_x0 <- NA_real_
+  write_styled_table(wb, sheet, participant_block, styles, start_row = 10)
+  for (i in seq_len(nrow(participant_block))) {
+    row <- i + 10
+    write_formula_cell(wb, sheet, row, 3, sprintf("ABS(B%d-$B$2)", row), styles)
+  }
+
+  iter_start <- values_last_row + 4
+  participant_cols <- seq(7, length.out = nrow(participants))
+  first_result_col <- max(participant_cols) + 1
+  headers <- c(
+    "iteracion", "x_prev", "s_prev", "delta", "limite_inf", "limite_sup",
+    paste0("w_", participants$participant_id),
+    "x_new", "s_new", "delta_x", "delta_s", "sig3_x_prev",
+    "sig3_s_prev", "sig3_x_new", "sig3_s_new", "signif3_converged",
+    "guardia_numerica", "fila_seleccionada"
+  )
+  writeData(wb, sheet, as.data.frame(t(headers), stringsAsFactors = FALSE), startRow = iter_start, colNames = FALSE)
+  addStyle(wb, sheet, styles$header, rows = iter_start, cols = seq_along(headers), gridExpand = TRUE, stack = TRUE)
+  for (iter in seq_len(50)) {
+    row <- iter_start + iter
+    prev_row <- row - 1
+    writeData(wb, sheet, iter, startRow = row, startCol = 1)
+    write_formula_cell(wb, sheet, row, 2, if (iter == 1) "$B$2" else sprintf("%s%d", int2col(first_result_col), prev_row), styles)
+    write_formula_cell(wb, sheet, row, 3, if (iter == 1) "$B$3" else sprintf("%s%d", int2col(first_result_col + 1), prev_row), styles)
+    write_formula_cell(wb, sheet, row, 4, sprintf("1.5*C%d", row), styles)
+    write_formula_cell(wb, sheet, row, 5, sprintf("B%d-D%d", row, row), styles)
+    write_formula_cell(wb, sheet, row, 6, sprintf("B%d+D%d", row, row), styles)
+    for (j in seq_len(nrow(participants))) {
+      data_row <- 10 + j
+      write_formula_cell(
+        wb,
+        sheet,
+        row,
+        participant_cols[[j]],
+        sprintf("MIN(MAX($B$%d,$E%d),$F%d)", data_row, row, row),
+        styles
+      )
+    }
+    win_range <- sprintf("%s%d:%s%d", int2col(min(participant_cols)), row, int2col(max(participant_cols)), row)
+    write_formula_cell(wb, sheet, row, first_result_col, sprintf("AVERAGE(%s)", win_range), styles)
+    write_formula_cell(wb, sheet, row, first_result_col + 1, sprintf("1.134*STDEV(%s)", win_range), styles)
+    write_formula_cell(wb, sheet, row, first_result_col + 2, sprintf("ABS(%s%d-B%d)", int2col(first_result_col), row, row), styles)
+    write_formula_cell(wb, sheet, row, first_result_col + 3, sprintf("ABS(%s%d-C%d)", int2col(first_result_col + 1), row, row), styles)
+    write_formula_cell(wb, sheet, row, first_result_col + 4, sig3_formula(sprintf("B%d", row)), styles)
+    write_formula_cell(wb, sheet, row, first_result_col + 5, sig3_formula(sprintf("C%d", row)), styles)
+    write_formula_cell(wb, sheet, row, first_result_col + 6, sig3_formula(sprintf("%s%d", int2col(first_result_col), row)), styles)
+    write_formula_cell(wb, sheet, row, first_result_col + 7, sig3_formula(sprintf("%s%d", int2col(first_result_col + 1), row)), styles)
+    write_formula_cell(wb, sheet, row, first_result_col + 8, sprintf("IF(AND(%s%d=%s%d,%s%d=%s%d),1,0)", int2col(first_result_col + 6), row, int2col(first_result_col + 4), row, int2col(first_result_col + 7), row, int2col(first_result_col + 5), row), styles, "control")
+    write_formula_cell(wb, sheet, row, first_result_col + 9, sprintf("IF(AND(%s%d<$B$4,%s%d<$B$4),1,0)", int2col(first_result_col + 2), row, int2col(first_result_col + 3), row), styles, "control")
+    write_formula_cell(wb, sheet, row, first_result_col + 10, sprintf("IF(OR(%s%d=1,%s%d=1),1,0)", int2col(first_result_col + 8), row, int2col(first_result_col + 9), row), styles, "control")
+  }
+  iter_last <- iter_start + 50
+  selected_range <- sprintf("%s%d:%s%d", int2col(first_result_col + 10), iter_start + 1, int2col(first_result_col + 10), iter_last)
+  write_formula_cell(wb, sheet, 6, 2, sprintf("IFERROR(MATCH(1,%s,0),50)", selected_range), styles, "control")
+  write_formula_cell(wb, sheet, 7, 2, sprintf("INDEX(%s%d:%s%d,$B$6)", int2col(first_result_col), iter_start + 1, int2col(first_result_col), iter_last), styles)
+  write_formula_cell(wb, sheet, 8, 2, sprintf("INDEX(%s%d:%s%d,$B$6)", int2col(first_result_col + 1), iter_start + 1, int2col(first_result_col + 1), iter_last), styles)
+  winsorized_terms <- paste(
+    sprintf(
+      "--(INDEX(%s%d:%s%d,$B$6)<>$B$%d)",
+      int2col(participant_cols),
+      iter_start + 1,
+      int2col(participant_cols),
+      iter_last,
+      10 + seq_len(nrow(participants))
+    ),
+    collapse = "+"
+  )
+  write_formula_cell(wb, sheet, 9, 2, winsorized_terms, styles)
+  freezePane(wb, sheet, firstRow = FALSE)
+  invisible(TRUE)
+}
+
+algorithm_summary_formula <- function(parametro, combo) {
+  if (combo$suffix == "0") {
+    return("0")
+  }
+  switch(
+    parametro,
+    "Analito" = '"O3"',
+    "Esquema (n)" = as.character(combo$n_lab),
+    "Nivel" = paste0('"', combo$level, '"'),
+    "n participantes" = "'algoritmo_A_iteraciones'!$B$5",
+    "x*0 = mediana" = "ROUND('algoritmo_A_iteraciones'!$B$2,4)",
+    "s*0 = MADe" = "ROUND('algoritmo_A_iteraciones'!$B$3,4)",
+    "x* (valor asignado)" = "ROUND('algoritmo_A_iteraciones'!$B$7,4)",
+    "s* (desviación robusta)" = "ROUND('algoritmo_A_iteraciones'!$B$8,4)",
+    "Observaciones winzorizadas" = "'algoritmo_A_iteraciones'!$B$9",
+    "Observaciones totales" = "'algoritmo_A_iteraciones'!$B$5",
+    "n_iteraciones" = "'algoritmo_A_iteraciones'!$B$6",
+    "criterio" = '"3 cifras significativas"',
+    "guardia_numérica" = "TEXT('algoritmo_A_iteraciones'!$B$4,\"0.0000000000\")",
+    "primera_iteración_3ra_cifra" = "'algoritmo_A_iteraciones'!$B$6",
+    '""'
+  )
+}
+
+write_algorithm_summary_sheet <- function(wb, combo, snapshot_combo, styles) {
+  sheet <- "algoritmo_A"
+  addWorksheet(wb, sheet)
+  rows <- snapshot_combo[snapshot_combo$section == sheet, , drop = FALSE]
+  rows <- rows[, c("bloque", "parametro", "app_value"), drop = FALSE]
+  rows$calculado <- NA_character_
+  rows$estado <- NA_character_
+  write_styled_table(wb, sheet, rows, styles, table_name = sheet)
+  snapshot_rows <- which(snapshot_combo$section == sheet)
+  for (i in seq_len(nrow(rows))) {
+    row <- i + 1
+    write_formula_cell(wb, sheet, row, 4, algorithm_summary_formula(rows$parametro[[i]], combo), styles)
+    expected <- cell_ref("validacion_snapshot", snapshot_rows[[i]] + 1, 8)
+    write_formula_cell(
+      wb,
+      sheet,
+      row,
+      5,
+      sprintf(
+        'IF(IFERROR(ABS(D%d-%s)<=5E-4,D%d=%s),"OK","FALLA")',
+        row,
+        expected,
+        row,
+        expected
+      ),
+      styles,
+      "control"
+    )
+  }
+  conditionalFormatting(wb, sheet, cols = 5, rows = 2:(nrow(rows) + 1), rule = '=="OK"', style = styles$ok)
+  conditionalFormatting(wb, sheet, cols = 5, rows = 2:(nrow(rows) + 1), rule = '=="FALLA"', style = styles$fail)
+  freezePane(wb, sheet, firstRow = TRUE)
+  invisible(TRUE)
+}
+
 write_validation_final <- function(wb, styles) {
   sheet <- "validacion_final"
   addWorksheet(wb, sheet)
@@ -715,6 +963,9 @@ write_validation_final <- function(wb, styles) {
       "resultado_estabilidad",
       "datos_participantes",
       "datos_referencia",
+      "valor_asignado",
+      "algoritmo_A_iteraciones",
+      "algoritmo_A",
       "validacion_snapshot",
       "validacion_final"
     ),
@@ -727,8 +978,11 @@ write_validation_final <- function(wb, styles) {
       NA_character_,
       "Implementado",
       "Implementado",
+      NA_character_,
       "Implementado",
-      "Implementado"
+      NA_character_,
+      "Implementado",
+      NA_character_
     ),
     notas = c(
       "Datos de homogeneidad filtrados por combo.",
@@ -739,6 +993,9 @@ write_validation_final <- function(wb, styles) {
       "Tabla visible app.R repetida segun comportamiento validado.",
       "Participantes excluyendo ref con control u_i.",
       "Referencia con controles de promedio e incertidumbre.",
+      "Parametros por metodo con incertidumbres compuestas.",
+      "Traza de 50 iteraciones del Algoritmo A.",
+      "Resumen visible app.R y comparacion contra snapshot.",
       "Snapshot congelado del combo.",
       "Resumen de comparacion de estado del libro."
     ),
@@ -767,6 +1024,33 @@ write_validation_final <- function(wb, styles) {
     7,
     2,
     'IF(COUNTIF(\'resultado_estabilidad\'!$G:$G,"FALLA")>0,"FALLA",IF(COUNTIF(\'resultado_estabilidad\'!$G:$G,"Pendiente")>0,"PENDIENTE","OK"))',
+    styles,
+    "control"
+  )
+  write_formula_cell(
+    wb,
+    sheet,
+    10,
+    2,
+    'IF(COUNTIF(\'valor_asignado\'!$K:$K,"FALLA")>0,"FALLA",IF(COUNTIF(\'valor_asignado\'!$K:$K,"Pendiente")>0,"PENDIENTE","OK"))',
+    styles,
+    "control"
+  )
+  write_formula_cell(
+    wb,
+    sheet,
+    12,
+    2,
+    'IF(COUNTIF(\'algoritmo_A\'!$E:$E,"FALLA")>0,"FALLA",IF(COUNTIF(\'algoritmo_A\'!$E:$E,"Pendiente")>0,"PENDIENTE","OK"))',
+    styles,
+    "control"
+  )
+  write_formula_cell(
+    wb,
+    sheet,
+    14,
+    2,
+    'IF(SUM(C20:C24)>0,"FALLA","OK")',
     styles,
     "control"
   )
@@ -803,7 +1087,10 @@ write_validation_final <- function(wb, styles) {
     "'resultado_homogeneidad'!$A:$G",
     "'resultado_estabilidad'!$A:$G",
     "'calc_homogeneidad'!$A:$C",
-    "'calc_estabilidad'!$A:$C"
+    "'calc_estabilidad'!$A:$C",
+    "'valor_asignado'!$A:$K",
+    "'algoritmo_A_iteraciones'!$A:$Z",
+    "'algoritmo_A'!$A:$E"
   )
   for (i in seq_len(nrow(errors))) {
     row <- error_start + i
@@ -876,6 +1163,9 @@ write_formula_workbook <- function(combo, snapshot) {
   )
   write_participant_sheet(wb, "datos_participantes", participants, styles)
   write_reference_sheet(wb, "datos_referencia", refs, styles)
+  write_algorithm_iterations_sheet(wb, combo, participants, styles)
+  write_assigned_value_sheet(wb, snapshot_combo, styles)
+  write_algorithm_summary_sheet(wb, combo, snapshot_combo, styles)
   write_snapshot_sheet(wb, snapshot_combo, styles)
   write_validation_final(wb, styles)
 
@@ -899,8 +1189,8 @@ run_generator <- function() {
   summary <- data.frame(
     workbook = basename(outputs),
     path = outputs,
-    fase = "Fase 4",
-    estado = "homogeneidad_estabilidad_formulas",
+    fase = "Fase 5",
+    estado = "valor_asignado_algoritmo_a_formulas",
     stringsAsFactors = FALSE
   )
   write.csv(
