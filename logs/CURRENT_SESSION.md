@@ -1,6 +1,6 @@
 # Session State: PT Analysis Application
 
-**Last Updated**: 2026-05-13 18:39 -0500
+**Last Updated**: 2026-05-13 18:43 -0500
 
 ## Session Objective
 
@@ -22,6 +22,8 @@ el snapshot congelado.
 - [x] Verificacion final: tres libros recalculados con LibreOffice quedaron
   `Estado global = OK`, `puntajes_EA` 60/60 OK, `informe_global` 25/25 OK y
   cero errores Excel.
+- [x] Commit y push completados: `df46150` (`Implement O3 formula validation
+  phase 6`) en `main`.
 - [ ] Queda pendiente Fase 7: heat maps.
 - [ ] Queda pendiente Fase 8 formal: automatizar/registrar recalculo y resumen,
   aunque el recalc manual de Fase 6 ya paso.
@@ -53,5 +55,5 @@ el snapshot congelado.
    2 decimales contra `puntajes_EA`.
 3. Ejecutar revision formal de fase cuando el subagente o proceso equivalente
    este disponible.
-4. Preparar commit/push de los artefactos del plan cuando el usuario lo pida o
-   al cierre completo de fases.
+4. Mantener separados los cambios ajenos del worktree antes de cualquier commit
+   siguiente.
