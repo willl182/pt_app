@@ -253,10 +253,10 @@ formulas, trazabilidad y controles de diferencia.
 ### Fase 2: Diseno tecnico del generador
 | Item | Estado | Notas |
 |------|--------|-------|
-| Crear `script_excel_formulas_validacion_o3.R` | Pendiente | Debe usar `openxlsx`, `writeFormula()` y estilos consistentes. |
-| Crear helpers para rangos nombrados | Pendiente | Reducir riesgo de referencias rotas en formulas. |
-| Crear helpers de comparacion snapshot | Pendiente | Generar columnas `calculado`, `esperado_app`, `delta_abs`, `estado`. |
-| Crear helpers de estilo | Pendiente | Azul inputs, negro formulas, verde links internos, amarillo controles. |
+| Crear `script_excel_formulas_validacion_o3.R` | Completado | Script ejecutable creado; usa `openxlsx`, `writeFormula()` y genera libros de andamiaje en `formulas/`. |
+| Crear helpers para rangos nombrados | Completado | `add_named_range()` y `add_table_named_ranges()` crean regiones por tabla y columna con nombres saneados. |
+| Crear helpers de comparacion snapshot | Completado | `make_validation_rows()` y `write_validation_block()` generan columnas `calculado`, `esperado_app`, `delta_abs`, `tolerancia`, `estado`. |
+| Crear helpers de estilo | Completado | `make_styles()` centraliza azul inputs, negro formulas, verde links internos, amarillo controles, OK y FALLA. |
 | Crear carpeta `formulas/` | Completado | Creada al documentar `inventario_fase1_o3.md`; mantener ahi los libros con formulas separados de los hardcodeados. |
 
 ### Fase 3: Datos crudos y hojas base
@@ -378,3 +378,7 @@ formulas, trazabilidad y controles de diferencia.
 - [260513 14:59] Inicio y cierre tecnico Fase 1: inventario, mapeo snapshot-hojas, funciones R a formulas Excel, heat maps, tolerancias y cuantiles documentados en `formulas/inventario_fase1_o3.md`.
 - [260513 15:00] Revisor de fase encontro divergencias: snapshot usaba `sigma_pt` de homogeneidad para `Referencia (1)` y no incluia `Expertos (4)`.
 - [260513 15:00] Corregido `generar_valores_validacion_o3.R`: `Referencia (1)` y `Expertos (4)` usan `sigma_pt = 0.020*x_pt+1.0` y `u_xpt` reportado por referencia; regenerados `valores_validacion_o3.csv` y los tres libros hardcodeados.
+- [260513 15:25] Fase 2 implementada: creado `script_excel_formulas_validacion_o3.R` con helpers de fuentes, estilos, rangos nombrados, formulas y bloques de comparacion snapshot.
+- [260513 15:25] Ejecutado generador de Fase 2; creados libros de andamiaje `validacion_formula_o3_0.xlsx`, `validacion_formula_o3_80.xlsx`, `validacion_formula_o3_180.xlsx` y `resumen_validacion_formulas_o3.csv`.
+- [260513 15:30] Revisor de fase encontro riesgos en Fase 2: `NA` escrito como `#N/A`, referencias incompletas en helper de comparacion, `validacion_final` sin ruta a `OK` y auto-ejecucion al hacer `source()`.
+- [260513 15:30] Corregidos hallazgos del revisor: `NA` se escribe como celda vacia, formulas de comparacion usan referencias con fila, `validacion_final` puede devolver `OK`, el script solo auto-ejecuta via `Rscript`, y los libros regenerados no contienen celdas de error Excel en XML.

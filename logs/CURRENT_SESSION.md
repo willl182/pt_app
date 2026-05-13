@@ -1,10 +1,10 @@
 # Session State: PT Analysis Application
 
-**Last Updated**: 2026-05-13 15:09 -05
+**Last Updated**: 2026-05-13 15:30 -05
 
 ## Session Objective
 
-Implementar la Fase 1 del plan de Excel con formulas para validacion O3.
+Implementar la Fase 2 del plan de Excel con formulas para validacion O3.
 
 ## Current State
 
@@ -19,8 +19,15 @@ Implementar la Fase 1 del plan de Excel con formulas para validacion O3.
 - [x] Regenerados `valores_validacion_o3.csv` y los tres libros hardcodeados
   O3 desde el snapshot corregido.
 - [x] Verificacion ejecutada: parse de scripts y checks del snapshot OK.
-- [ ] Queda pendiente continuar con Fase 2: diseno tecnico del generador de
-  libros con formulas.
+- [x] Fase 2 completada: creado
+  `validation_1/validation/excel/validacion_o3/script_excel_formulas_validacion_o3.R`.
+- [x] El generador de Fase 2 crea los tres libros de andamiaje con formulas:
+  `validacion_formula_o3_0.xlsx`, `validacion_formula_o3_80.xlsx`,
+  `validacion_formula_o3_180.xlsx`.
+- [x] Revisor de Fase 2 ejecutado; hallazgos corregidos antes del cierre.
+- [x] Verificaciones Fase 2: `parse()` OK, ejecución por `Rscript` OK,
+  `source()` no auto-ejecuta, XML de hojas sin celdas de error Excel.
+- [ ] Queda pendiente continuar con Fase 3: datos crudos y hojas base.
 
 ## Critical Technical Context
 
@@ -37,12 +44,18 @@ Implementar la Fase 1 del plan de Excel con formulas para validacion O3.
 - `validation_1/validation/...` esta ignorado por `.gitignore` via patron
   `validation/`; para commitear estos artefactos se requiere `git add -f`.
 - El worktree ya estaba sucio antes; no revertir cambios ajenos.
+- El script de formulas convierte `NA` a celdas vacias antes de `writeData()`
+  para evitar errores literales `#N/A` en los libros.
+- `write_validation_block()` ya genera referencias con fila (`B2`, `C2`, etc.)
+  y no solo letras de columna.
+- El script solo auto-ejecuta con `Rscript`; `source()` permite cargar helpers
+  sin sobrescribir artefactos.
 
 ## Next Steps
 
-1. Iniciar Fase 2 creando
-   `validation_1/validation/excel/validacion_o3/script_excel_formulas_validacion_o3.R`.
-2. Implementar helpers para rangos nombrados, comparacion contra snapshot y
-   estilos.
+1. Iniciar Fase 3 escribiendo hojas `datos_homogeneidad`,
+   `datos_estabilidad`, `datos_participantes`, `datos_referencia` y
+   `validacion_snapshot` por combo.
+2. Reusar los helpers de rangos nombrados y estilos del script de Fase 2.
 3. Usar `git add -f` para los archivos bajo `validation_1/validation/...` si
    se va a crear commit.
