@@ -339,9 +339,12 @@ summarise_reference_levels <- function(hourly_df) {
     ]
     rows <- rows[order(rows$hour_start), , drop = FALSE]
     n_hours <- nrow(rows)
-    final_mean <- mean(rows$mean_value)
-    final_sd <- if (n_hours > 1) sd(rows$mean_value) else NA_real_
-    final_u <- if (n_hours > 1) final_sd / sqrt(n_hours) else rows$u_value[1]
+    # xᵢ: promedio de los promedios horarios, redondeado a 3 cifras sig
+    # y truncado a 3 decimales (resolución instrumental máxima).
+    # Elimina decimales 'virtuales' antes de que xᵢ entre al Algoritmo A.
+    final_mean <- round(signif(mean(rows$mean_value), 3), 3)
+    final_sd   <- if (n_hours > 1) sd(rows$mean_value) else NA_real_
+    final_u    <- if (n_hours > 1) final_sd / sqrt(n_hours) else rows$u_value[1]
 
     mean_h1 <- if (n_hours >= 1) rows$mean_value[1] else NA_real_
     mean_h2 <- if (n_hours >= 2) rows$mean_value[2] else NA_real_
