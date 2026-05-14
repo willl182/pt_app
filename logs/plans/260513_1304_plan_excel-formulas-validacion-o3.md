@@ -300,12 +300,12 @@ formulas, trazabilidad y controles de diferencia.
 ### Fase 7: Heat maps y validacion visual
 | Item | Estado | Notas |
 |------|--------|-------|
-| Construir `heatmap_datos_globales` | Pendiente | Tabla larga combinando los tres niveles O3, cinco metodos y cuatro scores. |
-| Implementar matrices `heatmap_global_*` | Pendiente | Una hoja por metodo o una hoja consolidada con bloques por metodo/score. |
-| Validar datos numericos de heat map | Pendiente | Obligatorio: valores por participante/nivel, redondeados a 2 decimales. |
+| Construir `heatmap_datos_globales` | Completado | Hoja larga creada por libro desde `puntajes_EA`: cinco metodos, cuatro scores, participantes alfabeticos y nivel del combo. |
+| Implementar matrices `heatmap_global_*` | Completado | Hoja consolidada `heatmap_global` con bloques por metodo/score; cada bloque muestra participante, nivel, etiqueta y evaluacion. |
+| Validar datos numericos de heat map | Completado | 240/240 controles OK por libro; etiquetas `TEXT(score,"0.00")` contra `puntajes_EA`. |
 | Replicar paletas de `app.R` | Pendiente | Opcional: usar formato condicional con colores de `score_heatmap_palettes`. |
-| Validar orden de ejes | Pendiente | Participantes alfabeticos y niveles por valor numerico, igual que `render_global_score_heatmap()`. |
-| Validar etiquetas numericas | Pendiente | Mostrar valores a 2 decimales, blanco para no finitos. |
+| Validar orden de ejes | Completado | Participantes ordenados alfabeticamente; cada libro representa su nivel O3 y conserva el nivel como columna de matriz. |
+| Validar etiquetas numericas | Completado | Valores finitos muestran dos decimales; no numericos quedan en blanco, igual que `render_global_score_heatmap()`. |
 | Revisar `report_heatmaps()` | Completado | Decision Fase 1: excluido del alcance obligatorio; documentar como flujo distinto si se implementa reporte Word. |
 | Crear controles de colores | Pendiente | Opcional, solo si se implementa formato condicional. |
 
@@ -397,3 +397,6 @@ formulas, trazabilidad y controles de diferencia.
 - [260513 18:14] Decision tecnica Fase 5: usar `STDEV` en lugar de `STDEV.S` para `s_new` del Algoritmo A, por compatibilidad con el recalc de LibreOffice ya observada en Fase 4.
 - [260513 18:14] Revision de fase: intento de subagente `revisor-fase` no disponible por limite de uso; revision local encontro un bloqueo en `validacion_final`, donde `Estado global` no dependia de errores Excel. Se corrigio agregando estado de errores en la fila `validacion_final` del resumen.
 - [260513 18:14] Verificacion Fase 5: generador ejecutado, tres libros recalculados con LibreOffice en `/tmp/pt_o3_formula_recalc_phase5_*`; artefactos finales quedaron `validacion_final = OK`, `valor_asignado` 5/5 OK, `algoritmo_A` 14/14 OK y cero errores `#REF!`, `#DIV/0!`, `#VALUE!`, `#N/A`, `#NAME?`.
+- [260513 19:14] Fase 7 implementada: agregadas hojas `heatmap_datos_globales` y `heatmap_global` como vistas reorganizadas desde `puntajes_EA`, sin recalcular estadistica nueva.
+- [260513 19:14] Decision tecnica Fase 7: usar referencias directas por indice a `puntajes_EA` y a `heatmap_datos_globales`, evitando busquedas `MATCH` sobre columnas completas porque el heatmap solo reordena informacion existente.
+- [260513 19:14] Verificacion Fase 7: generador ejecutado, tres libros recalculados con LibreOffice en `/tmp/pt_o3_formula_recalc_phase7_*`; `heatmap_datos_globales` 240/240 OK, `heatmap_global` 240/240 OK, `validacion_final = OK` y `Total errores Excel = 0` en los tres libros.

@@ -1160,6 +1160,26 @@ score_eval_column <- function(score) {
   )
 }
 
+score_value_column <- function(score) {
+  switch(
+    score,
+    "z" = "$F:$F",
+    "z_prime" = "$H:$H",
+    "zeta" = "$J:$J",
+    "En" = "$L:$L",
+    "$F:$F"
+  )
+}
+
+score_column_letter <- function(score, kind) {
+  col <- if (kind == "value") {
+    score_value_column(score)
+  } else {
+    score_eval_column(score)
+  }
+  sub("^\\$([A-Z]+):\\$[A-Z]+$", "\\1", col)
+}
+
 write_global_report_sheet <- function(wb, snapshot_combo, styles) {
   sheet <- "informe_global"
   addWorksheet(wb, sheet)
@@ -1245,6 +1265,140 @@ write_global_report_sheet <- function(wb, snapshot_combo, styles) {
   invisible(TRUE)
 }
 
+write_heatmap_data_sheet <- function(wb, combo, participants, styles) {
+  sheet <- "heatmap_datos_globales"
+  addWorksheet(wb, sheet)
+  methods <- data.frame(
+    method_key = c("ref", "consensus_ma", "consensus_niqr", "algo", "expert"),
+    method = c(
+      "Referencia (1)", "Consenso MADe (2a)", "Consenso nIQR (2b)",
+      "Algoritmo A (3)", "Expertos (4)"
+    ),
+    stringsAsFactors = FALSE
+  )
+  scores <- data.frame(
+    score_tipo = c("z", "z_prime", "zeta", "En"),
+    score_label = c("z", "z'", "zeta", "En"),
+    stringsAsFactors = FALSE
+  )
+  participant_ids <- sort(as.character(participants$participant_id))
+  rows <- expand.grid(
+    method_row = seq_len(nrow(methods)),
+    score_row = seq_len(nrow(scores)),
+    participant_row = seq_along(participant_ids),
+    stringsAsFactors = FALSE
+  )
+  rows <- rows[order(rows$method_row, rows$score_row, rows$participant_row), , drop = FALSE]
+  puntajes_row <- (rows$method_row - 1) * length(participant_ids) + rows$participant_row + 1
+  data <- data.frame(
+    method_key = methods$method_key[rows$method_row],
+    method = methods$method[rows$method_row],
+    score_tipo = scores$score_tipo[rows$score_row],
+    score_label = scores$score_label[rows$score_row],
+    participant_id = participant_ids[rows$participant_row],
+    level = combo$level,
+    score_value = NA_real_,
+    evaluation = NA_character_,
+    etiqueta_celda = NA_character_,
+    puntajes_row = puntajes_row,
+    estado = NA_character_,
+    stringsAsFactors = FALSE
+  )
+  write_styled_table(wb, sheet, data, styles, table_name = sheet)
+  for (i in seq_len(nrow(data))) {
+    row <- i + 1
+    score_row <- data$puntajes_row[[i]]
+    value_col <- score_column_letter(data$score_tipo[[i]], "value")
+    eval_col <- score_column_letter(data$score_tipo[[i]], "eval")
+    write_formula_cell(wb, sheet, row, 7, sprintf("IFERROR('puntajes_EA'!$%s$%d,\"\")", value_col, score_row), styles)
+    write_formula_cell(wb, sheet, row, 8, sprintf("IFERROR('puntajes_EA'!$%s$%d,\"N/A\")", eval_col, score_row), styles, "control")
+    write_formula_cell(wb, sheet, row, 9, sprintf('IF(ISNUMBER(G%d),TEXT(G%d,"0.00"),"")', row, row), styles)
+    writeData(wb, sheet, score_row, startRow = row, startCol = 10)
+    write_formula_cell(
+      wb,
+      sheet,
+      row,
+      11,
+      sprintf(
+        'IF(AND(B%d=\'puntajes_EA\'!$B$%d,E%d=\'puntajes_EA\'!$C$%d,I%d=IF(ISNUMBER(\'puntajes_EA\'!$%s$%d),TEXT(\'puntajes_EA\'!$%s$%d,"0.00"),""),H%d=IFERROR(\'puntajes_EA\'!$%s$%d,"N/A")),"OK","FALLA")',
+        row,
+        score_row,
+        row,
+        score_row,
+        row,
+        value_col,
+        score_row,
+        value_col,
+        score_row,
+        row,
+        eval_col,
+        score_row
+      ),
+      styles,
+      "control"
+    )
+  }
+  conditionalFormatting(wb, sheet, cols = 11, rows = 2:(nrow(data) + 1), rule = '=="OK"', style = styles$ok)
+  conditionalFormatting(wb, sheet, cols = 11, rows = 2:(nrow(data) + 1), rule = '=="FALLA"', style = styles$fail)
+  freezePane(wb, sheet, firstRow = TRUE)
+  invisible(TRUE)
+}
+
+write_heatmap_matrix_sheet <- function(wb, combo, participants, styles) {
+  sheet <- "heatmap_global"
+  addWorksheet(wb, sheet)
+  methods <- data.frame(
+    method_key = c("ref", "consensus_ma", "consensus_niqr", "algo", "expert"),
+    method = c(
+      "Referencia (1)", "Consenso MADe (2a)", "Consenso nIQR (2b)",
+      "Algoritmo A (3)", "Expertos (4)"
+    ),
+    stringsAsFactors = FALSE
+  )
+  scores <- data.frame(
+    score_tipo = c("z", "z_prime", "zeta", "En"),
+    score_label = c("z", "z'", "zeta", "En"),
+    stringsAsFactors = FALSE
+  )
+  participant_ids <- sort(as.character(participants$participant_id))
+  start_row <- 1
+  for (method_idx in seq_len(nrow(methods))) {
+    for (score_idx in seq_len(nrow(scores))) {
+      title <- sprintf(
+        "Mapa global %s - %s",
+        methods$method[[method_idx]],
+        scores$score_label[[score_idx]]
+      )
+      writeData(wb, sheet, title, startRow = start_row, startCol = 1)
+      addStyle(wb, sheet, styles$title, rows = start_row, cols = 1, stack = TRUE)
+      header_row <- start_row + 1
+      data_start <- start_row + 2
+      data_end <- data_start + length(participant_ids) - 1
+      writeData(wb, sheet, c("participant_id", combo$level, "evaluacion", "estado"), startRow = header_row, startCol = 1, colNames = FALSE)
+      addStyle(wb, sheet, styles$header, rows = header_row, cols = 1:4, gridExpand = TRUE, stack = TRUE)
+      for (i in seq_along(participant_ids)) {
+        row <- data_start + i - 1
+        heatmap_row <- (
+          (method_idx - 1) * nrow(scores) * length(participant_ids) +
+            (score_idx - 1) * length(participant_ids) +
+            i +
+            1
+        )
+        writeData(wb, sheet, participant_ids[[i]], startRow = row, startCol = 1)
+        write_formula_cell(wb, sheet, row, 2, sprintf("IFERROR('heatmap_datos_globales'!$I$%d,\"\")", heatmap_row), styles)
+        write_formula_cell(wb, sheet, row, 3, sprintf("IFERROR('heatmap_datos_globales'!$H$%d,\"N/A\")", heatmap_row), styles, "control")
+        write_formula_cell(wb, sheet, row, 4, sprintf('IF(AND(A%d=\'heatmap_datos_globales\'!$E$%d,B%d=\'heatmap_datos_globales\'!$I$%d,C%d=\'heatmap_datos_globales\'!$H$%d,\'heatmap_datos_globales\'!$K$%d="OK"),"OK","FALLA")', row, heatmap_row, row, heatmap_row, row, heatmap_row, heatmap_row), styles, "control")
+      }
+      conditionalFormatting(wb, sheet, cols = 4, rows = data_start:data_end, rule = '=="OK"', style = styles$ok)
+      conditionalFormatting(wb, sheet, cols = 4, rows = data_start:data_end, rule = '=="FALLA"', style = styles$fail)
+      start_row <- data_end + 3
+    }
+  }
+  setColWidths(wb, sheet, cols = 1:4, widths = c(18, 16, 18, 12))
+  freezePane(wb, sheet, firstRow = TRUE)
+  invisible(TRUE)
+}
+
 write_validation_final <- function(wb, styles) {
   sheet <- "validacion_final"
   addWorksheet(wb, sheet)
@@ -1263,6 +1417,8 @@ write_validation_final <- function(wb, styles) {
       "algoritmo_A",
       "puntajes_EA",
       "informe_global",
+      "heatmap_datos_globales",
+      "heatmap_global",
       "validacion_snapshot",
       "validacion_final"
     ),
@@ -1277,6 +1433,8 @@ write_validation_final <- function(wb, styles) {
       "Implementado",
       NA_character_,
       "Implementado",
+      NA_character_,
+      NA_character_,
       NA_character_,
       NA_character_,
       NA_character_,
@@ -1297,6 +1455,8 @@ write_validation_final <- function(wb, styles) {
       "Resumen visible app.R y comparacion contra snapshot.",
       "Puntajes z, z', zeta y En por metodo y participante.",
       "Conteos globales por metodo, score y categoria.",
+      "Tabla larga para heat maps globales desde puntajes_EA.",
+      "Matrices visibles por metodo y score, con etiquetas a 2 decimales.",
       "Snapshot congelado del combo.",
       "Resumen de comparacion de estado del libro."
     ),
@@ -1367,9 +1527,27 @@ write_validation_final <- function(wb, styles) {
   write_formula_cell(
     wb,
     sheet,
+    15,
+    2,
+    'IF(COUNTIF(\'heatmap_datos_globales\'!$K:$K,"FALLA")>0,"FALLA",IF(COUNTIF(\'heatmap_datos_globales\'!$K:$K,"Pendiente")>0,"PENDIENTE","OK"))',
+    styles,
+    "control"
+  )
+  write_formula_cell(
+    wb,
+    sheet,
     16,
     2,
-    'IF(SUM(C22:C26)>0,"FALLA","OK")',
+    'IF(COUNTIF(\'heatmap_global\'!$D:$D,"FALLA")>0,"FALLA",IF(COUNTIF(\'heatmap_global\'!$D:$D,"Pendiente")>0,"PENDIENTE","OK"))',
+    styles,
+    "control"
+  )
+  write_formula_cell(
+    wb,
+    sheet,
+    18,
+    2,
+    'IF(SUM(C24:C28)>0,"FALLA","OK")',
     styles,
     "control"
   )
@@ -1411,7 +1589,9 @@ write_validation_final <- function(wb, styles) {
     "'algoritmo_A_iteraciones'!$A:$Z",
     "'algoritmo_A'!$A:$E",
     "'puntajes_EA'!$A:$N",
-    "'informe_global'!$A:$R"
+    "'informe_global'!$A:$R",
+    "'heatmap_datos_globales'!$A:$K",
+    "'heatmap_global'!$A:$D"
   )
   for (i in seq_len(nrow(errors))) {
     row <- error_start + i
@@ -1489,6 +1669,8 @@ write_formula_workbook <- function(combo, snapshot) {
   write_algorithm_summary_sheet(wb, combo, snapshot_combo, styles)
   write_scores_sheet(wb, snapshot_combo, styles)
   write_global_report_sheet(wb, snapshot_combo, styles)
+  write_heatmap_data_sheet(wb, combo, participants, styles)
+  write_heatmap_matrix_sheet(wb, combo, participants, styles)
   write_snapshot_sheet(wb, snapshot_combo, styles)
   write_validation_final(wb, styles)
 
@@ -1512,8 +1694,8 @@ run_generator <- function() {
   summary <- data.frame(
     workbook = basename(outputs),
     path = outputs,
-    fase = "Fase 6",
-    estado = "puntajes_ea_informe_global_formulas",
+    fase = "Fase 7",
+    estado = "heatmaps_formulas",
     stringsAsFactors = FALSE
   )
   write.csv(
