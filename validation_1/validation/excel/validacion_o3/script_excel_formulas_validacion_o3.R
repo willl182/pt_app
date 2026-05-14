@@ -1417,8 +1417,6 @@ write_validation_final <- function(wb, styles) {
       "algoritmo_A",
       "puntajes_EA",
       "informe_global",
-      "heatmap_datos_globales",
-      "heatmap_global",
       "validacion_snapshot",
       "validacion_final"
     ),
@@ -1433,8 +1431,6 @@ write_validation_final <- function(wb, styles) {
       "Implementado",
       NA_character_,
       "Implementado",
-      NA_character_,
-      NA_character_,
       NA_character_,
       NA_character_,
       NA_character_,
@@ -1455,8 +1451,6 @@ write_validation_final <- function(wb, styles) {
       "Resumen visible app.R y comparacion contra snapshot.",
       "Puntajes z, z', zeta y En por metodo y participante.",
       "Conteos globales por metodo, score y categoria.",
-      "Tabla larga para heat maps globales desde puntajes_EA.",
-      "Matrices visibles por metodo y score, con etiquetas a 2 decimales.",
       "Snapshot congelado del combo.",
       "Resumen de comparacion de estado del libro."
     ),
@@ -1524,33 +1518,6 @@ write_validation_final <- function(wb, styles) {
     styles,
     "control"
   )
-  write_formula_cell(
-    wb,
-    sheet,
-    15,
-    2,
-    'IF(COUNTIF(\'heatmap_datos_globales\'!$K:$K,"FALLA")>0,"FALLA",IF(COUNTIF(\'heatmap_datos_globales\'!$K:$K,"Pendiente")>0,"PENDIENTE","OK"))',
-    styles,
-    "control"
-  )
-  write_formula_cell(
-    wb,
-    sheet,
-    16,
-    2,
-    'IF(COUNTIF(\'heatmap_global\'!$D:$D,"FALLA")>0,"FALLA",IF(COUNTIF(\'heatmap_global\'!$D:$D,"Pendiente")>0,"PENDIENTE","OK"))',
-    styles,
-    "control"
-  )
-  write_formula_cell(
-    wb,
-    sheet,
-    18,
-    2,
-    'IF(SUM(C24:C28)>0,"FALLA","OK")',
-    styles,
-    "control"
-  )
   writeData(wb, sheet, "Estado global", startRow = nrow(summary) + 4, startCol = 1)
   write_formula_cell(
     wb,
@@ -1581,17 +1548,19 @@ write_validation_final <- function(wb, styles) {
     table_name = "validacion_final_errores"
   )
   result_ranges <- c(
+    "'datos_homogeneidad'!$A:$F",
     "'resultado_homogeneidad'!$A:$G",
+    "'datos_estabilidad'!$A:$E",
     "'resultado_estabilidad'!$A:$G",
+    "'datos_participantes'!$A:$H",
+    "'datos_referencia'!$A:$H",
     "'calc_homogeneidad'!$A:$C",
     "'calc_estabilidad'!$A:$C",
     "'valor_asignado'!$A:$K",
     "'algoritmo_A_iteraciones'!$A:$Z",
     "'algoritmo_A'!$A:$E",
     "'puntajes_EA'!$A:$N",
-    "'informe_global'!$A:$R",
-    "'heatmap_datos_globales'!$A:$K",
-    "'heatmap_global'!$A:$D"
+    "'informe_global'!$A:$R"
   )
   for (i in seq_len(nrow(errors))) {
     row <- error_start + i
@@ -1601,6 +1570,15 @@ write_validation_final <- function(wb, styles) {
     )
     write_formula_cell(wb, sheet, row, 3, count_formula, styles, "control")
   }
+  write_formula_cell(
+    wb,
+    sheet,
+    nrow(summary) + 1,
+    2,
+    sprintf("IF(SUM(C%d:C%d)>0,\"FALLA\",\"OK\")", error_start + 1, error_start + nrow(errors)),
+    styles,
+    "control"
+  )
   writeData(wb, sheet, "Total errores Excel", startRow = error_start + nrow(errors) + 2, startCol = 1)
   write_formula_cell(
     wb,
@@ -1669,8 +1647,6 @@ write_formula_workbook <- function(combo, snapshot) {
   write_algorithm_summary_sheet(wb, combo, snapshot_combo, styles)
   write_scores_sheet(wb, snapshot_combo, styles)
   write_global_report_sheet(wb, snapshot_combo, styles)
-  write_heatmap_data_sheet(wb, combo, participants, styles)
-  write_heatmap_matrix_sheet(wb, combo, participants, styles)
   write_snapshot_sheet(wb, snapshot_combo, styles)
   write_validation_final(wb, styles)
 
@@ -1683,6 +1659,273 @@ write_formula_workbook <- function(combo, snapshot) {
   out_path
 }
 
+make_heatmap_rows_from_snapshot <- function(snapshot) {
+  score_specs <- list(
+    z = c(label = "z", value = "z_score", eval = "z_score_eval"),
+    z_prime = c(label = "z'", value = "z_prime_score", eval = "z_prime_score_eval"),
+    zeta = c(label = "zeta", value = "zeta_score", eval = "zeta_score_eval"),
+    En = c(label = "En", value = "En_score", eval = "En_score_eval")
+  )
+  score_rows <- snapshot[snapshot$section == "puntajes_EA", , drop = FALSE]
+  out <- vector("list", length(score_specs))
+  for (i in seq_along(score_specs)) {
+    spec <- score_specs[[i]]
+    value <- score_rows[[spec[["value"]]]]
+    out[[i]] <- data.frame(
+      method_key = score_rows$method_key,
+      method = score_rows$method,
+      score_tipo = names(score_specs)[[i]],
+      score_label = spec[["label"]],
+      participant_id = score_rows$participant_id,
+      level = score_rows$level,
+      score_value = value,
+      evaluation = score_rows[[spec[["eval"]]]],
+      etiqueta_celda = ifelse(is.finite(value), sprintf("%.2f", value), ""),
+      stringsAsFactors = FALSE
+    )
+  }
+  rows <- do.call(rbind, out)
+  rows$level_num <- normalize_level_key(rows$level)
+  rows <- rows[order(
+    rows$method,
+    rows$score_tipo,
+    rows$participant_id,
+    rows$level_num
+  ), , drop = FALSE]
+  rows$level_num <- NULL
+  rownames(rows) <- NULL
+  rows
+}
+
+write_heatmap_annex <- function(snapshot) {
+  wb <- createWorkbook()
+  styles <- make_styles(wb)
+  heatmap_rows <- make_heatmap_rows_from_snapshot(snapshot)
+  methods <- unique(heatmap_rows$method)
+  scores <- unique(heatmap_rows$score_tipo)
+  score_labels <- setNames(heatmap_rows$score_label, heatmap_rows$score_tipo)
+  participants <- sort(unique(heatmap_rows$participant_id))
+  levels <- unique(heatmap_rows$level[order(normalize_level_key(heatmap_rows$level))])
+
+  addWorksheet(wb, "README")
+  writeData(wb, "README", "Anexo heatmaps O3", startRow = 1, startCol = 1)
+  addStyle(wb, "README", styles$title, rows = 1, cols = 1, stack = TRUE)
+  writeData(
+    wb,
+    "README",
+    data.frame(
+      campo = c("fuente", "descripcion", "criterio"),
+      valor = c(
+        "valores_validacion_o3.csv / puntajes_EA",
+        "Vista reorganizada: participantes en filas y niveles en columnas.",
+        "No recalcula scores; solo organiza score_value y evaluation ya validados."
+      ),
+      stringsAsFactors = FALSE
+    ),
+    startRow = 3
+  )
+
+  addWorksheet(wb, "heatmap_datos_globales")
+  write_styled_table(
+    wb,
+    "heatmap_datos_globales",
+    heatmap_rows,
+    styles,
+    table_name = "heatmap_datos_globales"
+  )
+
+  addWorksheet(wb, "heatmap_global")
+  start_row <- 1
+  for (method in methods) {
+    for (score in scores) {
+      block <- heatmap_rows[
+        heatmap_rows$method == method & heatmap_rows$score_tipo == score,
+        ,
+        drop = FALSE
+      ]
+      writeData(
+        wb,
+        "heatmap_global",
+        sprintf("Mapa global %s - %s", method, score_labels[[score]]),
+        startRow = start_row,
+        startCol = 1
+      )
+      addStyle(wb, "heatmap_global", styles$title, rows = start_row, cols = 1, stack = TRUE)
+      header <- c("participant_id", levels)
+      writeData(wb, "heatmap_global", t(header), startRow = start_row + 1, startCol = 1, colNames = FALSE)
+      addStyle(
+        wb,
+        "heatmap_global",
+        styles$header,
+        rows = start_row + 1,
+        cols = seq_along(header),
+        gridExpand = TRUE,
+        stack = TRUE
+      )
+      for (i in seq_along(participants)) {
+        row <- start_row + 1 + i
+        writeData(wb, "heatmap_global", participants[[i]], startRow = row, startCol = 1)
+        for (j in seq_along(levels)) {
+          value <- block$etiqueta_celda[
+            block$participant_id == participants[[i]] & block$level == levels[[j]]
+          ]
+          if (length(value) == 0) {
+            value <- ""
+          }
+          writeData(wb, "heatmap_global", value[[1]], startRow = row, startCol = j + 1)
+        }
+      }
+      start_row <- start_row + length(participants) + 4
+    }
+  }
+  setColWidths(wb, "heatmap_global", cols = 1:(length(levels) + 1), widths = "auto")
+  out_path <- file.path(formulas_dir, "validacion_heatmaps_o3.xlsx")
+  saveWorkbook(wb, out_path, overwrite = TRUE)
+  message("Wrote ", out_path)
+  out_path
+}
+
+recalculate_workbooks <- function(paths) {
+  libreoffice <- Sys.which("libreoffice")
+  if (!nzchar(libreoffice)) {
+    warning(
+      "LibreOffice no esta disponible; los libros quedan sin recalculo ",
+      "externo y el resumen se marcara como PENDIENTE."
+    )
+    return(FALSE)
+  }
+
+  tmp_dir <- tempfile("pt_o3_formula_recalc_")
+  input_dir <- file.path(tmp_dir, "input")
+  output_dir <- file.path(tmp_dir, "output")
+  profile_dir <- file.path(tmp_dir, "lo_profile")
+  dir.create(input_dir, recursive = TRUE, showWarnings = FALSE)
+  dir.create(output_dir, recursive = TRUE, showWarnings = FALSE)
+  dir.create(profile_dir, recursive = TRUE, showWarnings = FALSE)
+
+  input_paths <- file.path(input_dir, basename(paths))
+  file.copy(paths, input_paths, overwrite = TRUE)
+
+  args <- c(
+    "--headless",
+    paste0("-env:UserInstallation=file://", normalizePath(profile_dir, winslash = "/", mustWork = TRUE)),
+    "--convert-to",
+    "xlsx",
+    "--outdir",
+    normalizePath(output_dir, winslash = "/", mustWork = TRUE),
+    normalizePath(input_paths, winslash = "/", mustWork = TRUE)
+  )
+  command <- paste(shQuote(libreoffice), paste(shQuote(args), collapse = " "))
+  status_file <- tempfile("libreoffice_status_")
+  exit_status <- system(
+    paste(command, ">", shQuote(status_file), "2>&1"),
+    intern = FALSE,
+    ignore.stdout = FALSE,
+    ignore.stderr = FALSE
+  )
+  status <- readLines(status_file, warn = FALSE)
+  recalculated <- file.path(output_dir, basename(paths))
+  missing <- recalculated[!file.exists(recalculated)]
+  if (length(missing) > 0) {
+    warning(
+      "LibreOffice no produjo todos los libros esperados:\n",
+      paste("-", missing, collapse = "\n")
+    )
+    return(FALSE)
+  }
+  if (!is.null(exit_status) && !identical(exit_status, 0L)) {
+    warning(
+      "LibreOffice devolvio estado ", exit_status,
+      ", pero produjo todos los libros recalculados:\n",
+      paste(status, collapse = "\n")
+    )
+  }
+
+  file.copy(recalculated, paths, overwrite = TRUE)
+  TRUE
+}
+
+read_validation_final_summary <- function(path, recalculated) {
+  validation <- openxlsx::read.xlsx(
+    path,
+    sheet = "validacion_final",
+    colNames = FALSE,
+    rows = 1:30,
+    cols = 1:3
+  )
+  names(validation) <- c("hoja", "estado", "notas")
+  validation <- validation[!is.na(validation$hoja), , drop = FALSE]
+
+  total_errors <- validation$estado[validation$hoja == "Total errores Excel"]
+  total_errors <- suppressWarnings(as.integer(total_errors[[1]]))
+  if (!is.finite(total_errors)) {
+    total_errors <- NA_integer_
+  }
+
+  detail <- validation[
+    validation$hoja %in% c(
+      "datos_homogeneidad",
+      "calc_homogeneidad",
+      "resultado_homogeneidad",
+      "datos_estabilidad",
+      "calc_estabilidad",
+      "resultado_estabilidad",
+      "datos_participantes",
+      "datos_referencia",
+      "valor_asignado",
+      "algoritmo_A_iteraciones",
+      "algoritmo_A",
+      "puntajes_EA",
+      "informe_global",
+      "validacion_snapshot",
+      "validacion_final"
+    ),
+    ,
+    drop = FALSE
+  ]
+
+  if (!recalculated) {
+    formula_rows <- is.na(detail$estado)
+    detail$estado[formula_rows] <- "PENDIENTE_RECALCULO"
+  }
+
+  global <- validation[validation$hoja == "Estado global", , drop = FALSE]
+  if (nrow(global) == 0) {
+    global <- data.frame(
+      hoja = "Estado global",
+      estado = if (recalculated) "FALLA" else "PENDIENTE_RECALCULO",
+      notas = "",
+      stringsAsFactors = FALSE
+    )
+  }
+
+  out <- rbind(detail, global)
+  out$workbook <- basename(path)
+  out$path <- path
+  out$total_errores_excel <- total_errors
+  out$fase <- "Fase 9"
+  out[, c(
+    "workbook",
+    "path",
+    "hoja",
+    "estado",
+    "notas",
+    "total_errores_excel",
+    "fase"
+  )]
+}
+
+write_generator_summary <- function(paths, recalculated) {
+  summaries <- lapply(paths, read_validation_final_summary, recalculated = recalculated)
+  summary <- do.call(rbind, summaries)
+  write.csv(
+    summary,
+    file.path(formulas_dir, "resumen_validacion_formulas_o3.csv"),
+    row.names = FALSE
+  )
+  summary
+}
+
 run_generator <- function() {
   check_required_sources(required_sources)
   dir.create(formulas_dir, recursive = TRUE, showWarnings = FALSE)
@@ -1691,13 +1934,22 @@ run_generator <- function() {
   for (i in seq_len(nrow(target_combos))) {
     outputs[[i]] <- write_formula_workbook(target_combos[i, , drop = FALSE], snapshot)
   }
-  summary <- data.frame(
-    workbook = basename(outputs),
-    path = outputs,
-    fase = "Fase 7",
-    estado = "heatmaps_formulas",
+  heatmap_output <- write_heatmap_annex(snapshot)
+  summary <- write_generator_summary(outputs, recalculated = FALSE)
+  heatmap_summary <- data.frame(
+    workbook = basename(heatmap_output),
+    path = heatmap_output,
+    hoja = c("heatmap_datos_globales", "heatmap_global"),
+    estado = "ANEXO",
+    notas = c(
+      "Tabla larga reorganizada desde puntajes_EA del snapshot.",
+      "Matrices por metodo y score con participantes en filas y niveles en columnas."
+    ),
+    total_errores_excel = NA_integer_,
+    fase = "Fase 9",
     stringsAsFactors = FALSE
   )
+  summary <- rbind(summary, heatmap_summary)
   write.csv(
     summary,
     file.path(formulas_dir, "resumen_validacion_formulas_o3.csv"),

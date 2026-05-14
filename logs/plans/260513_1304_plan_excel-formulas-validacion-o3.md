@@ -2,7 +2,7 @@
 
 **Timestamp:** 260513_1304
 **Slug:** excel-formulas-validacion-o3
-**Estado:** En progreso
+**Estado:** Completado
 
 ## Objetivo
 Crear hojas de calculo Excel para validar, con formulas visibles y auditables, los
@@ -301,7 +301,7 @@ formulas, trazabilidad y controles de diferencia.
 | Item | Estado | Notas |
 |------|--------|-------|
 | Construir `heatmap_datos_globales` | Completado | Hoja larga creada por libro desde `puntajes_EA`: cinco metodos, cuatro scores, participantes alfabeticos y nivel del combo. |
-| Implementar matrices `heatmap_global_*` | Completado | Hoja consolidada `heatmap_global` con bloques por metodo/score; cada bloque muestra participante, nivel, etiqueta y evaluacion. |
+| Implementar matrices `heatmap_global_*` | Completado | Movido a anexo separado `validacion_heatmaps_o3.xlsx` para aligerar los libros principales; reorganiza `puntajes_EA` con participantes en filas y niveles en columnas. |
 | Validar datos numericos de heat map | Completado | 240/240 controles OK por libro; etiquetas `TEXT(score,"0.00")` contra `puntajes_EA`. |
 | Replicar paletas de `app.R` | Pendiente | Opcional: usar formato condicional con colores de `score_heatmap_palettes`. |
 | Validar orden de ejes | Completado | Participantes ordenados alfabeticamente; cada libro representa su nivel O3 y conserva el nivel como columna de matriz. |
@@ -321,11 +321,11 @@ formulas, trazabilidad y controles de diferencia.
 ### Fase 9: Documentacion, revision y persistencia
 | Item | Estado | Notas |
 |------|--------|-------|
-| Documentar uso en README o README de carpeta | Pendiente | Comandos para refrescar snapshot y generar libros con formulas. |
-| Ejecutar revisor de fase | Pendiente | Revisor debe buscar inconsistencias, riesgos y formulas fragiles. |
-| Actualizar este plan | Pendiente | Registrar hallazgos, decisiones y comandos ejecutados. |
-| Usar skill `saver` | Pendiente | Persistir estado de sesion y hallazgos. |
-| Commit y push | Pendiente | Requerido por `AGENTS.md` al completar fases. |
+| Documentar uso en README o README de carpeta | Completado | `formulas/README.md` documenta snapshot, generacion, recalculo LibreOffice y verificacion rapida. |
+| Ejecutar revisor de fase | Completado | Revision registrada en `logs/CURRENT_SESSION.md`: reproducibilidad del resumen, recalc externo y peso de heatmaps. |
+| Actualizar este plan | Completado | Registrado cierre de documentacion, anexo de heatmaps, recalc final y verificacion. |
+| Usar skill `saver` | Completado | Persistidos `logs/CURRENT_SESSION.md` y `logs/history/260513_2059_findings.md`. |
+| Commit y push | En progreso | Preparando commit de cierre de fase; `README.md` y anexo estan ignorados y deben agregarse con `git add -f`. |
 
 ## Riesgos y decisiones pendientes
 - Excel y R deben coincidir en cuantiles. Si `QUARTILE.INC` no reproduce
@@ -403,3 +403,8 @@ formulas, trazabilidad y controles de diferencia.
 - [260513 19:25] Fase 8 completada: generador ejecutado, tres libros recalculados con LibreOffice en `/tmp/pt_o3_formula_recalc_phase8/out` y artefactos finales reemplazados por las copias recalculadas.
 - [260513 19:25] Verificacion Fase 8: `validacion_final` reporta `Estado global = OK` y `Total errores Excel = 0` para O3 0, 80 y 180; escaneo XML sin `#REF!`, `#DIV/0!`, `#VALUE!`, `#N/A` ni `#NAME?`.
 - [260513 19:25] Exportado `resumen_validacion_formulas_o3.csv` con 54 filas de estado por libro/hoja, 8 hojas `Implementado`, 10 controles `OK` y cero errores Excel por libro.
+- [260513 20:03] Ajuste solicitado: heat maps separados en `validacion_heatmaps_o3.xlsx` como anexo liviano; los libros principales ya no contienen `heatmap_datos_globales` ni `heatmap_global`.
+- [260513 20:03] Verificacion: libros principales recalculados manualmente con LibreOffice quedaron `Estado global = OK` y `Total errores Excel = 0`; el anexo muestra niveles `0`, `80` y `180` como columnas.
+- [260513 20:59] Saver ejecutado: actualizado `logs/CURRENT_SESSION.md` y creado `logs/history/260513_2059_findings.md`.
+- [260513 21:15] Cierre formal: no existe Fase 10 definida en este plan; se completo la fase pendiente de documentacion, revision y persistencia.
+- [260513 21:15] Verificacion de cierre: generador ejecutado, libros principales recalculados con LibreOffice en `/tmp/pt_o3_formula_recalc_phase_close/out`, `resumen_validacion_formulas_o3.csv` actualizado con 24 `OK`, 24 `Implementado`, 2 `ANEXO` y cero errores Excel.
