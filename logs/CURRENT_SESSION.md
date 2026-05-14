@@ -38,6 +38,8 @@ solo define fases 1-9; se completo la fase pendiente de cierre.
 - [x] El escaneo XML de los tres libros no encontro `#REF!`, `#DIV/0!`,
   `#VALUE!`, `#N/A` ni `#NAME?`.
 - [x] El plan fue marcado como `Completado`; Fase 9 queda cerrada.
+- [x] Commit `3a6f674` (`Cierra validacion Excel O3 con formulas`) fue
+  enviado a `main`.
 
 ## Critical Technical Context
 
@@ -56,6 +58,5 @@ solo define fases 1-9; se completo la fase pendiente de cierre.
 
 ## Next Steps
 
-1. Agregar al commit los archivos ignorados con `git add -f` si se quiere
-   versionar el README operativo y el anexo de heatmaps.
-2. Hacer commit y push de los cambios de cierre del plan.
+1. No quedan pasos pendientes para el plan
+   `260513_1304_plan_excel-formulas-validacion-o3.md`.

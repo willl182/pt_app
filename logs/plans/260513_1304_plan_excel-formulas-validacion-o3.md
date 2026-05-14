@@ -325,7 +325,7 @@ formulas, trazabilidad y controles de diferencia.
 | Ejecutar revisor de fase | Completado | Revision registrada en `logs/CURRENT_SESSION.md`: reproducibilidad del resumen, recalc externo y peso de heatmaps. |
 | Actualizar este plan | Completado | Registrado cierre de documentacion, anexo de heatmaps, recalc final y verificacion. |
 | Usar skill `saver` | Completado | Persistidos `logs/CURRENT_SESSION.md` y `logs/history/260513_2059_findings.md`. |
-| Commit y push | En progreso | Preparando commit de cierre de fase; `README.md` y anexo estan ignorados y deben agregarse con `git add -f`. |
+| Commit y push | Completado | Commit `3a6f674` enviado a `main`; `README.md` y anexo se versionaron con `git add -f` por regla `.gitignore`. |
 
 ## Riesgos y decisiones pendientes
 - Excel y R deben coincidir en cuantiles. Si `QUARTILE.INC` no reproduce
@@ -408,3 +408,4 @@ formulas, trazabilidad y controles de diferencia.
 - [260513 20:59] Saver ejecutado: actualizado `logs/CURRENT_SESSION.md` y creado `logs/history/260513_2059_findings.md`.
 - [260513 21:15] Cierre formal: no existe Fase 10 definida en este plan; se completo la fase pendiente de documentacion, revision y persistencia.
 - [260513 21:15] Verificacion de cierre: generador ejecutado, libros principales recalculados con LibreOffice en `/tmp/pt_o3_formula_recalc_phase_close/out`, `resumen_validacion_formulas_o3.csv` actualizado con 24 `OK`, 24 `Implementado`, 2 `ANEXO` y cero errores Excel.
+- [260513 21:18] Commit y push completados: `3a6f674` (`Cierra validacion Excel O3 con formulas`) enviado a `main`.
