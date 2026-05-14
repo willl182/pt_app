@@ -312,11 +312,11 @@ formulas, trazabilidad y controles de diferencia.
 ### Fase 8: Recalculo y verificacion automatica
 | Item | Estado | Notas |
 |------|--------|-------|
-| Ejecutar generador | Pendiente | Crear los tres libros `validacion_formula_o3_*.xlsx`. |
-| Recalcular con LibreOffice | Pendiente | Usar flujo de recalc de la skill `xlsx` o comando equivalente disponible en repo. |
-| Escanear errores de formula | Pendiente | Cero errores `#REF!`, `#DIV/0!`, `#VALUE!`, `#N/A`, `#NAME?`. |
-| Exportar resumen CSV | Pendiente | `resumen_validacion_formulas_o3.csv` con estado por libro/hoja. |
-| Revisar diferencias | Pendiente | Investigar toda diferencia fuera de tolerancia antes de cerrar. |
+| Ejecutar generador | Completado | `Rscript validation_1/validation/excel/validacion_o3/script_excel_formulas_validacion_o3.R` regenero los tres libros `validacion_formula_o3_*.xlsx`. |
+| Recalcular con LibreOffice | Completado | Recalculo headless en `/tmp/pt_o3_formula_recalc_phase8/out`; las copias recalculadas reemplazaron los artefactos finales en `formulas/`. |
+| Escanear errores de formula | Completado | Escaneo XML sin literales `#REF!`, `#DIV/0!`, `#VALUE!`, `#N/A`, `#NAME?`; `validacion_final` reporta `Total errores Excel = 0` por libro. |
+| Exportar resumen CSV | Completado | `resumen_validacion_formulas_o3.csv` regenerado con 54 filas, estado por libro/hoja, fase `Fase 8` y `total_errores_excel = 0`. |
+| Revisar diferencias | Completado | Los tres libros recalculados quedaron con `Estado global = OK`; no hubo diferencias fuera de tolerancia que investigar. |
 
 ### Fase 9: Documentacion, revision y persistencia
 | Item | Estado | Notas |
@@ -400,3 +400,6 @@ formulas, trazabilidad y controles de diferencia.
 - [260513 19:14] Fase 7 implementada: agregadas hojas `heatmap_datos_globales` y `heatmap_global` como vistas reorganizadas desde `puntajes_EA`, sin recalcular estadistica nueva.
 - [260513 19:14] Decision tecnica Fase 7: usar referencias directas por indice a `puntajes_EA` y a `heatmap_datos_globales`, evitando busquedas `MATCH` sobre columnas completas porque el heatmap solo reordena informacion existente.
 - [260513 19:14] Verificacion Fase 7: generador ejecutado, tres libros recalculados con LibreOffice en `/tmp/pt_o3_formula_recalc_phase7_*`; `heatmap_datos_globales` 240/240 OK, `heatmap_global` 240/240 OK, `validacion_final = OK` y `Total errores Excel = 0` en los tres libros.
+- [260513 19:25] Fase 8 completada: generador ejecutado, tres libros recalculados con LibreOffice en `/tmp/pt_o3_formula_recalc_phase8/out` y artefactos finales reemplazados por las copias recalculadas.
+- [260513 19:25] Verificacion Fase 8: `validacion_final` reporta `Estado global = OK` y `Total errores Excel = 0` para O3 0, 80 y 180; escaneo XML sin `#REF!`, `#DIV/0!`, `#VALUE!`, `#N/A` ni `#NAME?`.
+- [260513 19:25] Exportado `resumen_validacion_formulas_o3.csv` con 54 filas de estado por libro/hoja, 8 hojas `Implementado`, 10 controles `OK` y cero errores Excel por libro.
