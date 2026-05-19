@@ -40,6 +40,10 @@ if (interactive()) {
   source("ptcalc/R/pt_homogeneity.R")
 }
 
+`%||%` <- function(x, y) {
+  if (is.null(x)) y else x
+}
+
 score_equation <- function(math) {
   withMathJax(
     div(
@@ -149,6 +153,133 @@ ui <- fluidPage(
 # II. Lógica del Servidor
 # ===================================================================
 server <- function(input, output, session) {
+  internal_tools_enabled <- tolower(Sys.getenv("PT_APP_INTERNAL_TOOLS", "false")) %in%
+    c("true", "t", "1", "yes", "y", "si", "sí")
+  workflow_status <- reactiveVal("Herramientas internas listas. Seleccione una acción.")
+
+  run_workflow_script <- function(script, args = character()) {
+    cmd_args <- c(script, args)
+    result <- system2("Rscript", cmd_args, stdout = TRUE, stderr = TRUE)
+    status <- attr(result, "status")
+    if (is.null(status)) {
+      status <- 0
+    }
+    list(status = status, output = paste(result, collapse = "\n"))
+  }
+
+  output$preprocessing_workflow_status <- renderText({
+    workflow_status()
+  })
+
+  observeEvent(input$open_preprocessing_workflow, {
+    req(internal_tools_enabled)
+    showModal(modalDialog(
+      title = tagList(icon("screwdriver-wrench"), " Workflow interno de preprocesamiento"),
+      size = "l",
+      easyClose = TRUE,
+      footer = modalButton("Cerrar"),
+      tags$p(
+        class = "text-muted",
+        "Herramientas internas para mover datos entre crudos, pt_app y calaire-app."
+      ),
+      fluidRow(
+        column(3, numericInput("workflow_round", "Ronda", value = 1, min = 1, step = 1)),
+        column(9, textInput("workflow_k", "k por defecto", value = "2"))
+      ),
+      tags$hr(),
+      h4("1. Crudos -> pt_app"),
+      actionButton("workflow_run_raw_preprocess", "Ejecutar preprocesamiento interno", icon = icon("gears")),
+      tags$hr(),
+      h4("2. pt_app -> calaire-app"),
+      fluidRow(
+        column(6, actionButton("workflow_export_reference", "Exportar referencia", icon = icon("file-export"))),
+        column(6, actionButton("workflow_export_participants", "Exportar participantes", icon = icon("file-export")))
+      ),
+      tags$hr(),
+      h4("3. calaire-app -> pt_app"),
+      actionButton("workflow_import_participants", "Importar participantes desde calaire-app", icon = icon("file-import")),
+      tags$hr(),
+      h4("4. Consolidación final"),
+      radioButtons(
+        "workflow_participant_origin",
+        "Origen de participantes",
+        choices = c(
+          "Desde calaire-app" = "calaire",
+          "Procesamiento interno" = "interno"
+        ),
+        selected = "calaire",
+        inline = TRUE
+      ),
+      actionButton("workflow_consolidate", "Generar ronda completa", icon = icon("object-group"), class = "btn-primary"),
+      tags$hr(),
+      h4("Estado"),
+      verbatimTextOutput("preprocessing_workflow_status")
+    ))
+  })
+
+  observeEvent(input$workflow_run_raw_preprocess, {
+    req(internal_tools_enabled)
+    workflow_status("Ejecutando preprocesamiento interno...")
+    result <- run_workflow_script("scripts/preprocesar_calaire.R")
+    workflow_status(result$output)
+    showNotification(if (result$status == 0) "Preprocesamiento completado." else "Preprocesamiento con errores.", type = if (result$status == 0) "message" else "error")
+  })
+
+  observeEvent(input$workflow_export_reference, {
+    req(internal_tools_enabled)
+    round_id <- as.character(input$workflow_round %||% 1)
+    result <- run_workflow_script("scripts/convert_pt_app_to_calaire_app.R", c(
+      file.path("data/processed", paste0("ronda_", round_id, "_completa.csv")),
+      file.path("data/to_calaire-app", paste0(round_id, "-ref.csv")),
+      "reference",
+      input$workflow_k %||% "2"
+    ))
+    workflow_status(result$output)
+    showNotification(if (result$status == 0) "Referencia exportada." else "Error exportando referencia.", type = if (result$status == 0) "message" else "error")
+  })
+
+  observeEvent(input$workflow_export_participants, {
+    req(internal_tools_enabled)
+    round_id <- as.character(input$workflow_round %||% 1)
+    result <- run_workflow_script("scripts/convert_pt_app_to_calaire_app.R", c(
+      file.path("data/processed", paste0("ronda_", round_id, "_completa.csv")),
+      file.path("data/to_calaire-app", paste0(round_id, "-pt.csv")),
+      "participants",
+      input$workflow_k %||% "2"
+    ))
+    workflow_status(result$output)
+    showNotification(if (result$status == 0) "Participantes exportados." else "Error exportando participantes.", type = if (result$status == 0) "message" else "error")
+  })
+
+  observeEvent(input$workflow_import_participants, {
+    req(internal_tools_enabled)
+    round_id <- as.character(input$workflow_round %||% 1)
+    result <- run_workflow_script("scripts/convert_from_calaire_app_to_pt_app.R", c(
+      file.path("data/from_calaire-app", paste0(round_id, "-pt.csv")),
+      file.path("data/processed", paste0("ronda_", round_id, "_participantes_from_calaire.csv"))
+    ))
+    workflow_status(result$output)
+    showNotification(if (result$status == 0) "Participantes importados." else "Error importando participantes.", type = if (result$status == 0) "message" else "error")
+  })
+
+  observeEvent(input$workflow_consolidate, {
+    req(internal_tools_enabled)
+    round_id <- as.character(input$workflow_round %||% 1)
+    participant_file <- if ((input$workflow_participant_origin %||% "calaire") == "calaire") {
+      file.path("data/processed", paste0("ronda_", round_id, "_participantes_from_calaire.csv"))
+    } else {
+      file.path("data/processed", paste0("ronda_", round_id, "_participantes.csv"))
+    }
+    result <- run_workflow_script("scripts/consolidar_ronda_pt_app.R", c(
+      round_id,
+      participant_file,
+      file.path("data/processed", paste0("ronda_", round_id, "_referencia.csv")),
+      file.path("data/processed", paste0("ronda_", round_id, "_completa.csv"))
+    ))
+    workflow_status(result$output)
+    showNotification(if (result$status == 0) "Ronda completa generada." else "Error consolidando ronda.", type = if (result$status == 0) "message" else "error")
+  })
+
   # Guardia numérica para convergencia; el criterio primario es signif3
   # según ISO 13528:2022 NOTE 1.
   ALGO_A_TOL <- 1e-10
@@ -171,35 +302,24 @@ server <- function(input, output, session) {
     df
   }
 
-  default_homogeneity_path <- "data/processed/ronda_2_homogeneidad.csv"
-  default_stability_path <- "data/processed/ronda_2_estabilidad.csv"
-
   hom_data_full <- reactive({
-    if (!is.null(input$hom_file)) {
-      return(read_hom_stab_csv(input$hom_file$datapath, "homogeneidad"))
-    }
-
     validate(
       need(
-        file.exists(default_homogeneity_path),
-        "Suba el archivo de homogeneidad o genere data/processed/ronda_2_homogeneidad.csv."
+        !is.null(input$hom_file),
+        "Suba el archivo de homogeneidad para iniciar el análisis."
       )
     )
-    read_hom_stab_csv(default_homogeneity_path, "homogeneidad")
+    read_hom_stab_csv(input$hom_file$datapath, "homogeneidad")
   })
 
   stab_data_full <- reactive({
-    if (!is.null(input$stab_file)) {
-      return(read_hom_stab_csv(input$stab_file$datapath, "estabilidad"))
-    }
-
     validate(
       need(
-        file.exists(default_stability_path),
-        "Suba el archivo de estabilidad o genere data/processed/ronda_2_estabilidad.csv."
+        !is.null(input$stab_file),
+        "Suba el archivo de estabilidad para iniciar el análisis."
       )
     )
-    read_hom_stab_csv(default_stability_path, "estabilidad")
+    read_hom_stab_csv(input$stab_file$datapath, "estabilidad")
   })
 
   # Referencia CALAIRE separada para la ronda PT.
@@ -300,96 +420,6 @@ server <- function(input, output, session) {
       mutate(n_lab = as.integer(n_lab))
   }
 
-  # Cargar participantes desde data/processed/ cuando no se suben archivos manualmente.
-  # Busca CSVs con las columnas requeridas y normaliza nombres de columnas.
-  auto_load_participants <- function(processed_dir = "data/processed") {
-    if (!dir.exists(processed_dir)) return(list(data_list = list(), raw_data = NULL))
-
-    files <- list.files(processed_dir, pattern = "\\.csv$", full.names = TRUE)
-    complete_files <- files[grepl("_completa\\.csv$", basename(files))]
-    if (length(complete_files) > 0) {
-      files <- complete_files
-    }
-    # Excluir archivos horarios, referencia, individuales de pipeline, y reportes.
-    # Los archivos _r.csv van por calaire_reference_df().
-    # Si hay archivos _completa.csv se prefieren como fuente unica de participantes.
-    # Los archivos _p_ronda.csv son salidas individuales de pipeline que ya estan
-    # contenidos en los archivos _participantes.csv.
-    exclude_patterns <- "^h_|referencia_ronda|_referencia\\.|_r\\.csv$|_p_ronda\\.|valores_generadores|incertidumbre\\.md|preprocesamiento_log"
-    files <- files[!grepl(exclude_patterns, basename(files))]
-
-    data_list <- list()
-    for (f in files) {
-      df <- tryCatch(
-        vroom::vroom(f, show_col_types = FALSE),
-        error = function(e) NULL
-      )
-      if (is.null(df) || nrow(df) == 0) next
-
-      required <- c("pollutant", "level", "mean_value", "u_value")
-      if (!all(required %in% names(df))) next
-
-      if (!"participant_id" %in% names(df) && "instrument" %in% names(df)) {
-        df$participant_id <- df$instrument
-      }
-      if ("tipo" %in% names(df)) {
-        df$participant_id[df$tipo == "referencia"] <- "ref"
-      }
-      df$u_i <- df$u_value
-      if (!"sd_value" %in% names(df)) {
-        df$sd_value <- NA_real_
-      }
-
-      # Si el archivo tiene columna 'tipo', excluir filas de referencia
-      if ("tipo" %in% names(df)) {
-        df <- df[df$tipo != "referencia", , drop = FALSE]
-        if (nrow(df) == 0) next
-      }
-
-      # Normalizar: instrument -> participant_id
-      if (!"participant_id" %in% names(df)) next
-
-      # Excluir archivos de referencia CALAIRE (instrumento = calaire_ref)
-      if (all(df$participant_id == "calaire_ref")) next
-
-      df <- infer_n_lab(df, f)
-
-      # Asegurar que run exista (requerido por el pipeline de agrupacion)
-      if (!"run" %in% names(df)) {
-        # Derivar run por orden cronologico de niveles dentro de cada contaminante
-        df$run <- NA_integer_
-        sp_groups <- unique(df[, c("participant_id", "pollutant"), drop = FALSE])
-        for (j in seq_len(nrow(sp_groups))) {
-          idx <- df$participant_id == sp_groups$participant_id[j] &
-                 df$pollutant == sp_groups$pollutant[j]
-          if ("hour_start" %in% names(df)) {
-            level_order <- unique(df$level[idx][order(df$hour_start[idx])])
-          } else {
-            level_order <- unique(df$level[idx])
-          }
-          df$run[idx] <- match(df$level[idx], level_order)
-        }
-      }
-      df$run <- as.character(df$run)
-
-      data_list[[length(data_list) + 1]] <- df
-    }
-
-    if (length(data_list) == 0) return(list(data_list = list(), raw_data = NULL))
-
-    # Armonizar columnas antes de rbind
-    all_cols <- Reduce(union, lapply(data_list, names))
-    data_list <- lapply(data_list, function(df) {
-      for (col in all_cols) {
-        if (!col %in% names(df)) df[[col]] <- NA
-      }
-      df[, all_cols, drop = FALSE]
-    })
-
-    raw_data <- do.call(rbind, data_list)
-    list(data_list = data_list, raw_data = raw_data)
-  }
-
   normalize_participant_uncertainty <- function(df) {
     default_k <- 2
     u_exp_aliases <- c("u_exp", "uexp", "U_exp", "U(xi)", "U_xi", "Uxi")
@@ -440,43 +470,33 @@ server <- function(input, output, session) {
 
   # Datos de preparación PT
   pt_prep_data <- reactive({
-    manual_files <- !is.null(input$summary_files) && nrow(input$summary_files) > 0
-
-    if (manual_files) {
-      data_list <- lapply(seq_len(nrow(input$summary_files)), function(i) {
-        df <- vroom::vroom(input$summary_files$datapath[i], show_col_types = FALSE)
-        if (!"participant_id" %in% names(df) && "instrument" %in% names(df)) {
-          df$participant_id <- df$instrument
-        }
-        if ("tipo" %in% names(df)) {
-          df$participant_id[df$tipo == "referencia"] <- "ref"
-        }
-        df <- normalize_participant_uncertainty(df)
-        if (!"sd_value" %in% names(df)) {
-          df$sd_value <- NA_real_
-        }
-        if ("run" %in% names(df)) {
-          df$run <- as.character(df$run)
-        }
-        df <- infer_n_lab(df, input$summary_files$name[i])
-        return(df)
-      })
-      raw_data <- do.call(rbind, data_list)
-      rv$raw_summary_data_list <- data_list
-    } else {
-      auto <- auto_load_participants()
-      if (is.null(auto$raw_data)) {
-        return(NULL)
-      }
-      data_list <- auto$data_list
-      raw_data <- auto$raw_data
-      rv$raw_summary_data_list <- data_list
-      showNotification(
-        paste0("Participantes auto-cargados desde data/processed/: ",
-               length(data_list), " archivo(s)."),
-        type = "message", duration = 5
+    validate(
+      need(
+        !is.null(input$summary_files) && nrow(input$summary_files) > 0,
+        "Suba el archivo consolidado de participantes para iniciar el análisis."
       )
-    }
+    )
+
+    data_list <- lapply(seq_len(nrow(input$summary_files)), function(i) {
+      df <- vroom::vroom(input$summary_files$datapath[i], show_col_types = FALSE)
+      if (!"participant_id" %in% names(df) && "instrument" %in% names(df)) {
+        df$participant_id <- df$instrument
+      }
+      if ("tipo" %in% names(df)) {
+        df$participant_id[df$tipo == "referencia"] <- "ref"
+      }
+      df <- normalize_participant_uncertainty(df)
+      if (!"sd_value" %in% names(df)) {
+        df$sd_value <- NA_real_
+      }
+      if ("run" %in% names(df)) {
+        df$run <- as.character(df$run)
+      }
+      df <- infer_n_lab(df, input$summary_files$name[i])
+      return(df)
+    })
+    raw_data <- do.call(rbind, data_list)
+    rv$raw_summary_data_list <- data_list
 
     if (is.null(raw_data) || nrow(raw_data) == 0) {
       return(NULL)
@@ -1559,7 +1579,22 @@ server <- function(input, output, session) {
                   "Si no se activa, la referencia se toma del archivo consolidado como participant_id='ref'."
                 )
               )
-            )
+            ),
+            if (internal_tools_enabled) {
+              div(
+                style = "margin-top: 16px; border-top: 1px solid #e5e7eb; padding-top: 12px;",
+                actionButton(
+                  "open_preprocessing_workflow",
+                  label = tagList(icon("screwdriver-wrench"), " Herramientas internas de preprocesamiento"),
+                  class = "btn btn-outline-secondary"
+                ),
+                tags$small(
+                  class = "text-muted",
+                  style = "display: block; margin-top: 6px;",
+                  "Visible solo con PT_APP_INTERNAL_TOOLS=true."
+                )
+              )
+            }
           )
         ),
         div(class = "shadcn-card",
@@ -6446,12 +6481,7 @@ server <- function(input, output, session) {
     if (!is.null(input$summary_files) && nrow(input$summary_files) > 0) {
       cat(sprintf("- Resumen: %d archivo(s) cargado(s) (%d filas en total).\n", nrow(input$summary_files), nrow(pt_prep_data())))
     } else {
-      auto <- auto_load_participants()
-      if (!is.null(auto$raw_data)) {
-        cat(sprintf("- Resumen: %d participante(s) auto-cargado(s) desde data/processed/ (%d filas en total).\n", length(auto$data_list), nrow(auto$raw_data)))
-      } else {
-        cat("- Resumen: No cargado.\n")
-      }
+      cat("- Resumen: No cargado.\n")
     }
 
     calaire_ref <- calaire_reference_df()
