@@ -40,6 +40,31 @@ if (interactive()) {
   source("ptcalc/R/pt_homogeneity.R")
 }
 
+score_equation <- function(math) {
+  withMathJax(
+    div(
+      class = "text-muted",
+      tags$strong("Ecuación: "),
+      paste0("\\(", math, "\\)")
+    )
+  )
+}
+
+safe_filename_stem <- function(x, fallback = "Informe_EA") {
+  x <- trimws(as.character(x %||% ""))
+  if (!nzchar(x)) {
+    x <- fallback
+  }
+  x <- gsub("[^[:alnum:]_.-]+", "_", x)
+  x <- gsub("_+", "_", x)
+  x <- gsub("^_+|_+$", "", x)
+  if (!nzchar(x)) {
+    fallback
+  } else {
+    x
+  }
+}
+
 # ===================================================================
 # I. Interfaz de Usuario (UI)
 # ===================================================================
@@ -132,56 +157,85 @@ server <- function(input, output, session) {
   # Esta sección maneja la carga inicial de datos desde archivos subidos por el usuario.
   # Estos reactivos son la base para todos los análisis posteriores.
 
-  hom_data_full <- reactive({
-    req(input$hom_file)
-    df <- vroom::vroom(input$hom_file$datapath, show_col_types = FALSE)
+  read_hom_stab_csv <- function(path, label) {
+    df <- vroom::vroom(path, show_col_types = FALSE)
     validate(
       need(
         all(c("value", "pollutant", "level") %in% names(df)),
-        "Error: El archivo de homogeneidad debe contener las columnas 'value', 'pollutant' y 'level'. Verifique que ha subido el archivo correcto."
+        sprintf(
+          "Error: El archivo de %s debe contener las columnas 'value', 'pollutant' y 'level'. Verifique que ha subido el archivo correcto.",
+          label
+        )
       )
     )
     df
+  }
+
+  default_homogeneity_path <- "data/processed/ronda_2_homogeneidad.csv"
+  default_stability_path <- "data/processed/ronda_2_estabilidad.csv"
+
+  hom_data_full <- reactive({
+    if (!is.null(input$hom_file)) {
+      return(read_hom_stab_csv(input$hom_file$datapath, "homogeneidad"))
+    }
+
+    validate(
+      need(
+        file.exists(default_homogeneity_path),
+        "Suba el archivo de homogeneidad o genere data/processed/ronda_2_homogeneidad.csv."
+      )
+    )
+    read_hom_stab_csv(default_homogeneity_path, "homogeneidad")
   })
 
   stab_data_full <- reactive({
-    req(input$stab_file)
-    df <- vroom::vroom(input$stab_file$datapath, show_col_types = FALSE)
+    if (!is.null(input$stab_file)) {
+      return(read_hom_stab_csv(input$stab_file$datapath, "estabilidad"))
+    }
+
     validate(
       need(
-        all(c("value", "pollutant", "level") %in% names(df)),
-        "Error: El archivo de estabilidad debe contener las columnas 'value', 'pollutant' y 'level'. Verifique que ha subido el archivo correcto."
+        file.exists(default_stability_path),
+        "Suba el archivo de estabilidad o genere data/processed/ronda_2_estabilidad.csv."
       )
     )
-    df
+    read_hom_stab_csv(default_stability_path, "estabilidad")
   })
 
-  # Referencia CALAIRE procesada para la ronda PT.
-  # Fuente: salida consolidada del preprocesador CALAIRE.
+  # Referencia CALAIRE separada para la ronda PT.
+  # Solo se usa cuando el usuario activa el checkbox y sube un CSV individual.
+  # Si no se activa, la referencia debe venir como participant_id = "ref" en
+  # el archivo consolidado de participantes.
   calaire_reference_df <- reactive({
-    path <- file.path("data", "processed", "referencia_ronda.csv")
-    if (!file.exists(path)) {
+    if (!use_calaire_reference()) {
       return(NULL)
     }
 
-    df <- vroom::vroom(path, show_col_types = FALSE)
+    if (is.null(input$calaire_reference_file)) {
+      return(NULL)
+    }
+
+    df <- vroom::vroom(input$calaire_reference_file$datapath, show_col_types = FALSE)
     required_cols <- c("pollutant", "level", "mean_value", "u_value")
     if (!all(required_cols %in% names(df))) {
       showNotification(
         paste0(
-          "'referencia_ronda.csv' debe contener: ",
+          "El archivo de referencia CALAIRE debe contener: ",
           paste(required_cols, collapse = ", "), "."
         ),
         type = "error", duration = 10
       )
       return(NULL)
     }
+    if (!"sd_value" %in% names(df)) {
+      df$sd_value <- NA_real_
+    }
 
     df %>%
       mutate(
         participant_id = "ref",
         reference_source = "CALAIRE",
-        sd_value = u_value
+        u_i = u_value
       ) %>%
       select(
         participant_id,
@@ -190,6 +244,7 @@ server <- function(input, output, session) {
         mean_value,
         sd_value,
         u_value,
+        u_i,
         n_hours,
         unit,
         reference_source,
@@ -214,14 +269,53 @@ server <- function(input, output, session) {
     isTRUE(input$use_calaire_reference)
   })
 
+  infer_n_lab <- function(df, filename = NULL) {
+    if ("n_lab" %in% names(df)) {
+      return(df)
+    }
+
+    basename_value <- if (!is.null(filename)) basename(filename) else ""
+    explicit_n <- stringr::str_match(
+      basename_value,
+      "(?:^|_)n([0-9]+)(?:_|\\.|$)"
+    )[, 2]
+
+    if (!is.na(explicit_n)) {
+      df$n_lab <- as.integer(explicit_n)
+      return(df)
+    }
+
+    if (!all(c("participant_id", "pollutant", "level") %in% names(df))) {
+      df$n_lab <- NA_integer_
+      return(df)
+    }
+
+    n_by_combo <- df %>%
+      filter(!is.na(participant_id), participant_id != "ref") %>%
+      distinct(pollutant, level, participant_id) %>%
+      count(pollutant, level, name = "n_lab")
+
+    df %>%
+      left_join(n_by_combo, by = c("pollutant", "level")) %>%
+      mutate(n_lab = as.integer(n_lab))
+  }
+
   # Cargar participantes desde data/processed/ cuando no se suben archivos manualmente.
   # Busca CSVs con las columnas requeridas y normaliza nombres de columnas.
   auto_load_participants <- function(processed_dir = "data/processed") {
     if (!dir.exists(processed_dir)) return(list(data_list = list(), raw_data = NULL))
 
     files <- list.files(processed_dir, pattern = "\\.csv$", full.names = TRUE)
-    # Excluir archivos horarios, referencia, y reportes
-    exclude_patterns <- "^h_|referencia_ronda|incertidumbre\\.md|preprocesamiento_log"
+    complete_files <- files[grepl("_completa\\.csv$", basename(files))]
+    if (length(complete_files) > 0) {
+      files <- complete_files
+    }
+    # Excluir archivos horarios, referencia, individuales de pipeline, y reportes.
+    # Los archivos _r.csv van por calaire_reference_df().
+    # Si hay archivos _completa.csv se prefieren como fuente unica de participantes.
+    # Los archivos _p_ronda.csv son salidas individuales de pipeline que ya estan
+    # contenidos en los archivos _participantes.csv.
+    exclude_patterns <- "^h_|referencia_ronda|_referencia\\.|_r\\.csv$|_p_ronda\\.|valores_generadores|incertidumbre\\.md|preprocesamiento_log"
     files <- files[!grepl(exclude_patterns, basename(files))]
 
     data_list <- list()
@@ -232,28 +326,116 @@ server <- function(input, output, session) {
       )
       if (is.null(df) || nrow(df) == 0) next
 
-      required <- c("pollutant", "level", "mean_value", "sd_value")
+      required <- c("pollutant", "level", "mean_value", "u_value")
       if (!all(required %in% names(df))) next
 
-      # Normalizar: instrument -> participant_id
       if (!"participant_id" %in% names(df) && "instrument" %in% names(df)) {
         df$participant_id <- df$instrument
       }
+      if ("tipo" %in% names(df)) {
+        df$participant_id[df$tipo == "referencia"] <- "ref"
+      }
+      df$u_i <- df$u_value
+      if (!"sd_value" %in% names(df)) {
+        df$sd_value <- NA_real_
+      }
+
+      # Si el archivo tiene columna 'tipo', excluir filas de referencia
+      if ("tipo" %in% names(df)) {
+        df <- df[df$tipo != "referencia", , drop = FALSE]
+        if (nrow(df) == 0) next
+      }
+
+      # Normalizar: instrument -> participant_id
       if (!"participant_id" %in% names(df)) next
 
-      # Extraer n_lab del nombre de archivo (part_1_ronda.csv -> 1)
-      if (!"n_lab" %in% names(df)) {
-        n <- as.integer(stringr::str_extract(basename(f), "\\d+"))
-        df$n_lab <- if (!is.na(n)) n else NA_integer_
+      # Excluir archivos de referencia CALAIRE (instrumento = calaire_ref)
+      if (all(df$participant_id == "calaire_ref")) next
+
+      df <- infer_n_lab(df, f)
+
+      # Asegurar que run exista (requerido por el pipeline de agrupacion)
+      if (!"run" %in% names(df)) {
+        # Derivar run por orden cronologico de niveles dentro de cada contaminante
+        df$run <- NA_integer_
+        sp_groups <- unique(df[, c("participant_id", "pollutant"), drop = FALSE])
+        for (j in seq_len(nrow(sp_groups))) {
+          idx <- df$participant_id == sp_groups$participant_id[j] &
+                 df$pollutant == sp_groups$pollutant[j]
+          if ("hour_start" %in% names(df)) {
+            level_order <- unique(df$level[idx][order(df$hour_start[idx])])
+          } else {
+            level_order <- unique(df$level[idx])
+          }
+          df$run[idx] <- match(df$level[idx], level_order)
+        }
       }
+      df$run <- as.character(df$run)
 
       data_list[[length(data_list) + 1]] <- df
     }
 
     if (length(data_list) == 0) return(list(data_list = list(), raw_data = NULL))
 
+    # Armonizar columnas antes de rbind
+    all_cols <- Reduce(union, lapply(data_list, names))
+    data_list <- lapply(data_list, function(df) {
+      for (col in all_cols) {
+        if (!col %in% names(df)) df[[col]] <- NA
+      }
+      df[, all_cols, drop = FALSE]
+    })
+
     raw_data <- do.call(rbind, data_list)
     list(data_list = data_list, raw_data = raw_data)
+  }
+
+  normalize_participant_uncertainty <- function(df) {
+    default_k <- 2
+    u_exp_aliases <- c("u_exp", "uexp", "U_exp", "U(xi)", "U_xi", "Uxi")
+    u_exp_col <- intersect(u_exp_aliases, names(df))[1]
+    if (!is.na(u_exp_col) && !"u_exp" %in% names(df)) {
+      df$u_exp <- df[[u_exp_col]]
+    }
+    if ("k" %in% names(df) && !"k_factor" %in% names(df)) {
+      df$k_factor <- df$k
+    }
+    if (all(c("u_exp", "k_factor") %in% names(df))) {
+      k_num <- suppressWarnings(as.numeric(df$k_factor))
+      u_exp_num <- suppressWarnings(as.numeric(df$u_exp))
+      u_from_exp <- ifelse(is.finite(k_num) & k_num > 0, u_exp_num / k_num, NA_real_)
+      if (!"u_value" %in% names(df)) {
+        df$u_value <- u_from_exp
+      } else {
+        u_value_num <- suppressWarnings(as.numeric(df$u_value))
+        mismatch <- is.finite(u_value_num) & is.finite(u_from_exp) &
+          abs(u_value_num - u_from_exp) > max(1e-10, 0.01 * abs(u_value_num))
+        if (any(mismatch, na.rm = TRUE)) {
+          warning(
+            "Inconsistencia entre u_value y u_exp/k; se conserva u_value ",
+            "para zeta y u_exp para En."
+          )
+        }
+      }
+    }
+    if ("u_value" %in% names(df)) {
+      df$u_i <- df$u_value
+    }
+    if (!"k_factor" %in% names(df)) {
+      df$k_factor <- default_k
+    }
+    k_num <- suppressWarnings(as.numeric(df$k_factor))
+    k_num[!is.finite(k_num) | k_num <= 0] <- default_k
+    df$k_factor <- k_num
+    if (!"u_exp" %in% names(df)) {
+      df$u_exp <- NA_real_
+    }
+    if ("u_value" %in% names(df)) {
+      u_value_num <- suppressWarnings(as.numeric(df$u_value))
+      u_exp_num <- suppressWarnings(as.numeric(df$u_exp))
+      df$u_exp <- ifelse(is.finite(u_exp_num), u_exp_num, u_value_num * df$k_factor)
+    }
+    df
   }
 
   # Datos de preparación PT
@@ -263,8 +445,20 @@ server <- function(input, output, session) {
     if (manual_files) {
       data_list <- lapply(seq_len(nrow(input$summary_files)), function(i) {
         df <- vroom::vroom(input$summary_files$datapath[i], show_col_types = FALSE)
-        n <- as.integer(stringr::str_extract(input$summary_files$name[i], "\\d+"))
-        df$n_lab <- n
+        if (!"participant_id" %in% names(df) && "instrument" %in% names(df)) {
+          df$participant_id <- df$instrument
+        }
+        if ("tipo" %in% names(df)) {
+          df$participant_id[df$tipo == "referencia"] <- "ref"
+        }
+        df <- normalize_participant_uncertainty(df)
+        if (!"sd_value" %in% names(df)) {
+          df$sd_value <- NA_real_
+        }
+        if ("run" %in% names(df)) {
+          df$run <- as.character(df$run)
+        }
+        df <- infer_n_lab(df, input$summary_files$name[i])
         return(df)
       })
       raw_data <- do.call(rbind, data_list)
@@ -288,10 +482,12 @@ server <- function(input, output, session) {
       return(NULL)
     }
 
+    raw_data <- normalize_participant_uncertainty(raw_data)
+
     validate(
       need(
-        all(c("participant_id", "pollutant", "level", "mean_value", "sd_value") %in% names(raw_data)),
-        "Error: Los archivos resumen deben contener las columnas 'participant_id', 'pollutant', 'level', 'mean_value' y 'sd_value'. Verifique que ha subido los archivos correctos."
+        all(c("participant_id", "pollutant", "level", "mean_value", "u_value") %in% names(raw_data)),
+        "Error: Los archivos actuales deben contener las columnas 'participant_id', 'pollutant', 'level', 'mean_value' y la incertidumbre: 'u_value' o 'u_exp'/'U(xi)' junto con 'k'. Verifique que ha subido los archivos ajustados."
       )
     )
 
@@ -305,32 +501,60 @@ server <- function(input, output, session) {
     # Almacenar datos crudos en un valor reactivo para uso en cálculo de sigma_pt_1
     rv$raw_summary_data <- raw_data
 
+    raw_data$run <- as.character(raw_data$run)
+
     # Agregar los datos crudos para obtener un único valor medio por participante/nivel
     summary_data <- raw_data %>%
       group_by(participant_id, pollutant, level, run, n_lab) %>%
       summarise(
         mean_value = mean(mean_value, na.rm = TRUE),
         sd_value = mean(sd_value, na.rm = TRUE),
+        u_value = mean(u_value, na.rm = TRUE),
+        u_i = mean(u_i, na.rm = TRUE),
+        across(
+          any_of(c("u_exp", "k_factor")),
+          ~ mean(.x, na.rm = TRUE)
+        ),
+        across(
+          any_of(c("mean_h1", "mean_h2", "mean_h3")),
+          ~ mean(.x, na.rm = TRUE)
+        ),
         .groups = "drop"
       )
 
     if (use_calaire_reference()) {
       ref_df <- calaire_reference_df()
-      if (!is.null(ref_df) && nrow(ref_df) > 0) {
-        n_labs <- sort(unique(summary_data$n_lab))
-        available_combos <- summary_data %>%
-          distinct(pollutant, level)
-        ref_rows <- ref_df %>%
-          semi_join(available_combos, by = c("pollutant", "level")) %>%
-          tidyr::crossing(n_lab = n_labs) %>%
-          mutate(run = "calaire_ref") %>%
-          select(participant_id, pollutant, level, run, n_lab, mean_value, sd_value)
+      validate(
+        need(
+          !is.null(ref_df) && nrow(ref_df) > 0,
+          "Activó referencia CALAIRE separada, pero no cargó el archivo CSV de referencia."
+        )
+      )
 
-        if (nrow(ref_rows) > 0) {
-          summary_data <- summary_data %>%
-            filter(participant_id != "ref") %>%
-            bind_rows(ref_rows)
-        }
+      n_labs <- sort(unique(summary_data$n_lab))
+      available_combos <- summary_data %>%
+        distinct(pollutant, level)
+      ref_rows <- ref_df %>%
+        semi_join(available_combos, by = c("pollutant", "level")) %>%
+        tidyr::crossing(n_lab = n_labs) %>%
+        mutate(run = "calaire_ref") %>%
+        select(
+          participant_id,
+          pollutant,
+          level,
+          run,
+          n_lab,
+          mean_value,
+          sd_value,
+          u_value,
+          u_i,
+          any_of(c("mean_h1", "mean_h2", "mean_h3"))
+        )
+
+      if (nrow(ref_rows) > 0) {
+        summary_data <- summary_data %>%
+          filter(participant_id != "ref") %>%
+          bind_rows(ref_rows)
       }
     }
 
@@ -338,44 +562,44 @@ server <- function(input, output, session) {
   })
 
   # Datos PT reportados por cada participante, incluyendo u_i.
-  # Fuente preferida: archivo subido por el usuario (input$pt_data_file).
-  # Fallback: data/pt_data_n13.csv en disco si no se subió ningún archivo.
+  # Fuente unica: resumen consolidado actual con columna u_value.
   pt_data_df <- reactive({
-    required_cols <- c("participant_id", "pollutant", "level", "u_i")
-
-    # Prioridad 1: archivo subido por el usuario
-    if (!is.null(input$pt_data_file)) {
-      df <- vroom::vroom(input$pt_data_file$datapath, show_col_types = FALSE)
-      if (!all(required_cols %in% names(df))) {
-        showNotification(
-          paste0("El archivo pt_data debe contener: ",
-                 paste(required_cols, collapse = ", "), "."),
-          type = "error", duration = 10
-        )
+    required_cols <- c("participant_id", "pollutant", "level")
+    normalize_u_df <- function(df, source_label, notify = TRUE) {
+      if (!"participant_id" %in% names(df) && "instrument" %in% names(df)) {
+        df$participant_id <- df$instrument
+      }
+      if ("tipo" %in% names(df)) {
+        df$participant_id[df$tipo == "referencia"] <- "ref"
+      }
+      df <- normalize_participant_uncertainty(df)
+      if (!all(c(required_cols, "u_value", "u_i") %in% names(df))) {
+        if (notify) {
+          showNotification(
+            paste0(source_label, " debe contener: ",
+                   paste(c(required_cols, "u_value"), collapse = ", "),
+                   "."),
+            type = "error", duration = 10
+          )
+        }
         return(NULL)
       }
-      return(df |> dplyr::select(participant_id, pollutant, level, u_i))
+      df %>%
+        filter(is.na(participant_id) | participant_id != "ref") %>%
+        select(participant_id, pollutant, level, u_i, any_of(c("u_exp", "k_factor")))
     }
 
-    # Prioridad 2: archivo en disco (data/pt_data_n13.csv)
-    path <- file.path("data", "pt_data_n13.csv")
-    if (file.exists(path)) {
-      df <- vroom::vroom(path, show_col_types = FALSE)
-      if (!all(required_cols %in% names(df))) {
-        showNotification(
-          paste0("'pt_data_n13.csv' debe contener: ",
-                 paste(required_cols, collapse = ", "),
-                 ". No se calcularán zeta ni En para filas sin u_i."),
-          type = "error", duration = 10
-        )
-        return(NULL)
+    # Prioridad 1: incertidumbre incluida en el resumen cargado/autocargado
+    if (!is.null(rv$raw_summary_data) && nrow(rv$raw_summary_data) > 0) {
+      raw_u <- normalize_u_df(rv$raw_summary_data, "El archivo resumen", notify = FALSE)
+      if (!is.null(raw_u)) {
+        return(raw_u)
       }
-      return(df |> dplyr::select(participant_id, pollutant, level, u_i))
     }
 
     # Sin fuente disponible
     showNotification(
-      "No se encontró archivo pt_data. Suba 'pt_data_n*.csv' en Carga de datos o coloque el archivo en data/. No se calcularán zeta ni En.",
+      "No se encontró u_value en el resumen consolidado actual. No se calcularán zeta ni En.",
       type = "error", duration = 12
     )
     NULL
@@ -659,7 +883,7 @@ server <- function(input, output, session) {
     # Conclusions for MADe method
     if (!is.na(hom_ss) && length(hom_c_criterion) > 0 && hom_ss <= hom_c_criterion) {
       hom_conclusion1_made <- paste0(
-        "ss (", format_num(hom_ss), ") <= c_MADe (",
+        "ss (", format_num(hom_ss), ") ≤ c_MADe (",
         format_num(hom_c_criterion),
         "): CUMPLE CRITERIO HOMOGENEIDAD (MADe)"
       )
@@ -678,7 +902,7 @@ server <- function(input, output, session) {
 
     if (!is.na(hom_ss) && length(hom_c_criterion_expanded) > 0 && hom_ss <= hom_c_criterion_expanded) {
       hom_conclusion2_made <- paste0(
-        "ss (", format_num(hom_ss), ") <= c_MADe_exp (",
+        "ss (", format_num(hom_ss), ") ≤ c_MADe_exp (",
         format_num(hom_c_criterion_expanded),
         "): CUMPLE CRITERIO EXP HOMOGENEIDAD (MADe)"
       )
@@ -700,7 +924,7 @@ server <- function(input, output, session) {
     # Conclusions for nIQR method
     if (!is.na(hom_ss) && length(hom_c_criterion_niqr) > 0 && !is.na(hom_c_criterion_niqr) && hom_ss <= hom_c_criterion_niqr) {
       hom_conclusion1_niqr = paste0(
-        "ss (", format_num(hom_ss), ") <= c_nIQR (",
+        "ss (", format_num(hom_ss), ") ≤ c_nIQR (",
         format_num(hom_c_criterion_niqr),
         "): CUMPLE CRITERIO HOMOGENEIDAD (nIQR)"
       )
@@ -722,7 +946,7 @@ server <- function(input, output, session) {
 
     if (!is.na(hom_ss) && length(hom_c_criterion_expanded_niqr) > 0 && !is.na(hom_c_criterion_expanded_niqr) && hom_ss <= hom_c_criterion_expanded_niqr) {
       hom_conclusion2_niqr = paste0(
-        "ss (", format_num(hom_ss), ") <= c_nIQR_exp (",
+        "ss (", format_num(hom_ss), ") ≤ c_nIQR_exp (",
         format_num(hom_c_criterion_expanded_niqr),
         "): CUMPLE CRITERIO EXP HOMOGENEIDAD (nIQR)"
       )
@@ -941,7 +1165,7 @@ server <- function(input, output, session) {
     # Conclusions for MADe method
     if (!is.na(diff_hom_stab) && length(stab_c_criterion) > 0 && diff_hom_stab <= stab_c_criterion) {
       stab_conclusion1_made = paste0(
-        "ss (", format_num(diff_hom_stab), ") <= c_MADe (",
+        "ss (", format_num(diff_hom_stab), ") ≤ c_MADe (",
         format_num(stab_c_criterion),
         "): CUMPLE CRITERIO ESTABILIDAD (MADe)"
       )
@@ -963,7 +1187,7 @@ server <- function(input, output, session) {
 
     if (!is.na(diff_hom_stab) && length(stab_c_criterion_expanded) > 0 && diff_hom_stab <= stab_c_criterion_expanded) {
       stab_conclusion2_made = paste0(
-        "ss (", format_num(diff_hom_stab), ") <= c_MADe_exp (",
+        "ss (", format_num(diff_hom_stab), ") ≤ c_MADe_exp (",
         format_num(stab_c_criterion_expanded),
         "): CUMPLE CRITERIO EXP ESTABILIDAD (MADe)"
       )
@@ -983,7 +1207,7 @@ server <- function(input, output, session) {
     # Conclusions for nIQR method
     if (!is.na(diff_hom_stab) && length(stab_c_criterion_niqr) > 0 && !is.na(stab_c_criterion_niqr) && diff_hom_stab <= stab_c_criterion_niqr) {
       stab_conclusion1_niqr = paste0(
-        "ss (", format_num(diff_hom_stab), ") <= c_nIQR (",
+        "ss (", format_num(diff_hom_stab), ") ≤ c_nIQR (",
         format_num(stab_c_criterion_niqr),
         "): CUMPLE CRITERIO ESTABILIDAD (nIQR)"
       )
@@ -1005,7 +1229,7 @@ server <- function(input, output, session) {
 
     if (!is.na(diff_hom_stab) && length(stab_c_criterion_expanded_niqr) > 0 && !is.na(stab_c_criterion_expanded_niqr) && diff_hom_stab <= stab_c_criterion_expanded_niqr) {
       stab_conclusion2_niqr = paste0(
-        "ss (", format_num(diff_hom_stab), ") <= c_nIQR_exp (",
+        "ss (", format_num(diff_hom_stab), ") ≤ c_nIQR_exp (",
         format_num(stab_c_criterion_expanded_niqr),
         "): CUMPLE CRITERIO EXP ESTABILIDAD (nIQR)"
       )
@@ -1089,21 +1313,25 @@ server <- function(input, output, session) {
 
 
     # Enriquecer con u_i reportada por cada participante (presupuesto propio).
-    # Sin u_i no se calculan zeta ni En; sd_value queda solo como chequeo interno.
+    # Sin u_i no se calculan zeta ni En.
     u_df <- pt_data_df()
     participant_data <- participant_data %>%
       rename(result = mean_value)
     if (!is.null(u_df)) {
       participant_data <- participant_data %>%
+        select(-any_of("u_i")) %>%
         dplyr::left_join(
-          u_df |> dplyr::select(participant_id, pollutant, level, u_i),
+          u_df |>
+            dplyr::select(participant_id, pollutant, level, u_i, any_of(c("u_exp", "k_factor"))),
           by = c("participant_id", "pollutant", "level")
         ) %>%
         mutate(
           uncertainty_std = u_i,
-          # Chequeo de consistencia interna: u_i vs sd(mean_values)/sqrt(3)
-          # Solo para trazabilidad — nunca bloquea el cálculo
-          u_i_check = sd_value / sqrt(3)
+          U_xi_reported = dplyr::if_else(
+            is.finite(u_exp),
+            u_exp,
+            k * uncertainty_std
+          )
         )
       # Advertencia si algún participante no tiene u_i
       missing_ui <- participant_data %>%
@@ -1111,29 +1339,10 @@ server <- function(input, output, session) {
         pull(participant_id)
       if (length(missing_ui) > 0) {
         showNotification(
-          paste0("u_i no encontrado en 'pt_data_n13.csv' para: ",
+          paste0("u_i no encontrado en los datos consolidados para: ",
                  paste(missing_ui, collapse = ", "),
                  ". No se calcularán zeta ni En."),
           type = "error", duration = 8
-        )
-      }
-      # Fase 4: alerta de consistencia interna (umbral 50% diferencia relativa)
-      # u_i_check = sd_value/√3 es una estimación interna; u_i es el presupuesto reportado.
-      # Si difieren >50%, puede indicar un presupuesto inusual — nunca bloquea el cálculo.
-      inconsistent_ui <- participant_data %>%
-        filter(
-          is.finite(u_i) & is.finite(u_i_check) & u_i > 0,
-          abs(u_i - u_i_check) / u_i > 0.50
-        ) %>%
-        pull(participant_id)
-      if (length(inconsistent_ui) > 0) {
-        showNotification(
-          paste0(
-            "Chequeo de consistencia: u_i difiere >50% del estimado interno (sd/√3) ",
-            "para: ", paste(inconsistent_ui, collapse = ", "), ".",
-            " Verifique el presupuesto de incertidumbre reportado."
-          ),
-          type = "message", duration = 12
         )
       }
     } else {
@@ -1141,7 +1350,9 @@ server <- function(input, output, session) {
         mutate(
           uncertainty_std = NA_real_,
           u_i             = NA_real_,
-          u_i_check       = sd_value / sqrt(3)
+          u_exp           = NA_real_,
+          k_factor        = NA_real_,
+          U_xi_reported   = NA_real_
         )
     }
 
@@ -1152,7 +1363,11 @@ server <- function(input, output, session) {
         z_score = (result - x_pt) / sigma_pt,
         z_prime_score = (result - x_pt) / sqrt(sigma_pt^2 + u_xpt_def^2),
         zeta_score = (result - x_pt) / sqrt(uncertainty_std^2 + u_xpt_def^2),
-        U_xi = k * uncertainty_std,
+        U_xi = dplyr::if_else(
+          is.finite(U_xi_reported),
+          U_xi_reported,
+          k * uncertainty_std
+        ),
         U_xpt = k * u_xpt_def,
         En_score = (result - x_pt) / sqrt(U_xi^2 + U_xpt^2)
       ) %>%
@@ -1319,32 +1534,29 @@ server <- function(input, output, session) {
                 div(class = "upload-label",
                   icon("file-csv"),
                   span("3. Datos Consolidados de participantes"),
-                  tags$small(class = "text-muted", "(Origen: resultados de laboratorios participantes)")
+                  tags$small(class = "text-muted", "(Incertidumbre: u_value o columnas U(xi)/u_exp + k)")
                 ),
-                fileInput("summary_files", NULL, accept = ".csv", multiple = TRUE, placeholder = "summary_n*.csv (opcional si hay archivos en data/processed/)")
-              ),
-              div(class = "upload-item", style = "border-left: 4px solid #8b5cf6; padding-left: 12px;",
-                div(class = "upload-label",
-                  icon("file-csv"),
-                  span("4. Incertidumbre de participantes"),
-                  tags$small(class = "text-muted", "(u_i reportada por cada participante — pt_data_n*.csv)")
-                ),
-                fileInput("pt_data_file", NULL, accept = ".csv", placeholder = "pt_data_n13.csv")
+                fileInput("summary_files", NULL, accept = ".csv", multiple = TRUE, placeholder = "ronda_*_completa.csv"),
+                helpText("Si el CSV trae incertidumbre expandida, use las columnas 'u_exp' o 'U(xi)' y 'k'; la app verificará internamente u = U(xi) / k y usará U(xi) en En.")
               ),
               div(class = "upload-item", style = "border-left: 4px solid #0ea5e9; padding-left: 12px;",
                 div(class = "upload-label",
                   icon("vial-circle-check"),
-                  span("5. Referencia CALAIRE procesada"),
-                  tags$small(class = "text-muted", "(data/processed/referencia_ronda.csv)")
+                  span("4. Referencia CALAIRE separada"),
+                  tags$small(class = "text-muted", "(opcional: solo si no viene en el consolidado)")
                 ),
                 checkboxInput(
                   "use_calaire_reference",
-                  "Usar referencia CALAIRE como valor asignado de ronda",
-                  value = TRUE
+                  "Subir referencia CALAIRE en archivo separado",
+                  value = FALSE
+                ),
+                conditionalPanel(
+                  condition = "input.use_calaire_reference == true",
+                  fileInput("calaire_reference_file", NULL, accept = ".csv", placeholder = "ronda_*_referencia.csv")
                 ),
                 tags$small(
                   class = "text-muted",
-                  "Reemplaza las filas participant_id='ref' cuando exista coincidencia exacta de analito y nivel."
+                  "Si no se activa, la referencia se toma del archivo consolidado como participant_id='ref'."
                 )
               )
             )
@@ -1592,23 +1804,24 @@ server <- function(input, output, session) {
               tabPanel(
                 "Valor de referencia",
                 h4("Resultados de Referencia"),
-                p("Visualiza la referencia usada por el análisis. Si está activo, CALAIRE reemplaza las filas 'ref' con coincidencia exacta de analito y nivel."),
-                dataTableOutput("reference_table"),
-                hr(),
-                h4("Referencia CALAIRE consolidada"),
-                p("Salida final del preprocesador: data/processed/referencia_ronda.csv."),
-                dataTableOutput("calaire_reference_table"),
-                hr(),
-                h4("Referencia CALAIRE horaria"),
-                p("Detalle horario auditado: data/processed/h_referencia_ronda.csv."),
-                dataTableOutput("calaire_hourly_reference_table")
+                p("Visualiza la referencia usada por el análisis."),
+                dataTableOutput("reference_table")
+              ),
+              tabPanel(
+                "Método de expertos",
+                h4("Valor asignado por método de expertos"),
+                p("Usa el valor de referencia como x_pt y calcula u(x_pt) y sigma_pt con las ecuaciones operativas de expertos."),
+                dataTableOutput("expert_assigned_value_table")
               ),
               tabPanel(
                 "Compatibilidad Metrológica",
                 h4("Diferencias entre Valor de Referencia y Consenso"),
                 p("Esta tabla muestra la compatibilidad metrológica entre el valor de referencia y los valores de consenso calculados."),
                 dataTableOutput("metrological_compatibility_table"),
-                p(class = "text-muted", "Nota: D_2a = x_pt(Ref) - x_pt(2a); D_2b = x_pt(Ref) - x_pt(2b)")
+                p(
+                  class = "text-muted",
+                  HTML("Nota: D<sub>2a</sub> = x<sub>pt</sub>(Ref) - x<sub>pt</sub>(2a); D<sub>2b</sub> = x<sub>pt</sub>(Ref) - x<sub>pt</sub>(2b)")
+                )
               )
             )
           )
@@ -1635,6 +1848,12 @@ server <- function(input, output, session) {
               tabPanel(
                 "Resultados de puntajes",
                 h4("Resumen de parámetros"),
+                p(
+                  class = "text-muted",
+                  "`u(x_pt) base` es la incertidumbre propia del método; ",
+                  "`u(x_pt)_def` incluye homogeneidad y estabilidad; ",
+                  "`U(x_pt)_def` es la incertidumbre expandida usada en En."
+                ),
                 tableOutput("scores_parameter_table"),
                 hr(),
                 h4("Resumen de puntajes por participante"),
@@ -1797,8 +2016,8 @@ server <- function(input, output, session) {
             width = 3,
             h4("2. Selección de Datos"),
             uiOutput("report_n_selector"),
-            uiOutput("report_level_selector"),
-            p(class = "text-info", style = "font-size: 0.9em;", "Nota: Se incluirán todos los analitos disponibles."),
+            uiOutput("report_participant_selector"),
+            p(class = "text-info", style = "font-size: 0.9em;", "Nota: El informe incluye todos los niveles y analitos disponibles para la ronda seleccionada."),
             hr(),
             h4("3. Parámetros"),
             selectInput("report_metric", "Métrica:", choices = c("z", "z'", "zeta", "En")),
@@ -1808,7 +2027,7 @@ server <- function(input, output, session) {
             hr(),
             h4("Datos de Participantes"),
             fileInput("participants_data_upload", "Tabla de Instrumentación (CSV):", accept = ".csv"),
-            helpText("Formato: Codigo_Lab, Analizador_SO2, Analizador_CO, Analizador_O3, Analizador_NO_NO2"),
+            helpText("Opcional. Si no se carga, el informe usa los participantes reales de la ronda seleccionada."),
             hr(),
             h4("Descarga"),
             radioButtons("report_format", "Formato:", choices = c("Word (DOCX)" = "word"), selected = "word"),
@@ -1950,7 +2169,7 @@ server <- function(input, output, session) {
 
     if (!is.na(diff_observed) && diff_observed <= stab_criterion_value) {
       conclusion <- paste0(
-        "|y1 - y2| (", format_num(diff_observed), ") <= c_MADe (",
+        "|y1 - y2| (", format_num(diff_observed), ") ≤ c_MADe (",
         format_num(stab_criterion_value),
         "): CUMPLE CRITERIO ESTABILIDAD (MADe)"
       )
@@ -1969,7 +2188,7 @@ server <- function(input, output, session) {
 
     if (is.finite(stab_criterion_value_niqr) && !is.na(diff_observed) && diff_observed <= stab_criterion_value_niqr) {
       conclusion_niqr <- paste0(
-        "|y1 - y2| (", format_num(diff_observed), ") <= c_nIQR (",
+        "|y1 - y2| (", format_num(diff_observed), ") ≤ c_nIQR (",
         format_num(stab_criterion_value_niqr),
         "): CUMPLE CRITERIO ESTABILIDAD (nIQR)"
       )
@@ -2010,7 +2229,7 @@ server <- function(input, output, session) {
     if (t_test_result$p.value > 0.05) {
       ttest_conclusion <- "Prueba t: no se detecta diferencia estadísticamente significativa entre los dos conjuntos de datos (p > 0.05), se respalda la estabilidad."
     } else {
-      ttest_conclusion <- "Prueba t: se detecta diferencia estadísticamente significativa entre los dos conjuntos de datos (p <= 0.05), indicando posible inestabilidad."
+      ttest_conclusion <- "Prueba t: se detecta diferencia estadísticamente significativa entre los dos conjuntos de datos (p ≤ 0.05), indicando posible inestabilidad."
     }
 
     list(
@@ -2315,7 +2534,7 @@ server <- function(input, output, session) {
         "x_pt (hom_stab)",
         "Median |sample_2 - x_pt|",
         "MADe (1.483 × median)",
-        "u_sigma_pt"
+        "u(σ_pt)"
       ),
       Valor = c(
         res$g,
@@ -2343,7 +2562,7 @@ server <- function(input, output, session) {
         "Q3 (75%)",
         "IQR (Q3 - Q1)",
         "nIQR (0.7413 × IQR)",
-        "u_sigma_pt (nIQR)"
+        "u(σ_pt) (nIQR)"
       ),
       Valor = c(
         res$g,
@@ -2548,7 +2767,7 @@ server <- function(input, output, session) {
         "x_pt (hom_stab)",
         "Median |sample_2 - x_pt|",
         "MADe (1.483 × median)",
-        "u_sigma_pt"
+        "u(σ_pt)"
       ),
       Valor = c(
         hom_res$g,
@@ -2577,7 +2796,7 @@ server <- function(input, output, session) {
         "Q3 (75%)",
         "IQR (Q3 - Q1)",
         "nIQR (0.7413 × IQR)",
-        "u_sigma_pt (nIQR)"
+        "u(σ_pt) (nIQR)"
       ),
       Valor = c(
         hom_res$g,
@@ -2649,7 +2868,7 @@ server <- function(input, output, session) {
         "DE robusta (sigma_pt)",
         "MADe (1.483 × sigma_pt)",
         "Incertidumbre del valor asignado (u_xpt)",
-        "Incertidumbre (u_sigma_pt)"
+        "Incertidumbre u(σ_pt)"
       ),
       Valor = c(
         format_num(res$stab_median_val),
@@ -2760,6 +2979,24 @@ server <- function(input, output, session) {
     params$a[[1]] * x_pt + params$b[[1]]
   }
 
+  calculate_expert_u_xpt <- function(x_pt) {
+    if (!is.finite(x_pt)) {
+      return(NA_real_)
+    }
+
+    0.003 * x_pt
+  }
+
+  evaluate_u_xpt_sigma_criterion <- function(u_xpt_def, sigma_pt) {
+    if (!is.finite(u_xpt_def) || !is.finite(sigma_pt) || sigma_pt <= 0) {
+      return("No evaluable")
+    }
+    if (u_xpt_def <= 0.3 * sigma_pt) {
+      return("Cumple: u(x_pt)_def ≤ 0.3 sigma_pt")
+    }
+    "No cumple: usar z' / zeta / En"
+  }
+
   ensure_classification_columns <- function(df) {
     required_cols <- c(
       "classification_z_en",
@@ -2797,6 +3034,7 @@ server <- function(input, output, session) {
     }
     participants_df <- participants_df %>%
       mutate(
+        u_exp = if ("u_exp" %in% names(.)) u_exp else NA_real_,
         uncertainty_std_missing = !is.finite(uncertainty_std),
         uncertainty_std = ifelse(uncertainty_std_missing, NA_real_, uncertainty_std)
       )
@@ -2810,7 +3048,11 @@ server <- function(input, output, session) {
     }
     zeta_den <- sqrt(participants_df$uncertainty_std^2 + u_xpt_def^2)
     zeta_values <- ifelse(zeta_den > 0, (participants_df$result - x_pt) / zeta_den, NA_real_)
-    U_xi <- k * participants_df$uncertainty_std
+    U_xi <- ifelse(
+      is.finite(participants_df$u_exp),
+      participants_df$u_exp,
+      k * participants_df$uncertainty_std
+    )
     U_xpt <- k * u_xpt_def
     en_den <- sqrt(U_xi^2 + U_xpt^2)
     en_values <- ifelse(en_den > 0, (participants_df$result - x_pt) / en_den, NA_real_)
@@ -2909,7 +3151,7 @@ server <- function(input, output, session) {
       group_by(participant_id) %>%
       summarise(
         result   = mean(mean_value, na.rm = TRUE),
-        sd_value = mean(sd_value, na.rm = TRUE),
+        u_value  = mean(u_value, na.rm = TRUE),
         .groups  = "drop"
       ) %>%
       mutate(
@@ -2918,19 +3160,20 @@ server <- function(input, output, session) {
         level     = target_level
       )
 
-    # Incorporar u_i reportada por el participante desde pt_data_n13.csv.
+    # Incorporar u_i reportada por el participante desde los datos consolidados.
     # El participante conoce su propio presupuesto; la app no puede recalcularlo.
-    # Sin u_i no se calculan zeta ni En; sd_value queda solo como chequeo interno.
+    # Sin u_i no se calculan zeta ni En.
     u_df <- pt_data_df()
     if (!is.null(u_df)) {
       participant_data <- participant_data %>%
+        select(-any_of("u_i")) %>%
         dplyr::left_join(
-          u_df |> dplyr::select(participant_id, pollutant, level, u_i),
+          u_df |>
+            dplyr::select(participant_id, pollutant, level, u_i, any_of(c("u_exp", "k_factor"))),
           by = c("participant_id", "pollutant", "level")
         ) %>%
         mutate(
-          uncertainty_std = u_i,
-          u_i_check       = sd_value / sqrt(3)
+          uncertainty_std = u_i
         )
       missing_ui <- participant_data %>% filter(is.na(u_i)) %>% pull(participant_id)
       if (length(missing_ui) > 0) {
@@ -2940,29 +3183,13 @@ server <- function(input, output, session) {
           type = "error", duration = 8
         )
       }
-      # Fase 4: alerta de consistencia interna (umbral 50% diferencia relativa)
-      inconsistent_ui <- participant_data %>%
-        filter(
-          is.finite(u_i) & is.finite(u_i_check) & u_i > 0,
-          abs(u_i - u_i_check) / u_i > 0.50
-        ) %>%
-        pull(participant_id)
-      if (length(inconsistent_ui) > 0) {
-        showNotification(
-          paste0(
-            "Chequeo de consistencia: u_i difiere >50% del estimado interno (sd/√3) ",
-            "para: ", paste(inconsistent_ui, collapse = ", "), ".",
-            " Verifique el presupuesto de incertidumbre reportado."
-          ),
-          type = "message", duration = 12
-        )
-      }
     } else {
       participant_data <- participant_data %>%
         mutate(
           uncertainty_std = NA_real_,
           u_i             = NA_real_,
-          u_i_check       = sd_value / sqrt(3)
+          u_exp           = NA_real_,
+          k_factor        = NA_real_
         )
     }
 
@@ -2975,7 +3202,11 @@ server <- function(input, output, session) {
       return(list(error = "No se encontró información del participante de referencia para esta combinación."))
     }
     x_pt1 <- mean(ref_data$mean_value, na.rm = TRUE)
-    sigma_pt1 <- calculate_expert_sigma_pt(target_pollutant, x_pt1)
+    u_xpt_ref <- mean(ref_data$u_value, na.rm = TRUE)
+    if (is.finite(u_xpt_ref)) {
+      u_xpt1 <- u_xpt_ref
+    }
+    sigma_pt1 <- hom_res$sigma_pt
     if (use_calaire_reference()) {
       calaire_ref <- get_calaire_reference_for_combo(target_pollutant, target_level)
       if (!is.null(calaire_ref) && nrow(calaire_ref) > 0) {
@@ -3019,6 +3250,7 @@ server <- function(input, output, session) {
     u_xpt2a <- if (is.finite(sigma_pt_2a)) 1.25 * sigma_pt_2a / sqrt(n_part) else NA_real_
     u_xpt2b <- if (is.finite(sigma_pt_2b)) 1.25 * sigma_pt_2b / sqrt(n_part) else NA_real_
     sigma_pt_expert <- calculate_expert_sigma_pt(target_pollutant, x_pt1)
+    u_xpt_expert <- calculate_expert_u_xpt(x_pt1)
 
     # H4: ISO 13528 recomienda Algoritmo A solo para n >= 12;
     # para n < 12 usar MADe/nIQR directamente
@@ -3040,7 +3272,7 @@ server <- function(input, output, session) {
     combos$ref <- compute_combo_scores(participant_data, x_pt1, sigma_pt1, u_xpt1, score_combo_info$ref, k = k_factor, u_hom = u_hom_val, u_stab = u_stab_val)
     combos$consensus_ma <- compute_combo_scores(participant_data, median_val, sigma_pt_2a, u_xpt2a, score_combo_info$consensus_ma, k = k_factor, u_hom = u_hom_val, u_stab = u_stab_val)
     combos$consensus_niqr <- compute_combo_scores(participant_data, median_val, sigma_pt_2b, u_xpt2b, score_combo_info$consensus_niqr, k = k_factor, u_hom = u_hom_val, u_stab = u_stab_val)
-    combos$expert <- compute_combo_scores(participant_data, x_pt1, sigma_pt_expert, u_xpt1, score_combo_info$expert, k = k_factor, u_hom = u_hom_val, u_stab = u_stab_val)
+    combos$expert <- compute_combo_scores(participant_data, x_pt1, sigma_pt_expert, u_xpt_expert, score_combo_info$expert, k = k_factor, u_hom = u_hom_val, u_stab = u_stab_val)
 
     if (is.null(algo_res$error)) {
       u_xpt3 <- 1.25 * algo_res$robust_sd / sqrt(n_part)
@@ -3061,8 +3293,10 @@ server <- function(input, output, session) {
           Etiqueta = meta$label,
           `x_pt` = NA_real_,
           `sigma_pt` = NA_real_,
-          `u(x_pt)` = NA_real_,
+          `u(x_pt) base` = NA_real_,
           `u(x_pt)_def` = NA_real_,
+          `U(x_pt)_def` = NA_real_,
+          `Criterio u(x_pt)` = "No evaluable",
           Nota = combo$error
         )
       } else {
@@ -3071,8 +3305,10 @@ server <- function(input, output, session) {
           Etiqueta = combo$label,
           `x_pt` = combo$x_pt,
           `sigma_pt` = combo$sigma_pt,
-          `u(x_pt)` = combo$u_xpt,
+          `u(x_pt) base` = combo$u_xpt,
           `u(x_pt)_def` = combo$u_xpt_def,
+          `U(x_pt)_def` = k_factor * combo$u_xpt_def,
+          `Criterio u(x_pt)` = evaluate_u_xpt_sigma_criterion(combo$u_xpt_def, combo$sigma_pt),
           Nota = ""
         )
       }
@@ -3089,7 +3325,12 @@ server <- function(input, output, session) {
           Combinación = meta$title,
           Participante = NA_character_,
           Resultado = NA_real_,
+          `x_pt` = NA_real_,
           `u(xi)` = NA_real_,
+          `sigma_pt` = NA_real_,
+          `u(x_pt) base` = NA_real_,
+          `u(x_pt)_def` = NA_real_,
+          `U(x_pt)_def` = NA_real_,
           `Puntaje z` = NA_real_,
           `Evaluación z` = combo$error,
           `Puntaje z'` = NA_real_,
@@ -3105,7 +3346,12 @@ server <- function(input, output, session) {
             Combinación = combo$title,
             Participante = participant_id,
             Resultado = result,
+            `x_pt` = x_pt,
             `u(xi)` = uncertainty_std,
+            `sigma_pt` = sigma_pt,
+            `u(x_pt) base` = u_xpt,
+            `u(x_pt)_def` = u_xpt_def,
+            `U(x_pt)_def` = U_xpt,
             `Puntaje z` = z_score,
             `Evaluación z` = z_score_eval,
             `Puntaje z'` = z_prime_score,
@@ -3509,6 +3755,29 @@ server <- function(input, output, session) {
   })
 
   metrological_compatibility_data <- eventReactive(input$run_metrological_compatibility, {
+    empty_consensus_df <- function() {
+      tibble(
+        pollutant = character(),
+        n_lab = character(),
+        level = character(),
+        x_pt_consensus = numeric(),
+        sigma_pt_2a = numeric(),
+        sigma_pt_2b = numeric(),
+        n_participants = numeric()
+      )
+    }
+
+    empty_algo_df <- function() {
+      tibble(
+        pollutant = character(),
+        n_lab = character(),
+        level = character(),
+        x_pt_algo = numeric(),
+        sigma_pt_algo = numeric(),
+        n_participants_algo = numeric()
+      )
+    }
+
     # 1. Obtener Valores de Referencia
     prep_data <- pt_prep_data()
     if (is.null(prep_data)) return(tibble())
@@ -3520,7 +3789,7 @@ server <- function(input, output, session) {
       group_by(pollutant, n_lab, level) %>%
       summarise(
         x_pt_ref = mean(mean_value, na.rm = TRUE), 
-        sd_ref = mean(sd_value, na.rm = TRUE),
+        u_ref = mean(u_value, na.rm = TRUE),
         .groups = "drop"
       ) %>%
       mutate(n_lab = as.character(n_lab))
@@ -3553,7 +3822,12 @@ server <- function(input, output, session) {
       })
     }
     
-    consensus_df <- if (length(consensus_rows) > 0) bind_rows(consensus_rows) else tibble()
+    consensus_df <- if (length(consensus_rows) > 0) {
+      bind_rows(consensus_rows) %>%
+        mutate(n_lab = as.character(n_lab))
+    } else {
+      empty_consensus_df()
+    }
     
     # 3. Obtener Valores del Algoritmo A
     algo_cache <- algoA_results_cache()
@@ -3577,7 +3851,12 @@ server <- function(input, output, session) {
       })
     }
     
-    algo_df <- if (length(algo_rows) > 0) bind_rows(algo_rows) else tibble()
+    algo_df <- if (length(algo_rows) > 0) {
+      bind_rows(algo_rows) %>%
+        mutate(n_lab = as.character(n_lab))
+    } else {
+      empty_algo_df()
+    }
     
     # 4. Combinar todo
     all_combos <- bind_rows(
@@ -3613,12 +3892,7 @@ server <- function(input, output, session) {
         u_stab <- d_max / sqrt(3)
       }
       
-      # cálculo de u_ref
-      # u_ref = u_xi de referencia = k * (sd_ref / sqrt(m))
-      # Usamos input$report_k para consistencia con otros informes.
-      k_val <- if(!is.null(input$report_k)) input$report_k else 2
-      
-      u_ref <- if(!is.na(row$sd_ref)) k_val * (row$sd_ref / sqrt(m)) else NA_real_
+      u_ref <- row$u_ref
       
       # Calcular u_xpt_def para cada método
       
@@ -3654,7 +3928,8 @@ server <- function(input, output, session) {
 
       # Método 4: sigma_pt por laboratorios expertos, x_pt de referencia
       sigma_pt_4 <- calculate_expert_sigma_pt(p, row$x_pt_ref)
-      u_xpt_def_4 <- if(!is.na(row$sd_ref)) sqrt(row$sd_ref^2 + u_hom^2 + u_stab^2) else NA_real_
+      u_xpt_4 <- calculate_expert_u_xpt(row$x_pt_ref)
+      u_xpt_def_4 <- if(!is.na(u_xpt_4)) sqrt(u_xpt_4^2 + u_hom^2 + u_stab^2) else NA_real_
       crit_4 <- if(!is.na(u_ref) && !is.na(u_xpt_def_4)) sqrt(u_xpt_def_4^2 + u_ref^2) else NA_real_
       
       row$x_pt_2a <- row$x_pt_consensus
@@ -3982,11 +4257,13 @@ server <- function(input, output, session) {
           return(summary_row %>% select(Combinación, Nota))
         }
         summary_row %>%
-          select(Combinación, `x_pt`, `sigma_pt`, `u(x_pt)`) %>%
+          select(Combinación, `x_pt`, `sigma_pt`, `u(x_pt) base`, `u(x_pt)_def`, `U(x_pt)_def`, `Criterio u(x_pt)`) %>%
           mutate(
             `x_pt` = format_num(`x_pt`),
             `sigma_pt` = format_num(`sigma_pt`),
-            `u(x_pt)` = format_num(`u(x_pt)`)
+            `u(x_pt) base` = format_num(`u(x_pt) base`),
+            `u(x_pt)_def` = format_num(`u(x_pt)_def`),
+            `U(x_pt)_def` = format_num(`U(x_pt)_def`)
           )
       },
       striped = TRUE,
@@ -4000,12 +4277,24 @@ server <- function(input, output, session) {
         return(datatable(data.frame(Mensaje = "No hay datos disponibles para esta combinación.")))
       }
       datatable(
-        overview,
+        overview %>% select(-any_of("U(xi)")),
         options = list(scrollX = TRUE, pageLength = 12),
         rownames = FALSE
       ) %>%
         format_numeric_columns(
-          c("Resultado", "u(xi)", "Puntaje z", "Puntaje z'", "Puntaje zeta", "Puntaje En")
+          c(
+            "Resultado",
+            "x_pt",
+            "u(xi)",
+            "sigma_pt",
+            "u(x_pt) base",
+            "u(x_pt)_def",
+            "U(x_pt)_def",
+            "Puntaje z",
+            "Puntaje z'",
+            "Puntaje zeta",
+            "Puntaje En"
+          )
         )
     })
 
@@ -4070,11 +4359,12 @@ server <- function(input, output, session) {
         `Etiqueta de combinación` = combination_label,
         Nivel = level,
         `x_pt`,
+        `u(x_pt) base` = u_xpt,
         `u(x_pt)_def` = u_xpt_def,
-        `Incertidumbre expandida` = expanded_uncertainty,
+        `U(x_pt)_def` = expanded_uncertainty,
         `sigma_pt`
       ) %>%
-      format_numeric_columns(c("x_pt", "u(x_pt)_def", "Incertidumbre expandida", "sigma_pt"))
+      format_numeric_columns(c("x_pt", "u(x_pt) base", "u(x_pt)_def", "U(x_pt)_def", "sigma_pt"))
 
     datatable(
       filtered_display,
@@ -4305,8 +4595,12 @@ server <- function(input, output, session) {
     if (!is.null(res$error)) {
       return(datatable(data.frame(Mensaje = res$error)))
     }
-    datatable(res$overview, options = list(scrollX = TRUE, pageLength = 12), rownames = FALSE) %>%
-      format_numeric_columns(c("Resultado", "u(xi)", "Puntaje z", "Puntaje z'", "Puntaje zeta", "Puntaje En"))
+    datatable(
+      res$overview %>% select(-any_of("U(xi)")),
+      options = list(scrollX = TRUE, pageLength = 12),
+      rownames = FALSE
+    ) %>%
+      format_numeric_columns(c("Resultado", "x_pt", "u(xi)", "sigma_pt", "u(x_pt) base", "u(x_pt)_def", "U(x_pt)_def", "Puntaje z", "Puntaje z'", "Puntaje zeta", "Puntaje En"))
   })
 
   # H7: CSV export con encabezados descriptivos
@@ -4327,7 +4621,7 @@ server <- function(input, output, session) {
           "#"
         )
         writeLines(header_lines, file)
-        write.table(res$overview, file, sep = ",", row.names = FALSE,
+        write.table(res$overview %>% select(-any_of("U(xi)")), file, sep = ",", row.names = FALSE,
                     append = TRUE, col.names = TRUE)
       }
     }
@@ -4364,6 +4658,7 @@ server <- function(input, output, session) {
           div(class = "alert alert-warning", combo$error)
         } else {
           tagList(
+            score_equation("z = \\frac{x_i - x_{pt}}{\\sigma_{pt}}"),
             dataTableOutput(paste0("z_table_", key)),
             plotlyOutput(paste0("z_plot_", key), height = "300px")
           )
@@ -4390,6 +4685,7 @@ server <- function(input, output, session) {
           div(class = "alert alert-warning", combo$error)
         } else {
           tagList(
+            score_equation("z' = \\frac{x_i - x_{pt}}{\\sqrt{\\sigma_{pt}^{2} + u(x_{pt})^{2}}}"),
             dataTableOutput(paste0("zprime_table_", key)),
             plotlyOutput(paste0("zprime_plot_", key), height = "300px")
           )
@@ -4416,6 +4712,7 @@ server <- function(input, output, session) {
           div(class = "alert alert-warning", combo$error)
         } else {
           tagList(
+            score_equation("\\zeta = \\frac{x_i - x_{pt}}{\\sqrt{u(x_i)^{2} + u(x_{pt})^{2}}}"),
             dataTableOutput(paste0("zeta_table_", key)),
             plotlyOutput(paste0("zeta_plot_", key), height = "300px")
           )
@@ -4442,6 +4739,7 @@ server <- function(input, output, session) {
           div(class = "alert alert-warning", combo$error)
         } else {
           tagList(
+            score_equation("E_n = \\frac{x_i - x_{pt}}{\\sqrt{U(x_i)^{2} + U(x_{pt})^{2}}},\\quad U = k u"),
             dataTableOutput(paste0("en_table_", key)),
             plotlyOutput(paste0("en_plot_", key), height = "300px")
           )
@@ -4465,11 +4763,11 @@ server <- function(input, output, session) {
         }
         datatable(
           combo$data %>%
-            select(Participante = participant_id, Resultado = result, `u(xi)` = uncertainty_std, `Puntaje z` = z_score, `Evaluación z` = z_score_eval),
+            select(Participante = participant_id, Resultado = result, `x_pt` = x_pt, `u(xi)` = uncertainty_std, `sigma_pt` = sigma_pt, `u(x_pt) base` = u_xpt, `u(x_pt)_def` = u_xpt_def, `U(x_pt)_def` = U_xpt, `Puntaje z` = z_score, `Evaluación z` = z_score_eval),
           options = list(scrollX = TRUE, pageLength = 10),
           rownames = FALSE
         ) %>%
-          format_numeric_columns(c("Resultado", "u(xi)", "Puntaje z"))
+          format_numeric_columns(c("Resultado", "x_pt", "u(xi)", "sigma_pt", "u(x_pt) base", "u(x_pt)_def", "U(x_pt)_def", "Puntaje z"))
       })
 
       output[[paste0("z_plot_", combo_key)]] <- renderPlotly({
@@ -4494,11 +4792,11 @@ server <- function(input, output, session) {
         }
         datatable(
           combo$data %>%
-            select(Participante = participant_id, Resultado = result, `u(xi)` = uncertainty_std, `Puntaje z'` = z_prime_score, `Evaluación z'` = z_prime_score_eval),
+            select(Participante = participant_id, Resultado = result, `x_pt` = x_pt, `u(xi)` = uncertainty_std, `sigma_pt` = sigma_pt, `u(x_pt) base` = u_xpt, `u(x_pt)_def` = u_xpt_def, `U(x_pt)_def` = U_xpt, `Puntaje z'` = z_prime_score, `Evaluación z'` = z_prime_score_eval),
           options = list(scrollX = TRUE, pageLength = 10),
           rownames = FALSE
         ) %>%
-          format_numeric_columns(c("Resultado", "u(xi)", "Puntaje z'"))
+          format_numeric_columns(c("Resultado", "x_pt", "u(xi)", "sigma_pt", "u(x_pt) base", "u(x_pt)_def", "U(x_pt)_def", "Puntaje z'"))
       })
 
       output[[paste0("zprime_plot_", combo_key)]] <- renderPlotly({
@@ -4523,11 +4821,11 @@ server <- function(input, output, session) {
         }
         datatable(
           combo$data %>%
-            select(Participante = participant_id, Resultado = result, `u(xi)` = uncertainty_std, `Puntaje zeta` = zeta_score, `Evaluación zeta` = zeta_score_eval),
+            select(Participante = participant_id, Resultado = result, `x_pt` = x_pt, `u(xi)` = uncertainty_std, `sigma_pt` = sigma_pt, `u(x_pt) base` = u_xpt, `u(x_pt)_def` = u_xpt_def, `U(x_pt)_def` = U_xpt, `Puntaje zeta` = zeta_score, `Evaluación zeta` = zeta_score_eval),
           options = list(scrollX = TRUE, pageLength = 10),
           rownames = FALSE
         ) %>%
-          format_numeric_columns(c("Resultado", "u(xi)", "Puntaje zeta"))
+          format_numeric_columns(c("Resultado", "x_pt", "u(xi)", "sigma_pt", "u(x_pt) base", "u(x_pt)_def", "U(x_pt)_def", "Puntaje zeta"))
       })
 
       output[[paste0("zeta_plot_", combo_key)]] <- renderPlotly({
@@ -4552,11 +4850,11 @@ server <- function(input, output, session) {
         }
         datatable(
           combo$data %>%
-            select(Participante = participant_id, Resultado = result, `u(xi)` = uncertainty_std, `Puntaje En` = En_score, `Puntaje En Eval` = En_score_eval),
+            select(Participante = participant_id, Resultado = result, `x_pt` = x_pt, `u(xi)` = uncertainty_std, `sigma_pt` = sigma_pt, `u(x_pt) base` = u_xpt, `u(x_pt)_def` = u_xpt_def, `U(x_pt)_def` = U_xpt, `Puntaje En` = En_score, `Puntaje En Eval` = En_score_eval),
           options = list(scrollX = TRUE, pageLength = 10),
           rownames = FALSE
         ) %>%
-          format_numeric_columns(c("Resultado", "u(xi)", "Puntaje En"))
+          format_numeric_columns(c("Resultado", "x_pt", "u(xi)", "sigma_pt", "u(x_pt) base", "u(x_pt)_def", "U(x_pt)_def", "Puntaje En"))
       })
 
       output[[paste0("en_plot_", combo_key)]] <- renderPlotly({
@@ -4587,7 +4885,10 @@ server <- function(input, output, session) {
     tab_panels <- lapply(participants, function(pid) {
       safe_id <- gsub("[^A-Za-z0-9]", "_", pid)
       table_id <- paste0("participant_table_", safe_id)
-      plot_id <- paste0("participant_plot_", safe_id)
+      values_plot_id <- paste0("participant_values_plot_", safe_id)
+      z_plot_id <- paste0("participant_z_plot_", safe_id)
+      zeta_plot_id <- paste0("participant_zeta_plot_", safe_id)
+      en_plot_id <- paste0("participant_en_plot_", safe_id)
 
       output[[table_id]] <- renderDataTable({
         info <- participants_combined_data()
@@ -4607,9 +4908,12 @@ server <- function(input, output, session) {
             `Esquema PT (n)` = n_lab,
             Nivel = level,
             Resultado = result,
+            `u(xi)` = uncertainty_std,
             `x_pt` = x_pt,
             `sigma_pt` = sigma_pt,
-            `u(x_pt)` = u_xpt,
+            `u(x_pt) base` = u_xpt,
+            `u(x_pt)_def` = u_xpt_def,
+            `U(x_pt)_def` = U_xpt,
             `Puntaje z` = z_score,
             `Evaluación z` = z_score_eval,
             `Puntaje z'` = z_prime_score,
@@ -4620,18 +4924,18 @@ server <- function(input, output, session) {
             `Puntaje En Eval` = En_score_eval
           )
         datatable(table_df, options = list(scrollX = TRUE, pageLength = 10), rownames = FALSE) %>%
-          format_numeric_columns(c("Resultado", "x_pt", "sigma_pt", "u(x_pt)", "Puntaje z", "Puntaje z'", "Puntaje zeta", "Puntaje En"))
+          format_numeric_columns(c("Resultado", "u(xi)", "x_pt", "sigma_pt", "u(x_pt) base", "u(x_pt)_def", "U(x_pt)_def", "Puntaje z", "Puntaje z'", "Puntaje zeta", "Puntaje En"))
       })
 
-      output[[plot_id]] <- renderPlotly({
+      participant_plot_data <- reactive({
         info <- participants_combined_data()
         if (!is.null(info$error)) {
-          return(NULL)
+          return(list(error = info$error))
         }
         participant_df <- info$data %>%
           filter(participant_id == pid)
         if (nrow(participant_df) == 0) {
-          return(NULL)
+          return(list(error = "Sin datos para este participante."))
         }
 
         plot_df <- participant_df %>%
@@ -4639,7 +4943,15 @@ server <- function(input, output, session) {
           head(n = n_distinct(.$level))
 
         level_factor <- factor(participant_df$level, levels = sort(unique(participant_df$level)))
+        list(participant_df = participant_df, plot_df = plot_df, level_factor = level_factor)
+      })
 
+      output[[values_plot_id]] <- renderPlotly({
+        plot_data <- participant_plot_data()
+        if (!is.null(plot_data$error)) {
+          return(NULL)
+        }
+        plot_df <- plot_data$plot_df
         p_values <- ggplot(plot_df, aes(x = factor(level, levels = sort(unique(level))))) +
           geom_point(aes(y = result, color = "Participante"), size = 3) +
           geom_line(aes(y = result, group = 1, color = "Participante")) +
@@ -4650,6 +4962,16 @@ server <- function(input, output, session) {
           theme_minimal() +
           theme(axis.text.x = element_text(angle = 45, hjust = 1), legend.position = "bottom")
 
+        plotly::ggplotly(p_values)
+      })
+
+      output[[z_plot_id]] <- renderPlotly({
+        plot_data <- participant_plot_data()
+        if (!is.null(plot_data$error)) {
+          return(NULL)
+        }
+        participant_df <- plot_data$participant_df
+        level_factor <- plot_data$level_factor
         p_z <- ggplot(participant_df, aes(x = level_factor, y = z_score, group = combination, color = combination)) +
           geom_hline(yintercept = c(-3, 3), linetype = "dashed", color = "#C0392B") +
           geom_hline(yintercept = c(-2, 2), linetype = "dashed", color = "#E67E22") +
@@ -4660,6 +4982,16 @@ server <- function(input, output, session) {
           theme_minimal() +
           theme(axis.text.x = element_text(angle = 45, hjust = 1), legend.position = "bottom")
 
+        plotly::ggplotly(p_z)
+      })
+
+      output[[zeta_plot_id]] <- renderPlotly({
+        plot_data <- participant_plot_data()
+        if (!is.null(plot_data$error)) {
+          return(NULL)
+        }
+        participant_df <- plot_data$participant_df
+        level_factor <- plot_data$level_factor
         p_zeta <- ggplot(participant_df, aes(x = level_factor, y = zeta_score, group = combination, color = combination)) +
           geom_hline(yintercept = c(-3, 3), linetype = "dashed", color = "#C0392B") +
           geom_hline(yintercept = c(-2, 2), linetype = "dashed", color = "#E67E22") +
@@ -4670,6 +5002,16 @@ server <- function(input, output, session) {
           theme_minimal() +
           theme(axis.text.x = element_text(angle = 45, hjust = 1), legend.position = "bottom")
 
+        plotly::ggplotly(p_zeta)
+      })
+
+      output[[en_plot_id]] <- renderPlotly({
+        plot_data <- participant_plot_data()
+        if (!is.null(plot_data$error)) {
+          return(NULL)
+        }
+        participant_df <- plot_data$participant_df
+        level_factor <- plot_data$level_factor
         p_en <- ggplot(participant_df, aes(x = level_factor, y = En_score, group = combination, color = combination)) +
           geom_hline(yintercept = c(-1, 1), linetype = "dashed", color = "#C0392B") +
           geom_hline(yintercept = 0, color = "grey50") +
@@ -4679,16 +5021,7 @@ server <- function(input, output, session) {
           theme_minimal() +
           theme(axis.text.x = element_text(angle = 45, hjust = 1), legend.position = "bottom")
 
-        plotly::subplot(
-          plotly::ggplotly(p_values),
-          plotly::ggplotly(p_z),
-          plotly::ggplotly(p_zeta),
-          plotly::ggplotly(p_en),
-          nrows = 2,
-          shareX = FALSE,
-          titleX = TRUE,
-          titleY = TRUE
-        )
+        plotly::ggplotly(p_en)
       })
 
       tabPanel(
@@ -4698,7 +5031,13 @@ server <- function(input, output, session) {
         dataTableOutput(table_id),
         hr(),
         h4("Gráficos"),
-        plotlyOutput(plot_id, height = "600px")
+        plotlyOutput(values_plot_id, height = "320px"),
+        br(),
+        plotlyOutput(z_plot_id, height = "320px"),
+        br(),
+        plotlyOutput(zeta_plot_id, height = "320px"),
+        br(),
+        plotlyOutput(en_plot_id, height = "320px")
       )
     })
 
@@ -4738,23 +5077,142 @@ server <- function(input, output, session) {
     selectInput("report_level", "Seleccionar nivel:", choices = common_levels)
   })
 
+  output$report_participant_selector <- renderUI({
+    req(pt_prep_data(), input$report_n_lab)
+
+    participants <- pt_prep_data() %>%
+      filter(
+        n_lab == input$report_n_lab,
+        participant_id != "ref"
+      ) %>%
+      pull(participant_id) %>%
+      unique() %>%
+      sort()
+
+    if (length(participants) == 0) {
+      return(helpText("No hay participantes disponibles para el informe."))
+    }
+
+    selectInput(
+      "report_participant",
+      "Participante en Anexo C:",
+      choices = c("Todos" = "__all__", participants),
+      selected = "__all__"
+    )
+  })
+
   # Reactivo para datos de instrumentación de participantes
   participants_instrumentation <- reactive({
-    req(input$participants_data_upload)
-    tryCatch(
-      {
-        df <- read.csv(input$participants_data_upload$datapath, stringsAsFactors = FALSE)
-        # Validate required columns
-        required_cols <- c("Codigo_Lab", "Analizador_SO2", "Analizador_CO", "Analizador_O3", "Analizador_NO_NO2")
-        if (!all(required_cols %in% names(df))) {
-          return(NULL)
-        }
-        df
-      },
-      error = function(e) {
-        NULL
+    if (!is.null(input$participants_data_upload)) {
+      uploaded_df <- tryCatch(
+        read.csv(input$participants_data_upload$datapath, stringsAsFactors = FALSE),
+        error = function(e) NULL
+      )
+      required_cols <- c("Codigo_Lab", "Analizador_SO2", "Analizador_CO", "Analizador_O3", "Analizador_NO_NO2")
+      if (!is.null(uploaded_df) && all(required_cols %in% names(uploaded_df))) {
+        return(uploaded_df)
       }
+    }
+
+    summary_df <- pt_prep_data()
+    if (is.null(summary_df) || nrow(summary_df) == 0) {
+      return(NULL)
+    }
+
+    if ("n_lab" %in% names(summary_df) && !is.null(input$report_n_lab)) {
+      summary_df <- summary_df %>%
+        filter(as.character(n_lab) == as.character(input$report_n_lab))
+    }
+
+    participant_df <- summary_df %>%
+      filter(!is.na(participant_id), participant_id != "ref") %>%
+      distinct(participant_id, pollutant, level, n_lab) %>%
+      group_by(participant_id) %>%
+      summarise(
+        Codigo_Lab = first(participant_id),
+        Esquema_PT_n = paste(sort(unique(n_lab)), collapse = ", "),
+        Analitos = paste(sort(unique(toupper(pollutant))), collapse = ", "),
+        Niveles = paste(sort(unique(level)), collapse = ", "),
+        Combinaciones = n(),
+        .groups = "drop"
+      ) %>%
+      select(Codigo_Lab, Esquema_PT_n, Analitos, Niveles, Combinaciones)
+
+    if (nrow(participant_df) == 0) {
+      return(NULL)
+    }
+    participant_df
+  })
+
+  equipment_instrumentation <- reactive({
+    if (!is.null(input$participants_data_upload)) {
+      uploaded_df <- tryCatch(
+        read.csv(input$participants_data_upload$datapath, stringsAsFactors = FALSE),
+        error = function(e) NULL
+      )
+      if (!is.null(uploaded_df) && "Codigo_Lab" %in% names(uploaded_df)) {
+        return(unique(uploaded_df))
+      }
+    }
+
+    processed_dir <- "data/processed"
+    equipment_files <- list.files(
+      processed_dir,
+      pattern = "_equipos\\.csv$",
+      full.names = TRUE
     )
+    if (length(equipment_files) == 0) {
+      return(NULL)
+    }
+
+    summary_df <- pt_prep_data()
+    selected_pollutants <- character()
+    if (!is.null(summary_df) && nrow(summary_df) > 0) {
+      if ("n_lab" %in% names(summary_df) && !is.null(input$report_n_lab)) {
+        summary_df <- summary_df %>%
+          filter(as.character(n_lab) == as.character(input$report_n_lab))
+      }
+      if ("pollutant" %in% names(summary_df)) {
+        selected_pollutants <- sort(unique(tolower(summary_df$pollutant)))
+      }
+    }
+
+    file_pollutants <- list(
+      ronda_1_equipos = c("so2", "co"),
+      ronda_2_equipos = c("o3", "no", "no2")
+    )
+    selected_files <- equipment_files
+    if (length(selected_pollutants) > 0) {
+      matched <- equipment_files[vapply(equipment_files, function(path) {
+        key <- tools::file_path_sans_ext(basename(path))
+        pollutants <- file_pollutants[[key]]
+        !is.null(pollutants) && any(selected_pollutants %in% pollutants)
+      }, logical(1))]
+      if (length(matched) > 0) {
+        selected_files <- matched
+      }
+    }
+
+    equipment_list <- lapply(selected_files, function(path) {
+      df <- tryCatch(
+        read.csv(path, stringsAsFactors = FALSE),
+        error = function(e) NULL
+      )
+      if (is.null(df) || !"Codigo_Lab" %in% names(df)) {
+        return(NULL)
+      }
+      unique(df)
+    })
+    equipment_list <- Filter(Negate(is.null), equipment_list)
+    if (length(equipment_list) == 0) {
+      return(NULL)
+    }
+
+    Reduce(
+      function(x, y) full_join(x, y, by = "Codigo_Lab"),
+      equipment_list
+    ) %>%
+      distinct(Codigo_Lab, .keep_all = TRUE)
   })
 
   # Reactivo para Resumen de Grubbs
@@ -4853,8 +5311,9 @@ server <- function(input, output, session) {
 
   # Reactivo para Resumen Xpt del Informe (Anexo A)
   report_xpt_summary <- reactive({
-    req(pt_prep_data(), input$report_method)
-    data <- pt_prep_data()
+    req(pt_prep_data(), input$report_n_lab, input$report_method)
+    data <- pt_prep_data() %>%
+      filter(n_lab == input$report_n_lab)
     method <- input$report_method
 
     if (nrow(data) == 0) {
@@ -4873,6 +5332,87 @@ server <- function(input, output, session) {
 
     results_list <- list()
 
+    build_xpt_summary_row <- function(pol, n, lev, subset_data, method_code) {
+      ref_data <- subset_data %>% filter(participant_id == "ref")
+      part_data <- subset_data %>% filter(participant_id != "ref")
+
+      xpt <- NA_real_
+      u_xpt <- NA_real_
+      sigma_pt <- NA_real_
+      source_method <- "Desconocido"
+
+      if (method_code == "1") {
+        if (nrow(ref_data) > 0) {
+          xpt <- mean(ref_data$mean_value, na.rm = TRUE)
+          u_xpt <- mean(ref_data$u_value, na.rm = TRUE)
+          hom_res <- tryCatch(
+            compute_homogeneity_metrics(pol, lev),
+            error = function(e) NULL
+          )
+          sigma_pt <- if (!is.null(hom_res) && is.null(hom_res$error)) {
+            hom_res$sigma_pt
+          } else {
+            NA_real_
+          }
+          source_method <- "Referencia"
+        }
+      } else if (method_code == "2a") {
+        vals <- part_data$mean_value
+        if (length(vals) > 0) {
+          xpt <- median(vals, na.rm = TRUE)
+          made <- 1.483 * median(abs(vals - xpt), na.rm = TRUE)
+          u_xpt <- 1.25 * made / sqrt(length(vals))
+          sigma_pt <- made
+          source_method <- "Consenso MADe"
+        }
+      } else if (method_code == "2b") {
+        vals <- part_data$mean_value
+        if (length(vals) > 0) {
+          xpt <- median(vals, na.rm = TRUE)
+          niqr <- calculate_niqr(vals)
+          u_xpt <- 1.25 * niqr / sqrt(length(vals))
+          sigma_pt <- niqr
+          source_method <- "Consenso nIQR"
+        }
+      } else if (method_code == "3") {
+        vals <- part_data$mean_value
+        ids <- part_data$participant_id
+        if (length(vals) >= 3) {
+          res_algo <- run_algorithm_a(vals, ids, tol = ALGO_A_TOL)
+          if (is.null(res_algo$error)) {
+            xpt <- res_algo$assigned_value
+            sigma_pt <- res_algo$robust_sd
+            u_xpt <- 1.25 * sigma_pt / sqrt(length(vals))
+            source_method <- "Algoritmo A"
+          }
+        }
+      } else if (method_code == "4") {
+        if (nrow(ref_data) > 0) {
+          xpt <- mean(ref_data$mean_value, na.rm = TRUE)
+          u_xpt <- calculate_expert_u_xpt(xpt)
+          sigma_pt <- calculate_expert_sigma_pt(pol, xpt)
+          source_method <- "Expertos"
+        }
+      }
+
+      data.frame(
+        Contaminante = pol,
+        Nivel = lev,
+        Metodo = source_method,
+        x_pt = ifelse(is.na(xpt), NA_real_, xpt),
+        u_xpt = ifelse(is.na(u_xpt), NA_real_, u_xpt),
+        u_ref_check = if (nrow(ref_data) > 1) {
+          stats::sd(ref_data$mean_value, na.rm = TRUE) / sqrt(nrow(ref_data))
+        } else {
+          NA_real_
+        },
+        sigma_pt = ifelse(is.na(sigma_pt), NA_real_, sigma_pt),
+        stringsAsFactors = FALSE
+      )
+    }
+
+    result_index <- 1L
+
     for (i in seq_len(nrow(combos))) {
       pol <- combos$pollutant[[i]]
       n <- combos$n_lab[[i]]
@@ -4885,79 +5425,17 @@ server <- function(input, output, session) {
       subset_data <- data %>%
         filter(pollutant == pol, n_lab == n, level == lev)
 
-      ref_data <- subset_data %>% filter(participant_id == "ref")
-      part_data <- subset_data %>% filter(participant_id != "ref")
-
-      xpt <- NA
-      u_xpt <- NA
-      sigma_pt <- NA
-      source_method <- "Desconocido"
-
-      if (method == "1") { # Referencia
-        if (nrow(ref_data) > 0) {
-          xpt <- mean(ref_data$mean_value, na.rm = TRUE)
-          u_xpt <- mean(ref_data$sd_value, na.rm = TRUE)
-          sigma_pt <- calculate_expert_sigma_pt(pol, xpt)
-          source_method <- "Referencia"
-        }
-      } else if (method == "2a") { # Consenso MADe
-        vals <- part_data$mean_value
-        if (length(vals) > 0) {
-          xpt <- median(vals, na.rm = TRUE)
-          made <- 1.483 * median(abs(vals - xpt), na.rm = TRUE)
-          u_xpt <- 1.25 * made / sqrt(length(vals))
-          sigma_pt <- made
-          source_method <- "Consenso MADe"
-        }
-      } else if (method == "2b") { # Consenso nIQR
-        vals <- part_data$mean_value
-        if (length(vals) > 0) {
-          xpt <- median(vals, na.rm = TRUE)
-          niqr <- calculate_niqr(vals)
-          u_xpt <- 1.25 * niqr / sqrt(length(vals))
-          sigma_pt <- niqr
-          source_method <- "Consenso nIQR"
-        }
-      } else if (method == "3") { # Algoritmo A
-        vals <- part_data$mean_value
-        ids <- part_data$participant_id
-        if (length(vals) >= 3) {
-          # Podemos usar la función run_algorithm_a existente en app.R si es accesible,
-          # o la definida dentro del ámbito de este reactivo si la copiamos.
-          # Como run_algorithm_a está definida en el ámbito global de server o ui?
-          # Parece estar en el ámbito de server. Intentemos usarla.
-          # Nota: run_algorithm_a en app.R toma (values, ids).
-          res_algo <- run_algorithm_a(vals, ids, tol = ALGO_A_TOL)
-          if (is.null(res_algo$error)) {
-            xpt <- res_algo$assigned_value
-            sigma_pt <- res_algo$robust_sd
-            u_xpt <- 1.25 * sigma_pt / sqrt(length(vals))
-            source_method <- "Algoritmo A"
-          }
-        }
-      } else if (method == "4") { # Expertos
-        if (nrow(ref_data) > 0) {
-          xpt <- mean(ref_data$mean_value, na.rm = TRUE)
-          u_xpt <- mean(ref_data$sd_value, na.rm = TRUE)
-          sigma_pt <- calculate_expert_sigma_pt(pol, xpt)
-          source_method <- "Expertos"
-        }
-      }
-
-      results_list[[i]] <- data.frame(
-        Contaminante = pol,
-        Nivel = lev,
-        Metodo = source_method,
-        x_pt = ifelse(is.na(xpt), NA, xpt),
-        u_xpt = ifelse(is.na(u_xpt), NA, u_xpt),
-        u_ref_check = if (nrow(ref_data) > 1) {
-          stats::sd(ref_data$mean_value, na.rm = TRUE) / sqrt(nrow(ref_data))
-        } else {
-          NA_real_
-        },
-        sigma_pt = ifelse(is.na(sigma_pt), NA, sigma_pt),
-        stringsAsFactors = FALSE
+      results_list[[result_index]] <- build_xpt_summary_row(
+        pol, n, lev, subset_data, method
       )
+      result_index <- result_index + 1L
+
+      if (method != "4") {
+        results_list[[result_index]] <- build_xpt_summary_row(
+          pol, n, lev, subset_data, "4"
+        )
+        result_index <- result_index + 1L
+      }
     }
 
     do.call(rbind, results_list)
@@ -4965,8 +5443,9 @@ server <- function(input, output, session) {
 
   # Reactivo para Resumen de Homogeneidad (Anexo B)
   report_homogeneity_summary <- reactive({
-    req(hom_data_full())
-    data <- pt_prep_data()
+    req(hom_data_full(), input$report_n_lab)
+    data <- pt_prep_data() %>%
+      filter(n_lab == input$report_n_lab)
 
     if (nrow(data) == 0) {
       return(NULL)
@@ -5018,8 +5497,9 @@ server <- function(input, output, session) {
 
   # Reactivo para Resumen de Estabilidad (Anexo B)
   report_stability_summary <- reactive({
-    req(hom_data_full(), stab_data_full())
-    data <- pt_prep_data()
+    req(hom_data_full(), stab_data_full(), input$report_n_lab)
+    data <- pt_prep_data() %>%
+      filter(n_lab == input$report_n_lab)
 
     if (nrow(data) == 0) {
       return(NULL)
@@ -5084,7 +5564,17 @@ server <- function(input, output, session) {
   # --- Funciones auxiliares para Resúmenes de Puntajes del Informe ---
 
   calculate_method_scores_df <- function(method_code) {
-    data <- pt_prep_data()
+    req(input$report_n_lab)
+    method_label <- dplyr::case_when(
+      method_code == "1" ~ "Referencia",
+      method_code == "2a" ~ "Consenso MADe",
+      method_code == "2b" ~ "Consenso nIQR",
+      method_code == "3" ~ "Algoritmo A",
+      method_code == "4" ~ "Expertos",
+      TRUE ~ "Desconocido"
+    )
+    data <- pt_prep_data() %>%
+      filter(n_lab == input$report_n_lab)
     if (nrow(data) == 0) {
       return(NULL)
     }
@@ -5104,6 +5594,7 @@ server <- function(input, output, session) {
       u_df <- pt_data_df()
       if (!is.null(u_df)) {
         part_data <- part_data %>%
+          dplyr::select(-any_of("u_i")) %>%
           dplyr::left_join(
             u_df |> dplyr::select(participant_id, pollutant, level, u_i),
             by = c("participant_id", "pollutant", "level")
@@ -5119,10 +5610,11 @@ server <- function(input, output, session) {
 
       if (method_code == "1") {
         ref_xpt <- mean(ref_data$mean_value, na.rm = TRUE)
+        ref_u_xpt <- mean(ref_data$u_value, na.rm = TRUE)
         assigned <- list(
           xpt = ref_xpt,
-          u_xpt = mean(ref_data$sd_value, na.rm = TRUE),
-          sigma = calculate_expert_sigma_pt(pol, ref_xpt)
+          u_xpt = ref_u_xpt,
+          sigma = NA_real_
         )
       } else if (method_code == "2a") {
         vals <- part_data$mean_value
@@ -5145,7 +5637,7 @@ server <- function(input, output, session) {
         ref_xpt <- mean(ref_data$mean_value, na.rm = TRUE)
         assigned <- list(
           xpt = ref_xpt,
-          u_xpt = mean(ref_data$sd_value, na.rm = TRUE),
+          u_xpt = calculate_expert_u_xpt(ref_xpt),
           sigma = calculate_expert_sigma_pt(pol, ref_xpt)
         )
       }
@@ -5166,6 +5658,8 @@ server <- function(input, output, session) {
 
       scores <- part_data %>%
         mutate(
+          method_code = method_code,
+          method_label = method_label,
           x_pt = assigned$xpt,
           u_xpt = assigned$u_xpt,
           sigma_pt = final_sigma,
@@ -5174,7 +5668,7 @@ server <- function(input, output, session) {
           zeta_score = (mean_value - assigned$xpt) / sqrt(uncertainty_std^2 + assigned$u_xpt^2),
           En_score = (mean_value - assigned$xpt) / sqrt((k * uncertainty_std)^2 + (k * assigned$u_xpt)^2)
         ) %>%
-        select(participant_id, pollutant, level, mean_value, sd_value, u_i, uncertainty_std, x_pt, u_xpt, sigma_pt, z_score, z_prime_score, zeta_score, En_score)
+        select(participant_id, pollutant, level, method_code, method_label, mean_value, u_value, u_i, uncertainty_std, x_pt, u_xpt, sigma_pt, z_score, z_prime_score, zeta_score, En_score)
 
       all_scores[[i]] <- scores
     }
@@ -5297,6 +5791,7 @@ server <- function(input, output, session) {
   })
 
   report_heatmaps <- reactive({
+    req(input$report_n_lab, input$report_method, input$report_metric)
     data <- pt_prep_data()
     if (nrow(data) == 0) {
       return(NULL)
@@ -5311,7 +5806,20 @@ server <- function(input, output, session) {
     plot_list <- list()
 
     for (pol in pollutants) {
-      pol_data <- scores_df %>% filter(pollutant == pol)
+      pol_data <- scores_df %>%
+        filter(pollutant == pol) %>%
+        mutate(
+          participant_id = factor(
+            participant_id,
+            levels = sort(unique(as.character(participant_id)))
+          ),
+          level = factor(
+            level,
+            levels = unique(
+              level[order(readr::parse_number(as.character(level)), as.character(level))]
+            )
+          )
+        )
 
       metric <- input$report_metric
 
@@ -5319,7 +5827,8 @@ server <- function(input, output, session) {
         pol_data$score_val <- pol_data$En_score
         pol_data$eval <- case_when(
           abs(pol_data$En_score) <= 1 ~ "Satisfactorio",
-          TRUE ~ "Insatisfactorio"
+          is.finite(pol_data$En_score) ~ "Insatisfactorio",
+          TRUE ~ "N/A"
         )
       } else {
         # Select score based on metric
@@ -5332,20 +5841,46 @@ server <- function(input, output, session) {
         pol_data$eval <- case_when(
           abs(pol_data$score_val) <= 2 ~ "Satisfactorio",
           abs(pol_data$score_val) < 3 ~ "Cuestionable",
-          TRUE ~ "Insatisfactorio"
+          is.finite(pol_data$score_val) ~ "Insatisfactorio",
+          TRUE ~ "N/A"
         )
       }
 
       p <- ggplot(pol_data, aes(x = level, y = participant_id, fill = eval)) +
         geom_tile(color = "white") +
-        geom_text(aes(label = round(score_val, 2)), color = "white", size = 3) +
-        scale_fill_manual(values = c("Satisfactorio" = "#2E7D32", "Cuestionable" = "#F9A825", "Insatisfactorio" = "#C62828")) +
-        labs(title = paste("Mapa de Calor -", toupper(pol)), x = "Nivel", y = "Participante", fill = "Evaluación") +
-        theme_minimal()
+        geom_text(
+          aes(label = ifelse(is.finite(score_val), sprintf("%.2f", score_val), "")),
+          color = "#1B1B1B",
+          size = 3
+        ) +
+        scale_fill_manual(
+          values = c(
+            "Satisfactorio" = "#2E7D32",
+            "Cuestionable" = "#F9A825",
+            "Insatisfactorio" = "#C62828",
+            "N/A" = "#BDBDBD"
+          ),
+          drop = FALSE
+        ) +
+        labs(
+          title = paste("Mapa de Calor -", toupper(pol)),
+          subtitle = paste(
+            "n =", input$report_n_lab,
+            "| Método:", input$report_method,
+            "| Indicador:", input$report_metric
+          ),
+          x = "Nivel",
+          y = "Participante",
+          fill = "Evaluación"
+        ) +
+        theme_minimal() +
+        theme(
+          panel.grid = element_blank(),
+          axis.text.x = element_text(angle = 45, hjust = 1)
+        )
 
       plot_list[[pol]] <- p
     }
-    plot_list
     plot_list
   })
 
@@ -5405,9 +5940,17 @@ server <- function(input, output, session) {
         )
     }
 
-    # Obtener todos los participantes (excluyendo ref)
+    # Obtener participantes para el anexo C (excluyendo ref)
     participants <- unique(scores_df$participant_id)
     participants <- participants[participants != "ref"]
+    selected_participant <- input$report_participant
+    if (!is.null(selected_participant) && selected_participant != "__all__") {
+      participants <- intersect(participants, selected_participant)
+    }
+
+    if (length(participants) == 0) {
+      return(NULL)
+    }
 
     part_list <- list()
 
@@ -5439,10 +5982,12 @@ server <- function(input, output, session) {
         table_rows[[i]] <- data.frame(
           Contaminante = pol,
           Nivel = lev,
+          Metodo = p_data$method_label[i],
           Resultado = p_data$mean_value[i],
           Incertidumbre = p_data$u_i[i],
           Valor_Asignado = p_data$x_pt[i],
           Incertidumbre_VA = p_data$u_xpt[i],
+          Sigma_pt = p_data$sigma_pt[i],
           Score = score_val,
           Evaluacion = eval_val,
           stringsAsFactors = FALSE
@@ -5476,7 +6021,7 @@ server <- function(input, output, session) {
         p_combo <- create_combo_plot(
           pol_data,
           score_col,
-          paste(metric, "-score", toupper(pol)),
+          paste(metric, "-score", toupper(pol), "-", unique(pol_data$method_label)),
           limit_lines = limit_lines,
           limit_colors = limit_colors,
           show_legend = is_last
@@ -5506,31 +6051,38 @@ server <- function(input, output, session) {
   })
   report_preview <- reactive({
     req(
-      input$report_n_lab, input$report_level,
+      input$report_n_lab,
       input$report_method, input$report_k
     )
     summary_df <- pt_prep_data()
     if (is.null(summary_df)) {
-      return(list(error = "No se encontraron datos resumidos de PT (summary_n*.csv)."))
+      return(list(error = "No se encontraron datos consolidados de PT (ronda_*_completa.csv)."))
     }
 
-    # Para vista previa, solo verificamos el primer contaminante
+    preview_levels <- pt_prep_data() %>%
+      filter(n_lab == input$report_n_lab) %>%
+      pull(level) %>%
+      unique() %>%
+      sort()
+    preview_level <- preview_levels[[1]]
+
+    # Para vista previa, solo verificamos la primera combinación disponible.
     first_pollutant <- unique(hom_data_full()$pollutant)[1]
 
-    hom_res <- compute_homogeneity_metrics(first_pollutant, input$report_level)
+    hom_res <- compute_homogeneity_metrics(first_pollutant, preview_level)
     # El error de homogeneidad no es fatal para la vista previa, pero lo necesitamos para estabilidad
 
     stab_res <- if (!is.null(hom_res$error)) {
       list(error = "No se pudo calcular estabilidad debido a error en homogeneidad.")
     } else {
-      compute_stability_metrics(first_pollutant, input$report_level, hom_res)
+      compute_stability_metrics(first_pollutant, preview_level, hom_res)
     }
 
     # Calcular valor asignado e incertidumbre basado en el método
     target_data <- summary_df %>%
       filter(
         n_lab == input$report_n_lab,
-        level == input$report_level
+        level == preview_level
       )
 
     if (nrow(target_data) == 0) {
@@ -5549,8 +6101,8 @@ server <- function(input, output, session) {
     if (method == "1") { # Referencia
       if (nrow(ref_data) > 0) {
         x_pt <- mean(ref_data$mean_value, na.rm = TRUE)
-        u_xpt <- mean(ref_data$sd_value, na.rm = TRUE) # Asumiendo que sd_value es la incertidumbre para ref
-        sigma_pt <- calculate_expert_sigma_pt(first_pollutant, x_pt)
+        u_xpt <- mean(ref_data$u_value, na.rm = TRUE)
+        sigma_pt <- if (!is.null(hom_res$error)) NA_real_ else hom_res$sigma_pt
       } else {
         return(list(error = "No hay datos de referencia para el método seleccionado."))
       }
@@ -5581,7 +6133,7 @@ server <- function(input, output, session) {
     } else if (method == "4") { # Expertos
       if (nrow(ref_data) > 0) {
         x_pt <- mean(ref_data$mean_value, na.rm = TRUE)
-        u_xpt <- mean(ref_data$sd_value, na.rm = TRUE)
+        u_xpt <- calculate_expert_u_xpt(x_pt)
         sigma_pt <- calculate_expert_sigma_pt(first_pollutant, x_pt)
       } else {
         return(list(error = "No hay datos de referencia para el método de expertos."))
@@ -5599,7 +6151,7 @@ server <- function(input, output, session) {
       summary_df = summary_df,
       target_pollutant = first_pollutant,
       target_n_lab = input$report_n_lab,
-      target_level = input$report_level,
+      target_level = preview_level,
       sigma_pt = sigma_pt,
       u_xpt = u_xpt,
       k = input$report_k,
@@ -5704,7 +6256,7 @@ server <- function(input, output, session) {
         metric = input$report_metric,
         method = input$report_method,
         pollutant = NULL,
-        level = input$report_level,
+        level = NULL,
         n_lab = input$report_n_lab,
         k_factor = input$report_k,
         scheme_id = input$report_scheme_id,
@@ -5725,8 +6277,10 @@ server <- function(input, output, session) {
         score_summary = report_score_summary(),
         heatmaps = report_heatmaps(),
         participant_data = report_participant_data(),
+        participant_filter = input$report_participant,
         metrological_compatibility = metrological_compatibility_data(),
         metrological_compatibility_method = input$report_metrological_compatibility,
+        equipos_data = equipment_instrumentation(),
         project_root = app_dir
       )
       
@@ -5786,13 +6340,15 @@ server <- function(input, output, session) {
   output$download_report <- downloadHandler(
     filename = function() {
       ext <- "docx"
+      scheme_id <- safe_filename_stem(input$report_scheme_id)
+      metric_label <- safe_filename_stem(input$report_metric, fallback = "metrica")
 
-      # Construct filename with parameters: n_lab-metric-method-compatibility
-      # Example: Informe_EA_2025-12-02_13-zeta-2a-2a
+      # Construct filename with parameters: scheme_id-n_lab-metric-method-compatibility
+      # Example: EA-2026-02-1-z-4-2a
       fname <- paste0(
-        "Informe_EA_", Sys.Date(), "_",
+        scheme_id, "-",
         input$report_n_lab, "-",
-        input$report_metric, "-",
+        metric_label, "-",
         input$report_method, "-",
         input$report_metrological_compatibility
       )
@@ -5824,7 +6380,7 @@ server <- function(input, output, session) {
         metric = input$report_metric,
         method = input$report_method,
         pollutant = NULL, # NULL means process all pollutants
-        level = input$report_level,
+        level = NULL,
         n_lab = input$report_n_lab,
         k_factor = input$report_k,
         # Identification params
@@ -5852,9 +6408,12 @@ server <- function(input, output, session) {
         heatmaps = report_heatmaps(),
         # Datos Anexo C
         participant_data = report_participant_data(),
+        participant_filter = input$report_participant,
         # Compatibilidad Metrológica
         metrological_compatibility = metrological_compatibility_data(),
-        metrological_compatibility_method = input$report_metrological_compatibility
+        metrological_compatibility_method = input$report_metrological_compatibility,
+        equipos_data = equipment_instrumentation(),
+        project_root = getwd()
       )
 
       # Render directly to the Shiny download file path
@@ -5896,14 +6455,15 @@ server <- function(input, output, session) {
     }
 
     calaire_ref <- calaire_reference_df()
-    if (!is.null(calaire_ref)) {
+    if (!use_calaire_reference()) {
+      cat("- Referencia: se usa la incluida en el consolidado (participant_id='ref').\n")
+    } else if (!is.null(calaire_ref)) {
       cat(sprintf(
-        "- Referencia CALAIRE: disponible (%d combinaciones). Uso en análisis: %s.\n",
-        nrow(calaire_ref),
-        ifelse(use_calaire_reference(), "activo", "inactivo")
+        "- Referencia CALAIRE separada: cargada (%d combinaciones), uso en análisis activo.\n",
+        nrow(calaire_ref)
       ))
     } else {
-      cat("- Referencia CALAIRE: no disponible. Ejecute scripts/preprocesar_calaire.R.\n")
+      cat("- Referencia CALAIRE separada: activada pero no cargada.\n")
     }
   })
 
@@ -5912,7 +6472,7 @@ server <- function(input, output, session) {
   output$assigned_pollutant_selector <- renderUI({
     data <- pt_prep_data()
     if (is.null(data) || nrow(data) == 0) {
-      return(helpText("Cargue los archivos summary_n*.csv para habilitar esta sección."))
+      return(helpText("Cargue los archivos consolidados ronda_*_completa.csv para habilitar esta sección."))
     }
     choices <- sort(unique(data$pollutant))
     selectInput("assigned_pollutant", "Seleccionar analito:", choices = choices)
@@ -6396,19 +6956,49 @@ server <- function(input, output, session) {
         Analito = toupper(pollutant),
         `Esquema (n)` = n_lab,
         Nivel = level,
-        Fuente = ifelse(run == "calaire_ref", "CALAIRE", "summary_n"),
+        Fuente = ifelse(run == "calaire_ref", "CALAIRE", "ronda_completa"),
         `Valor medio` = mean_value,
-        `u(xpt) / sd declarada` = sd_value
+        `u(xpt)` = u_value
       )
 
     datatable(display, options = list(pageLength = 10, scrollX = TRUE), rownames = FALSE) %>%
-      format_numeric_columns(c("Valor medio", "u(xpt) / sd declarada"))
+      format_numeric_columns(c("Valor medio", "u(xpt)"))
+  })
+
+  output$expert_assigned_value_table <- renderDataTable({
+    data <- reference_table_data()
+    if (nrow(data) == 0) {
+      return(datatable(data.frame(Mensaje = "No hay datos de referencia para calcular el método de expertos.")))
+    }
+
+    x_pt <- mean(data$mean_value, na.rm = TRUE)
+    u_xpt <- calculate_expert_u_xpt(x_pt)
+    sigma_pt <- calculate_expert_sigma_pt(input$assigned_pollutant, x_pt)
+    pollutant_code <- normalize_pollutant_code(input$assigned_pollutant)
+    sigma_params <- expert_sigma_params %>%
+      filter(.data$pollutant == pollutant_code)
+
+    display <- tibble::tibble(
+      Analito = toupper(input$assigned_pollutant),
+      `Esquema (n)` = input$assigned_n_lab,
+      Nivel = input$assigned_level,
+      `x_pt referencia` = x_pt,
+      `u(x_pt) expertos` = u_xpt,
+      `sigma_pt expertos` = sigma_pt,
+      `Coeficiente a` = if (nrow(sigma_params) > 0) sigma_params$a[[1]] else NA_real_,
+      `Coeficiente b` = if (nrow(sigma_params) > 0) sigma_params$b[[1]] else NA_real_,
+      `Fórmula u(x_pt)` = "0.003 * x_pt",
+      `Fórmula sigma_pt` = "a * x_pt + b"
+    )
+
+    datatable(display, options = list(pageLength = 10, scrollX = TRUE), rownames = FALSE) %>%
+      format_numeric_columns(c("x_pt referencia", "u(x_pt) expertos", "sigma_pt expertos", "Coeficiente a", "Coeficiente b"))
   })
 
   output$calaire_reference_table <- renderDataTable({
     data <- calaire_reference_df()
     if (is.null(data) || nrow(data) == 0) {
-      return(datatable(data.frame(Mensaje = "No existe data/processed/referencia_ronda.csv.")))
+      return(datatable(data.frame(Mensaje = "No hay referencia CALAIRE separada cargada.")))
     }
 
     display <- data %>%
@@ -6447,21 +7037,6 @@ server <- function(input, output, session) {
 
     datatable(display, options = list(pageLength = 10, scrollX = TRUE), rownames = FALSE) %>%
       format_numeric_columns(c("Media", "s horario", "u horario"))
-  })
-
-  # --- Módulo de Preparación PT ---
-
-  output$global_overview_algo <- renderDataTable({
-    overview <- get_global_overview_data(global_combo_specs$algo)
-    if (nrow(overview) == 0) {
-      return(datatable(data.frame(Mensaje = "No hay datos disponibles para esta combinación.")))
-    }
-    datatable(
-      overview,
-      options = list(scrollX = TRUE, pageLength = 12),
-      rownames = FALSE
-    ) %>%
-      format_numeric_columns(c("Resultado", "u(xi)", "Puntaje z", "Puntaje z'", "Puntaje zeta", "Puntaje En"))
   })
 
   output$metrological_compatibility_table <- renderDataTable({
@@ -6524,7 +7099,7 @@ server <- function(input, output, session) {
     if (nrow(plot_data) == 0) {
       return(NULL)
     }
-    
+
     hist_plot <- ggplot(plot_data, aes(x = mean_value)) +
       geom_histogram(aes(y = after_stat(density)), color = "black", fill = "steelblue", bins = 15) +
       geom_density(alpha = 0.4, fill = "lightblue") +
