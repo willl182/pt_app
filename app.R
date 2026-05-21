@@ -165,6 +165,32 @@ server <- function(input, output, session) {
     list(status = status, output = paste(result, collapse = "\n"))
   }
 
+  save_preprocessor_raw_files <- function(raw_files) {
+    if (is.null(raw_files) || nrow(raw_files) == 0) {
+      return(character())
+    }
+
+    raw_dir <- file.path("data", "raw")
+    dir.create(raw_dir, recursive = TRUE, showWarnings = FALSE)
+
+    saved_paths <- character(nrow(raw_files))
+    for (i in seq_len(nrow(raw_files))) {
+      file_name <- basename(raw_files$name[i])
+      file_name <- gsub("[^[:alnum:]_.-]+", "_", file_name)
+      if (!grepl("\\.csv$", file_name, ignore.case = TRUE)) {
+        file_name <- paste0(file_name, ".csv")
+      }
+      destination <- file.path(raw_dir, file_name)
+      copied <- file.copy(raw_files$datapath[i], destination, overwrite = TRUE)
+      if (!isTRUE(copied)) {
+        stop(sprintf("No se pudo guardar el archivo crudo '%s'.", file_name), call. = FALSE)
+      }
+      saved_paths[i] <- destination
+    }
+
+    saved_paths
+  }
+
   output$preprocessing_workflow_status <- renderText({
     workflow_status()
   })
@@ -185,7 +211,22 @@ server <- function(input, output, session) {
       ),
       tags$hr(),
       h4("1. Crudos -> pt_app"),
-      actionButton("workflow_run_raw_preprocess", "Ejecutar preprocesamiento interno", icon = icon("gears")),
+      fileInput(
+        "workflow_raw_files",
+        "Cargar datos crudos CALAIRE (CSV)",
+        accept = ".csv",
+        multiple = TRUE,
+        placeholder = "datos_ronda_*.csv"
+      ),
+      tags$small(
+        class = "text-muted",
+        "Los archivos se guardan temporalmente en data/raw/ para ejecutar el preprocesador."
+      ),
+      div(
+        style = "margin-top: 10px;",
+        actionButton("workflow_save_raw_files", "Guardar crudos", icon = icon("upload")),
+        actionButton("workflow_run_raw_preprocess", "Ejecutar preprocesamiento", icon = icon("gears"), class = "btn-primary")
+      ),
       tags$hr(),
       h4("2. pt_app -> calaire-app"),
       fluidRow(
@@ -214,7 +255,22 @@ server <- function(input, output, session) {
     ))
   })
 
+  observeEvent(input$workflow_save_raw_files, {
+    validate(
+      need(!is.null(input$workflow_raw_files), "Cargue al menos un CSV crudo.")
+    )
+    saved_paths <- save_preprocessor_raw_files(input$workflow_raw_files)
+    workflow_status(paste(
+      "Archivos crudos guardados:",
+      paste(basename(saved_paths), collapse = ", ")
+    ))
+    showNotification("Archivos crudos guardados.", type = "message")
+  })
+
   observeEvent(input$workflow_run_raw_preprocess, {
+    if (!is.null(input$workflow_raw_files)) {
+      save_preprocessor_raw_files(input$workflow_raw_files)
+    }
     workflow_status("Ejecutando preprocesamiento interno...")
     result <- run_workflow_script("scripts/preprocesar_calaire.R")
     workflow_status(result$output)
