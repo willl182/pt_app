@@ -153,9 +153,7 @@ ui <- fluidPage(
 # II. Lógica del Servidor
 # ===================================================================
 server <- function(input, output, session) {
-  internal_tools_enabled <- tolower(Sys.getenv("PT_APP_INTERNAL_TOOLS", "false")) %in%
-    c("true", "t", "1", "yes", "y", "si", "sí")
-  workflow_status <- reactiveVal("Herramientas internas listas. Seleccione una acción.")
+  workflow_status <- reactiveVal("Preprocesador listo. Seleccione una acción.")
 
   run_workflow_script <- function(script, args = character()) {
     cmd_args <- c(script, args)
@@ -172,15 +170,14 @@ server <- function(input, output, session) {
   })
 
   observeEvent(input$open_preprocessing_workflow, {
-    req(internal_tools_enabled)
     showModal(modalDialog(
-      title = tagList(icon("screwdriver-wrench"), " Workflow interno de preprocesamiento"),
+      title = tagList(icon("screwdriver-wrench"), " Preprocesador de datos"),
       size = "l",
       easyClose = TRUE,
       footer = modalButton("Cerrar"),
       tags$p(
         class = "text-muted",
-        "Herramientas internas para mover datos entre crudos, pt_app y calaire-app."
+        "Herramienta para preparar archivos de ronda y consolidar los datos que luego se cargan en el análisis."
       ),
       fluidRow(
         column(3, numericInput("workflow_round", "Ronda", value = 1, min = 1, step = 1)),
@@ -218,7 +215,6 @@ server <- function(input, output, session) {
   })
 
   observeEvent(input$workflow_run_raw_preprocess, {
-    req(internal_tools_enabled)
     workflow_status("Ejecutando preprocesamiento interno...")
     result <- run_workflow_script("scripts/preprocesar_calaire.R")
     workflow_status(result$output)
@@ -226,7 +222,6 @@ server <- function(input, output, session) {
   })
 
   observeEvent(input$workflow_export_reference, {
-    req(internal_tools_enabled)
     round_id <- as.character(input$workflow_round %||% 1)
     result <- run_workflow_script("scripts/convert_pt_app_to_calaire_app.R", c(
       file.path("data/processed", paste0("ronda_", round_id, "_completa.csv")),
@@ -239,7 +234,6 @@ server <- function(input, output, session) {
   })
 
   observeEvent(input$workflow_export_participants, {
-    req(internal_tools_enabled)
     round_id <- as.character(input$workflow_round %||% 1)
     result <- run_workflow_script("scripts/convert_pt_app_to_calaire_app.R", c(
       file.path("data/processed", paste0("ronda_", round_id, "_completa.csv")),
@@ -252,7 +246,6 @@ server <- function(input, output, session) {
   })
 
   observeEvent(input$workflow_import_participants, {
-    req(internal_tools_enabled)
     round_id <- as.character(input$workflow_round %||% 1)
     result <- run_workflow_script("scripts/convert_from_calaire_app_to_pt_app.R", c(
       file.path("data/from_calaire-app", paste0(round_id, "-pt.csv")),
@@ -263,7 +256,6 @@ server <- function(input, output, session) {
   })
 
   observeEvent(input$workflow_consolidate, {
-    req(internal_tools_enabled)
     round_id <- as.character(input$workflow_round %||% 1)
     participant_file <- if ((input$workflow_participant_origin %||% "calaire") == "calaire") {
       file.path("data/processed", paste0("ronda_", round_id, "_participantes_from_calaire.csv"))
@@ -1580,21 +1572,19 @@ server <- function(input, output, session) {
                 )
               )
             ),
-            if (internal_tools_enabled) {
-              div(
-                style = "margin-top: 16px; border-top: 1px solid #e5e7eb; padding-top: 12px;",
-                actionButton(
-                  "open_preprocessing_workflow",
-                  label = tagList(icon("screwdriver-wrench"), " Herramientas internas de preprocesamiento"),
-                  class = "btn btn-outline-secondary"
-                ),
-                tags$small(
-                  class = "text-muted",
-                  style = "display: block; margin-top: 6px;",
-                  "Visible solo con PT_APP_INTERNAL_TOOLS=true."
-                )
+            div(
+              style = "margin-top: 16px; border-top: 1px solid #e5e7eb; padding-top: 12px;",
+              actionButton(
+                "open_preprocessing_workflow",
+                label = tagList(icon("screwdriver-wrench"), " Preprocesador de datos"),
+                class = "btn btn-outline-secondary"
+              ),
+              tags$small(
+                class = "text-muted",
+                style = "display: block; margin-top: 6px;",
+                "Abre las herramientas de preprocesamiento en una ventana separada."
               )
-            }
+            )
           )
         ),
         div(class = "shadcn-card",
