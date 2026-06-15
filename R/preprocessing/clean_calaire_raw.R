@@ -1,38 +1,72 @@
 # Normalize make.names() column names to standard identifiers.
+.participant_label_token <- function(x) {
+  token <- tolower(trimws(as.character(x)))
+  token <- gsub("[^[:alnum:]]+", "_", token)
+  token <- gsub("^_+|_+$", "", token)
+  token
+}
+
 .normalize_col_names <- function(raw_names) {
   n <- make.names(trimws(raw_names), unique = TRUE)
   result <- n
 
   patterns <- list(
-    date              = "^Date",
-    time              = "^Time",
-    co_tapi_ppm       = "^CO\\.TAPI|^CO-TAPI",
-    co_gen_ppm        = "^CO\\.ppm$|^CO\\.generado|^CO\\.gen$|^CO_gen$",
-    co_calaire_ppm    = "^CO\\.CALAIRE|^CO_ref$|^CO\\.ref$",
-    co_part_1_ppm     = "^CO_p1$|^CO\\.p1$|^CO_part_1$",
-    co_invitado1_ppm  = "^CO\\.\\.Invitado|^CO\\.Invitado",
-    so2_ppb           = "^SO2$",
-    so2_gen_ppb       = "^SO2\\.ppb$|^SO2\\.Generado|^SO2\\.gen$|^SO2_gen$",
-    so2_calaire_ppb   = "^SO2\\.CALAIRE|^SO2_ref$|^SO2\\.ref$",
-    so2_part_1_ppb    = "^SO2_p1$|^SO2\\.p1$|^SO2_part_1$",
-    so2_invitado1_ppb = "^SO2\\.\\.Invitado|^SO2\\.Invitado",
-    no_gen_ppb        = "^NO_gen$|^NO\\.gen$",
-    no_calaire_ppb    = "^NO_ref$|^NO\\.ref$|^NO\\.CALAIRE",
-    no_part_1_ppb     = "^NO_p1$|^NO\\.p1$|^NO_part_1$",
-    no2_gen_ppb       = "^NO2_gen$|^NO2\\.gen$",
-    no2_calaire_ppb   = "^NO2_ref$|^NO2\\.ref$|^NO2\\.CALAIRE",
-    no2_part_1_ppb    = "^NO2_p1$|^NO2\\.p1$|^NO2_part_1$",
-    nox_gen_ppb       = "^Nox_gen$|^Nox\\.gen$|^NOx_gen$|^NOx\\.gen$",
-    nox_calaire_ppb   = "^Nox_ref$|^Nox\\.ref$|^Nox\\.CALAIRE|^NOx_ref$|^NOx\\.ref$|^NOx\\.CALAIRE",
-    nox_part_1_ppb    = "^Nox_p1$|^Nox\\.p1$|^Nox_part_1$|^NOx_p1$|^NOx\\.p1$|^NOx_part_1$",
-    o3_gen_ppb        = "^O3_gen$|^O3\\.gen$",
-    o3_calaire_ppb    = "^O3_ref$|^O3\\.ref$|^O3\\.CALAIRE",
-    o3_part_1_ppb     = "^O3_p1$|^O3\\.p1$|^O3_part_1$"
+    date              = "^[Dd]ate",
+    time              = "^[Tt]ime",
+    co_tapi_ppm       = "^[Cc][Oo]\\.TAPI|^[Cc][Oo]-TAPI",
+    co_gen_ppm        = "^[Cc][Oo]\\.ppm$|^[Cc][Oo]\\.generado|^[Cc][Oo]\\.gen$|^[Cc][Oo]_?gen$",
+    co_calaire_ppm    = "^[Cc][Oo]\\.CALAIRE|^[Cc][Oo]_?ref$|^[Cc][Oo]\\.ref$",
+    co_part_p1        = "^[Cc][Oo]_?p1$|^[Cc][Oo]\\.p1$|^[Cc][Oo]_?part_?1$",
+    co_invitado1_ppm  = "^[Cc][Oo]\\.\\.Invitado|^[Cc][Oo]\\.Invitado",
+    so2_ppb           = "^[Ss][Oo]2$",
+    so2_gen_ppb       = "^[Ss][Oo]2\\.ppb$|^[Ss][Oo]2\\.Generado|^[Ss][Oo]2\\.gen$|^[Ss][Oo]2_?gen$",
+    so2_calaire_ppb   = "^[Ss][Oo]2\\.CALAIRE|^[Ss][Oo]2_?ref$|^[Ss][Oo]2\\.ref$",
+    so2_part_p1       = "^[Ss][Oo]2_?p1$|^[Ss][Oo]2\\.p1$|^[Ss][Oo]2_?part_?1$",
+    so2_invitado1_ppb = "^[Ss][Oo]2\\.\\.Invitado|^[Ss][Oo]2\\.Invitado",
+    no_gen_ppb        = "^[Nn][Oo]_?gen$|^[Nn][Oo]\\.gen$",
+    no_calaire_ppb    = "^[Nn][Oo]_?ref$|^[Nn][Oo]\\.ref$|^[Nn][Oo]\\.CALAIRE",
+    no_part_p1        = "^[Nn][Oo]_?p1$|^[Nn][Oo]\\.p1$|^[Nn][Oo]_?part_?1$",
+    no2_gen_ppb       = "^[Nn][Oo]2_?gen$|^[Nn][Oo]2\\.gen$",
+    no2_calaire_ppb   = "^[Nn][Oo]2_?ref$|^[Nn][Oo]2\\.ref$|^[Nn][Oo]2\\.CALAIRE",
+    no2_part_p1       = "^[Nn][Oo]2_?p1$|^[Nn][Oo]2\\.p1$|^[Nn][Oo]2_?part_?1$",
+    nox_gen_ppb       = "^[Nn]ox_?gen$|^[Nn]ox\\.gen$|^[Nn][Oo]x_?gen$|^[Nn][Oo]x\\.gen$",
+    nox_calaire_ppb   = "^[Nn]ox_?ref$|^[Nn]ox\\.ref$|^[Nn]ox\\.CALAIRE|^[Nn][Oo]x_?ref$|^[Nn][Oo]x\\.ref$|^[Nn][Oo]x\\.CALAIRE",
+    nox_part_p1       = "^[Nn]ox_?p1$|^[Nn]ox\\.p1$|^[Nn]ox_?part_?1$|^[Nn][Oo]x_?p1$|^[Nn][Oo]x\\.p1$|^[Nn][Oo]x_?part_?1$",
+    o3_gen_ppb        = "^[Oo]3_?gen$|^[Oo]3\\.gen$",
+    o3_calaire_ppb    = "^[Oo]3_?ref$|^[Oo]3\\.ref$|^[Oo]3\\.CALAIRE",
+    o3_part_p1        = "^[Oo]3_?p1$|^[Oo]3\\.p1$|^[Oo]3_?part_?1$"
   )
 
   for (target in names(patterns)) {
     matches <- grepl(patterns[[target]], n, ignore.case = FALSE)
     result[matches] <- target
+  }
+
+  participant_patterns <- c(
+    co = "ppm",
+    so2 = "ppb",
+    no = "ppb",
+    no2 = "ppb",
+    nox = "ppb",
+    o3 = "ppb"
+  )
+  reserved_labels <- c(
+    "gen", "generado", "generator", "ref", "referencia", "calaire",
+    "tapi", "ppm", "ppb", "nmol", "umol"
+  )
+  for (pollutant in names(participant_patterns)) {
+    pattern <- paste0("^", pollutant, "[._]?(p[0-9]+|part[._]?[0-9]+|[A-Za-z][A-Za-z0-9]*)$")
+    matches <- grepl(pattern, n, ignore.case = TRUE)
+    if (any(matches)) {
+      labels <- sub(pattern, "\\1", n[matches], ignore.case = TRUE)
+      labels <- sub("^part[._]?", "p", labels, ignore.case = TRUE)
+      labels <- .participant_label_token(labels)
+      keep <- !labels %in% reserved_labels
+      if (any(keep)) {
+        idx <- which(matches)[keep]
+        result[idx] <- paste0(pollutant, "_part_", labels[keep])
+      }
+    }
   }
   result
 }
@@ -99,21 +133,27 @@ clean_calaire_raw <- function(raw, tz = "America/Bogota") {
   date_col <- if (any(norm_names == "date")) df[["date"]] else stop("No date column")
   time_col <- if (any(norm_names == "time")) df[["time"]] else stop("No time column")
   ts_str   <- paste(date_col, time_col)
+
+  # Detect format: AM/PM (12h) vs 24h, and 2-digit vs 4-digit year
+  has_ampm <- grepl("[AP]M$", trimws(time_col), ignore.case = TRUE)
   short_year <- grepl("^[0-9]{1,2}/[0-9]{1,2}/[0-9]{2}\\s", ts_str)
+
   ts <- rep(as.POSIXct(NA_real_, origin = "1970-01-01", tz = tz), length(ts_str))
-  if (any(!short_year)) {
-    ts[!short_year] <- as.POSIXct(
-      ts_str[!short_year],
-      format = "%m/%d/%Y %H:%M",
-      tz = tz
-    )
-  }
-  if (any(short_year)) {
-    ts[short_year] <- as.POSIXct(
-      ts_str[short_year],
-      format = "%m/%d/%y %H:%M",
-      tz = tz
-    )
+
+  # Format combinations
+  fmt_24h_4yr <- "%m/%d/%Y %H:%M"
+  fmt_24h_2yr <- "%m/%d/%y %H:%M"
+  fmt_12h_4yr <- "%m/%d/%Y %I:%M:%S %p"
+  fmt_12h_2yr <- "%m/%d/%y %I:%M:%S %p"
+
+  # Parse based on detected format
+  for (i in seq_along(ts_str)) {
+    if (has_ampm[i]) {
+      fmt <- if (short_year[i]) fmt_12h_2yr else fmt_12h_4yr
+    } else {
+      fmt <- if (short_year[i]) fmt_24h_2yr else fmt_24h_4yr
+    }
+    ts[i] <- as.POSIXct(ts_str[i], format = fmt, tz = tz)
   }
 
   n_failed <- sum(is.na(ts))

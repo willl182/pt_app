@@ -1,0 +1,257 @@
+---
+title: "Informe ejecutivo desglosado: comparación minutal por contaminante, ronda y nivel"
+output:
+  html_document:
+    toc: true
+    number_sections: true
+    theme: cosmo
+    df_print: paged
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE)
+library(dplyr)
+library(readr)
+library(tidyr)
+library(purrr)
+library(broom)
+library(knitr)
+library(ggplot2)
+library(stringr)
+
+read_raw_long <- function(path, round_label) {
+  dat <- read_delim(
+    file.path("..", path),
+    delim = ";",
+    trim_ws = TRUE,
+    show_col_types = FALSE
+  )
+
+  dat |>
+    rename(date = Date, time = Time) |>
+    pivot_longer(
+      cols = -c(date, time),
+      names_to = "variable",
+      values_to = "value",
+      values_transform = list(value = as.character)
+    ) |>
+    mutate(
+      value = suppressWarnings(as.numeric(value)),
+      pollutant = str_remove(variable, "_(p1|ref|gen)$"),
+      series = case_when(
+        str_detect(variable, "_p1$") ~ "p1",
+        str_detect(variable, "_ref$") ~ "referencia",
+        str_detect(variable, "_gen$") ~ "gen",
+        TRUE ~ NA_character_
+      ),
+      datetime = paste(date, time),
+      round = round_label
+    ) |>
+    select(round, datetime, pollutant, series, value) |>
+    filter(!is.na(series))
+}
+
+build_pairs <- function(path_p, path_r, round_label) {
+  p <- read_raw_long(path_p, round_label)
+  r <- read_raw_long(path_r, round_label)
+
+  p_wide <- p |>
+    filter(series %in% c("p1", "gen")) |>
+    pivot_wider(names_from = series, values_from = value)
+
+  r_wide <- r |>
+    filter(series %in% c("referencia", "gen")) |>
+    pivot_wider(names_from = series, values_from = value)
+
+  inner_join(p_wide, r_wide, by = c("round", "datetime", "pollutant", "gen")) |>
+    transmute(
+      round,
+      pollutant,
+      datetime,
+      level = case_when(
+        pollutant %in% c("co", "o3") ~ paste0(round(gen, 1), "-ppm"),
+        TRUE ~ paste0(round(gen, 0), "-ppb")
+      ),
+      participant = p1,
+      reference = referencia,
+      diff = participant - reference
+    ) |>
+    filter(is.finite(participant), is.finite(reference))
+}
+
+raw_pairs <- bind_rows(
+  build_pairs("data/raw/datos_ronda_1_p.csv", "data/raw/datos_ronda_1_r.csv", "Ronda 1"),
+  build_pairs("data/raw/datos_ronda_2a_p.csv", "data/raw/datos_ronda_2a_r.csv", "Ronda 2a"),
+  build_pairs("data/raw/datos_ronda_2b_p.csv", "data/raw/datos_ronda_2b_r.csv", "Ronda 2b"),
+  build_pairs("data/raw/datos_ronda_2c_p.csv", "data/raw/datos_ronda_2c_r.csv", "Ronda 2c")
+)
+
+analyse_subset <- function(df) {
+  tt <- t.test(df$participant, df$reference, paired = TRUE)
+  sh <- shapiro.test(df$diff)
+  an <- aov(value ~ group, data = tibble(
+    value = c(df$participant, df$reference),
+    group = factor(rep(c("p1", "referencia"), each = nrow(df)))
+  ))
+
+  tibble(
+    n = nrow(df),
+    mean_p1 = mean(df$participant),
+    mean_ref = mean(df$reference),
+    diff_mean = mean(df$diff),
+    t = unname(tt$statistic),
+    df = unname(tt$parameter),
+    p_t = tt$p.value,
+    shapiro_w = unname(sh$statistic),
+    shapiro_p = sh$p.value,
+    anova_f = broom::tidy(an)$statistic[1],
+    anova_p = broom::tidy(an)$p.value[1]
+  )
+}
+
+global_res <- analyse_subset(raw_pairs)
+by_round <- raw_pairs |>
+  group_by(round) |>
+  group_modify(~analyse_subset(.x)) |>
+  ungroup() |>
+  arrange(round)
+
+by_pollutant <- raw_pairs |>
+  group_by(pollutant) |>
+  group_modify(~analyse_subset(.x)) |>
+  ungroup() |>
+  arrange(pollutant)
+
+by_round_pollutant <- raw_pairs |>
+  group_by(round, pollutant) |>
+  group_modify(~analyse_subset(.x)) |>
+  ungroup() |>
+  arrange(round, pollutant)
+
+by_level <- raw_pairs |>
+  group_by(round, pollutant, level) |>
+  group_modify(~analyse_subset(.x)) |>
+  ungroup() |>
+  arrange(round, pollutant, level)
+
+executive_table <- by_level |>
+  mutate(
+    conclusion = case_when(
+      p_t < 0.05 & diff_mean > 0 ~ "Significativo: p1 por encima",
+      p_t < 0.05 & diff_mean < 0 ~ "Significativo: p1 por debajo",
+      p_t < 0.05 & diff_mean == 0 ~ "Significativo: sin sesgo medio",
+      TRUE ~ "No significativo"
+    ),
+    direction = case_when(
+      diff_mean > 0 ~ "p1 > referencia",
+      diff_mean < 0 ~ "p1 < referencia",
+      TRUE ~ "Igual"
+    )
+  )
+
+level_text <- executive_table |>
+  mutate(
+    verdict = case_when(
+      p_t < 0.05 & diff_mean > 0 ~ "Hay diferencias: p1 queda por encima.",
+      p_t < 0.05 & diff_mean < 0 ~ "Hay diferencias: p1 queda por debajo.",
+      p_t < 0.05 & diff_mean == 0 ~ "Hay diferencias, sin sesgo medio.",
+      TRUE ~ "No hay diferencias significativas."
+    ),
+    level_label = paste0(level, " (n=", n, ")")
+  )
+
+raw_pairs_long <- raw_pairs |>
+  select(round, pollutant, level, participant, reference) |>
+  pivot_longer(c(participant, reference), names_to = "grupo", values_to = "value")
+```
+
+## Resumen ejecutivo
+
+Se repite el análisis sobre los datos crudos minutales, pero ahora desglosado por
+contaminante, ronda y nivel. El nivel se reconstruyó a partir del valor generado
+`*_gen`, que marca los tramos de exposición en cada archivo.
+
+Conclusión corta:
+
+- Hay diferencias significativas en varios niveles, pero no en todos.
+- El sesgo no es uniforme: cambia por contaminante, ronda y nivel.
+- La dirección del sesgo se ve mejor en la tabla ejecutiva de nivel, no en las
+  tablas completas.
+
+Hallazgos clave por bloque:
+
+- `Ronda 1 / CO`: todos los niveles muestran diferencias significativas y
+  positivas; `p1` queda por encima de la referencia en todo el rango.
+- `Ronda 1 / SO2`: el nivel `0-ppb` no es significativo, pero `40`, `80`,
+  `119` y `179-ppb` sí muestran sesgo positivo significativo.
+- `Ronda 2a / O3`: el sesgo es positivo y significativo en los niveles
+  evaluados; solo el nivel más bajo no cruza el umbral.
+- `Ronda 2b / NO`: el patrón es mayormente positivo y significativo, con un
+  nivel que no cruza el umbral y uno con sesgo negativo.
+- `Ronda 2c / NO2`: el sesgo es significativo en todos los niveles, pero cambia
+  de signo; aquí sí importa mirar el nivel, no solo el p valor.
+
+## Lectura ejecutiva
+
+La conclusión útil no está en una tabla larga sino en la combinación de:
+
+- el signo de la diferencia media
+- si el `p valor` cruza o no `0.05`
+- si el patrón cambia entre rondas o niveles
+
+Resumen corto:
+
+- `p1` tiende a quedar por encima de la referencia en `CO`, `SO2`, `O3` y `NO`.
+- En `NO2`, el sesgo cambia de signo según el nivel.
+- Los niveles bajos cercanos a cero son los que más pueden quedar sin significancia.
+- Donde hay muchas observaciones, diferencias pequeñas se vuelven significativas.
+
+## Gráfica
+
+```{r}
+ggplot(raw_pairs_long, aes(x = grupo, y = value, fill = grupo)) +
+  geom_boxplot(width = 0.55, alpha = 0.8, outlier_alpha = 0.25) +
+  facet_grid(round ~ pollutant, scales = "free_y") +
+  scale_fill_manual(values = c("participant" = "#1f77b4", "reference" = "#6c757d")) +
+  labs(
+    x = NULL,
+    y = "Valor minuto a minuto",
+    title = "Distribución minutal por ronda y contaminante"
+  ) +
+  theme_minimal(base_size = 12) +
+  theme(legend.position = "none")
+```
+
+## Estado por nivel
+
+```{r}
+level_text |>
+  mutate(
+    bloque = paste(round, pollutant, sep = " / "),
+    veredicto = case_when(
+      verdict == "above" ~ "p1 por encima",
+      verdict == "below" ~ "p1 por debajo",
+      TRUE ~ "sin diferencia"
+    )
+  ) |>
+  select(bloque, level = level_label, veredicto) |>
+  kable(
+    col.names = c("Bloque", "Nivel", "Veredicto"),
+    caption = "Lectura simple por nivel"
+  )
+```
+
+## Conclusión
+
+En los datos crudos minutales, el hallazgo principal es que el comportamiento de
+`p1` frente a la referencia depende del contaminante, la ronda y el nivel.
+El mensaje operativo es:
+
+- En `CO`, `SO2`, `O3` y `NO` predominan sesgos positivos.
+- En `NO2`, el signo cambia y hay que leer nivel por nivel.
+- La significancia estadística no siempre implica una diferencia práctica
+  grande: en varias series el efecto es pequeño pero muy consistente.
+
+El cuadro de arriba deja, por cada nivel, si hay diferencias o no. Eso es lo que
+conviene mirar primero; el resto del detalle puede moverse a un anexo si hace
+falta.

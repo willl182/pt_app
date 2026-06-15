@@ -46,8 +46,10 @@ params:
   score_summary: NA
   heatmaps: NA
   participant_data: NA
+  participant_filter: "__all__"
   metrological_compatibility: NA
   metrological_compatibility_method: "2a"
+  equipos_data: NA
   project_root: null
 ---
 
@@ -95,6 +97,7 @@ library(tidyverse)
 library(knitr)
 library(kableExtra)
 library(outliers)
+library(patchwork)
 
 # Load ptcalc package for ISO 13528 calculations
 # This eliminates duplicate implementations and ensures consistency with app.R
@@ -113,6 +116,57 @@ if (requireNamespace("ptcalc", quietly = TRUE)) {
   devtools::load_all(ptcalc_path)
 } else {
   stop("No se encontro el paquete ptcalc. Instale ptcalc o ejecute el informe desde el proyecto.")
+}
+
+is_nonempty_df <- function(x) {
+  is.data.frame(x) && nrow(x) > 0
+}
+
+safe_param_df <- function(x) {
+  if (is_nonempty_df(x)) {
+    return(x)
+  }
+  data.frame()
+}
+
+safe_rename_by_position <- function(df, labels) {
+  if (!is.data.frame(df) || nrow(df) == 0) {
+    return(df)
+  }
+  names(df)[seq_len(min(ncol(df), length(labels)))] <- labels[seq_len(min(ncol(df), length(labels)))]
+  df
+}
+
+selected_summary_data <- function() {
+  df <- safe_param_df(params$summary_data)
+  if (nrow(df) == 0) {
+    return(df)
+  }
+  if ("n_lab" %in% names(df) && !is.null(params$n_lab)) {
+    df <- df %>% filter(n_lab == params$n_lab)
+  }
+  if ("level" %in% names(df) && !is.null(params$level)) {
+    df <- df %>% filter(level == params$level)
+  }
+  df
+}
+
+round_summary_data <- function() {
+  df <- safe_param_df(params$summary_data)
+  if (nrow(df) == 0) {
+    return(df)
+  }
+  if ("n_lab" %in% names(df) && !is.null(params$n_lab)) {
+    df <- df %>% filter(n_lab == params$n_lab)
+  }
+  df
+}
+
+participant_count <- function(df) {
+  if (!is_nonempty_df(df) || !"participant_id" %in% names(df)) {
+    return(0L)
+  }
+  length(unique(df$participant_id[df$participant_id != "ref" & !is.na(df$participant_id)]))
 }
 
 # NOTE: The following functions are now provided by ptcalc:
@@ -205,44 +259,46 @@ La organización, ejecución y evaluación de este EA se realizó bajo la respon
 
 ## 1.4. Participantes e Instrumentación
 
-En esta ronda del EA participaron `r length(unique(params$summary_data$participant_id)) - 1` laboratorios. A continuación, se lista a los participantes (mediante código asignado).
+En esta ronda del EA participaron `r participant_count(selected_summary_data())` laboratorios. A continuación, se lista a los participantes (mediante código asignado).
 
-```{r participants_table, echo=FALSE}
-# Use uploaded participants data if available, otherwise use placeholders
-if (!is.null(params$participants_data) && is.data.frame(params$participants_data)) {
-  # Use uploaded data
-  final_part_df <- params$participants_data
-} else {
-  # Create default table with placeholders
-  participants <- unique(params$summary_data$participant_id)
-  participants <- participants[participants != "ref"]
-  
-  part_df <- data.frame(
-    Codigo_Lab = participants,
-    Analizador_SO2 = "[Info Participante]",
-    Analizador_CO = "[Info Participante]",
-    Analizador_O3 = "[Info Participante]",
-    Analizador_NO_NO2 = "[Info Participante]",
-    stringsAsFactors = FALSE
-  )
-  
-  # Add Reference row at the top
-  ref_row <- data.frame(
-    Codigo_Lab = "REFERENCIA",
-    Analizador_SO2 = "HORIBA APSA- 370",
-    Analizador_CO = "Teledyne T300",
-    Analizador_O3 = "Thermo 49i",
-    Analizador_NO_NO2 = "HORIBA APSA- 370",
-    stringsAsFactors = FALSE
-  )
-  
-  final_part_df <- rbind(ref_row, part_df)
+```{r participants_table, echo=FALSE, results='asis'}
+final_part_df <- safe_param_df(params$equipos_data)
+
+if (!is_nonempty_df(final_part_df)) {
+  final_part_df <- safe_param_df(params$participants_data)
 }
 
-# Ensure proper column names for display
-names(final_part_df) <- c("Código Lab", "Analizador SO₂ (Marca/Modelo)", "Analizador CO (Marca/Modelo)", "Analizador O₃ (Marca/Modelo)", "Analizador NO/NO₂ (Marca/Modelo)")
+if (is_nonempty_df(final_part_df)) {
+  final_part_df <- unique(final_part_df)
+  final_part_df <- final_part_df %>%
+    select(any_of(c(
+      "Codigo_Lab",
+      "Analizador_SO2",
+      "Analizador_CO",
+      "Analizador_O3",
+      "Analizador_NO_NO2"
+    )))
 
-kable(final_part_df, caption = "Tabla 2. Participantes del Ensayo de Aptitud")
+  display_names <- c(
+    Codigo_Lab = "Código Lab",
+    Analizador_SO2 = "Analizador SO₂ (Marca/Modelo)",
+    Analizador_CO = "Analizador CO (Marca/Modelo)",
+    Analizador_O3 = "Analizador O₃ (Marca/Modelo)",
+    Analizador_NO_NO2 = "Analizador NO/NO₂ (Marca/Modelo)"
+  )
+  matched_names <- names(final_part_df)
+  matched_names[matched_names %in% names(display_names)] <- display_names[matched_names[matched_names %in% names(display_names)]]
+  names(final_part_df) <- matched_names
+
+  print(
+    kable(
+      final_part_df,
+      caption = "Tabla 2. Participantes del Ensayo de Aptitud"
+    )
+  )
+} else {
+  cat("No hay datos de participantes disponibles para la ronda seleccionada.")
+}
 ```
 
 # 2. Descripción del Ensayo y Metodología
@@ -262,12 +318,24 @@ kable(final_part_df, caption = "Tabla 2. Participantes del Ensayo de Aptitud")
 # Generate Table 3 dynamically from summary_data
 # We assume 'ref' values represent the target concentration for each level
 
-if (!is.null(params$summary_data)) {
-  levels_data <- params$summary_data %>%
-    filter(participant_id == "ref", n_lab == params$n_lab) %>%
+summary_selected <- round_summary_data()
+
+if (is_nonempty_df(summary_selected)) {
+  levels_source <- summary_selected
+  if ("participant_id" %in% names(levels_source) && any(levels_source$participant_id == "ref", na.rm = TRUE)) {
+    levels_source <- levels_source %>% filter(participant_id == "ref")
+  }
+  if (!"run" %in% names(levels_source)) {
+    levels_source <- levels_source %>% mutate(run = level)
+  }
+  levels_data <- levels_source %>%
     select(run, pollutant, mean_value) %>%
+    group_by(run, pollutant) %>%
+    summarise(mean_value = mean(mean_value, na.rm = TRUE), .groups = "drop") %>%
     pivot_wider(names_from = pollutant, values_from = mean_value) %>%
-    arrange(run)
+    mutate(run_order = readr::parse_number(as.character(run))) %>%
+    arrange(run_order, run) %>%
+    select(-run_order)
   
   # Rename columns for display
   colnames(levels_data)[1] <- "Corrida"
@@ -295,7 +363,7 @@ Dado que los ítems de ensayo se generan dinámicamente y se miden in situ, la e
 ```{r assigned_value_text, echo=FALSE, results='asis'}
 if (!is.null(params$method) && as.character(params$method) == "1") {
   cat("El valor asignado corresponde al valor determinado por el laboratorio de referencia: $x_{pt} = x_{ref}$.\n\n")
-  cat("La desviación estándar para la evaluación de la aptitud ($\\sigma_{pt}$) corresponde a la desviación estándar reportada por el laboratorio de referencia.")
+  cat("La desviación estándar para la evaluación de la aptitud ($\\sigma_{pt}$) se obtiene de la evaluación de homogeneidad para cada contaminante y nivel.")
 } else if (as.character(params$method) == "2a") {
   cat("El valor asignado se determinó por consenso de los participantes, utilizando un estimador robusto (mediana y MADe).\n\n")
   cat("La desviación estándar para la evaluación de la aptitud ($\\sigma_{pt}$) se estableció para cada contaminante basándose en ISO 13528:2022.\n\n")
@@ -312,6 +380,7 @@ if (!is.null(params$method) && as.character(params$method) == "1") {
   cat("El valor asignado se determinó por consenso de los participantes, utilizando un estimador robusto.\n\n")
   cat("La desviación estándar para la evaluación de la aptitud ($\\sigma_{pt}$) se estableció para cada contaminante basándose en ISO 13528:2022.")
 }
+
 ```
 
 Los valores de $x_{pt}$ y $\sigma_{pt}$ calculados para cada nivel se presentan en el Anexo A.
@@ -327,7 +396,7 @@ if (method == "2a") {
 } else if (method == "3") {
   cat("Se evaluó la compatibilidad metrológica calculando las diferencias entre el valor de referencia ($x_{pt,ref}$) y el valor de consenso ($x_{pt,3}$) para cada contaminante y nivel.")
 } else if (method == "4") {
-  cat("Se evaluó la compatibilidad metrológica para el método de expertos, usando el valor de referencia como $x_{pt}$ y la desviación para evaluación de aptitud calculada con la ecuación operativa por contaminante.")
+  cat("Se evaluó la compatibilidad metrológica para el criterio de expertos, usando el valor de referencia como $x_{pt}$ y la desviación para evaluación de aptitud calculada con la ecuación operativa por contaminante.")
 } else {
   cat("Se evaluó la compatibilidad metrológica calculando las diferencias entre el valor de referencia ($x_{pt,ref}$) y los valores de consenso ($x_{pt,2a}$, $x_{pt,2b}$ y $x_{pt,3}$) para cada contaminante y nivel.")
 }
@@ -440,7 +509,7 @@ if (!is.null(params$grubbs_summary) && is.data.frame(params$grubbs_summary) && n
 En esta ronda del EA, participaron `r params$n_lab` laboratorios.
 
 ```{r score_summary_table, echo=FALSE}
-if (!is.null(params$score_summary) && is.data.frame(params$score_summary)) {
+if (is_nonempty_df(params$score_summary)) {
   kable(params$score_summary, caption = "Tabla 5. Resumen de desempeño por indicador")
 } else {
   cat("No hay datos de resumen de desempeño disponibles.")
@@ -481,15 +550,18 @@ Se requiere a los laboratorios con resultados **Insatisfactorios** ($|z| \ge 3.0
 
 # Anexo A: Valores Asignados y Desviación Estándar para Evaluación de Aptitud
 
-A continuación se presenta el resumen de los valores asignados ($x_{pt}$), incertidumbres ($u(x_{pt})$) y desviaciones estándar para la evaluación de la aptitud ($\sigma_{pt}$) para cada contaminante y nivel, calculados según el método seleccionado.
+A continuación se presenta el resumen de los valores asignados ($x_{pt}$), incertidumbres ($u(x_{pt})$) y desviaciones estándar para la evaluación de la aptitud ($\sigma_{pt}$) para cada contaminante y nivel. La tabla incluye el método seleccionado y, cuando corresponde, el criterio de expertos con $x_{pt}$ tomado de la referencia.
 
 ```{r annex_a_table, echo=FALSE}
-if (!is.null(params$xpt_summary) && is.data.frame(params$xpt_summary) && nrow(params$xpt_summary) > 0) {
+if (is_nonempty_df(params$xpt_summary)) {
   
   xpt_df <- params$xpt_summary
   
   # Ensure proper column names for display
-  colnames(xpt_df) <- c("Contaminante", "Nivel", "Método", "Valor Asignado (x_pt)", "Incertidumbre u(x_pt)", "Desviación (sigma_pt)")
+  xpt_df <- safe_rename_by_position(
+    xpt_df,
+    c("Contaminante", "Nivel", "Método", "Valor Asignado (x_pt)", "Incertidumbre u(x_pt)", "u_ref", "Desviación (sigma_pt)")
+  )
   
   kable(xpt_df, digits = 4, caption = "Tabla A.1. Resumen de Valores Asignados y Parámetros Estadísticos")
 } else {
@@ -502,12 +574,15 @@ if (!is.null(params$xpt_summary) && is.data.frame(params$xpt_summary) && nrow(pa
 ## B.1. Resumen de Homogeneidad
 
 ```{r homogeneity_summary_table, echo=FALSE}
-if (!is.null(params$homogeneity_summary) && is.data.frame(params$homogeneity_summary) && nrow(params$homogeneity_summary) > 0) {
+if (is_nonempty_df(params$homogeneity_summary)) {
   
   hom_df <- params$homogeneity_summary
   
   # Proper column names for display
-  colnames(hom_df) <- c("Contaminante", "Nivel", "Items", "Réplicas", "sigma_pt", "u(x_pt)", "ss", "sw", "Criterio c", "Cumple", "Conclusión")
+  hom_df <- safe_rename_by_position(
+    hom_df,
+    c("Contaminante", "Nivel", "Items", "Réplicas", "sigma_pt", "u(x_pt)", "ss", "sw", "Criterio c", "Criterio c_exp", "Cumple", "Cumple c_exp", "Conclusión")
+  )
   
   kable(hom_df, digits = 4, caption = "Tabla B.1. Resumen de Evaluación de Homogeneidad")
 } else {
@@ -518,12 +593,15 @@ if (!is.null(params$homogeneity_summary) && is.data.frame(params$homogeneity_sum
 ## B.2. Resumen de Estabilidad
 
 ```{r stability_summary_table, echo=FALSE}
-if (!is.null(params$stability_summary) && is.data.frame(params$stability_summary) && nrow(params$stability_summary) > 0) {
+if (is_nonempty_df(params$stability_summary)) {
   
   stab_df <- params$stability_summary
   
   # Proper column names for display
-  colnames(stab_df) <- c("Contaminante", "Nivel", "Items", "Réplicas", "sigma_pt", "u(x_pt)", "Diferencia", "Criterio c", "Cumple", "Conclusión")
+  stab_df <- safe_rename_by_position(
+    stab_df,
+    c("Contaminante", "Nivel", "Items", "Réplicas", "sigma_pt", "u(x_pt)", "Diferencia", "Criterio c", "Criterio c_exp", "Cumple", "Cumple c_exp", "Conclusión")
+  )
   
   kable(stab_df, digits = 4, caption = "Tabla B.2. Resumen de Evaluación de Estabilidad")
 } else {
@@ -543,7 +621,9 @@ if (!is.null(params$participant_data) && length(params$participant_data) > 0) {
     cat("\n\n## Código:", pid, "\n\n")
     
     # Print Matrix Plot
-    print(p_info$matrix_plot)
+    if (!is.null(p_info$matrix_plot)) {
+      print(p_info$matrix_plot)
+    }
     cat("\n\n")
     cat("Figura. Matriz de desempeño para el participante", pid, "\n\n")
     
@@ -552,7 +632,10 @@ if (!is.null(params$participant_data) && length(params$participant_data) > 0) {
     
     # Format table for display
     disp_table <- p_info$summary_table
-    colnames(disp_table) <- c("Contaminante", "Nivel", "Resultado", "Incertidumbre", "Valor Asignado", "Incertidumbre VA", "Score", "Evaluación")
+    disp_table <- safe_rename_by_position(
+      disp_table,
+      c("Contaminante", "Nivel", "Método", "Resultado", "Incertidumbre", "Valor Asignado", "Incertidumbre VA", "sigma_pt", "Score", "Evaluación")
+    )
     
     print(kable(disp_table, digits = 4, caption = paste("Resultados detallados - Participante", pid)))
     cat("\n\n")

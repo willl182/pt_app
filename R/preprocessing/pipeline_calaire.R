@@ -2,15 +2,21 @@ run_pipeline_participant_ronda <- function(
     data_dir       = "data/raw",
     metadata_dir   = "data/metadata",
     output_dir     = "data/processed",
-    participant_id = "part_1",
+    participant_id = "p1",
+    output_prefix  = participant_id,
     input_file     = "datos_ronda_part.csv",
     tz             = "America/Bogota",
-    pollutants     = NULL
+    pollutants     = NULL,
+    levels_path    = NULL
 ) {
   path_ronda      <- file.path(data_dir, input_file)
-  path_levels     <- file.path(metadata_dir, "niveles_calaire.csv")
-  path_hourly_out <- file.path(output_dir, paste0("h_", participant_id, "_ronda.csv"))
-  path_final_out  <- file.path(output_dir, paste0(participant_id, "_ronda.csv"))
+  path_levels     <- if (is.null(levels_path)) {
+    file.path(metadata_dir, "niveles_calaire.csv")
+  } else {
+    levels_path
+  }
+  path_hourly_out <- file.path(output_dir, paste0("h_", output_prefix, "_ronda.csv"))
+  path_final_out  <- file.path(output_dir, paste0(output_prefix, "_ronda.csv"))
 
   required <- c(path_ronda, path_levels)
   missing  <- required[!file.exists(required)]
@@ -65,10 +71,15 @@ run_pipeline_ronda <- function(
     tz             = "America/Bogota",
     pollutants     = NULL,
     input_file     = "datos_ronda.csv",
-    output_prefix  = "referencia_ronda"
+    output_prefix  = "referencia_ronda",
+    levels_path    = NULL
 ) {
   path_ronda      <- file.path(data_dir,     input_file)
-  path_levels     <- file.path(metadata_dir, "niveles_calaire.csv")
+  path_levels     <- if (is.null(levels_path)) {
+    file.path(metadata_dir, "niveles_calaire.csv")
+  } else {
+    levels_path
+  }
   path_hourly_out <- file.path(output_dir,   paste0("h_", output_prefix, ".csv"))
   path_final_out  <- file.path(output_dir,   paste0(output_prefix, ".csv"))
   path_log_out    <- file.path(metadata_dir, "preprocesamiento_log_ronda.csv")
@@ -143,12 +154,22 @@ run_pipeline_calaire <- function(
     metadata_dir = "data/metadata",
     output_dir   = "data/processed",
     tz           = "America/Bogota",
-    pollutants   = NULL
+    pollutants   = NULL,
+    levels_path  = NULL,
+    design_path  = NULL
 ) {
   # Resolve paths
   path_estabilidad <- file.path(data_dir, "datos_estabilidad_homogeneidad.csv")
-  path_design      <- file.path(metadata_dir, "diseno_estabilidad_homogeneidad.csv")
-  path_levels      <- file.path(metadata_dir, "niveles_calaire.csv")
+  path_design      <- if (is.null(design_path)) {
+    file.path(metadata_dir, "diseno_estabilidad_homogeneidad.csv")
+  } else {
+    design_path
+  }
+  path_levels      <- if (is.null(levels_path)) {
+    file.path(metadata_dir, "niveles_calaire.csv")
+  } else {
+    levels_path
+  }
   path_hourly_out  <- file.path(output_dir, "h_estabilidad_homogeneidad.csv")
   path_mm_out      <- file.path(output_dir, "mm_estabilidad_homogeneidad.csv")
   path_incert_out  <- file.path(output_dir, "incertidumbre.md")

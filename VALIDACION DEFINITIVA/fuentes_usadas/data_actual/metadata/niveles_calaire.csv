@@ -1,0 +1,7 @@
+pollutant,unit,generator_col
+co,µmol/mol,co_gen_ppm
+so2,nmol/mol,so2_gen_ppb
+no,nmol/mol,no_gen_ppb
+no2,nmol/mol,no2_gen_ppb
+nox,nmol/mol,nox_gen_ppb
+o3,nmol/mol,o3_gen_ppb

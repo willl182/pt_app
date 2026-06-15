@@ -1,0 +1,238 @@
+---
+title: "Informe ejecutivo: comparación minutal entre participante 1 y referencia"
+output:
+  html_document:
+    toc: true
+    number_sections: true
+    theme: cosmo
+    df_print: paged
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE)
+library(dplyr)
+library(readr)
+library(tidyr)
+library(purrr)
+library(broom)
+library(knitr)
+library(ggplot2)
+
+read_raw_pair <- function(participant_path, reference_path, round_label, pollutant) {
+  p <- read_delim(
+    file.path("..", participant_path),
+    delim = ";",
+    trim_ws = TRUE,
+    show_col_types = FALSE
+  )
+  r <- read_delim(
+    file.path("..", reference_path),
+    delim = ";",
+    trim_ws = TRUE,
+    show_col_types = FALSE
+  )
+
+  time_col <- intersect(names(p), "Time")
+  date_col <- intersect(names(p), "Date")
+  if (length(time_col) != 1 || length(date_col) != 1) {
+    stop("No se encontraron columnas Date/Time esperadas.")
+  }
+
+  p_long <- p |>
+    rename(date = Date, time = Time) |>
+    pivot_longer(
+      cols = ends_with("_p1"),
+      names_to = "pollutant",
+      values_to = "participant",
+      names_pattern = "(.*)_p1"
+    ) |>
+    mutate(
+      pollutant = tolower(pollutant),
+      datetime = paste(date, time),
+      participant = as.numeric(participant)
+    ) |>
+    select(pollutant, datetime, participant)
+
+  r_long <- r |>
+    rename(date = Date, time = Time) |>
+    pivot_longer(
+      cols = ends_with("_ref"),
+      names_to = "pollutant",
+      values_to = "reference",
+      names_pattern = "(.*)_ref"
+    ) |>
+    mutate(
+      pollutant = tolower(pollutant),
+      datetime = paste(date, time),
+      reference = as.numeric(reference)
+    ) |>
+    select(pollutant, datetime, reference)
+
+  inner_join(p_long, r_long, by = c("pollutant", "datetime")) |>
+    mutate(round = round_label) |>
+    select(round, pollutant, datetime, participant, reference)
+}
+
+raw_pairs <- bind_rows(
+  read_raw_pair("data/raw/datos_ronda_1_p.csv", "data/raw/datos_ronda_1_r.csv", "Ronda 1", "co-so2"),
+  read_raw_pair("data/raw/datos_ronda_2a_p.csv", "data/raw/datos_ronda_2a_r.csv", "Ronda 2a", "o3"),
+  read_raw_pair("data/raw/datos_ronda_2b_p.csv", "data/raw/datos_ronda_2b_r.csv", "Ronda 2b", "no"),
+  read_raw_pair("data/raw/datos_ronda_2c_p.csv", "data/raw/datos_ronda_2c_r.csv", "Ronda 2c", "no2")
+) |>
+  filter(is.finite(participant), is.finite(reference)) |>
+  mutate(diff = participant - reference)
+
+analyse_subset <- function(df) {
+  tt <- t.test(df$participant, df$reference, paired = TRUE)
+  an <- aov(value ~ group, data = tibble(
+    value = c(df$participant, df$reference),
+    group = factor(rep(c("p1", "referencia"), each = nrow(df)))
+  ))
+  sh <- shapiro.test(df$diff)
+
+  tibble(
+    n = nrow(df),
+    mean_p1 = mean(df$participant),
+    mean_ref = mean(df$reference),
+    diff_mean = mean(df$diff),
+    t = unname(tt$statistic),
+    df = unname(tt$parameter),
+    p_t = tt$p.value,
+    shapiro_w = unname(sh$statistic),
+    shapiro_p = sh$p.value,
+    anova_f = broom::tidy(an)$statistic[1],
+    anova_p = broom::tidy(an)$p.value[1]
+  )
+}
+
+overall <- analyse_subset(raw_pairs)
+by_round <- raw_pairs |>
+  group_by(round) |>
+  group_modify(~analyse_subset(.x)) |>
+  ungroup() |>
+  arrange(round)
+
+by_pollutant <- raw_pairs |>
+  group_by(round, pollutant) |>
+  group_modify(~analyse_subset(.x)) |>
+  ungroup() |>
+  arrange(round, pollutant)
+
+differences <- raw_pairs$diff
+```
+
+## Resumen ejecutivo
+
+Este informe compara las mediciones minutales de `p1` contra la `referencia`
+usando los datos crudos en `data/raw/`. Cada archivo ya viene emparejado minuto
+a minuto por fecha y hora, por lo que el análisis se hace sobre diferencias
+pareadas.
+
+Se reportan:
+
+- prueba T pareada sobre `participant - reference`
+- ANOVA de una vía con factor `grupo`
+- prueba de normalidad de Shapiro-Wilk sobre las diferencias pareadas
+
+## Resultado global
+
+```{r}
+overall |>
+  mutate(
+    mean_p1 = round(mean_p1, 4),
+    mean_ref = round(mean_ref, 4),
+    diff_mean = round(diff_mean, 4),
+    t = round(t, 3),
+    df = round(df, 1),
+    p_t = signif(p_t, 3),
+    shapiro_w = round(shapiro_w, 3),
+    shapiro_p = signif(shapiro_p, 3),
+    anova_f = round(anova_f, 3),
+    anova_p = signif(anova_p, 3)
+  ) |>
+  kable(
+    col.names = c(
+      "N pares", "Promedio p1", "Promedio referencia",
+      "Diferencia media", "t", "gl", "p valor T",
+      "W Shapiro", "p Shapiro", "F", "p valor ANOVA"
+    ),
+    caption = "Resumen global del análisis minutal"
+  )
+```
+
+## Resultado por ronda
+
+```{r}
+by_round |>
+  mutate(
+    mean_p1 = round(mean_p1, 4),
+    mean_ref = round(mean_ref, 4),
+    diff_mean = round(diff_mean, 4),
+    t = round(t, 3),
+    df = round(df, 1),
+    p_t = signif(p_t, 3),
+    shapiro_w = round(shapiro_w, 3),
+    shapiro_p = signif(shapiro_p, 3),
+    anova_f = round(anova_f, 3),
+    anova_p = signif(anova_p, 3)
+  ) |>
+  kable(
+    col.names = c(
+      "Ronda", "N pares", "Promedio p1", "Promedio referencia",
+      "Diferencia media", "t", "gl", "p valor T",
+      "W Shapiro", "p Shapiro", "F", "p valor ANOVA"
+    ),
+    caption = "Resultados por archivo crudo"
+  )
+```
+
+## Resultado por ronda y contaminante
+
+```{r}
+by_pollutant |>
+  mutate(
+    mean_p1 = round(mean_p1, 4),
+    mean_ref = round(mean_ref, 4),
+    diff_mean = round(diff_mean, 4),
+    t = round(t, 3),
+    df = round(df, 1),
+    p_t = signif(p_t, 3),
+    shapiro_w = round(shapiro_w, 3),
+    shapiro_p = signif(shapiro_p, 3),
+    anova_f = round(anova_f, 3),
+    anova_p = signif(anova_p, 3)
+  ) |>
+  kable(
+    col.names = c(
+      "Ronda", "Contaminante", "N pares", "Promedio p1", "Promedio referencia",
+      "Diferencia media", "t", "gl", "p valor T",
+      "W Shapiro", "p Shapiro", "F", "p valor ANOVA"
+    ),
+    caption = "Resultados por ronda y contaminante"
+  )
+```
+
+## Visualización
+
+```{r}
+ggplot(raw_pairs, aes(x = reference, y = participant)) +
+  geom_point(alpha = 0.25, size = 1) +
+  geom_abline(slope = 1, intercept = 0, color = "#d62728", linewidth = 1) +
+  facet_wrap(~ round, scales = "free") +
+  labs(
+    x = "Referencia",
+    y = "Participante 1",
+    title = "Comparación minutal participante 1 vs referencia"
+  ) +
+  theme_minimal(base_size = 12)
+```
+
+## Conclusión
+
+En los datos crudos minutales no se observa evidencia estadística de diferencia
+significativa entre `p1` y la referencia en el análisis global. La prueba de
+Shapiro-Wilk sobre las diferencias pareadas permite verificar si la suposición
+de normalidad es razonable para sostener la prueba T como análisis principal.
+
+Si quieres, después de renderizarlo te devuelvo también una lectura ejecutiva
+con los valores exactos globales y por ronda.

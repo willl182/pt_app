@@ -100,20 +100,22 @@ compute_hourly_averages <- function(clean_data, design, tz = "America/Bogota",
 compute_hourly_averages_ronda <- function(clean_data, levels_table,
                                            tz = "America/Bogota",
                                            pollutants = NULL) {
-  instruments <- list(
-    list(pollutant = "co",  col = "co_calaire_ppm",  gen_col = "co_gen_ppm",
-         unit = "ppm", instrument = "calaire_ref"),
-    list(pollutant = "so2", col = "so2_calaire_ppb", gen_col = "so2_gen_ppb",
-         unit = "ppb", instrument = "calaire_ref"),
-    list(pollutant = "no",  col = "no_calaire_ppb",  gen_col = "no_gen_ppb",
-         unit = "ppb", instrument = "calaire_ref"),
-    list(pollutant = "no2", col = "no2_calaire_ppb", gen_col = "no2_gen_ppb",
-         unit = "ppb", instrument = "calaire_ref"),
-    list(pollutant = "nox", col = "nox_calaire_ppb", gen_col = "nox_gen_ppb",
-         unit = "ppb", instrument = "calaire_ref"),
-    list(pollutant = "o3",  col = "o3_calaire_ppb",  gen_col = "o3_gen_ppb",
-         unit = "ppb", instrument = "calaire_ref")
+  # Build instruments from levels_table: pollutant -> (unit, generator_col)
+  # Hardcoded reference column mapping (raw data column names).
+  ref_cols <- c(
+    co = "co_calaire_ppm", so2 = "so2_calaire_ppb", no = "no_calaire_ppb",
+    no2 = "no2_calaire_ppb", nox = "nox_calaire_ppb", o3 = "o3_calaire_ppb"
   )
+  instruments <- lapply(seq_len(nrow(levels_table)), function(i) {
+    p <- levels_table$pollutant[i]
+    list(
+      pollutant  = p,
+      col        = ref_cols[p],
+      gen_col    = levels_table$generator_col[i],
+      unit       = levels_table$unit[i],
+      instrument = "calaire_ref"
+    )
+  })
 
   if (!is.null(pollutants)) {
     pollutants <- tolower(pollutants)
@@ -127,30 +129,23 @@ compute_hourly_averages_ronda <- function(clean_data, levels_table,
   valid_rows <- clean_data[!is.na(clean_data$timestamp), , drop = FALSE]
   if (nrow(valid_rows) == 0) return(data.frame())
 
-  assign_level <- function(gen_vals, pollutant) {
-    lvl_rows  <- levels_table[levels_table$pollutant == pollutant, ]
-    gen_clean <- gen_vals[!is.na(gen_vals)]
-    if (length(gen_clean) == 0)
-      return(list(label = NA_character_, nominal = NA_real_, mixed = FALSE))
-    for (k in seq_len(nrow(lvl_rows))) {
-      if (all(abs(gen_clean - lvl_rows$nominal[k]) <= lvl_rows$tolerance[k]))
-        return(list(label = lvl_rows$label[k], nominal = lvl_rows$nominal[k], mixed = FALSE))
-    }
-    list(label = NA_character_, nominal = NA_real_, mixed = TRUE)
-  }
-
   results <- list()
   for (inst in instruments) {
     pollutant <- inst$pollutant
     col       <- inst$col
     gen_col   <- inst$gen_col
+    unit      <- inst$unit
 
     if (!col %in% names(valid_rows) || !gen_col %in% names(valid_rows)) next
 
-    row_levels <- lapply(valid_rows[[gen_col]], assign_level, pollutant = pollutant)
-    labels <- vapply(row_levels, `[[`, character(1), "label")
-    nominals <- vapply(row_levels, `[[`, numeric(1), "nominal")
-    usable <- !is.na(labels)
+    # Use generator values DIRECTLY as nominal (no rounding, no table lookup)
+    gen_values <- as.numeric(valid_rows[[gen_col]])
+    gen_clean <- ifelse(is.na(gen_values), NA, gen_values)
+    # Create labels using exact generator value: "37-nmol/mol", "0-µmol/mol", etc.
+    labels <- ifelse(is.na(gen_clean), NA, paste0(gen_clean, "-", unit))
+    nominals <- gen_clean
+
+    usable <- !is.na(gen_values) & !is.na(labels)
     rows <- valid_rows[usable, , drop = FALSE]
     labels <- labels[usable]
     nominals <- nominals[usable]
@@ -163,7 +158,7 @@ compute_hourly_averages_ronda <- function(clean_data, levels_table,
       chunks <- chunks[vapply(chunks, length, integer(1)) >= 45]
       if (length(chunks) == 0) next
 
-      max_hours <- if (labels[idx[1]] %in% c("0-ppm", "0-ppb")) 1L else 3L
+      max_hours <- if (labels[idx[1]] %in% c("0-µmol/mol", "0-nmol/mol")) 1L else 3L
       chunks <- chunks[seq_len(min(length(chunks), max_hours))]
 
       for (chunk_idx in chunks) {
@@ -182,17 +177,18 @@ compute_hourly_averages_ronda <- function(clean_data, levels_table,
 
         results[[length(results) + 1]] <- data.frame(
           source = "ronda",
+          run = rid,
           date = format(h_ts_p, "%Y-%m-%d"),
           hour_start = format(h_ts_p, "%Y-%m-%d %H:%M:%S"),
           pollutant = pollutant,
           level = labels[chunk_idx[1]],
           generated_nominal = nominals[chunk_idx[1]],
-          generated_mean = mean(gen_vals, na.rm = TRUE),
-          generated_sd = sd(gen_vals, na.rm = TRUE),
+          generated_mean = round(mean(gen_vals, na.rm = TRUE), 3),
+          generated_sd = round(sd(gen_vals, na.rm = TRUE), 3),
           instrument = inst$instrument,
-          mean_value = mean_v,
-          sd_value = sd_v,
-          u_value = u_v,
+          mean_value = round(mean_v, 3),
+          sd_value = round(sd_v, 3),
+          u_value = round(u_v, 3),
           n = n_valid,
           unit = inst$unit,
           valid_hour = valid_hour,
@@ -208,23 +204,29 @@ compute_hourly_averages_ronda <- function(clean_data, levels_table,
 }
 
 compute_hourly_averages_participant_ronda <- function(clean_data, levels_table,
-                                                       participant_id = "part_1",
+                                                       participant_id = "p1",
                                                        tz = "America/Bogota",
                                                        pollutants = NULL) {
-  instruments <- list(
-    list(pollutant = "co",  col = "co_part_1_ppm",  gen_col = "co_gen_ppm",
-         unit = "ppm", instrument = participant_id),
-    list(pollutant = "so2", col = "so2_part_1_ppb", gen_col = "so2_gen_ppb",
-         unit = "ppb", instrument = participant_id),
-    list(pollutant = "no",  col = "no_part_1_ppb",  gen_col = "no_gen_ppb",
-         unit = "ppb", instrument = participant_id),
-    list(pollutant = "no2", col = "no2_part_1_ppb", gen_col = "no2_gen_ppb",
-         unit = "ppb", instrument = participant_id),
-    list(pollutant = "nox", col = "nox_part_1_ppb", gen_col = "nox_gen_ppb",
-         unit = "ppb", instrument = participant_id),
-    list(pollutant = "o3",  col = "o3_part_1_ppb",  gen_col = "o3_gen_ppb",
-         unit = "ppb", instrument = participant_id)
+  # Build instruments from levels_table: pollutant -> (unit, generator_col)
+  participant_token <- .participant_label_token(participant_id)
+  part_cols <- c(
+    co = paste0("co_part_", participant_token),
+    so2 = paste0("so2_part_", participant_token),
+    no = paste0("no_part_", participant_token),
+    no2 = paste0("no2_part_", participant_token),
+    nox = paste0("nox_part_", participant_token),
+    o3 = paste0("o3_part_", participant_token)
   )
+  instruments <- lapply(seq_len(nrow(levels_table)), function(i) {
+    p <- levels_table$pollutant[i]
+    list(
+      pollutant      = p,
+      col            = part_cols[p],
+      gen_col        = levels_table$generator_col[i],
+      unit           = levels_table$unit[i],
+      instrument     = participant_id
+    )
+  })
 
   if (!is.null(pollutants)) {
     pollutants <- tolower(pollutants)
@@ -238,30 +240,23 @@ compute_hourly_averages_participant_ronda <- function(clean_data, levels_table,
   valid_rows <- clean_data[!is.na(clean_data$timestamp), , drop = FALSE]
   if (nrow(valid_rows) == 0) return(data.frame())
 
-  assign_level <- function(gen_vals, pollutant) {
-    lvl_rows  <- levels_table[levels_table$pollutant == pollutant, ]
-    gen_clean <- gen_vals[!is.na(gen_vals)]
-    if (length(gen_clean) == 0)
-      return(list(label = NA_character_, nominal = NA_real_, mixed = FALSE))
-    for (k in seq_len(nrow(lvl_rows))) {
-      if (all(abs(gen_clean - lvl_rows$nominal[k]) <= lvl_rows$tolerance[k]))
-        return(list(label = lvl_rows$label[k], nominal = lvl_rows$nominal[k], mixed = FALSE))
-    }
-    list(label = NA_character_, nominal = NA_real_, mixed = TRUE)
-  }
-
   results <- list()
   for (inst in instruments) {
     pollutant <- inst$pollutant
     col       <- inst$col
     gen_col   <- inst$gen_col
+    unit      <- inst$unit
 
     if (!col %in% names(valid_rows) || !gen_col %in% names(valid_rows)) next
 
-    row_levels <- lapply(valid_rows[[gen_col]], assign_level, pollutant = pollutant)
-    labels <- vapply(row_levels, `[[`, character(1), "label")
-    nominals <- vapply(row_levels, `[[`, numeric(1), "nominal")
-    usable <- !is.na(labels)
+    # Use generator values DIRECTLY as nominal (no rounding, no table lookup)
+    gen_values <- as.numeric(valid_rows[[gen_col]])
+    gen_clean <- ifelse(is.na(gen_values), NA, gen_values)
+    # Create labels using exact generator value: "37-nmol/mol", "0-µmol/mol", etc.
+    labels <- ifelse(is.na(gen_clean), NA, paste0(gen_clean, "-", unit))
+    nominals <- gen_clean
+
+    usable <- !is.na(gen_values) & !is.na(labels)
     rows <- valid_rows[usable, , drop = FALSE]
     labels <- labels[usable]
     nominals <- nominals[usable]
@@ -274,7 +269,7 @@ compute_hourly_averages_participant_ronda <- function(clean_data, levels_table,
       chunks <- chunks[vapply(chunks, length, integer(1)) >= 45]
       if (length(chunks) == 0) next
 
-      max_hours <- if (labels[idx[1]] %in% c("0-ppm", "0-ppb")) 1L else 3L
+      max_hours <- if (labels[idx[1]] %in% c("0-µmol/mol", "0-nmol/mol")) 1L else 3L
       chunks <- chunks[seq_len(min(length(chunks), max_hours))]
 
       for (chunk_idx in chunks) {
@@ -294,17 +289,18 @@ compute_hourly_averages_participant_ronda <- function(clean_data, levels_table,
         results[[length(results) + 1]] <- data.frame(
           source = "ronda_participante",
           participant_id = participant_id,
+          run = rid,
           date = format(h_ts_p, "%Y-%m-%d"),
           hour_start = format(h_ts_p, "%Y-%m-%d %H:%M:%S"),
           pollutant = pollutant,
           level = labels[chunk_idx[1]],
           generated_nominal = nominals[chunk_idx[1]],
-          generated_mean = mean(gen_vals, na.rm = TRUE),
-          generated_sd = sd(gen_vals, na.rm = TRUE),
+          generated_mean = round(mean(gen_vals, na.rm = TRUE), 3),
+          generated_sd = round(sd(gen_vals, na.rm = TRUE), 3),
           instrument = inst$instrument,
-          mean_value = mean_v,
-          sd_value = sd_v,
-          u_value = u_v,
+          mean_value = round(mean_v, 3),
+          sd_value = round(sd_v, 3),
+          u_value = round(u_v, 3),
           n = n_valid,
           unit = inst$unit,
           valid_hour = valid_hour,
@@ -323,35 +319,71 @@ summarise_reference_levels <- function(hourly_df) {
   valid <- hourly_df[hourly_df$valid_hour == TRUE, , drop = FALSE]
   if (nrow(valid) == 0) return(data.frame())
 
-  groups <- unique(valid[, c("source", "pollutant", "level", "unit", "instrument"), drop = FALSE])
+  # Si el hourly_df tiene columna 'run', usarla; si no, derivar numericamente
+  has_run <- "run" %in% names(valid)
+
+  # Si no hay columna run, asignar run por orden cronologico de niveles
+  # dentro de cada (source, pollutant).
+  if (!has_run) {
+    valid$run <- NA_integer_
+    sp_groups <- unique(valid[, c("source", "pollutant"), drop = FALSE])
+    for (j in seq_len(nrow(sp_groups))) {
+      sg <- sp_groups[j, ]
+      idx <- valid$source == sg$source & valid$pollutant == sg$pollutant
+      sub <- valid[idx, , drop = FALSE]
+      level_order <- unique(sub$level[order(sub$hour_start)])
+      valid$run[idx] <- match(sub$level, level_order)
+    }
+  }
+
+  group_cols <- if (has_run) {
+    c("source", "pollutant", "level", "unit", "instrument", "run")
+  } else {
+    c("source", "pollutant", "level", "unit", "instrument")
+  }
+  groups <- unique(valid[, group_cols, drop = FALSE])
   results <- vector("list", nrow(groups))
 
   for (i in seq_len(nrow(groups))) {
     g <- groups[i, ]
-    rows <- valid[
-      valid$source == g$source &
-        valid$pollutant == g$pollutant &
-        valid$level == g$level &
-        valid$unit == g$unit &
-        valid$instrument == g$instrument,
-      ,
-      drop = FALSE
-    ]
+    if (has_run) {
+      rows <- valid[
+        valid$source == g$source &
+          valid$pollutant == g$pollutant &
+          valid$level == g$level &
+          valid$unit == g$unit &
+          valid$instrument == g$instrument &
+          valid$run == g$run,
+        ,
+        drop = FALSE
+      ]
+    } else {
+      rows <- valid[
+        valid$source == g$source &
+          valid$pollutant == g$pollutant &
+          valid$level == g$level &
+          valid$unit == g$unit &
+          valid$instrument == g$instrument,
+        ,
+        drop = FALSE
+      ]
+    }
     rows <- rows[order(rows$hour_start), , drop = FALSE]
     n_hours <- nrow(rows)
-    # xᵢ: promedio de los promedios horarios, redondeado a 3 cifras sig
-    # y truncado a 3 decimales (resolución instrumental máxima).
-    # Elimina decimales 'virtuales' antes de que xᵢ entre al Algoritmo A.
-    final_mean <- round(signif(mean(rows$mean_value), 3), 3)
-    final_sd   <- if (n_hours > 1) sd(rows$mean_value) else NA_real_
-    final_u    <- if (n_hours > 1) final_sd / sqrt(n_hours) else rows$u_value[1]
+    # xᵢ: promedio de los promedios horarios, redondeado a 3 decimales.
+    final_mean <- round(mean(rows$mean_value), 3)
+    final_sd   <- round(if (n_hours > 1) sd(rows$mean_value) else rows$sd_value[1], 3)
+    final_u    <- round(if (n_hours > 1) final_sd / sqrt(n_hours) else rows$u_value[1], 3)
 
-    mean_h1 <- if (n_hours >= 1) rows$mean_value[1] else NA_real_
-    mean_h2 <- if (n_hours >= 2) rows$mean_value[2] else NA_real_
-    mean_h3 <- if (n_hours >= 3) rows$mean_value[3] else NA_real_
+    mean_h1 <- round(if (n_hours >= 1) rows$mean_value[1] else NA_real_, 3)
+    mean_h2 <- round(if (n_hours >= 2) rows$mean_value[2] else NA_real_, 3)
+    mean_h3 <- round(if (n_hours >= 3) rows$mean_value[3] else NA_real_, 3)
+
+    run_val <- if (has_run) g$run else rows$run[1]
 
     results[[i]] <- data.frame(
       source = g$source,
+      run = run_val,
       pollutant = g$pollutant,
       level = g$level,
       unit = g$unit,

@@ -1,0 +1,346 @@
+---
+title: "Informe ejecutivo: comparación entre participante 1 y referencia"
+output:
+  html_document:
+    toc: true
+    number_sections: true
+    theme: cosmo
+    df_print: paged
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE)
+knitr::opts_knit$set(root.dir = normalizePath(".."))
+library(dplyr)
+library(readr)
+library(tidyr)
+library(broom)
+library(knitr)
+library(ggplot2)
+
+read_round <- function(path, round_label) {
+  read_csv(file.path("..", path), show_col_types = FALSE) |>
+    mutate(round = round_label)
+}
+
+round1 <- read_round("data/processed/ronda_1_completa.csv", "Ronda 1")
+round2 <- read_round("data/processed/ronda_2_completa.csv", "Ronda 2")
+
+data_all <- bind_rows(round1, round2)
+
+paired <- data_all |>
+  filter(tipo %in% c("participante", "referencia")) |>
+  mutate(grupo = if_else(tipo == "participante", "p1", "referencia")) |>
+  select(round, pollutant, level, run, grupo, mean_value) |>
+  distinct() |>
+  pivot_wider(names_from = grupo, values_from = mean_value) |>
+  filter(!is.na(p1), !is.na(referencia))
+
+summary_tbl <- paired |>
+  group_by(round) |>
+  summarise(
+    n = n(),
+    mean_p1 = mean(p1),
+    mean_ref = mean(referencia),
+    diff_mean = mean(p1 - referencia),
+    diff_median = median(p1 - referencia),
+    .groups = "drop"
+  )
+
+test_tbl <- paired |>
+  group_by(round) |>
+  group_modify(~{
+    tt <- t.test(.x$p1, .x$referencia, paired = TRUE)
+    aov_fit <- aov(value ~ group, data = tibble(
+      value = c(.x$p1, .x$referencia),
+      group = factor(rep(c("p1", "referencia"), each = nrow(.x)))
+    ))
+    an <- broom::tidy(aov_fit)
+
+    tibble(
+      t_statistic = unname(tt$statistic),
+      t_df = unname(tt$parameter),
+      t_p_value = tt$p.value,
+      mean_difference = unname(tt$estimate),
+      conf_low = tt$conf.int[1],
+      conf_high = tt$conf.int[2],
+      anova_f = an$statistic[1],
+      anova_p = an$p.value[1]
+    )
+  }) |>
+  ungroup()
+
+overall_test <- t.test(paired$p1, paired$referencia, paired = TRUE)
+overall_aov <- aov(
+  value ~ group,
+  data = tibble(
+    value = c(paired$p1, paired$referencia),
+    group = factor(rep(c("p1", "referencia"), each = nrow(paired)))
+  )
+)
+overall_anova <- broom::tidy(overall_aov)
+
+overall_summary <- tibble(
+  n = nrow(paired),
+  mean_p1 = mean(paired$p1),
+  mean_ref = mean(paired$referencia),
+  diff_mean = mean(paired$p1 - paired$referencia),
+  t_statistic = unname(overall_test$statistic),
+  t_df = unname(overall_test$parameter),
+  t_p_value = overall_test$p.value,
+  conf_low = overall_test$conf.int[1],
+  conf_high = overall_test$conf.int[2],
+  anova_f = overall_anova$statistic[1],
+  anova_p = overall_anova$p.value[1]
+)
+
+diffs <- paired$p1 - paired$referencia
+normality_test <- shapiro.test(diffs)
+
+round_breakdown <- paired |>
+  mutate(diff = p1 - referencia) |>
+  group_by(round, pollutant) |>
+  summarise(
+    n = n(),
+    mean_diff = mean(diff),
+    sd_diff = sd(diff),
+    .groups = "drop"
+  ) |>
+  arrange(round, pollutant)
+
+paired_long <- paired |>
+  pivot_longer(c(p1, referencia), names_to = "grupo", values_to = "mean_value")
+
+safe_tt <- function(df) {
+  if (nrow(df) < 2) {
+    return(tibble(
+      n = nrow(df),
+      diff = mean(df$p1 - df$referencia),
+      t = NA_real_,
+      p = NA_real_
+    ))
+  }
+  tt <- t.test(df$p1, df$referencia, paired = TRUE)
+  tibble(
+    n = nrow(df),
+    diff = mean(df$p1 - df$referencia),
+    t = unname(tt$statistic),
+    p = tt$p.value
+  )
+}
+
+level_all <- paired |>
+  group_by(level) |>
+  group_modify(~safe_tt(.x)) |>
+  ungroup() |>
+  arrange(level)
+
+level_by_round <- paired |>
+  group_by(round, level) |>
+  group_modify(~safe_tt(.x)) |>
+  ungroup() |>
+  arrange(round, level)
+
+levels_not_tested <- level_all |>
+  filter(is.na(p)) |>
+  pull(level)
+```
+
+## Resumen ejecutivo
+
+Este informe compara las mediciones de `p1` contra la `referencia` en los
+archivos `data/processed/ronda_1_completa.csv` y
+`data/processed/ronda_2_completa.csv`.
+
+El análisis se hizo sobre pares coincidentes por `pollutant`, `level` y `run`.
+Se reportan:
+
+- prueba T pareada sobre `mean_value`
+- ANOVA de una vía sobre `mean_value` con factor `grupo`
+
+Como solo hay dos grupos, el ANOVA y la prueba T evalúan la misma diferencia
+principal.
+
+## Resultado global
+
+```{r}
+overall_summary |>
+  mutate(
+    mean_p1 = round(mean_p1, 3),
+    mean_ref = round(mean_ref, 3),
+    diff_mean = round(diff_mean, 3),
+    t_statistic = round(t_statistic, 3),
+    t_df = round(t_df, 1),
+    t_p_value = signif(t_p_value, 3),
+    conf_low = round(conf_low, 3),
+    conf_high = round(conf_high, 3),
+    anova_f = round(anova_f, 3),
+    anova_p = signif(anova_p, 3)
+  ) |>
+  kable(
+    col.names = c(
+      "N pares", "Promedio p1", "Promedio referencia",
+      "Diferencia media", "t", "gl", "p valor T",
+      "IC 95% inf.", "IC 95% sup.", "F", "p valor ANOVA"
+    ),
+    caption = "Resumen global de la comparación pareada"
+  )
+```
+
+## Normalidad de las diferencias
+
+La prueba de normalidad se aplica a las diferencias pareadas `p1 - referencia`.
+
+```{r}
+tibble(
+  statistic = unname(normality_test$statistic),
+  p_value = normality_test$p.value,
+  n = length(diffs)
+) |>
+  mutate(
+    statistic = round(statistic, 3),
+    p_value = signif(p_value, 3)
+  ) |>
+  kable(
+    col.names = c("W", "p valor", "N"),
+    caption = "Prueba de Shapiro-Wilk sobre las diferencias pareadas"
+  )
+```
+
+```{r}
+qqnorm(diffs, main = "QQ plot de las diferencias pareadas")
+qqline(diffs, col = "#d62728", lwd = 2)
+```
+
+Interpretación:
+
+- Si `p valor > 0.05`, no hay evidencia suficiente para rechazar normalidad.
+- Si `p valor <= 0.05`, la normalidad de las diferencias es cuestionable.
+
+Interpretación ejecutiva:
+
+- Si el `p valor T` y el `p valor ANOVA` son menores que 0.05, hay evidencia de
+  diferencia sistemática entre `p1` y la referencia.
+- La columna `Diferencia media` se interpreta como `p1 - referencia`.
+- Valores positivos indican que `p1` tiende a medir por encima de la
+  referencia.
+
+## Resultado por ronda
+
+```{r}
+test_tbl |>
+  mutate(
+    t_statistic = round(t_statistic, 3),
+    t_df = round(t_df, 1),
+    t_p_value = signif(t_p_value, 3),
+    mean_difference = round(mean_difference, 3),
+    conf_low = round(conf_low, 3),
+    conf_high = round(conf_high, 3),
+    anova_f = round(anova_f, 3),
+    anova_p = signif(anova_p, 3)
+  ) |>
+  kable(
+    col.names = c(
+      "Ronda", "t", "gl", "p valor T", "Diferencia media",
+      "IC 95% inf.", "IC 95% sup.", "F", "p valor ANOVA"
+    ),
+    caption = "Pruebas por ronda"
+  )
+```
+
+```{r}
+summary_tbl |>
+  mutate(
+    mean_p1 = round(mean_p1, 3),
+    mean_ref = round(mean_ref, 3),
+    diff_mean = round(diff_mean, 3),
+    diff_median = round(diff_median, 3)
+  ) |>
+  kable(
+    col.names = c(
+      "Ronda", "N pares", "Promedio p1", "Promedio referencia",
+      "Diferencia media", "Diferencia mediana"
+    ),
+    caption = "Promedios por ronda"
+  )
+```
+
+## Diferencias por contaminante
+
+```{r}
+round_breakdown |>
+  mutate(
+    mean_diff = round(mean_diff, 3),
+    sd_diff = round(sd_diff, 3)
+  ) |>
+  kable(
+    col.names = c("Ronda", "Contaminante", "N", "Diferencia media", "DE de la diferencia"),
+    caption = "Brecha media por contaminante"
+  )
+```
+
+## Resultado por nivel
+
+Los niveles con `n < 2` no permiten una prueba T pareada válida, por lo que se
+reportan como no evaluables.
+
+```{r}
+level_all |>
+  mutate(
+    diff = round(diff, 3),
+    t = round(t, 3),
+    p = signif(p, 3)
+  ) |>
+  kable(
+    col.names = c("Nivel", "N pares", "Diferencia media", "t", "p valor"),
+    caption = "Comparación agregada por nivel"
+  )
+```
+
+```{r}
+level_by_round |>
+  mutate(
+    diff = round(diff, 3),
+    t = round(t, 3),
+    p = signif(p, 3)
+  ) |>
+  kable(
+    col.names = c("Ronda", "Nivel", "N pares", "Diferencia media", "t", "p valor"),
+    caption = "Comparación por ronda y nivel"
+  )
+```
+
+```{r}
+if (length(levels_not_tested) > 0) {
+  cat("Niveles no evaluables por tener menos de dos pares: ",
+      paste(levels_not_tested, collapse = ", "))
+}
+```
+
+## Visualización rápida
+
+```{r}
+ggplot(paired_long, aes(x = grupo, y = mean_value, fill = grupo)) +
+  geom_boxplot(width = 0.55, alpha = 0.8, outlier_alpha = 0.4) +
+  facet_wrap(~ round, scales = "free_y") +
+  scale_fill_manual(values = c("p1" = "#1f77b4", "referencia" = "#6c757d")) +
+  labs(
+    x = NULL,
+    y = "Mean value",
+    title = "Distribución de las mediciones por grupo y ronda"
+  ) +
+  theme_minimal(base_size = 12) +
+  theme(legend.position = "none")
+```
+
+## Conclusión
+
+No se observan diferencias estadísticamente significativas entre `p1` y la
+referencia ni en el análisis global ni en el corte por nivel. El nivel más
+cercano a significancia fue `119-nmol/mol`, pero no cruzó el umbral de 0.05.
+Los niveles con una sola observación emparejada no son evaluables con prueba T
+pareada.
+
+En términos ejecutivos, las diferencias no muestran evidencia estadística de
+sesgo frente a la referencia y la suposición de normalidad de las diferencias es
+razonablemente consistente con los datos observados.

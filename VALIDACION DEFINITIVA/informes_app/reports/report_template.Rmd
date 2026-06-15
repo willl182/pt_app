@@ -1,0 +1,647 @@
+---
+title: "Informe Final del Ensayo de Aptitud (EA)"
+subtitle: "Medición de Gases Contaminantes Criterio SO₂, CO, O₃, NO, NO₂"
+author: "Laboratorio CALAIRE"
+date: "`r Sys.Date()`"
+output:
+  word_document:
+    toc: true
+    toc_depth: 3
+    reference_docx: null
+  html_document:
+    toc: true
+    toc_depth: 3
+    toc_float: true
+  pdf_document:
+    toc: true
+    toc_depth: 3
+    latex_engine: pdflatex
+params:
+  hom_data: NA
+  stab_data: NA
+  summary_data: NA
+  metric: "z"
+  method: "3"
+  pollutant: NULL
+  level: "level_1"
+  n_lab: 7
+  k_factor: 2
+  # Identification params
+  scheme_id: "EA-202X-XX"
+  report_id: "INF-202X-XX"
+  issue_date: NA
+  period: "Mes - Mes Año"
+  coordinator: "Nombre"
+  quality_pro: "Nombre"
+  projects_pro: "Nombre"
+  infrastructure_pro: "Nombre"
+  ops_eng: "Nombre"
+  quality_manager: "Nombre"
+  # Data summaries
+  participants_data: NA
+  grubbs_summary: NA
+  xpt_summary: NA
+  homogeneity_summary: NA
+  stability_summary: NA
+  score_summary: NA
+  heatmaps: NA
+  participant_data: NA
+  participant_filter: "__all__"
+  metrological_compatibility: NA
+  metrological_compatibility_method: "2a"
+  equipos_data: NA
+  project_root: null
+---
+
+<style type="text/css">
+  .list-group-item.active, 
+  .list-group-item.active:focus, 
+  .list-group-item.active:hover {
+      background-color: #FDB913 !important;
+      border-color: #FDB913 !important;
+      color: #111827 !important;
+  }
+
+  .tocify-subheader .tocify-item.active,
+  .tocify-subheader .tocify-item.active:hover {
+      color: #111827 !important;
+      background-color: rgba(253, 185, 19, 0.2) !important;
+      border-left: 3px solid #FDB913;
+  }
+
+  h1.title {
+      border-bottom: 3px solid #FDB913;
+      padding-bottom: 10px;
+      margin-bottom: 20px;
+  }
+
+  a {
+      color: #E5A610;
+      text-decoration: none;
+  }
+
+  a:hover {
+      color: #FDB913;
+      text-decoration: underline;
+  }
+
+  ::selection {
+      background: #FDB913;
+      color: #111827;
+  }
+</style>
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE, fig.width = 8, fig.height = 5)
+library(tidyverse)
+library(knitr)
+library(kableExtra)
+library(outliers)
+library(patchwork)
+
+# Load ptcalc package for ISO 13528 calculations
+# This eliminates duplicate implementations and ensures consistency with app.R
+project_root <- NULL
+if (!is.null(params$project_root) && nzchar(params$project_root)) {
+  project_root <- params$project_root
+}
+if (is.null(project_root)) {
+  project_root <- getwd()
+}
+
+ptcalc_path <- file.path(project_root, "ptcalc")
+if (requireNamespace("ptcalc", quietly = TRUE)) {
+  library(ptcalc)
+} else if (dir.exists(ptcalc_path)) {
+  devtools::load_all(ptcalc_path)
+} else {
+  stop("No se encontro el paquete ptcalc. Instale ptcalc o ejecute el informe desde el proyecto.")
+}
+
+is_nonempty_df <- function(x) {
+  is.data.frame(x) && nrow(x) > 0
+}
+
+safe_param_df <- function(x) {
+  if (is_nonempty_df(x)) {
+    return(x)
+  }
+  data.frame()
+}
+
+safe_rename_by_position <- function(df, labels) {
+  if (!is.data.frame(df) || nrow(df) == 0) {
+    return(df)
+  }
+  names(df)[seq_len(min(ncol(df), length(labels)))] <- labels[seq_len(min(ncol(df), length(labels)))]
+  df
+}
+
+selected_summary_data <- function() {
+  df <- safe_param_df(params$summary_data)
+  if (nrow(df) == 0) {
+    return(df)
+  }
+  if ("n_lab" %in% names(df) && !is.null(params$n_lab)) {
+    df <- df %>% filter(n_lab == params$n_lab)
+  }
+  if ("level" %in% names(df) && !is.null(params$level)) {
+    df <- df %>% filter(level == params$level)
+  }
+  df
+}
+
+round_summary_data <- function() {
+  df <- safe_param_df(params$summary_data)
+  if (nrow(df) == 0) {
+    return(df)
+  }
+  if ("n_lab" %in% names(df) && !is.null(params$n_lab)) {
+    df <- df %>% filter(n_lab == params$n_lab)
+  }
+  df
+}
+
+participant_count <- function(df) {
+  if (!is_nonempty_df(df) || !"participant_id" %in% names(df)) {
+    return(0L)
+  }
+  length(unique(df$participant_id[df$participant_id != "ref" & !is.na(df$participant_id)]))
+}
+
+# NOTE: The following functions are now provided by ptcalc:
+# - calculate_niqr (pt_robust_stats.R)
+# - run_algorithm_a (pt_robust_stats.R)  
+# - calculate_homogeneity_stats (pt_homogeneity.R)
+
+# Helper: Prepare Wide Data
+get_wide_data <- function(df, target_pollutant) {
+  filtered <- df %>% filter(pollutant == target_pollutant)
+  if (nrow(filtered) == 0) return(NULL)
+  filtered %>%
+    select(-pollutant) %>%
+    pivot_wider(names_from = replicate, values_from = value, names_prefix = "sample_")
+}
+
+# Wrapper: Algorithm A using ptcalc (ensures consistent tolerance with app.R)
+# Returns simplified list for report compatibility: list(mean, sd, error)
+run_algorithm_a_report <- function(values, max_iter = 50) {
+  result <- run_algorithm_a(values = values, max_iter = max_iter, tol = 1e-03)
+  list(
+    mean = result$assigned_value,
+    sd = result$robust_sd,
+    error = result$error
+  )
+}
+
+# Wrapper: Compute homogeneity using ptcalc
+compute_homogeneity <- function(data_full, pol, lev) {
+  wide <- get_wide_data(data_full, pol) %>% filter(level == lev)
+  if(nrow(wide) == 0) return(NULL)
+  
+  cols_sample <- grep("sample_", names(wide), value = TRUE)
+  m <- length(cols_sample)
+  g <- nrow(wide)
+  
+  # Prepare matrix for ptcalc
+  sample_matrix <- as.matrix(wide[, cols_sample])
+  
+  # Use ptcalc for core calculations
+  stats <- calculate_homogeneity_stats(sample_matrix)
+  
+  if (!is.null(stats$error)) {
+    return(NULL)
+  }
+  
+  # Calculate sigma_pt using MADe of first sample (consistent with app.R)
+  sample1 <- wide$sample_1
+  sigma_pt <- calculate_mad_e(sample1)
+  c_crit <- calculate_homogeneity_criterion(sigma_pt)
+  c_crit_expanded <- calculate_homogeneity_criterion_expanded(sigma_pt, stats$sw, g)
+  
+  list(
+    ss = stats$ss, 
+    sw = stats$sw, 
+    sigma_pt = sigma_pt, 
+    c_crit = c_crit, 
+    c_crit_expanded = c_crit_expanded,
+    mean = stats$grand_mean, 
+    passed = stats$ss <= c_crit,
+    passed_expanded = stats$ss <= c_crit_expanded
+  )
+}
+```
+
+# 1. Introduccion
+
+Este informe presenta los resultados del Ensayo de Aptitud (EA) para la medicion de gases contaminantes criterio en aire cero, conforme a la norma ISO/IEC 17043:2023 y los metodos estadisticos de la norma ISO 13528:2022. El documento resume la informacion del esquema, la participacion, la metodologia y los resultados obtenidos.
+
+## 1.1. Información del Proveedor y del esquema
+
+**Alcance:** Este Ensayo de Aptitud (EA) por comparación interlaboratorio abarca la medición de los gases contaminantes criterio SO₂, CO, O₃, NO y NO₂ en aire cero, según lo definido en el `r params$scheme_id`.
+
+**Objetivo Principal:** Evaluar el desempeño de los laboratorios participantes en la medición de los gases contaminantes criterio, conforme a los requisitos de la norma ISO/IEC 17043:2023 y utilizando los métodos estadísticos de la norma ISO 13528:2022.
+
+## 1.2. Confidencialidad y Uso del Informe
+
+La identidad de los participantes es confidencial y solo conocida por el personal autorizado de CALAIRE involucrado en la operación del esquema de EA. Se utilizan códigos de laboratorio anonimizados en este informe para asegurar la confidencialidad, según lo estipulado en la política de confidencialidad del laboratorio. Este informe es para uso de los participantes y, cuando aplique, de sus organismos de acreditación o autoridades regulatorias. Cualquier otro uso debe ser autorizado por CALAIRE.
+
+## 1.3. Roles de Autorización y Personal Clave
+
+La organización, ejecución y evaluación de este EA se realizó bajo la responsabilidad del Laboratorio CALAIRE. Los roles clave involucrados fueron:
+
+**Coordinador EA:** `r params$coordinator`  
+**Profesional Calidad Aire:** `r params$quality_pro`  
+**Profesional Proyectos:** `r params$projects_pro`  
+**Profesional Infraestructura:** `r params$infrastructure_pro`  
+**Ingeniero Operativo:** `r params$ops_eng`  
+**Profesional de Gestión de Calidad:** `r params$quality_manager`
+
+## 1.4. Participantes e Instrumentación
+
+En esta ronda del EA participaron `r participant_count(selected_summary_data())` laboratorios. A continuación, se lista a los participantes (mediante código asignado).
+
+```{r participants_table, echo=FALSE, results='asis'}
+final_part_df <- safe_param_df(params$equipos_data)
+
+if (!is_nonempty_df(final_part_df)) {
+  final_part_df <- safe_param_df(params$participants_data)
+}
+
+if (is_nonempty_df(final_part_df)) {
+  final_part_df <- unique(final_part_df)
+  final_part_df <- final_part_df %>%
+    select(any_of(c(
+      "Codigo_Lab",
+      "Analizador_SO2",
+      "Analizador_CO",
+      "Analizador_O3",
+      "Analizador_NO_NO2"
+    )))
+
+  display_names <- c(
+    Codigo_Lab = "Código Lab",
+    Analizador_SO2 = "Analizador SO₂ (Marca/Modelo)",
+    Analizador_CO = "Analizador CO (Marca/Modelo)",
+    Analizador_O3 = "Analizador O₃ (Marca/Modelo)",
+    Analizador_NO_NO2 = "Analizador NO/NO₂ (Marca/Modelo)"
+  )
+  matched_names <- names(final_part_df)
+  matched_names[matched_names %in% names(display_names)] <- display_names[matched_names[matched_names %in% names(display_names)]]
+  names(final_part_df) <- matched_names
+
+  print(
+    kable(
+      final_part_df,
+      caption = "Tabla 2. Participantes del Ensayo de Aptitud"
+    )
+  )
+} else {
+  cat("No hay datos de participantes disponibles para la ronda seleccionada.")
+}
+```
+
+# 2. Descripción del Ensayo y Metodología
+
+## 2.1. Ítems de Ensayo y Producción
+
+**Descripción:** Los ítems de ensayo consistieron en atmósferas de gas SO₂, CO, O₃, NO, NO₂ en aire cero, generadas dinámicamente y suministradas a los participantes a través de un colector de distribución (manifold) de vidrio inerte.
+
+**Método de Producción:**
+
+*   **O₃:** El O₃ es generado dinámicamente mediante un generador de ozono, trazable con un fotómetro nivel 2 en la cadena de trazabilidad de ozono.
+*   **SO₂, CO, NO, NO₂:** Generados por dilución dinámica de Materiales Certificados de Referencia (MCR) trazables, utilizando controladores de flujo másico calibrados.
+
+**Niveles de Concentración:** Se generaron 5 niveles de concentración nominal más un nivel cero para cada contaminante. La secuencia y duración de cada nivel (corrida/run) se detallan a continuación:
+
+```{r levels_table, echo=FALSE}
+# Generate Table 3 dynamically from summary_data
+# We assume 'ref' values represent the target concentration for each level
+
+summary_selected <- round_summary_data()
+
+if (is_nonempty_df(summary_selected)) {
+  levels_source <- summary_selected
+  if ("participant_id" %in% names(levels_source) && any(levels_source$participant_id == "ref", na.rm = TRUE)) {
+    levels_source <- levels_source %>% filter(participant_id == "ref")
+  }
+  if (!"run" %in% names(levels_source)) {
+    levels_source <- levels_source %>% mutate(run = level)
+  }
+  levels_data <- levels_source %>%
+    select(run, pollutant, mean_value) %>%
+    group_by(run, pollutant) %>%
+    summarise(mean_value = mean(mean_value, na.rm = TRUE), .groups = "drop") %>%
+    pivot_wider(names_from = pollutant, values_from = mean_value) %>%
+    mutate(run_order = readr::parse_number(as.character(run))) %>%
+    arrange(run_order, run) %>%
+    select(-run_order)
+  
+  # Rename columns for display
+  colnames(levels_data)[1] <- "Corrida"
+  
+  kable(levels_data, digits = 2, caption = "Tabla 3. Niveles de concentración del ítem de ensayo (Valores de Referencia)")
+} else {
+  cat("No hay datos de resumen disponibles para generar la Tabla 3.")
+}
+```
+
+\*Los valores de concentración obedecen a los intervalos de medición establecidos en la normativa vigente y lo estipulado en los métodos US-EPA.
+
+**Instrucciones a Participantes:** Se solicitó a los participantes reportar [3] mediciones promedio de [1 h] para cada nivel de concentración a partir de los niveles de concentración minutales.
+
+## 2.2. Homogeneidad y Estabilidad de los Ítems de EA
+
+Dado que los ítems de ensayo se generan dinámicamente y se miden in situ, la evaluación de homogeneidad y estabilidad se enfoca en el sistema de generación y distribución.
+
+**Homogeneidad:** Se verificó la homogeneidad del gas distribuido a través del manifold antes del inicio del EA, midiendo la concentración en diferentes puntos de salida según ISO 13528:2022, Anexo B. Los datos de homogeneidad se presentan en el Anexo B.
+
+**Estabilidad:** Se monitoreó la estabilidad de la concentración generada durante cada corrida mediante los instrumentos de referencia de CALAIRE, según ISO 13528:2022, Anexo B. Los datos de estabilidad se presentan en el Anexo B.
+
+## 2.3. Determinación del Valor Asignado ($x_{pt}$) y su desviación ($\sigma_{pt}$)
+
+```{r assigned_value_text, echo=FALSE, results='asis'}
+if (!is.null(params$method) && as.character(params$method) == "1") {
+  cat("El valor asignado corresponde al valor determinado por el laboratorio de referencia: $x_{pt} = x_{ref}$.\n\n")
+  cat("La desviación estándar para la evaluación de la aptitud ($\\sigma_{pt}$) se obtiene de la evaluación de homogeneidad para cada contaminante y nivel.")
+} else if (as.character(params$method) == "2a") {
+  cat("El valor asignado se determinó por consenso de los participantes, utilizando un estimador robusto (mediana y MADe).\n\n")
+  cat("La desviación estándar para la evaluación de la aptitud ($\\sigma_{pt}$) se estableció para cada contaminante basándose en ISO 13528:2022.\n\n")
+  cat("**Método Específico:** *Por consenso:* $\\sigma_{pt} = MADe$.")
+} else if (as.character(params$method) == "2b") {
+  cat("El valor asignado se determinó por consenso de los participantes, utilizando un estimador robusto (mediana y nIQR).\n\n")
+  cat("La desviación estándar para la evaluación de la aptitud ($\\sigma_{pt}$) se estableció para cada contaminante basándose en ISO 13528:2022.\n\n")
+  cat("**Método Específico:** *Por consenso:* $\\sigma_{pt} = nIQR$.")
+} else if (as.character(params$method) == "3") {
+  cat("El valor asignado se determinó por consenso de los participantes, utilizando un estimador robusto (Algoritmo A).\n\n")
+  cat("La desviación estándar para la evaluación de la aptitud ($\\sigma_{pt}$) se estableció para cada contaminante basándose en ISO 13528:2022.\n\n")
+  cat("**Método Específico:** *Por consenso:* $\\sigma_{pt} = s^*$, donde $s^*$ es la desviación estándar robusta calculada mediante el Algoritmo A.")
+} else {
+  cat("El valor asignado se determinó por consenso de los participantes, utilizando un estimador robusto.\n\n")
+  cat("La desviación estándar para la evaluación de la aptitud ($\\sigma_{pt}$) se estableció para cada contaminante basándose en ISO 13528:2022.")
+}
+
+```
+
+Los valores de $x_{pt}$ y $\sigma_{pt}$ calculados para cada nivel se presentan en el Anexo A.
+
+## 2.4. Compatibilidad Metrológica
+
+```{r metrological_compatibility_text, echo=FALSE, results='asis'}
+method <- params$metrological_compatibility_method
+if (method == "2a") {
+  cat("Se evaluó la compatibilidad metrológica calculando las diferencias entre el valor de referencia ($x_{pt,ref}$) y el valor de consenso ($x_{pt,2a}$) para cada contaminante y nivel.")
+} else if (method == "2b") {
+  cat("Se evaluó la compatibilidad metrológica calculando las diferencias entre el valor de referencia ($x_{pt,ref}$) y el valor de consenso ($x_{pt,2b}$) para cada contaminante y nivel.")
+} else if (method == "3") {
+  cat("Se evaluó la compatibilidad metrológica calculando las diferencias entre el valor de referencia ($x_{pt,ref}$) y el valor de consenso ($x_{pt,3}$) para cada contaminante y nivel.")
+} else if (method == "4") {
+  cat("Se evaluó la compatibilidad metrológica para el método de expertos, usando el valor de referencia como $x_{pt}$ y la desviación para evaluación de aptitud calculada con la ecuación operativa por contaminante.")
+} else {
+  cat("Se evaluó la compatibilidad metrológica calculando las diferencias entre el valor de referencia ($x_{pt,ref}$) y los valores de consenso ($x_{pt,2a}$, $x_{pt,2b}$ y $x_{pt,3}$) para cada contaminante y nivel.")
+}
+```
+
+```{r metrological_compatibility_table, echo=FALSE}
+if (!is.null(params$metrological_compatibility) && is.data.frame(params$metrological_compatibility) && nrow(params$metrological_compatibility) > 0) {
+  
+  mc_df <- params$metrological_compatibility
+  method <- params$metrological_compatibility_method
+  
+  # Filter columns based on selected method
+  if (method == "2a") {
+    mc_df <- mc_df %>% select(pollutant, n_lab, level, x_pt_ref, x_pt_2a, Diff_Ref_2a)
+    colnames(mc_df) <- c("Contaminante", "N_Lab", "Nivel", "Valor Ref", "Valor Consenso 2a", "Dif (Ref - 2a)")
+  } else if (method == "2b") {
+    mc_df <- mc_df %>% select(pollutant, n_lab, level, x_pt_ref, x_pt_2b, Diff_Ref_2b)
+    colnames(mc_df) <- c("Contaminante", "N_Lab", "Nivel", "Valor Ref", "Valor Consenso 2b", "Dif (Ref - 2b)")
+  } else if (method == "3") {
+    mc_df <- mc_df %>% select(pollutant, n_lab, level, x_pt_ref, x_pt_3, Diff_Ref_3)
+    colnames(mc_df) <- c("Contaminante", "N_Lab", "Nivel", "Valor Ref", "Valor Consenso 3 (Alg A)", "Dif (Ref - 3)")
+  } else if (method == "4") {
+    mc_df <- mc_df %>% select(pollutant, n_lab, level, x_pt_ref, x_pt_4, sigma_pt_4, Diff_Ref_4)
+    colnames(mc_df) <- c("Contaminante", "N_Lab", "Nivel", "Valor Ref", "Valor Expertos 4", "sigma_pt Expertos", "Dif (Ref - 4)")
+  } else {
+    # Fallback: Show all
+    colnames(mc_df) <- c("Contaminante", "N_Lab", "Nivel", "Valor Ref", "Valor Consenso 2a", "Valor Consenso 2b", "Valor Consenso 3 (Alg A)", "Dif (Ref - 2a)", "Dif (Ref - 2b)", "Dif (Ref - 3)")
+  }
+  
+  kable(mc_df, digits = 4, caption = "Tabla. Compatibilidad Metrológica: Diferencias entre Valor de Referencia y Consenso")
+} else {
+  cat("No hay datos de compatibilidad metrológica disponibles.")
+}
+```
+
+# 3. Criterios de Evaluación
+
+## 3.1. Indicadores de Desempeño y criterios de evaluación
+
+Se calcularon los siguientes indicadores de desempeño para cada resultado reportado $x_i$ por cada participante:
+
+```{r performance_criteria_table, echo=FALSE}
+metric <- params$metric
+criteria_df <- data.frame(
+  Indicador = character(),
+  Ecuacion = character(),
+  Evaluacion = character(),
+  stringsAsFactors = FALSE
+)
+
+if (metric == "z") {
+  criteria_df <- data.frame(
+    Indicador = "Puntuación z",
+    Ecuacion = "$z = \\frac{x_i - x_{pt}}{\\sigma_{pt}}$",
+    Evaluacion = "|z| ≤ 2.0: **Satisfactorio**<br>2.0 < |z| < 3.0: **Cuestionable**<br>|z| ≥ 3.0: **Insatisfactorio**",
+    stringsAsFactors = FALSE
+  )
+} else if (metric == "z'") {
+  criteria_df <- data.frame(
+    Indicador = "Puntuación z'",
+    Ecuacion = "$z' = \\frac{x_i - x_{pt}}{\\sqrt{\\sigma_{pt}^2 + u(x_{pt})^2}}$",
+    Evaluacion = "|z'| ≤ 2.0: **Satisfactorio**<br>2.0 < |z'| < 3.0: **Cuestionable**<br>|z'| ≥ 3.0: **Insatisfactorio**",
+    stringsAsFactors = FALSE
+  )
+} else if (metric == "zeta") {
+  criteria_df <- data.frame(
+    Indicador = "Puntuación zeta",
+    Ecuacion = "$\\zeta = \\frac{x_i - x_{pt}}{\\sqrt{u(x_i)^2 + u(x_{pt})^2}}$",
+    Evaluacion = "|zeta| ≤ 2.0: **Satisfactorio**<br>2.0 < |zeta| < 3.0: **Cuestionable**<br>|zeta| ≥ 3.0: **Insatisfactorio**",
+    stringsAsFactors = FALSE
+  )
+} else if (metric == "En") {
+  criteria_df <- data.frame(
+    Indicador = "Puntuación En",
+    Ecuacion = "$E_n = \\frac{x_i - x_{pt}}{\\sqrt{U(x_i)^2 + U(x_{pt})^2}}$",
+    Evaluacion = "|En| ≤ 1.0: **Satisfactorio**<br>|En| > 1.0: **Insatisfactorio**",
+    stringsAsFactors = FALSE
+  )
+}
+
+colnames(criteria_df) <- c("Indicador", "Ecuación", "Evaluación")
+kable(criteria_df, escape = FALSE, caption = "Tabla. Criterios de evaluación del desempeño")
+```
+
+## 3.2. Tratamiento Estadístico de Datos
+
+**Recepción y Validación:** Los resultados reportados por los participantes fueron recibidos a través del Aplicativo Web/Formulario y validados para verificar formato, unidades y completitud.
+
+**Identificación de atípicos:** Se realizó una revisión de los datos para identificar posibles errores y atípicos, según ISO 13528:2022, 6.3.
+Para ello se llevó a cabo la prueba de Grubbs para atípicos, encontrando los siguientes resultados:
+
+```{r grubbs_table, echo=FALSE}
+if (!is.null(params$grubbs_summary) && is.data.frame(params$grubbs_summary) && nrow(params$grubbs_summary) > 0) {
+  
+  grubbs_df <- params$grubbs_summary
+  
+  # Ensure proper column names for display
+  colnames(grubbs_df) <- c("Contaminante", "Nivel", "Participantes Evaluados", "Valor p", "Atípicos detectados", "Participante", "Valor Atípico")
+  
+  kable(grubbs_df, caption = "Tabla 4. Resultados de la prueba de Grubbs para atípicos")
+} else {
+  cat("No se encontraron atípicos o no hay datos suficientes para la prueba de Grubbs.")
+}
+```
+
+# 4. Resultados y Discusión
+
+## 4.1. Resumen General del Desempeño
+
+En esta ronda del EA, participaron `r params$n_lab` laboratorios.
+
+```{r score_summary_table, echo=FALSE}
+if (is_nonempty_df(params$score_summary)) {
+  kable(params$score_summary, caption = "Tabla 5. Resumen de desempeño por indicador")
+} else {
+  cat("No hay datos de resumen de desempeño disponibles.")
+}
+```
+
+## 4.2. Evaluación por Contaminante
+
+A continuación, se presenta un resumen del desempeño para cada contaminante.
+
+```{r heatmaps_loop, echo=FALSE, results='asis', fig.height=4, fig.width=8}
+if (!is.null(params$heatmaps) && length(params$heatmaps) > 0) {
+  for (pol in names(params$heatmaps)) {
+    cat("\n\n### Resultados para", toupper(pol), "\n\n")
+    
+    # Print Heatmap
+    print(params$heatmaps[[pol]])
+    cat("\n\n")
+    
+    cat("Figura. Mapa de Calor para las puntuaciones para", toupper(pol), "por participante.\n\n")
+  }
+} else {
+  cat("No hay mapas de calor disponibles.")
+}
+```
+
+# 5. Conclusiones
+
+**Conformidad General:** El desempeño general de los laboratorios participantes en esta ronda fue positivo.
+
+**Áreas de Preocupación:** Se observaron desempeños cuestionables o insatisfactorios en algunos participantes.
+
+**Acciones Sugeridas para Participantes:**
+Se recomienda a los laboratorios con resultados **Cuestionables** ($2.0 < |z| < 3.0$) investigar las posibles causas de la desviación.
+Se requiere a los laboratorios con resultados **Insatisfactorios** ($|z| \ge 3.0$) realizar una investigación exhaustiva de las causas raíz (e.g., calibración, procedimiento, equipo) e implementar acciones correctivas documentadas.
+
+---
+
+# Anexo A: Valores Asignados y Desviación Estándar para Evaluación de Aptitud
+
+A continuación se presenta el resumen de los valores asignados ($x_{pt}$), incertidumbres ($u(x_{pt})$) y desviaciones estándar para la evaluación de la aptitud ($\sigma_{pt}$) para cada contaminante y nivel. La tabla incluye el método seleccionado y, cuando corresponde, el método de expertos con $x_{pt}$ tomado de la referencia.
+
+```{r annex_a_table, echo=FALSE}
+if (is_nonempty_df(params$xpt_summary)) {
+  
+  xpt_df <- params$xpt_summary
+  
+  # Ensure proper column names for display
+  xpt_df <- safe_rename_by_position(
+    xpt_df,
+    c("Contaminante", "Nivel", "Método", "Valor Asignado (x_pt)", "Incertidumbre u(x_pt)", "u_ref", "Desviación (sigma_pt)")
+  )
+  
+  kable(xpt_df, digits = 4, caption = "Tabla A.1. Resumen de Valores Asignados y Parámetros Estadísticos")
+} else {
+  cat("No hay datos de resumen de valores asignados disponibles.")
+}
+```
+
+# Anexo B: Resumen de Homogeneidad y Estabilidad
+
+## B.1. Resumen de Homogeneidad
+
+```{r homogeneity_summary_table, echo=FALSE}
+if (is_nonempty_df(params$homogeneity_summary)) {
+  
+  hom_df <- params$homogeneity_summary
+  
+  # Proper column names for display
+  hom_df <- safe_rename_by_position(
+    hom_df,
+    c("Contaminante", "Nivel", "Items", "Réplicas", "sigma_pt", "u(x_pt)", "ss", "sw", "Criterio c", "Cumple", "Conclusión")
+  )
+  
+  kable(hom_df, digits = 4, caption = "Tabla B.1. Resumen de Evaluación de Homogeneidad")
+} else {
+  cat("No hay datos de homogeneidad disponibles.")
+}
+```
+
+## B.2. Resumen de Estabilidad
+
+```{r stability_summary_table, echo=FALSE}
+if (is_nonempty_df(params$stability_summary)) {
+  
+  stab_df <- params$stability_summary
+  
+  # Proper column names for display
+  stab_df <- safe_rename_by_position(
+    stab_df,
+    c("Contaminante", "Nivel", "Items", "Réplicas", "sigma_pt", "u(x_pt)", "Diferencia", "Criterio c", "Cumple", "Conclusión")
+  )
+  
+  kable(stab_df, digits = 4, caption = "Tabla B.2. Resumen de Evaluación de Estabilidad")
+} else {
+  cat("No hay datos de estabilidad disponibles.")
+}
+```
+
+# Anexo C: Resultados por Participante
+
+A continuación se presentan los resultados detallados para cada participante.
+
+```{r participant_results_loop, echo=FALSE, results='asis', fig.height=10, fig.width=8}
+if (!is.null(params$participant_data) && length(params$participant_data) > 0) {
+  for (pid in names(params$participant_data)) {
+    p_info <- params$participant_data[[pid]]
+    
+    cat("\n\n## Código:", pid, "\n\n")
+    
+    # Print Matrix Plot
+    if (!is.null(p_info$matrix_plot)) {
+      print(p_info$matrix_plot)
+    }
+    cat("\n\n")
+    cat("Figura. Matriz de desempeño para el participante", pid, "\n\n")
+    
+    # Print Summary Table
+    cat("### Tabla de Resultados\n\n")
+    
+    # Format table for display
+    disp_table <- p_info$summary_table
+    disp_table <- safe_rename_by_position(
+      disp_table,
+      c("Contaminante", "Nivel", "Método", "Resultado", "Incertidumbre", "Valor Asignado", "Incertidumbre VA", "sigma_pt", "Score", "Evaluación")
+    )
+    
+    print(kable(disp_table, digits = 4, caption = paste("Resultados detallados - Participante", pid)))
+    cat("\n\n")
+    cat("\\newpage") # Page break after each participant
+  }
+} else {
+  cat("No hay datos de participantes disponibles.")
+}
+```

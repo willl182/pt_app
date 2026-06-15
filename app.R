@@ -222,6 +222,32 @@ server <- function(input, output, session) {
         class = "text-muted",
         "Los archivos se guardan temporalmente en data/raw/ para ejecutar el preprocesador."
       ),
+      tags$div(
+        style = "margin-top: 12px;",
+        fileInput(
+          "workflow_levels_file",
+          "Cargar tabla de niveles/generadores",
+          accept = ".csv",
+          placeholder = "niveles_calaire.csv"
+        ),
+        tags$small(
+          class = "text-muted",
+          "Columnas requeridas: pollutant, unit, generator_col. Define qué columna del archivo crudo contiene el generador de cada analito."
+        )
+      ),
+      tags$div(
+        style = "margin-top: 12px;",
+        fileInput(
+          "workflow_design_file",
+          "Cargar diseño de estabilidad/homogeneidad",
+          accept = ".csv",
+          placeholder = "diseno_estabilidad_homogeneidad.csv"
+        ),
+        tags$small(
+          class = "text-muted",
+          "Columnas requeridas: source, pollutant, instrument, level, replicate, sample_id, study_type, start_timestamp, end_timestamp, source_column, unit. Define los bloques de tiempo y columnas usadas para homogeneidad/estabilidad."
+        )
+      ),
       div(
         style = "margin-top: 10px;",
         actionButton("workflow_save_raw_files", "Guardar crudos", icon = icon("upload")),
@@ -268,18 +294,27 @@ server <- function(input, output, session) {
   })
 
   observeEvent(input$workflow_run_raw_preprocess, {
+    validate(
+      need(!is.null(input$workflow_levels_file), "Cargue la tabla de niveles/generadores."),
+      need(!is.null(input$workflow_design_file), "Cargue el diseño de estabilidad/homogeneidad.")
+    )
     if (!is.null(input$workflow_raw_files)) {
       save_preprocessor_raw_files(input$workflow_raw_files)
     }
     workflow_status("Ejecutando preprocesamiento interno...")
-    result <- run_workflow_script("scripts/preprocesar_calaire.R")
+    result <- run_workflow_script("scripts/aplicativo/preprocesar_calaire.R", c(
+      "--levels",
+      input$workflow_levels_file$datapath,
+      "--design",
+      input$workflow_design_file$datapath
+    ))
     workflow_status(result$output)
     showNotification(if (result$status == 0) "Preprocesamiento completado." else "Preprocesamiento con errores.", type = if (result$status == 0) "message" else "error")
   })
 
   observeEvent(input$workflow_export_reference, {
     round_id <- as.character(input$workflow_round %||% 1)
-    result <- run_workflow_script("scripts/convert_pt_app_to_calaire_app.R", c(
+    result <- run_workflow_script("scripts/aplicativo/convert_pt_app_to_calaire_app.R", c(
       file.path("data/processed", paste0("ronda_", round_id, "_completa.csv")),
       file.path("data/to_calaire-app", paste0(round_id, "-ref.csv")),
       "reference",
@@ -291,7 +326,7 @@ server <- function(input, output, session) {
 
   observeEvent(input$workflow_export_participants, {
     round_id <- as.character(input$workflow_round %||% 1)
-    result <- run_workflow_script("scripts/convert_pt_app_to_calaire_app.R", c(
+    result <- run_workflow_script("scripts/aplicativo/convert_pt_app_to_calaire_app.R", c(
       file.path("data/processed", paste0("ronda_", round_id, "_completa.csv")),
       file.path("data/to_calaire-app", paste0(round_id, "-pt.csv")),
       "participants",
@@ -303,7 +338,7 @@ server <- function(input, output, session) {
 
   observeEvent(input$workflow_import_participants, {
     round_id <- as.character(input$workflow_round %||% 1)
-    result <- run_workflow_script("scripts/convert_from_calaire_app_to_pt_app.R", c(
+    result <- run_workflow_script("scripts/aplicativo/convert_from_calaire_app_to_pt_app.R", c(
       file.path("data/from_calaire-app", paste0(round_id, "-pt.csv")),
       file.path("data/processed", paste0("ronda_", round_id, "_participantes_from_calaire.csv"))
     ))
@@ -318,7 +353,7 @@ server <- function(input, output, session) {
     } else {
       file.path("data/processed", paste0("ronda_", round_id, "_participantes.csv"))
     }
-    result <- run_workflow_script("scripts/consolidar_ronda_pt_app.R", c(
+    result <- run_workflow_script("scripts/aplicativo/consolidar_ronda_pt_app.R", c(
       round_id,
       participant_file,
       file.path("data/processed", paste0("ronda_", round_id, "_referencia.csv")),
@@ -1352,6 +1387,77 @@ server <- function(input, output, session) {
     )
   }
 
+  # --- Funciones auxiliares para exportación de registros H/E ---
+  build_homogeneity_export_df <- function() {
+    req(hom_data_full())
+    combos <- hom_data_full() %>% distinct(pollutant, level)
+    records <- list()
+    for (i in seq_len(nrow(combos))) {
+      pol <- combos$pollutant[i]
+      lev <- combos$level[i]
+      res <- tryCatch(
+        compute_homogeneity_metrics(pol, lev),
+        error = function(e) list(error = conditionMessage(e))
+      )
+      if (!is.null(res$error)) next
+      records[[length(records) + 1]] <- data.frame(
+        Contaminante = pol,
+        Nivel = lev,
+        Items = res$g,
+        Replicas = res$m,
+        sigma_pt = round(res$sigma_pt, 4),
+        `u(x_pt)` = round(res$u_xpt, 4),
+        ss = round(res$ss, 4),
+        sw = round(res$sw, 4),
+        `Criterio c` = round(res$c_criterion, 4),
+        `Criterio c_exp` = round(res$c_criterion_expanded, 4),
+        Cumple = ifelse(res$ss <= res$c_criterion, "Sí", "No"),
+        `Cumple c_exp` = ifelse(res$ss <= res$c_criterion_expanded, "Sí", "No"),
+        `Conclusión` = gsub("<br>", " | ", res$conclusion),
+        check.names = FALSE,
+        stringsAsFactors = FALSE
+      )
+    }
+    if (length(records) > 0) do.call(rbind, records) else NULL
+  }
+
+  build_stability_export_df <- function() {
+    req(hom_data_full(), stab_data_full())
+    combos <- hom_data_full() %>% distinct(pollutant, level)
+    records <- list()
+    for (i in seq_len(nrow(combos))) {
+      pol <- combos$pollutant[i]
+      lev <- combos$level[i]
+      hom_res <- tryCatch(
+        compute_homogeneity_metrics(pol, lev),
+        error = function(e) list(error = conditionMessage(e))
+      )
+      if (!is.null(hom_res$error)) next
+      stab_res <- tryCatch(
+        compute_stability_metrics(pol, lev, hom_res),
+        error = function(e) list(error = conditionMessage(e))
+      )
+      if (!is.null(stab_res$error)) next
+      records[[length(records) + 1]] <- data.frame(
+        Contaminante = pol,
+        Nivel = lev,
+        Items = stab_res$g,
+        Replicas = stab_res$m,
+        sigma_pt = round(stab_res$stab_sigma_pt, 4),
+        `u(x_pt)` = round(stab_res$stab_u_xpt, 4),
+        Diferencia = round(stab_res$diff_hom_stab, 4),
+        `Criterio c` = round(stab_res$stab_c_criterion, 4),
+        `Criterio c_exp` = round(stab_res$stab_c_criterion_expanded, 4),
+        Cumple = ifelse(stab_res$diff_hom_stab <= stab_res$stab_c_criterion, "Sí", "No"),
+        `Cumple c_exp` = ifelse(stab_res$diff_hom_stab <= stab_res$stab_c_criterion_expanded, "Sí", "No"),
+        `Conclusión` = gsub("<br>", " | ", stab_res$stab_conclusion),
+        check.names = FALSE,
+        stringsAsFactors = FALSE
+      )
+    }
+    if (length(records) > 0) do.call(rbind, records) else NULL
+  }
+
   compute_scores_metrics <- function(summary_df, target_pollutant, target_n_lab, target_level, sigma_pt, u_xpt, k, m = NULL, u_hom = 0, u_stab = 0) {
     if (is.null(summary_df) || nrow(summary_df) == 0) {
       return(list(error = "No hay datos resumen disponibles para los puntajes PT."))
@@ -1705,6 +1811,8 @@ server <- function(input, output, session) {
                 h4("Conclusión (Método nIQR)"),
                 uiOutput("homog_conclusion_niqr"),
                 hr(),
+                downloadButton("download_homogeneity_csv", "Exportar registros de homogeneidad (CSV)", class = "btn-sm btn-outline-secondary mb-2"),
+                hr(),
                 fluidRow(
                   column(width = 6,
                     h4("Resumen del Estudio (Método MADe)"),
@@ -1751,6 +1859,8 @@ server <- function(input, output, session) {
                 hr(),
                 h4("Conclusión (Método nIQR)"),
                 uiOutput("stability_conclusion_niqr"),
+                hr(),
+                downloadButton("download_stability_csv", "Exportar registros de estabilidad (CSV)", class = "btn-sm btn-outline-secondary mb-2"),
                 hr(),
                 fluidRow(
                   column(width = 6,
@@ -4708,6 +4818,47 @@ server <- function(input, output, session) {
     }
   )
 
+  # --- Exportación de registros de Homogeneidad y Estabilidad ---
+  output$download_homogeneity_csv <- downloadHandler(
+    filename = function() {
+      paste0("Registro_Homogeneidad_", Sys.Date(), ".csv")
+    },
+    content = function(file) {
+      df <- build_homogeneity_export_df()
+      if (is.null(df)) {
+        write.csv(data.frame(Mensaje = "No hay datos de homogeneidad disponibles."), file, row.names = FALSE)
+      } else {
+        header_lines <- c(
+          paste0("# Registro de Homogeneidad - Generado: ", Sys.time()),
+          paste0("# Aplicacion: CALAIRE-APP / ISO 13528:2022"),
+          "#"
+        )
+        writeLines(header_lines, file)
+        write.table(df, file, sep = ",", row.names = FALSE, append = TRUE, col.names = TRUE)
+      }
+    }
+  )
+
+  output$download_stability_csv <- downloadHandler(
+    filename = function() {
+      paste0("Registro_Estabilidad_", Sys.Date(), ".csv")
+    },
+    content = function(file) {
+      df <- build_stability_export_df()
+      if (is.null(df)) {
+        write.csv(data.frame(Mensaje = "No hay datos de estabilidad disponibles."), file, row.names = FALSE)
+      } else {
+        header_lines <- c(
+          paste0("# Registro de Estabilidad - Generado: ", Sys.time()),
+          paste0("# Aplicacion: CALAIRE-APP / ISO 13528:2022"),
+          "#"
+        )
+        writeLines(header_lines, file)
+        write.table(df, file, sep = ",", row.names = FALSE, append = TRUE, col.names = TRUE)
+      }
+    }
+  )
+
   output$scores_evaluation_summary <- renderTable(
     {
       eval_res <- scores_evaluation_summary()
@@ -5235,65 +5386,7 @@ server <- function(input, output, session) {
         return(unique(uploaded_df))
       }
     }
-
-    processed_dir <- "data/processed"
-    equipment_files <- list.files(
-      processed_dir,
-      pattern = "_equipos\\.csv$",
-      full.names = TRUE
-    )
-    if (length(equipment_files) == 0) {
-      return(NULL)
-    }
-
-    summary_df <- pt_prep_data()
-    selected_pollutants <- character()
-    if (!is.null(summary_df) && nrow(summary_df) > 0) {
-      if ("n_lab" %in% names(summary_df) && !is.null(input$report_n_lab)) {
-        summary_df <- summary_df %>%
-          filter(as.character(n_lab) == as.character(input$report_n_lab))
-      }
-      if ("pollutant" %in% names(summary_df)) {
-        selected_pollutants <- sort(unique(tolower(summary_df$pollutant)))
-      }
-    }
-
-    file_pollutants <- list(
-      ronda_1_equipos = c("so2", "co"),
-      ronda_2_equipos = c("o3", "no", "no2")
-    )
-    selected_files <- equipment_files
-    if (length(selected_pollutants) > 0) {
-      matched <- equipment_files[vapply(equipment_files, function(path) {
-        key <- tools::file_path_sans_ext(basename(path))
-        pollutants <- file_pollutants[[key]]
-        !is.null(pollutants) && any(selected_pollutants %in% pollutants)
-      }, logical(1))]
-      if (length(matched) > 0) {
-        selected_files <- matched
-      }
-    }
-
-    equipment_list <- lapply(selected_files, function(path) {
-      df <- tryCatch(
-        read.csv(path, stringsAsFactors = FALSE),
-        error = function(e) NULL
-      )
-      if (is.null(df) || !"Codigo_Lab" %in% names(df)) {
-        return(NULL)
-      }
-      unique(df)
-    })
-    equipment_list <- Filter(Negate(is.null), equipment_list)
-    if (length(equipment_list) == 0) {
-      return(NULL)
-    }
-
-    Reduce(
-      function(x, y) full_join(x, y, by = "Codigo_Lab"),
-      equipment_list
-    ) %>%
-      distinct(Codigo_Lab, .keep_all = TRUE)
+    NULL
   })
 
   # Reactivo para Resumen de Grubbs
@@ -5563,7 +5656,9 @@ server <- function(input, output, session) {
         ss = round(hom_res$ss, 4),
         sw = round(hom_res$sw, 4),
         c_criterio = round(hom_res$c_criterion, 4),
+        c_criterio_expandido = round(hom_res$c_criterion_expanded, 4),
         Cumple_Criterio = ifelse(hom_res$ss <= hom_res$c_criterion, "Sí", "No"),
+        Cumple_Criterio_expandido = ifelse(hom_res$ss <= hom_res$c_criterion_expanded, "Sí", "No"),
         Conclusion = hom_res$conclusion,
         stringsAsFactors = FALSE
       )
@@ -5629,7 +5724,9 @@ server <- function(input, output, session) {
         u_xpt = round(stab_res$stab_u_xpt, 4),
         diff_hom_stab = round(stab_res$diff_hom_stab, 4),
         c_criterio = round(stab_res$stab_c_criterion, 4),
+        c_criterio_expandido = round(stab_res$stab_c_criterion_expanded, 4),
         Cumple_Criterio = ifelse(stab_res$diff_hom_stab <= stab_res$stab_c_criterion, "Sí", "No"),
+        Cumple_Criterio_expandido = ifelse(stab_res$diff_hom_stab <= stab_res$stab_c_criterion_expanded, "Sí", "No"),
         Conclusion = stab_res$stab_conclusion,
         stringsAsFactors = FALSE
       )
