@@ -1,8 +1,8 @@
 # Documentación de Funciones
 
-**Fecha de generación:** 2026-01-24 17:27:58.725427
+**Fecha de generación:** 2026-06-16 11:56:44.739595
 
-**Total funciones:** 48
+**Total funciones:** 77
 
 ---
 
@@ -24,6 +24,26 @@
 
 ---
 
+## `build_homogeneity_export_df`
+
+**Archivo:** `app.R`
+
+---
+
+## `build_stability_export_df`
+
+**Archivo:** `app.R`
+
+---
+
+## `build_xpt_summary_row`
+
+**Archivo:** `app.R`
+
+**Parámetros:** `pol, n, lev, subset_data, method_code`
+
+---
+
 ## `calculate_en_score`
 
 @export
@@ -33,6 +53,22 @@
 **Parámetros:** `x, x_pt, U_x, U_xpt`
 
 **Referencia ISO:** ISO 13528:2022, Section 10.5
+
+---
+
+## `calculate_expert_sigma_pt`
+
+**Archivo:** `app.R`
+
+**Parámetros:** `pollutant, x_pt`
+
+---
+
+## `calculate_expert_u_xpt`
+
+**Archivo:** `app.R`
+
+**Parámetros:** `x_pt`
 
 ---
 
@@ -54,7 +90,7 @@
 
 **Archivo:** `pt_homogeneity.R`
 
-**Parámetros:** `sigma_pt, sw_sq`
+**Parámetros:** `sigma_pt, sw, g`
 
 **Referencia ISO:** ISO 13528:2022, Section 9.2.4
 
@@ -132,7 +168,7 @@
 
 **Archivo:** `pt_homogeneity.R`
 
-**Parámetros:** `stab_sample_data, hom_grand_mean`
+**Parámetros:** `stab_sample_data, hom_general_mean_homog, hom_stab_x_pt, hom_stab_sigma_pt`
 
 **Referencia ISO:** ISO 13528:2022, Section 9.3
 
@@ -242,7 +278,7 @@
 
 **Archivo:** `app.R`
 
-**Parámetros:** `summary_df, target_pollutant, target_n_lab, target_level, sigma_pt, u_xpt, k, m = NULL`
+**Parámetros:** `summary_df, target_pollutant, target_n_lab, target_level, sigma_pt, u_xpt, k, m = NULL, u_hom = 0, u_stab = 0`
 
 ---
 
@@ -267,6 +303,18 @@
 **Archivo:** `app.R`
 
 **Parámetros:** `df, score_col, title_suffix, limit_lines = c(2, 3), limit_colors = c("orange", "red"), show_legend = TRUE`
+
+---
+
+## `empty_algo_df`
+
+**Archivo:** `app.R`
+
+---
+
+## `empty_consensus_df`
+
+**Archivo:** `app.R`
 
 ---
 
@@ -318,6 +366,14 @@
 
 ---
 
+## `evaluate_u_xpt_sigma_criterion`
+
+**Archivo:** `app.R`
+
+**Parámetros:** `u_xpt_def, sigma_pt`
+
+---
+
 ## `evaluate_z_score`
 
 @export
@@ -338,11 +394,43 @@
 
 ---
 
+## `format_convergence_method`
+
+**Archivo:** `app.R`
+
+**Parámetros:** `method`
+
+---
+
 ## `format_num`
 
 **Archivo:** `app.R`
 
-**Parámetros:** `x`
+**Parámetros:** `x, n_digits = 4`
+
+---
+
+## `format_numeric_columns`
+
+**Archivo:** `app.R`
+
+**Parámetros:** `df, columns = NULL`
+
+---
+
+## `get_algo_a_stabilization_iter`
+
+**Archivo:** `app.R`
+
+**Parámetros:** `res`
+
+---
+
+## `get_calaire_reference_for_combo`
+
+**Archivo:** `app.R`
+
+**Parámetros:** `target_pollutant, target_level`
 
 ---
 
@@ -386,6 +474,22 @@
 
 ---
 
+## `infer_n_lab`
+
+**Archivo:** `app.R`
+
+**Parámetros:** `df, filename = NULL`
+
+---
+
+## `is_nonempty_df`
+
+**Archivo:** `report_template.Rmd`
+
+**Parámetros:** `x`
+
+---
+
 ## `mad_e_manual`
 
 @export
@@ -414,11 +518,51 @@
 
 ---
 
+## `normalize_participant_uncertainty`
+
+**Archivo:** `app.R`
+
+**Parámetros:** `df`
+
+---
+
+## `normalize_pollutant_code`
+
+**Archivo:** `app.R`
+
+**Parámetros:** `pollutant`
+
+---
+
+## `normalize_u_df`
+
+**Archivo:** `app.R`
+
+**Parámetros:** `df, source_label, notify = TRUE`
+
+---
+
+## `participant_count`
+
+**Archivo:** `report_template.Rmd`
+
+**Parámetros:** `df`
+
+---
+
 ## `plot_scores`
 
 **Archivo:** `app.R`
 
 **Parámetros:** `df, score_col, title, subtitle, ylab, warn_limits = NULL, action_limits = NULL`
+
+---
+
+## `read_hom_stab_csv`
+
+**Archivo:** `app.R`
+
+**Parámetros:** `path, label`
 
 ---
 
@@ -430,13 +574,19 @@
 
 ---
 
+## `round_summary_data`
+
+**Archivo:** `report_template.Rmd`
+
+---
+
 ## `run_algorithm_a`
 
 @export
 
 **Archivo:** `pt_robust_stats.R`
 
-**Parámetros:** `values, ids = NULL, max_iter = 50, tol = 1e-03`
+**Parámetros:** `values, ids = NULL, max_iter = 50, tol = 1e-10`
 
 **Referencia ISO:** ISO 13528:2022, Annex C
 
@@ -450,11 +600,81 @@
 
 ---
 
+## `run_workflow_script`
+
+**Archivo:** `app.R`
+
+**Parámetros:** `script, args = character()`
+
+---
+
+## `safe_filename_stem`
+
+**Archivo:** `app.R`
+
+**Parámetros:** `x, fallback = "Informe_EA"`
+
+---
+
+## `safe_param_df`
+
+**Archivo:** `report_template.Rmd`
+
+**Parámetros:** `x`
+
+---
+
+## `safe_rename_by_position`
+
+**Archivo:** `report_template.Rmd`
+
+**Parámetros:** `df, labels`
+
+---
+
+## `save_preprocessor_raw_files`
+
+**Archivo:** `app.R`
+
+**Parámetros:** `raw_files`
+
+---
+
+## `scalar_or_default`
+
+**Archivo:** `app.R`
+
+**Parámetros:** `x, default`
+
+---
+
+## `score_equation`
+
+**Archivo:** `app.R`
+
+**Parámetros:** `math`
+
+---
+
+## `selected_summary_data`
+
+**Archivo:** `report_template.Rmd`
+
+---
+
 ## `server`
 
 **Archivo:** `app.R`
 
 **Parámetros:** `input, output, session`
+
+---
+
+## `stable_sigfig_value`
+
+**Archivo:** `pt_robust_stats.R`
+
+**Parámetros:** `x, digits = algo_a_significant_figures`
 
 ---
 

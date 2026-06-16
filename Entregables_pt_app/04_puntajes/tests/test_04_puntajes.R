@@ -7,14 +7,10 @@
 
 library(testthat)
 
-# Configurar directorio de trabajo
-old_wd <- setwd("../../..")
-on.exit(setwd(old_wd))
-
-# Cargar datos
+# Cargar datos (rutas relativas a la raíz del proyecto)
 summary_data <- read.csv("data/summary_n4.csv")
 
-# Cargar funciones
+# Cargar funciones (rutas relativas a la raíz del proyecto)
 source("Entregables_pt_app/03_calculos_pt/R/robust_stats.R")
 source("Entregables_pt_app/03_calculos_pt/R/valor_asignado.R")
 source("Entregables_pt_app/03_calculos_pt/R/sigma_pt.R")

@@ -64,7 +64,7 @@ $$
 
 Desviación estándar entre muestras:
 $$
-s_{\bar{x}} = \sqrt{s_{\bar{x}}^2}} = \sqrt{0.00012345} = 0.011111
+s_{\bar{x}} = \sqrt{s_{\bar{x}}^2} = \sqrt{0.00012345} = 0.011111
 $$
 
 ### 2.4 Cálculo de Varianza Dentro de Muestras ($s_w^2$)

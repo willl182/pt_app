@@ -5865,21 +5865,21 @@ server <- function(input, output, session) {
         z_eval = case_when(
           abs(z_score) <= 2 ~ "Satisfactorio",
           abs(z_score) < 3 ~ "Cuestionable",
-          TRUE ~ "Insatisfactorio"
+          TRUE ~ "No satisfactorio"
         ),
         z_prime_eval = case_when(
           abs(z_prime_score) <= 2 ~ "Satisfactorio",
           abs(z_prime_score) < 3 ~ "Cuestionable",
-          TRUE ~ "Insatisfactorio"
+          TRUE ~ "No satisfactorio"
         ),
         zeta_eval = case_when(
           abs(zeta_score) <= 2 ~ "Satisfactorio",
           abs(zeta_score) < 3 ~ "Cuestionable",
-          TRUE ~ "Insatisfactorio"
+          TRUE ~ "No satisfactorio"
         ),
         En_eval = case_when(
           abs(En_score) <= 1 ~ "Satisfactorio",
-          TRUE ~ "Insatisfactorio"
+          TRUE ~ "No satisfactorio"
         )
       )
 
@@ -5897,18 +5897,16 @@ server <- function(input, output, session) {
     # Construir filas
     z_sat <- c("z-score", "Satisfactorio", count_eval("z_eval", "Satisfactorio"))
     z_quest <- c("z-score", "Cuestionable", count_eval("z_eval", "Cuestionable"))
-    z_unsat <- c("z-score", "Insatisfactorio", count_eval("z_eval", "Insatisfactorio"))
-
+    z_unsat <- c("z-score", "No satisfactorio", count_eval("z_eval", "No satisfactorio"))
+    z_sat <- c("z-score", "Satisfactorio", count_eval("z_eval", "Satisfactorio"))
+    z_quest <- c("z-score", "Cuestionable", count_eval("z_eval", "Cuestionable"))
+    zp_unsat <- c("z'-score", "No satisfactorio", count_eval("z_prime_eval", "No satisfactorio"))
     zp_sat <- c("z'-score", "Satisfactorio", count_eval("z_prime_eval", "Satisfactorio"))
     zp_quest <- c("z'-score", "Cuestionable", count_eval("z_prime_eval", "Cuestionable"))
-    zp_unsat <- c("z'-score", "Insatisfactorio", count_eval("z_prime_eval", "Insatisfactorio"))
-
+    zeta_unsat <- c("zeta-score", "No satisfactorio", count_eval("zeta_eval", "No satisfactorio"))
     zeta_sat <- c("zeta-score", "Satisfactorio", count_eval("zeta_eval", "Satisfactorio"))
     zeta_quest <- c("zeta-score", "Cuestionable", count_eval("zeta_eval", "Cuestionable"))
-    zeta_unsat <- c("zeta-score", "Insatisfactorio", count_eval("zeta_eval", "Insatisfactorio"))
-
-    en_sat <- c("En-score", "Satisfactorio", count_eval("En_eval", "Satisfactorio"))
-    en_unsat <- c("En-score", "Insatisfactorio", count_eval("En_eval", "Insatisfactorio"))
+    en_unsat <- c("En-score", "No satisfactorio", count_eval("En_eval", "No satisfactorio"))
 
     # Combinar
     summary_df <- rbind(z_sat, z_quest, z_unsat, zp_sat, zp_quest, zp_unsat, zeta_sat, zeta_quest, zeta_unsat, en_sat, en_unsat)
@@ -6005,7 +6003,7 @@ server <- function(input, output, session) {
         pol_data$score_val <- pol_data$En_score
         pol_data$eval <- case_when(
           abs(pol_data$En_score) <= 1 ~ "Satisfactorio",
-          is.finite(pol_data$En_score) ~ "Insatisfactorio",
+          is.finite(pol_data$En_score) ~ "No satisfactorio",
           TRUE ~ "N/A"
         )
       } else {
@@ -6019,7 +6017,7 @@ server <- function(input, output, session) {
         pol_data$eval <- case_when(
           abs(pol_data$score_val) <= 2 ~ "Satisfactorio",
           abs(pol_data$score_val) < 3 ~ "Cuestionable",
-          is.finite(pol_data$score_val) ~ "Insatisfactorio",
+          is.finite(pol_data$score_val) ~ "No satisfactorio",
           TRUE ~ "N/A"
         )
       }
@@ -6035,7 +6033,7 @@ server <- function(input, output, session) {
           values = c(
             "Satisfactorio" = "#2E7D32",
             "Cuestionable" = "#F9A825",
-            "Insatisfactorio" = "#C62828",
+            "No satisfactorio" = "#C62828",
             "N/A" = "#BDBDBD"
           ),
           drop = FALSE
@@ -6152,9 +6150,9 @@ server <- function(input, output, session) {
         )
 
         eval_val <- if (metric == "En") {
-          case_when(abs(score_val) <= 1 ~ "Satisfactorio", TRUE ~ "Insatisfactorio")
+          case_when(abs(score_val) <= 1 ~ "Satisfactorio", TRUE ~ "No satisfactorio")
         } else {
-          case_when(abs(score_val) <= 2 ~ "Satisfactorio", abs(score_val) < 3 ~ "Cuestionable", TRUE ~ "Insatisfactorio")
+          case_when(abs(score_val) <= 2 ~ "Satisfactorio", abs(score_val) < 3 ~ "Cuestionable", TRUE ~ "No satisfactorio")
         }
 
         table_rows[[i]] <- data.frame(

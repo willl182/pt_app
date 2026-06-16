@@ -21,7 +21,7 @@ Usamos datos del archivo `data/homogeneity.csv` para CO a nivel 2-μmol/mol:
 
 ```r
 # Cargar datos
-hom_data <- read.csv("../../data/homogeneity.csv")
+hom_data <- read.csv("data/homogeneity.csv")
 
 # Filtrar CO nivel 2-μmol/mol
 co_nivel2 <- hom_data[
@@ -108,7 +108,7 @@ Usamos datos del archivo `data/stability.csv` para CO nivel 2-μmol/mol:
 
 ```r
 # Cargar datos
-stab_data <- read.csv("../../data/stability.csv")
+stab_data <- read.csv("data/stability.csv")
 
 # Filtrar CO nivel 2-μmol/mol
 co_nivel2_stab <- stab_data[
@@ -153,7 +153,7 @@ Usamos datos del archivo `data/summary_n4.csv` para CO nivel 2-μmol/mol:
 
 ```r
 # Cargar datos
-summary_data <- read.csv("../../data/summary_n4.csv")
+summary_data <- read.csv("data/summary_n4.csv")
 
 # Filtrar CO nivel 2-μmol/mol
 co_nivel2_sum <- summary_data[
@@ -265,16 +265,18 @@ $$\sigma_{pt} = s^* = 0.06$$
 ## Uso de las Funciones
 
 ```r
-# Cargar todas las funciones
-source("../../R/homogeneity.R")
-source("../../R/stability.R")
-source("../../R/valor_asignado.R")
-source("../../R/sigma_pt.R")
+# Referencia vigente: ptcalc/R/pt_robust_stats.R y ptcalc/R/pt_homogeneity.R
+# Funciones adicionales del entregable 03:
+source("ptcalc/R/pt_robust_stats.R")
+source("ptcalc/R/pt_homogeneity.R")
+source("Entregables_pt_app/03_calculos_pt/R/stability.R")
+source("Entregables_pt_app/03_calculos_pt/R/valor_asignado.R")
+source("Entregables_pt_app/03_calculos_pt/R/sigma_pt.R")
 
 # Cargar datos
-hom_data <- read.csv("../../data/homogeneity.csv")
-stab_data <- read.csv("../../data/stability.csv")
-summary_data <- read.csv("../../data/summary_n4.csv")
+hom_data <- read.csv("data/homogeneity.csv")
+stab_data <- read.csv("data/stability.csv")
+summary_data <- read.csv("data/summary_n4.csv")
 
 # 1. Calcular sigma_pt para todos los contaminantes/niveles
 sigma_dict <- crear_diccionario_sigma_pt(summary_data, metodo = "algoritmo_a")
@@ -289,9 +291,9 @@ resultados_stab <- analizar_estabilidad_todos(stab_data, hom_data, resultados_ho
 resultados_va <- calcular_valor_asignado_todos(summary_data, metodo = "algoritmo_a")
 
 # Ver resultados
-print(resultados_hom$co_2-μmol/mol)
-print(resultados_stab$co_2-μmol/mol)
-print(resultados_va$co_2-μmol/mol)
+print(resultados_hom$`co_2-μmol/mol`)
+print(resultados_stab$`co_2-μmol/mol`)
+print(resultados_va$`co_2-μmol/mol`)
 ```
 
 ---

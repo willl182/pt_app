@@ -2,7 +2,7 @@
 # Titulo: test_02_firma_funciones.R
 # Entregable: 02
 # Descripcion: Verifica que las funciones existan y ejecuten correctamente
-# Entrada: pt_app/R/*.R, pt_app/app.R
+# Entrada: pt_app/R/*.R, pt_app/ptcalc/R/*.R, pt_app/app.R
 # Salida: data.frame con resultados de verificacion
 # Referencia: N/A
 # ===================================================================
@@ -10,15 +10,34 @@
 library(testthat)
 library(tidyverse)
 
-# Cargar las funciones de los archivos R
-source("../../../R/pt_homogeneity.R")
-source("../../../R/pt_robust_stats.R")
-source("../../../R/pt_scores.R")
-source("../../../R/utils.R")
+# Cargar las funciones desde la raiz del proyecto
+source("R/pt_homogeneity.R")
+source("R/pt_robust_stats.R")
+source("R/pt_scores.R")
+source("R/utils.R")
+source("ptcalc/R/pt_homogeneity.R")
+source("ptcalc/R/pt_robust_stats.R")
+source("ptcalc/R/pt_scores.R")
+
+# Detectar firma de calculate_homogeneity_criterion_expanded
+# La version en R/ usa 3 args (sigma_pt, sw, g)
+# La version en ptcalc/R/ usa 4 args con defaults:
+#   - 2 args: (sigma_pt, u_sigma_pt)
+#   - 3 args: (sigma_pt, sw, g)
+args_che <- names(formals(calculate_homogeneity_criterion_expanded))
+if ("u_sigma_pt" %in% args_che) {
+  # ptcalc version: usar 2 args como caso principal
+  che_parametros <- c("sigma_pt", "u_sigma_pt")
+  che_test_valores <- list(sigma_pt = 0.5, u_sigma_pt = 0.1)
+} else {
+  # app R/ version: usar 3 args obligatorios
+  che_parametros <- c("sigma_pt", "sw", "g")
+  che_test_valores <- list(sigma_pt = 0.5, sw = 0.1, g = 10)
+}
 
 # Funciones a probar (lista principal)
 funciones_principales <- list(
-  # Estadísticos robustos
+  # Estadisticos robustos
   list(
     nombre = "calculate_niqr",
     archivo = "pt_robust_stats.R",
@@ -40,7 +59,7 @@ funciones_principales <- list(
       ids = 1:5
     )
   ),
-  
+
   # Puntajes
   list(
     nombre = "calculate_z_score",
@@ -78,7 +97,7 @@ funciones_principales <- list(
     parametros = c("en"),
     test_valores = list(en = 0.9)
   ),
-  
+
   # Homogeneidad
   list(
     nombre = "calculate_homogeneity_stats",
@@ -95,8 +114,8 @@ funciones_principales <- list(
   list(
     nombre = "calculate_homogeneity_criterion_expanded",
     archivo = "pt_homogeneity.R",
-    parametros = c("sigma_pt", "sw", "g"),
-    test_valores = list(sigma_pt = 0.5, sw = 0.1, g = 10)
+    parametros = che_parametros,
+    test_valores = che_test_valores
   ),
   list(
     nombre = "evaluate_homogeneity",
@@ -142,20 +161,20 @@ context("Entregable 02 - Verificación de Funciones")
 test_that("Funciones principales existen y son ejecutables", {
   for (f in funciones_principales) {
     nombre <- f$nombre
-    
+
     # Verificar que la función existe
     expect_true(exists(nombre, mode = "function"),
                 info = paste("La función", nombre, "debe existir"))
-    
+
     # Intentar ejecutar la función con valores de prueba
     test_args <- f$test_valores
-    
+
     resultado <- tryCatch({
       do.call(nombre, test_args)
     }, error = function(e) {
       list(error = e$message)
     })
-    
+
     # Verificar que no haya error
     hay_error <- if(is.list(resultado)) {
       !is.null(resultado$error)
@@ -197,12 +216,12 @@ generar_reporte <- function() {
     status = character(),
     stringsAsFactors = FALSE
   )
-  
+
   # Verificar existencia de cada función
   for (f in funciones_principales) {
     nombre <- f$nombre
     existe <- exists(nombre, mode = "function")
-    
+
     resultados <- rbind(resultados, data.frame(
       test = paste0("existe_", nombre),
       resultado = as.character(existe),
@@ -210,7 +229,7 @@ generar_reporte <- function() {
       status = ifelse(existe, "PASS", "FAIL"),
       stringsAsFactors = FALSE
     ))
-    
+
     # Ejecutar función
     if (existe) {
       test_args <- f$test_valores
@@ -220,7 +239,7 @@ generar_reporte <- function() {
       }, error = function(e) {
         "ERROR"
       })
-      
+
       resultados <- rbind(resultados, data.frame(
         test = paste0("ejecuta_", nombre),
         resultado = resultado,
@@ -230,7 +249,7 @@ generar_reporte <- function() {
       ))
     }
   }
-  
+
   return(resultados)
 }
 
@@ -240,7 +259,7 @@ resultados <- generar_reporte()
 print(resultados)
 
 # Guardar CSV
-ruta_csv <- "../test_02_resultados.csv"
+ruta_csv <- "Entregables_pt_app/02_funciones_usadas/test_02_resultados.csv"
 cat("\nGuardando resultados en:", ruta_csv, "\n")
 write.csv(resultados, ruta_csv, row.names = FALSE)
 cat("\nResultados guardados correctamente.\n")

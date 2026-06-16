@@ -121,8 +121,7 @@ run_algorithm_a <- function(values, ids = NULL, max_iter = 50, tol = 1e-06) {
       weights = data.frame(id = ids, valor = values, winsorizado = values,
                            fue_winsorizado = FALSE, stringsAsFactors = FALSE),
       converged = TRUE,
-      n_winsorized = 0L,
-      error = NULL
+      n_winsorized = 0L
     ))
   }
 
@@ -149,11 +148,10 @@ run_algorithm_a <- function(values, ids = NULL, max_iter = 50, tol = 1e-06) {
         assigned_value = x_new,
         robust_sd = 0,
         iterations = if (length(iteration_records) > 0) do.call(rbind, iteration_records) else data.frame(),
-        weights = data.frame(id = ids, valor = values, winsorizado = winsorized,
-                             fue_winsorizado = is_winsorized, stringsAsFactors = FALSE),
+        weights = data.frame(id = ids, valor = values, winsorizado = winsorizado,
+                               fue_winsorizado = is_winsorizado, stringsAsFactors = FALSE),
         converged = FALSE,
-        n_winsorized = sum(is_winsorized),
-        error = NULL
+        n_winsorized = sum(is_winsorizado)
       ))
     }
 
@@ -229,10 +227,8 @@ run_algorithm_a <- function(values, ids = NULL, max_iter = 50, tol = 1e-06) {
 #'
 #' @export
 calculate_z_score <- function(x, x_pt, sigma_pt) {
-  if (!is.finite(sigma_pt) || sigma_pt <= 0) {
-    return(NA_real_)
-  }
-  (x - x_pt) / sigma_pt
+  valid <- is.finite(sigma_pt) & sigma_pt > 0
+  ifelse(valid, (x - x_pt) / sigma_pt, NA_real_)
 }
 
 #' Calcular puntaje z' (z-prime)
@@ -253,10 +249,8 @@ calculate_z_score <- function(x, x_pt, sigma_pt) {
 #' @export
 calculate_z_prime_score <- function(x, x_pt, sigma_pt, u_xpt) {
   denominator <- sqrt(sigma_pt^2 + u_xpt^2)
-  if (!is.finite(denominator) || denominator <= 0) {
-    return(NA_real_)
-  }
-  (x - x_pt) / denominator
+  valid <- is.finite(denominator) & denominator > 0
+  ifelse(valid, (x - x_pt) / denominator, NA_real_)
 }
 
 #' Calcular puntaje zeta
@@ -277,10 +271,8 @@ calculate_z_prime_score <- function(x, x_pt, sigma_pt, u_xpt) {
 #' @export
 calculate_zeta_score <- function(x, x_pt, u_x, u_xpt) {
   denominator <- sqrt(u_x^2 + u_xpt^2)
-  if (!is.finite(denominator) || denominator <= 0) {
-    return(NA_real_)
-  }
-  (x - x_pt) / denominator
+  valid <- is.finite(denominator) & denominator > 0
+  ifelse(valid, (x - x_pt) / denominator, NA_real_)
 }
 
 #' Calcular puntaje En (Error normalizado)
@@ -301,10 +293,8 @@ calculate_zeta_score <- function(x, x_pt, u_x, u_xpt) {
 #' @export
 calculate_en_score <- function(x, x_pt, U_x, U_xpt) {
   denominator <- sqrt(U_x^2 + U_xpt^2)
-  if (!is.finite(denominator) || denominator <= 0) {
-    return(NA_real_)
-  }
-  (x - x_pt) / denominator
+  valid <- is.finite(denominator) & denominator > 0
+  ifelse(valid, (x - x_pt) / denominator, NA_real_)
 }
 
 #' Evaluar puntaje z (o z', zeta)
@@ -717,10 +707,10 @@ calculate_scores_participants <- function(df, x_pt_val, sigma_pt_val, u_xpt_val,
       U_xpt = k * u_xpt_val
     ) %>%
     dplyr::mutate(
-      z_score = (mean_value - x_pt) / sigma_pt,
-      z_prime_score = (mean_value - x_pt) / sqrt(sigma_pt^2 + u_xpt^2),
-      zeta_score = (mean_value - x_pt) / sqrt(u_x^2 + u_xpt^2),
-      En_score = (mean_value - x_pt) / sqrt(U_x^2 + U_xpt^2),
+      z_score = calculate_z_score(mean_value, x_pt, sigma_pt),
+      z_prime_score = calculate_z_prime_score(mean_value, x_pt, sigma_pt, u_xpt),
+      zeta_score = calculate_zeta_score(mean_value, x_pt, u_x, u_xpt),
+      En_score = calculate_en_score(mean_value, x_pt, U_x, U_xpt),
       z_score_eval = sapply(z_score, evaluate_z_score),
       z_prime_score_eval = sapply(z_prime_score, evaluate_z_score),
       zeta_score_eval = sapply(zeta_score, evaluate_z_score),

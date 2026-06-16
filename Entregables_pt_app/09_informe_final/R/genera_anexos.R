@@ -89,6 +89,8 @@ for (analito in analitos_unicos) {
         g = stats$g,
         m = stats$m,
         grand_mean = stats$grand_mean,
+        x_pt = stats$x_pt,
+        sigma_pt = stats$sigma_pt,
         s_x_bar = stats$s_xt,
         sw = stats$sw,
         ss = stats$ss,
@@ -106,7 +108,7 @@ write.csv(hom_df, file.path(anexos_dir, "homogeneidad_resultados.csv"), row.name
 cat("  Guardado: homogeneidad_resultados.csv (", nrow(hom_df), " registros)\n")
 
 # ===================================================================
-# 2. ESTABILIDAD POR ANALITO
+# 2. ESTABILIDAD POR ANALITO/NIVEL
 # ===================================================================
 
 cat("\nCalculando estabilidad...\n")
@@ -116,36 +118,55 @@ stab_results <- list()
 for (analito in analitos_unicos) {
   cat("  Analito:", analito, "\n")
   
-  # Obtener media de homogeneidad para este analito
-  hom_analito <- hom_df[hom_df$pollutant == analito, ]
+  niveles_unicos <- unique(stab_data$level[stab_data$pollutant == analito])
   
-  if (nrow(hom_analito) > 0) {
-    hom_mean <- mean(hom_analito$grand_mean, na.rm = TRUE)
-  } else {
-    hom_mean <- NA
-  }
-  
-  # Filtrar datos de estabilidad
-  stab_filtered <- stab_data[stab_data$pollutant == analito, ]
-  
-  if (nrow(stab_filtered) > 0) {
-    stats <- calculate_stability_stats(stab_filtered$value, hom_mean)
+  for (nivel in niveles_unicos) {
+    # Filtrar datos de estabilidad
+    stab_filtered <- stab_data[stab_data$pollutant == analito & stab_data$level == nivel, ]
     
-    # Criterio
-    sigma_pt <- 0.03
-    criterion <- 0.3 * sigma_pt
+    # Obtener datos de homogeneidad para este analito/nivel
+    hom_row <- hom_df[hom_df$pollutant == analito & hom_df$level == nivel, ]
     
-    evaluacion <- evaluate_stability(stats$difference, criterion)
-    
-    stab_results[[analito]] <- data.frame(
-      pollutant = analito,
-      hom_mean = hom_mean,
-      stab_mean = stats$stab_mean,
-      difference = stats$difference,
-      criterion = criterion,
-      evaluacion = evaluacion,
-      stringsAsFactors = FALSE
-    )
+    if (nrow(hom_row) > 0 && nrow(stab_filtered) > 0) {
+      hom_mean <- hom_row$grand_mean
+      hom_x_pt <- hom_row$x_pt
+      hom_sigma_pt <- hom_row$sigma_pt
+      
+      # Construir matriz (muestras x réplicas)
+      sample_ids <- unique(stab_filtered$sample_id)
+      replicates <- unique(stab_filtered$replicate)
+      
+      matriz_stab <- matrix(NA, nrow = length(sample_ids), ncol = length(replicates))
+      
+      for (i in seq_along(sample_ids)) {
+        for (j in seq_along(replicates)) {
+          idx <- stab_filtered$sample_id == sample_ids[i] & 
+                 stab_filtered$replicate == replicates[j]
+          matriz_stab[i, j] <- stab_filtered$value[idx]
+        }
+      }
+      
+      stats <- calculate_stability_stats(matriz_stab, hom_mean, hom_x_pt, hom_sigma_pt)
+      
+      if (is.null(stats$error)) {
+        # Criterio
+        sigma_pt <- 0.03
+        criterion <- 0.3 * sigma_pt
+        
+        evaluacion <- evaluate_stability(stats$difference, criterion)
+        
+        stab_results[[paste0(analito, "_", nivel)]] <- data.frame(
+          pollutant = analito,
+          level = nivel,
+          hom_mean = hom_mean,
+          stab_mean = stats$stab_mean,
+          difference = stats$difference,
+          criterion = criterion,
+          evaluacion = evaluacion,
+          stringsAsFactors = FALSE
+        )
+      }
+    }
   }
 }
 
@@ -190,9 +211,9 @@ for (analito in analitos_summary) {
         median = median(valores, na.rm = TRUE),
         niqr = niqr,
         made = made,
-        algo_a_x = if (!is.null(algo_a$error)) algo_a$assigned_value else NA,
-        algo_a_sd = if (!is.null(algo_a$error)) algo_a$robust_sd else NA,
-        algo_a_converged = if (!is.null(algo_a$error)) algo_a$converged else NA,
+        algo_a_x = if (is.null(algo_a$error)) algo_a$assigned_value else NA,
+        algo_a_sd = if (is.null(algo_a$error)) algo_a$robust_sd else NA,
+        algo_a_converged = if (is.null(algo_a$error)) algo_a$converged else NA,
         stringsAsFactors = FALSE
       )
     }
@@ -214,7 +235,9 @@ scores_results <- list()
 for (analito in analitos_summary) {
   cat("  Analito:", analito, "\n")
   
-  for (nivel in niveles_summary) {
+  niveles_summary_pt <- unique(summary_data$level[summary_data$pollutant == analito])
+  
+  for (nivel in niveles_summary_pt) {
     # Filtrar datos
     all_data <- summary_data[summary_data$pollutant == analito &
                            summary_data$level == nivel, ]

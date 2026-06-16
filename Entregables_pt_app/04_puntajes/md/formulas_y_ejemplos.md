@@ -8,7 +8,7 @@
 
 1. [Puntaje z](#1-puntaje-z)
 2. [Puntaje z' (z-prima)](#2-puntaje-z-z-prima)
-3. [Puntaje ζ (zeta)]#3-puntaje-ζ-zeta)
+3. [Puntaje ζ (zeta)](#3-puntaje-ζ-zeta)
 4. [Puntaje En](#4-puntaje-en)
 5. [Ejemplos de Cálculo](#5-ejemplos-de-cálculo)
 
@@ -27,11 +27,11 @@ Donde:
 
 ### Criterios de Evaluación
 
-| |z| | Evaluación |
-|----|-----------|
-| |z| ≤ 2 | Satisfactorio |
-| 2 < |z| < 3 | Cuestionable |
-| |z| ≥ 3 | No satisfactorio |
+| Criterio | Evaluación |
+|----------|------------|
+| \|z\| <= 2 | Satisfactorio |
+| 2 < \|z\| < 3 | Cuestionable |
+| \|z\| >= 3 | No satisfactorio |
 
 ### Ejemplo
 
@@ -133,10 +133,10 @@ Donde:
 
 ### Criterios de Evaluación
 
-| |En| | Evaluación |
-|----|-----------|
-| |En| ≤ 1 | Satisfactorio |
-| |En| > 1 | No satisfactorio |
+| Criterio | Evaluación |
+|----------|------------|
+| \|E_n\| <= 1 | Satisfactorio |
+| \|E_n\| > 1 | No satisfactorio |
 
 ### Ejemplo
 
@@ -241,7 +241,13 @@ Evaluación: **No satisfactorio** (|ζ| = 7.447 ≥ 3)
 $$E_n = \frac{2.18 - 2.0135}{\sqrt{0.04^2 + 0.02^2}} = \frac{0.1665}{0.04472} = 3.723$$
 Evaluación: **No satisfactorio** (|En| = 3.723 > 1)
 
-**Observación:** Cuando el participante reporta incertidumbre (u_x, U_x) relativamente grande comparada con σ_pt, los puntajes ζ y En pueden ser más severos que z y z'.
+**Observación:** Los puntajes ζ y En son más sensibles cuando la incertidumbre reportada por el participante es pequeña frente a la desviación respecto al valor asignado. Si el denominador aumenta por incertidumbres mayores, la magnitud del puntaje disminuye.
+
+---
+
+## Nota de Actualización 2026-06-16
+
+Este documento conserva fórmulas y ejemplos del módulo histórico de puntajes. Para la aplicación vigente, contrastar las fórmulas con `ptcalc/R/pt_scores.R` y con los cálculos inline de reportes en `app.R` antes de usar este documento como especificación normativa única.
 
 ---
 

@@ -10,10 +10,11 @@
 library(roxygen2)
 library(tidyverse)
 
-# Directorios
-app_file <- "../../../app.R"
-r_dir <- "../../../R/"
-reports_dir <- "../../../reports/"
+# Directorios (desde la raiz del proyecto)
+app_file <- "app.R"
+r_dir <- "R/"
+ptcalc_r_dir <- "ptcalc/R/"
+reports_dir <- "reports/"
 
 cat("Directorio de trabajo actual:", getwd(), "\n")
 cat("Archivo app.R:", app_file, "- Existe:", file.exists(app_file), "\n")
@@ -156,6 +157,10 @@ cat("Procesando archivos...\n\n")
 funciones_R <- procesar_directorio(r_dir)
 cat("Funciones en R/:", nrow(funciones_R), "\n")
 
+# Archivos R en el directorio ptcalc/R/
+funciones_ptcalc <- procesar_directorio(ptcalc_r_dir)
+cat("Funciones en ptcalc/R/:", nrow(funciones_ptcalc), "\n")
+
 # Archivo app.R
 funciones_app <- extraer_firmas(app_file)
 cat("Funciones en app.R:", nrow(funciones_app), "\n")
@@ -179,6 +184,7 @@ if (file.exists(report_template)) {
 # Combinar todas las funciones
 todas_funciones <- bind_rows(
   funciones_R,
+  funciones_ptcalc,
   funciones_app,
   funciones_report
 )
@@ -194,8 +200,9 @@ todas_funciones <- todas_funciones %>%
 cat("Total funciones únicas:", nrow(todas_funciones), "\n\n")
 
 # Guardar en CSV
-write.csv(todas_funciones, "../md/funciones_extraidas.csv", row.names = FALSE)
-cat("Resultados guardados en: Entregables_pt_app/02_funciones_usadas/md/funciones_extraidas.csv\n\n")
+out_csv <- "Entregables_pt_app/02_funciones_usadas/funciones_extraidas.csv"
+write.csv(todas_funciones, out_csv, row.names = FALSE)
+cat("Resultados guardados en:", out_csv, "\n\n")
 
 # Imprimir resumen
 cat("=== RESUMEN DE FUNCIONES ===\n\n")
@@ -229,7 +236,8 @@ crear_markdown_documentacion <- function(funciones) {
     contenido <- paste0(contenido, "---\n\n")
   }
   
-  writeLines(contenido, "../md/documentacion_funciones.md")
+  out_md <- "Entregables_pt_app/02_funciones_usadas/md/documentacion_funciones.md"
+  writeLines(contenido, out_md)
 }
 
 crear_markdown_documentacion(todas_funciones)

@@ -1,0 +1,29 @@
+=== LOG DE GENERACIÓN DE ANEXOS ===
+Fecha: 2026-06-16 11:58:38
+Script: genera_anexos.R
+
+--- RESUMEN DE ARCHIVOS GENERADOS ---
+1. homogeneidad_resultados.csv: 31 registros
+2. estabilidad_resultados.csv: 31 registros
+3. estadisticos_robustos.csv: 30 registros
+4. puntajes_pt.csv: 270 registros
+5. resumen_puntajes.csv: 30 registros
+
+--- RESUMEN DE HOMOGENEIDAD ---
+Total evaluaciones: 31
+Aceptables: 16
+No aceptables: 15
+
+--- RESUMEN DE ESTABILIDAD ---
+Total evaluaciones: 31
+Estables: 9
+No estables: 22
+
+--- RESUMEN DE PUNTAJES Z ---
+Total puntajes z: 270
+Satisfactorios: 244
+Cuestionables: 11
+No satisfactorios: 15
+
+--- FIN DEL LOG ---
+

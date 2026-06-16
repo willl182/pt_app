@@ -7,16 +7,15 @@
 
 library(testthat)
 
-# Configurar directorio de trabajo
-old_wd <- setwd("../../..")
-on.exit(setwd(old_wd))
+# Nota: Ejecutar este script desde la raíz del proyecto
+# Rscript Entregables_pt_app/03_calculos_pt/tests/test_03_calculos_pt.R
 
 # Cargar datos
 hom_data <- read.csv("data/homogeneity.csv")
 stab_data <- read.csv("data/stability.csv")
 summary_data <- read.csv("data/summary_n4.csv")
 
-# Cargar funciones
+# Cargar funciones (referencia vigente: ptcalc/R/pt_robust_stats.R, ptcalc/R/pt_homogeneity.R)
 source("Entregables_pt_app/03_calculos_pt/R/robust_stats.R")
 source("Entregables_pt_app/03_calculos_pt/R/homogeneity.R")
 source("Entregables_pt_app/03_calculos_pt/R/stability.R")
@@ -472,7 +471,68 @@ test_that("comparación de métodos para sigma_pt", {
 })
 
 # ===================================================================
+# RESULTADOS
+# ===================================================================
+
+# Guardar resultados de ejecución en CSV
+resultados_csv <- data.frame(
+  test = character(),
+  status = character(),
+  stringsAsFactors = FALSE
+)
+
+# Ejecutar flujo completo y extraer métricas clave
+sigma_dict <- crear_diccionario_sigma_pt(summary_data, metodo = "algoritmo_a")
+resultados_hom <- analizar_homogeneidad_todos(hom_data, sigma_dict)
+resultados_stab <- analizar_estabilidad_todos(stab_data, hom_data, resultados_hom)
+
+# Extraer resultados para CO nivel 2-μmol/mol
+hom_co <- resultados_hom$`co_2-μmol/mol`
+sta_co <- resultados_stab$`co_2-μmol/mol`
+
+# Calcular valores asignados con diferentes métodos
+va_ref <- calcular_valor_asignado(summary_data, "co", "2-μmol/mol", "referencia")
+va_made <- calcular_valor_asignado(summary_data, "co", "2-μmol/mol", "consenso_made")
+va_niqr <- calcular_valor_asignado(summary_data, "co", "2-μmol/mol", "consenso_niqr")
+va_algo_a <- calcular_valor_asignado(summary_data, "co", "2-μmol/mol", "algoritmo_a")
+
+resultados_csv <- rbind(resultados_csv, data.frame(
+  test = c(
+    "sigma_pt_co_2umol",
+    "hom_cumple_criterio",
+    "hom_cumple_expandido",
+    "hom_ss",
+    "hom_c",
+    "stab_cumple_criterio",
+    "stab_diff",
+    "stab_c",
+    "va_referencia",
+    "va_consenso_made",
+    "va_consenso_niqr",
+    "va_algoritmo_a"
+  ),
+  valor = c(
+    if (!is.null(sigma_dict$`co_2-μmol/mol`)) sigma_dict$`co_2-μmol/mol` else NA,
+    if (!is.null(hom_co$evaluacion$pasa_criterio)) as.character(hom_co$evaluacion$pasa_criterio) else NA,
+    if (!is.null(hom_co$evaluacion$pasa_expandido)) as.character(hom_co$evaluacion$pasa_expandido) else NA,
+    if (!is.null(hom_co$stats$ss)) hom_co$stats$ss else NA,
+    if (!is.null(hom_co$c_criterion)) hom_co$c_criterion else NA,
+    if (!is.null(sta_co$evaluacion$pasa_criterio)) as.character(sta_co$evaluacion$pasa_criterio) else NA,
+    if (!is.null(sta_co$diff_hom_est)) sta_co$diff_hom_est else NA,
+    if (!is.null(sta_co$c_criterion)) sta_co$c_criterion else NA,
+    if (!is.null(va_ref$valor_asignado)) va_ref$valor_asignado else NA,
+    if (!is.null(va_made$valor_asignado)) va_made$valor_asignado else NA,
+    if (!is.null(va_niqr$valor_asignado)) va_niqr$valor_asignado else NA,
+    if (!is.null(va_algo_a$valor_asignado)) va_algo_a$valor_asignado else NA
+  ),
+  stringsAsFactors = FALSE
+))
+
+write.csv(resultados_csv, "Entregables_pt_app/03_calculos_pt/tests/test_03_resultados.csv", row.names = FALSE)
+
+# ===================================================================
 # FINAL
 # ===================================================================
 
 cat("\n=== TESTS COMPLETADOS - Entregable 03 ===\n")
+cat("Resultados guardados en: Entregables_pt_app/03_calculos_pt/tests/test_03_resultados.csv\n")
