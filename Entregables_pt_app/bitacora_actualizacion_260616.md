@@ -9,7 +9,7 @@
 | Entregable | Subagente | Estado recomendado |
 |------------|-----------|--------------------|
 | 01 | `entregable_01_baseline_curator` | Histórico validado |
-| 02 | `entregable_02_function_inventory_auditor` | Requiere regeneración |
+| 02 | `entregable_02_function_inventory_auditor` | Regenerado y enriquecido |
 | 03 | `entregable_03_stat_engine_documenter` | Histórico / requiere alineación con `ptcalc` |
 | 04 | `entregable_04_scoring_documenter` | Histórico / parcialmente vigente |
 | 05 | `entregable_05_ui_prototype_mapper` | Histórico / prototipo parcial |
@@ -23,7 +23,7 @@
 | Entregable | Discrepancia principal | Acción aplicada |
 |------------|------------------------|-----------------|
 | 01 | Redacción imprecisa sobre comparación de sintaxis vs hashes. | Se aclaró validación por hash SHA256 y parseo sintáctico. |
-| 02 | Inventario de 48 funciones no cubre código vigente completo. | Se marcó como requiere regeneración y se amplió fuente canónica sugerida. |
+| 02 | Inventario de 48 funciones era escueto y no cubría el código vigente. | Se reescribió `R/lista_funciones.R` para parsear roxygen2 completo, se añadieron anotaciones manuales para funciones de `app.R`/`report_template.Rmd`, se generó documentación de 77 funciones con descripciones, ejemplos y referencias ISO, y se exportó a DOCX. |
 | 03 | Scripts standalone históricos divergen de `ptcalc/R/`. | Se documentó estado histórico y necesidad de contraste técnico. |
 | 04 | Módulo histórico no cubre todo el flujo activo de `app.R`. | Se documentó vigencia parcial y se corrigieron errores Markdown/conceptuales. |
 | 05 | Prototipo HTML no refleja la navegación actual. | Se reclasificó como prototipo histórico parcial. |
@@ -35,6 +35,7 @@
 ## Riesgos Técnicos Detectados
 
 - ~~`app.R` y `ptcalc/R/pt_homogeneity.R` deben revisarse por posible divergencia de firma en `calculate_homogeneity_criterion_expanded()`~~ **RESUELTO:** firma polimórfica implementada en `ptcalc/R/pt_homogeneity.R` (acepta 2 o 3 args).
+- ~~Documentación de funciones (`documentacion_funciones.md`) era escueta, sin descripciones ni ejemplos.~~ **RESUELTO:** regeneración completa del Entregable 02 con 77 funciones documentadas, parser de roxygen2 completo y anotaciones manuales.
 - Hay dos trayectorias de puntajes: funciones en `ptcalc/R/pt_scores.R` y cálculos inline en `app.R`. Se normalizó la etiqueta `"No satisfactorio"` en `app.R` para consistencia con `ptcalc`.
 - Algunos tests de entregables escriben CSV de resultado y dependen del directorio de trabajo.
 - Los DOCX se regeneraron con `pandoc` desde los MD actualizados. Los PDF históricos se conservan como evidencia formateada sin regeneración.
@@ -69,4 +70,7 @@ Rscript -e 'files <- Sys.glob("Entregables_pt_app/e[1-9].md"); ok <- file.exists
 | `07_dashboards/tests/test_07_graficos.md` | `07_dashboards/tests/test_07_graficos.docx` |
 | `08_beta/tests/test_08_end_to_end.md` | `08_beta/tests/test_08_end_to_end.docx` |
 
-**Nota:** Se corrigió error de sintaxis TeX (`\sqrt{s_{\bar{x}}^2}}` → `\sqrt{s_{\bar{x}}^2}`) en `anexo_calculos.md` antes de la conversión.
+**Notas:**
+
+- Se corrigió error de sintaxis TeX (`\sqrt{s_{\bar{x}}^2}}` → `\sqrt{s_{\bar{x}}^2}`) en `anexo_calculos.md` antes de la conversión inicial.
+- En la regeneración del Entregable 02 se volvieron a exportar `README.md` → `README.docx` y `md/documentacion_funciones.md` → `documentacion_funciones.docx` con el contenido enriquecido.

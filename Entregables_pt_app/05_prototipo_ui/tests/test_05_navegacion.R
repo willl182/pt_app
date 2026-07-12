@@ -8,20 +8,44 @@
 # Fecha: 2026-01-24
 # ===================================================================
 
+library(testthat)
+
+script_file <- tryCatch(sys.frame(1)$ofile, error = function(e) NULL)
+
+if (is.null(script_file)) {
+  file_arg <- grep("^--file=", commandArgs(FALSE), value = TRUE)
+  if (length(file_arg) > 0) {
+    script_file <- sub("^--file=", "", file_arg[[1]])
+  }
+}
+
+if (is.null(script_file)) {
+  candidates <- c(
+    file.path(getwd(), "Entregables_pt_app", "05_prototipo_ui"),
+    getwd(),
+    file.path(getwd(), "..")
+  )
+  entregable_dir <- normalizePath(
+    candidates[file.exists(file.path(candidates, "html", "prototipo.html"))][1],
+    mustWork = TRUE
+  )
+} else {
+  entregable_dir <- normalizePath(file.path(dirname(script_file), ".."),
+                                  mustWork = TRUE)
+}
+
+path_e05 <- function(...) {
+  file.path(entregable_dir, ...)
+}
+
 test_that("archivo HTML existe", {
-  old_wd <- setwd("..")
-  on.exit(setwd(old_wd))
-  
-  html_file <- "html/prototipo.html"
+  html_file <- path_e05("html", "prototipo.html")
   expect_true(file.exists(html_file), 
               info = "El archivo prototipo.html debe existir")
 })
 
 test_that("archivo HTML tiene estructura basica valida", {
-  old_wd <- setwd("..")
-  on.exit(setwd(old_wd))
-  
-  html_file <- "html/prototipo.html"
+  html_file <- path_e05("html", "prototipo.html")
   html_content <- readLines(html_file, warn = FALSE)
   html_text <- paste(html_content, collapse = "\n")
   
@@ -42,10 +66,7 @@ test_that("archivo HTML tiene estructura basica valida", {
 })
 
 test_that("HTML tiene barra lateral con todos los modulos", {
-  old_wd <- setwd("..")
-  on.exit(setwd(old_wd))
-  
-  html_file <- "html/prototipo.html"
+  html_file <- path_e05("html", "prototipo.html")
   html_content <- readLines(html_file, warn = FALSE)
   html_text <- paste(html_content, collapse = "\n")
   
@@ -70,10 +91,7 @@ test_that("HTML tiene barra lateral con todos los modulos", {
 })
 
 test_that("HTML tiene todos los modulos principales como secciones", {
-  old_wd <- setwd("..")
-  on.exit(setwd(old_wd))
-  
-  html_file <- "html/prototipo.html"
+  html_file <- path_e05("html", "prototipo.html")
   html_content <- readLines(html_file, warn = FALSE)
   html_text <- paste(html_content, collapse = "\n")
   
@@ -98,10 +116,7 @@ test_that("HTML tiene todos los modulos principales como secciones", {
 })
 
 test_that("modulo Carga de Datos tiene estructura correcta", {
-  old_wd <- setwd("..")
-  on.exit(setwd(old_wd))
-  
-  html_file <- "html/prototipo.html"
+  html_file <- path_e05("html", "prototipo.html")
   html_content <- readLines(html_file, warn = FALSE)
   html_text <- paste(html_content, collapse = "\n")
   
@@ -119,10 +134,7 @@ test_that("modulo Carga de Datos tiene estructura correcta", {
 })
 
 test_that("HTML tiene elementos UI esperados", {
-  old_wd <- setwd("..")
-  on.exit(setwd(old_wd))
-  
-  html_file <- "html/prototipo.html"
+  html_file <- path_e05("html", "prototipo.html")
   html_content <- readLines(html_file, warn = FALSE)
   html_text <- paste(html_content, collapse = "\n")
   
@@ -143,10 +155,7 @@ test_that("HTML tiene elementos UI esperados", {
 })
 
 test_that("HTML tiene estilos CSS en linea", {
-  old_wd <- setwd("..")
-  on.exit(setwd(old_wd))
-  
-  html_file <- "html/prototipo.html"
+  html_file <- path_e05("html", "prototipo.html")
   html_content <- readLines(html_file, warn = FALSE)
   html_text <- paste(html_content, collapse = "\n")
   
@@ -167,10 +176,7 @@ test_that("HTML tiene estilos CSS en linea", {
 })
 
 test_that("HTML tiene JavaScript para navegacion", {
-  old_wd <- setwd("..")
-  on.exit(setwd(old_wd))
-  
-  html_file <- "html/prototipo.html"
+  html_file <- path_e05("html", "prototipo.html")
   html_content <- readLines(html_file, warn = FALSE)
   html_text <- paste(html_content, collapse = "\n")
   
@@ -185,10 +191,7 @@ test_that("HTML tiene JavaScript para navegacion", {
 })
 
 test_that("HTML tiene barra superior con elementos correctos", {
-  old_wd <- setwd("..")
-  on.exit(setwd(old_wd))
-  
-  html_file <- "html/prototipo.html"
+  html_file <- path_e05("html", "prototipo.html")
   html_content <- readLines(html_file, warn = FALSE)
   html_text <- paste(html_content, collapse = "\n")
   
@@ -206,10 +209,7 @@ test_that("HTML tiene barra superior con elementos correctos", {
 })
 
 test_that("HTML tiene componentes de cards", {
-  old_wd <- setwd("..")
-  on.exit(setwd(old_wd))
-  
-  html_file <- "html/prototipo.html"
+  html_file <- path_e05("html", "prototipo.html")
   html_content <- readLines(html_file, warn = FALSE)
   html_text <- paste(html_content, collapse = "\n")
   
@@ -227,10 +227,7 @@ test_that("HTML tiene componentes de cards", {
 })
 
 test_that("HTML tiene placeholders para graficos", {
-  old_wd <- setwd("..")
-  on.exit(setwd(old_wd))
-  
-  html_file <- "html/prototipo.html"
+  html_file <- path_e05("html", "prototipo.html")
   html_content <- readLines(html_file, warn = FALSE)
   html_text <- paste(html_content, collapse = "\n")
   
@@ -242,19 +239,13 @@ test_that("HTML tiene placeholders para graficos", {
 })
 
 test_that("archivo wireframes.md existe", {
-  old_wd <- setwd("..")
-  on.exit(setwd(old_wd))
-  
-  md_file <- "md/wireframes.md"
+  md_file <- path_e05("md", "wireframes.md")
   expect_true(file.exists(md_file), 
               info = "El archivo wireframes.md debe existir")
 })
 
 test_that("wireframes.md contiene todos los modulos documentados", {
-  old_wd <- setwd("..")
-  on.exit(setwd(old_wd))
-  
-  md_file <- "md/wireframes.md"
+  md_file <- path_e05("md", "wireframes.md")
   md_content <- readLines(md_file, warn = FALSE)
   md_text <- paste(md_content, collapse = "\n")
   
@@ -276,19 +267,13 @@ test_that("wireframes.md contiene todos los modulos documentados", {
 })
 
 test_that("archivo diagrama_navegacion.mmd existe", {
-  old_wd <- setwd("..")
-  on.exit(setwd(old_wd))
-  
-  mmd_file <- "mmd/diagrama_navegacion.mmd"
+  mmd_file <- path_e05("mmd", "diagrama_navegacion.mmd")
   expect_true(file.exists(mmd_file), 
               info = "El archivo diagrama_navegacion.mmd debe existir")
 })
 
 test_that("diagrama_navegacion.mmd tiene estructura de mermaid valida", {
-  old_wd <- setwd("..")
-  on.exit(setwd(old_wd))
-  
-  mmd_file <- "mmd/diagrama_navegacion.mmd"
+  mmd_file <- path_e05("mmd", "diagrama_navegacion.mmd")
   mmd_content <- readLines(mmd_file, warn = FALSE)
   mmd_text <- paste(mmd_content, collapse = "\n")
   
@@ -306,10 +291,7 @@ test_that("diagrama_navegacion.mmd tiene estructura de mermaid valida", {
 })
 
 test_that("diagrama de navegacion tiene nodos de decision", {
-  old_wd <- setwd("..")
-  on.exit(setwd(old_wd))
-  
-  mmd_file <- "mmd/diagrama_navegacion.mmd"
+  mmd_file <- path_e05("mmd", "diagrama_navegacion.mmd")
   mmd_content <- readLines(mmd_file, warn = FALSE)
   mmd_text <- paste(mmd_content, collapse = "\n")
   
@@ -321,9 +303,6 @@ test_that("diagrama de navegacion tiene nodos de decision", {
 })
 
 test_that("estructura de directorios es correcta", {
-  old_wd <- setwd("..")
-  on.exit(setwd(old_wd))
-  
   directorios_esperados <- c(
     ".",
     "md",
@@ -333,7 +312,7 @@ test_that("estructura de directorios es correcta", {
   )
   
   for (directorio in directorios_esperados) {
-    expect_true(dir.exists(directorio),
+    expect_true(dir.exists(path_e05(directorio)),
                 info = paste("El directorio", directorio, "debe existir"))
   }
 })

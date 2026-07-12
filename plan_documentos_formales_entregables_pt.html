@@ -1,0 +1,1391 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+  <meta charset="utf-8" />
+  <meta name="generator" content="pandoc" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+  <title>Plan: Documentos formales para entregables PT App</title>
+  <style>
+    /* Default styles provided by pandoc.
+    ** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
+    */
+    html {
+      color: #1a1a1a;
+      background-color: #fdfdfd;
+    }
+    body {
+      margin: 0 auto;
+      max-width: 36em;
+      padding-left: 50px;
+      padding-right: 50px;
+      padding-top: 50px;
+      padding-bottom: 50px;
+      hyphens: auto;
+      overflow-wrap: break-word;
+      text-rendering: optimizeLegibility;
+      font-kerning: normal;
+    }
+    @media (max-width: 600px) {
+      body {
+        font-size: 0.9em;
+        padding: 12px;
+      }
+      h1 {
+        font-size: 1.8em;
+      }
+    }
+    @media print {
+      html {
+        background-color: white;
+      }
+      body {
+        background-color: transparent;
+        color: black;
+        font-size: 12pt;
+      }
+      p, h2, h3 {
+        orphans: 3;
+        widows: 3;
+      }
+      h2, h3, h4 {
+        page-break-after: avoid;
+      }
+    }
+    p {
+      margin: 1em 0;
+    }
+    a {
+      color: #1a1a1a;
+    }
+    a:visited {
+      color: #1a1a1a;
+    }
+    img {
+      max-width: 100%;
+    }
+    svg {
+      height: auto;
+      max-width: 100%;
+    }
+    h1, h2, h3, h4, h5, h6 {
+      margin-top: 1.4em;
+    }
+    h5, h6 {
+      font-size: 1em;
+      font-style: italic;
+    }
+    h6 {
+      font-weight: normal;
+    }
+    ol, ul {
+      padding-left: 1.7em;
+      margin-top: 1em;
+    }
+    li > ol, li > ul {
+      margin-top: 0;
+    }
+    blockquote {
+      margin: 1em 0 1em 1.7em;
+      padding-left: 1em;
+      border-left: 2px solid #e6e6e6;
+      color: #606060;
+    }
+    code {
+      white-space: pre-wrap;
+      font-family: Menlo, Monaco, Consolas, 'Lucida Console', monospace;
+      font-size: 85%;
+      margin: 0;
+      hyphens: manual;
+    }
+    pre {
+      margin: 1em 0;
+      overflow: auto;
+    }
+    pre code {
+      padding: 0;
+      overflow: visible;
+      overflow-wrap: normal;
+    }
+    .sourceCode {
+     background-color: transparent;
+     overflow: visible;
+    }
+    hr {
+      border: none;
+      border-top: 1px solid #1a1a1a;
+      height: 1px;
+      margin: 1em 0;
+    }
+    table {
+      margin: 1em 0;
+      border-collapse: collapse;
+      width: 100%;
+      overflow-x: auto;
+      display: block;
+      font-variant-numeric: lining-nums tabular-nums;
+    }
+    table caption {
+      margin-bottom: 0.75em;
+    }
+    tbody {
+      margin-top: 0.5em;
+      border-top: 1px solid #1a1a1a;
+      border-bottom: 1px solid #1a1a1a;
+    }
+    th {
+      border-top: 1px solid #1a1a1a;
+      padding: 0.25em 0.5em 0.25em 0.5em;
+    }
+    td {
+      padding: 0.125em 0.5em 0.25em 0.5em;
+    }
+    header {
+      margin-bottom: 4em;
+      text-align: center;
+    }
+    #TOC li {
+      list-style: none;
+    }
+    #TOC ul {
+      padding-left: 1.3em;
+    }
+    #TOC > ul {
+      padding-left: 0;
+    }
+    #TOC a:not(:hover) {
+      text-decoration: none;
+    }
+    span.smallcaps{font-variant: small-caps;}
+    div.columns{display: flex; gap: min(4vw, 1.5em);}
+    div.column{flex: auto; overflow-x: auto;}
+    div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+    /* The extra [class] is a hack that increases specificity enough to
+       override a similar rule in reveal.js */
+    ul.task-list[class]{list-style: none;}
+    ul.task-list li input[type="checkbox"] {
+      font-size: inherit;
+      width: 0.8em;
+      margin: 0 0.8em 0.2em -1.6em;
+      vertical-align: middle;
+    }
+    .display.math{display: block; text-align: center; margin: 0.5rem auto;}
+    :root {
+      color-scheme: light;
+      --ink: #172033;
+      --muted: #5d6678;
+      --line: #d9dee8;
+      --soft: #f6f8fb;
+      --accent: #275d8c;
+      --accent-soft: #e8f1f8;
+    }
+    body {
+      color: var(--ink);
+      font-family: Arial, Helvetica, sans-serif;
+      line-height: 1.55;
+      margin: 0 auto;
+      max-width: 1120px;
+      padding: 40px 28px 72px;
+      background: #ffffff;
+    }
+    header {
+      border-bottom: 3px solid var(--accent);
+      margin-bottom: 32px;
+      padding-bottom: 18px;
+    }
+    h1,
+    h2,
+    h3 {
+      line-height: 1.2;
+    }
+    h1 {
+      color: var(--accent);
+      font-size: 2rem;
+      margin-top: 0;
+    }
+    h2 {
+      border-bottom: 1px solid var(--line);
+      margin-top: 36px;
+      padding-bottom: 8px;
+    }
+    h3 {
+      margin-top: 28px;
+    }
+    p {
+      margin: 0 0 14px;
+    }
+    code {
+      background: var(--soft);
+      border: 1px solid var(--line);
+      border-radius: 4px;
+      font-family: Consolas, Monaco, monospace;
+      font-size: 0.92em;
+      padding: 1px 4px;
+    }
+    table {
+      border-collapse: collapse;
+      margin: 16px 0 28px;
+      width: 100%;
+    }
+    th,
+    td {
+      border: 1px solid var(--line);
+      padding: 9px 11px;
+      text-align: left;
+      vertical-align: top;
+    }
+    th {
+      background: var(--accent-soft);
+      color: #163d60;
+      font-weight: 700;
+    }
+    tr:nth-child(even) td {
+      background: #fbfcfe;
+    }
+    ul {
+      padding-left: 22px;
+    }
+    li {
+      margin-bottom: 6px;
+    }
+    strong {
+      color: #111827;
+    }
+    @media print {
+      body {
+        max-width: none;
+        padding: 20mm;
+      }
+      h2,
+      h3 {
+        break-after: avoid;
+      }
+      table {
+        break-inside: avoid;
+      }
+    }
+  </style>
+</head>
+<body>
+<header id="title-block-header">
+<h1 class="title">Plan: Documentos formales para entregables PT App</h1>
+</header>
+<h1 id="plan-documentos-formales-para-entregables-pt-app">Plan:
+Documentos formales para entregables PT App</h1>
+<p><strong>Timestamp:</strong> 260628_0827 <strong>Slug:</strong>
+documentos-formales-entregables-pt <strong>Estado:</strong> En
+progreso</p>
+<h2 id="objetivo">Objetivo</h2>
+<p>Convertir la documentación actual de <code>Entregables_pt_app</code>
+en un conjunto de documentos técnicos formales, bien presentados y
+comprensibles para lectores no desarrolladores. Cada entregable debe
+tener un documento propio en formato editable y presentable, con
+explicación clara del propósito, alcance, evidencia, estado real,
+riesgos y relación con los documentos técnicos de soporte.</p>
+<p>El objetivo no es hacer un resumen corto ni maquillar los README
+existentes. El resultado esperado es que cada entregable pueda
+presentarse ante una persona común, evaluadora o administrativa, sin
+exigirle leer código ni entender R/Shiny, pero dejando trazabilidad
+suficiente para que los detalles técnicos estén disponibles en anexos o
+documentos especializados.</p>
+<h2 id="criterios-de-calidad">Criterios de Calidad</h2>
+<table>
+<colgroup>
+<col style="width: 47%" />
+<col style="width: 52%" />
+</colgroup>
+<thead>
+<tr>
+<th>Criterio</th>
+<th>Requisito</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Audiencia</td>
+<td>Lenguaje claro, institucional y aterrizado; evitar jerga de
+desarrollador salvo cuando se explique.</td>
+</tr>
+<tr>
+<td>Profundidad</td>
+<td>Revisión detallada de cada entregable, no ficha breve ni README
+renombrado.</td>
+</tr>
+<tr>
+<td>Presentación</td>
+<td>Documento Word por entregable, con portada, control de versión,
+tablas, secciones claras y anexos/referencias.</td>
+</tr>
+<tr>
+<td>Honestidad técnica</td>
+<td>Diferenciar evidencia histórica, evidencia vigente, vigencia parcial
+y pendientes de auditoría.</td>
+</tr>
+<tr>
+<td>Trazabilidad</td>
+<td>Remitir a archivos fuente, pruebas, anexos, informes y evidencia
+disponible sin saturar el cuerpo principal.</td>
+</tr>
+<tr>
+<td>Defensa del proyecto</td>
+<td>Explicar qué demuestra cada entregable y por qué cumple una función
+dentro del desarrollo del aplicativo.</td>
+</tr>
+<tr>
+<td>Riesgos</td>
+<td>Señalar límites reales de cada entregable para evitar afirmaciones
+que no puedan sostenerse.</td>
+</tr>
+</tbody>
+</table>
+<h2 id="estructura-base-de-cada-documento">Estructura Base de Cada
+Documento</h2>
+<p>Cada documento por entregable debe seguir una estructura común,
+ajustada al contenido específico:</p>
+<table>
+<colgroup>
+<col style="width: 45%" />
+<col style="width: 55%" />
+</colgroup>
+<thead>
+<tr>
+<th>Sección</th>
+<th>Propósito</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Portada</td>
+<td>Nombre del entregable, proyecto, institución, fecha, versión y
+responsable documental.</td>
+</tr>
+<tr>
+<td>Resumen Ejecutivo</td>
+<td>Explicar en 1 a 2 páginas qué contiene el entregable, por qué existe
+y qué evidencia aporta.</td>
+</tr>
+<tr>
+<td>Contexto del Entregable</td>
+<td>Ubicar el entregable dentro de la evolución del aplicativo PT
+App.</td>
+</tr>
+<tr>
+<td>Alcance</td>
+<td>Qué cubre y qué no cubre el entregable.</td>
+</tr>
+<tr>
+<td>Contenido Entregado</td>
+<td>Inventario explicado de documentos, código, pruebas, anexos y
+reportes.</td>
+</tr>
+<tr>
+<td>Explicación Funcional</td>
+<td>Traducción del contenido técnico a lenguaje comprensible para no
+desarrolladores.</td>
+</tr>
+<tr>
+<td>Evidencia de Verificación</td>
+<td>Qué pruebas existen, qué validan y cómo interpretar sus
+resultados.</td>
+</tr>
+<tr>
+<td>Estado Actual</td>
+<td>Vigente, histórico, parcialmente vigente o pendiente de auditoría,
+con justificación.</td>
+</tr>
+<tr>
+<td>Relación con Otros Entregables</td>
+<td>Cómo se conecta con fases anteriores y posteriores.</td>
+</tr>
+<tr>
+<td>Riesgos y Limitaciones</td>
+<td>Aspectos que no deben sobreafirmarse en una entrega formal.</td>
+</tr>
+<tr>
+<td>Documentos de Consulta</td>
+<td>Rutas a documentos detallados, anexos técnicos, pruebas y archivos
+de soporte.</td>
+</tr>
+<tr>
+<td>Conclusión</td>
+<td>Valor del entregable dentro del proyecto y recomendación de
+uso.</td>
+</tr>
+</tbody>
+</table>
+<h2 id="fases">Fases</h2>
+<h3 id="fase-1-diagnóstico-documental-e-inventario-defendible">Fase 1:
+Diagnóstico documental e inventario defendible</h3>
+<table>
+<colgroup>
+<col style="width: 28%" />
+<col style="width: 38%" />
+<col style="width: 33%" />
+</colgroup>
+<thead>
+<tr>
+<th>Item</th>
+<th>Estado</th>
+<th>Notas</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Leer <code>AGENTS.md</code> y reglas del proyecto</td>
+<td>Completado</td>
+<td>Instrucciones críticas revisadas antes de crear este plan.</td>
+</tr>
+<tr>
+<td>Revisar estructura completa de <code>Entregables_pt_app</code></td>
+<td>Completado</td>
+<td>Hay 9 entregables principales, overviews <code>e1.md</code> a
+<code>e9.md</code>, DOCX existentes, código, pruebas, anexos y
+reportes.</td>
+</tr>
+<tr>
+<td>Identificar documentos que no son suficientes para entrega
+formal</td>
+<td>En progreso</td>
+<td>Los README/overviews actuales son útiles como inventario interno,
+pero no como documento final para lectores no técnicos.</td>
+</tr>
+<tr>
+<td>Clasificar cada entregable por estado documental</td>
+<td>Pendiente</td>
+<td>Usar estados ya detectados: histórico validado, regenerado,
+histórico, parcial, beta no vigente, requiere auditoría.</td>
+</tr>
+<tr>
+<td>Crear matriz de evidencia por entregable</td>
+<td>Pendiente</td>
+<td>Debe listar qué prueba, anexo, documento o archivo respalda cada
+afirmación.</td>
+</tr>
+</tbody>
+</table>
+<h3 id="fase-2-definir-línea-editorial-y-plantilla-institucional">Fase
+2: Definir línea editorial y plantilla institucional</h3>
+<table>
+<colgroup>
+<col style="width: 28%" />
+<col style="width: 38%" />
+<col style="width: 33%" />
+</colgroup>
+<thead>
+<tr>
+<th>Item</th>
+<th>Estado</th>
+<th>Notas</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Diseñar plantilla Word/Markdown común</td>
+<td>Pendiente</td>
+<td>Debe evitar apariencia de README y funcionar como documento técnico
+formal.</td>
+</tr>
+<tr>
+<td>Definir tono para lectores no desarrolladores</td>
+<td>Pendiente</td>
+<td>Lenguaje claro, con explicación de términos como Shiny, puntajes,
+homogeneidad, estabilidad y validación.</td>
+</tr>
+<tr>
+<td>Definir reglas de profundidad</td>
+<td>Pendiente</td>
+<td>Cuerpo principal explicativo; fórmulas, rutas, código y pruebas se
+remiten a anexos o documentos detallados.</td>
+</tr>
+<tr>
+<td>Crear glosario común</td>
+<td>Pendiente</td>
+<td>PT, ISO 13528, ISO 17043, valor asignado, sigma_pt, z-score,
+homogeneidad, estabilidad, reproducibilidad.</td>
+</tr>
+<tr>
+<td>Definir formato de tablas</td>
+<td>Pendiente</td>
+<td>Tablas de contenido, evidencia, trazabilidad, riesgos y documentos
+relacionados.</td>
+</tr>
+</tbody>
+</table>
+<h3 id="fase-3-elaborar-documentos-por-entregable">Fase 3: Elaborar
+documentos por entregable</h3>
+<table>
+<colgroup>
+<col style="width: 28%" />
+<col style="width: 38%" />
+<col style="width: 33%" />
+</colgroup>
+<thead>
+<tr>
+<th>Item</th>
+<th>Estado</th>
+<th>Notas</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Documento Entregable 01: Repositorio inicial</td>
+<td>Pendiente</td>
+<td>Enfatizar línea base, trazabilidad histórica e integridad del punto
+de partida.</td>
+</tr>
+<tr>
+<td>Documento Entregable 02: Funciones usadas</td>
+<td>Pendiente</td>
+<td>Presentar inventario funcional de 77 funciones sin convertirlo en
+listado técnico ininteligible.</td>
+</tr>
+<tr>
+<td>Documento Entregable 03: Cálculos PT standalone</td>
+<td>Pendiente</td>
+<td>Explicar motor matemático histórico y necesidad de alineación con
+<code>ptcalc</code>.</td>
+</tr>
+<tr>
+<td>Documento Entregable 04: Puntajes de desempeño</td>
+<td>Pendiente</td>
+<td>Explicar cómo se evalúa desempeño de laboratorios y distinguir
+vigencia parcial.</td>
+</tr>
+<tr>
+<td>Documento Entregable 05: Prototipo de interfaz</td>
+<td>Pendiente</td>
+<td>Presentar diseño inicial como evidencia de planeación, no como
+interfaz vigente.</td>
+</tr>
+<tr>
+<td>Documento Entregable 06: Lógica de aplicación y manual</td>
+<td>Pendiente</td>
+<td>Explicar integración Shiny histórica y aclarar que el manual no
+describe toda la app actual.</td>
+</tr>
+<tr>
+<td>Documento Entregable 07: Dashboards y gráficos</td>
+<td>Pendiente</td>
+<td>Mostrar valor de visualización y dejar claro que es evidencia
+parcial frente a <code>app.R</code>.</td>
+</tr>
+<tr>
+<td>Documento Entregable 08: Beta y documentación final</td>
+<td>Pendiente</td>
+<td>Separar beta histórica de aplicación vigente para no inducir
+error.</td>
+</tr>
+<tr>
+<td>Documento Entregable 09: Informe final y validación</td>
+<td>Pendiente</td>
+<td>Tratarlo con máxima cautela: validación, anexos, reproducibilidad y
+evidencia pendiente de auditoría.</td>
+</tr>
+</tbody>
+</table>
+<h3 id="fase-4-revisión-técnica-y-revisión-para-lector-común">Fase 4:
+Revisión técnica y revisión para lector común</h3>
+<table>
+<colgroup>
+<col style="width: 28%" />
+<col style="width: 38%" />
+<col style="width: 33%" />
+</colgroup>
+<thead>
+<tr>
+<th>Item</th>
+<th>Estado</th>
+<th>Notas</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Revisar consistencia entre documentos y <code>e1.md</code> a
+<code>e9.md</code></td>
+<td>Pendiente</td>
+<td>Ningún documento debe contradecir estados ya auditados.</td>
+</tr>
+<tr>
+<td>Revisar que cada afirmación tenga evidencia</td>
+<td>Pendiente</td>
+<td>Especial atención a E03, E04, E07, E08 y E09.</td>
+</tr>
+<tr>
+<td>Simplificar lenguaje técnico sin perder precisión</td>
+<td>Pendiente</td>
+<td>Convertir jerga en explicación, no eliminar contenido
+importante.</td>
+</tr>
+<tr>
+<td>Validar que los documentos no parezcan README</td>
+<td>Pendiente</td>
+<td>Deben tener portada, narrativa, tablas y conclusión formal.</td>
+</tr>
+<tr>
+<td>Ejecutar subagente <code>revisor-fase</code> o revisión
+equivalente</td>
+<td>Pendiente</td>
+<td>Requisito del flujo para cierre de fase.</td>
+</tr>
+</tbody>
+</table>
+<h3 id="fase-5-exportación-empaquetado-y-control-final">Fase 5:
+Exportación, empaquetado y control final</h3>
+<table>
+<colgroup>
+<col style="width: 28%" />
+<col style="width: 38%" />
+<col style="width: 33%" />
+</colgroup>
+<thead>
+<tr>
+<th>Item</th>
+<th>Estado</th>
+<th>Notas</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Exportar cada documento a DOCX</td>
+<td>Pendiente</td>
+<td>Formato principal de entrega editable.</td>
+</tr>
+<tr>
+<td>Exportar versión PDF si se requiere entrega cerrada</td>
+<td>Pendiente</td>
+<td>Recomendado para documentos finales a evaluadores.</td>
+</tr>
+<tr>
+<td>Crear índice maestro de entregables</td>
+<td>Pendiente</td>
+<td>Documento corto que indique qué archivo corresponde a cada
+entregable y cómo leer el paquete.</td>
+</tr>
+<tr>
+<td>Verificar enlaces/rutas y anexos</td>
+<td>Pendiente</td>
+<td>Evitar enlaces <code>file://</code> en documentos finales si no son
+adecuados para entrega externa.</td>
+</tr>
+<tr>
+<td>Persistir estado con skill <code>saver</code></td>
+<td>Pendiente</td>
+<td>Requisito al completar fases.</td>
+</tr>
+<tr>
+<td>Git commit y push</td>
+<td>Pendiente</td>
+<td>Requisito del flujo del proyecto si se ejecuta la elaboración.</td>
+</tr>
+</tbody>
+</table>
+<h2 id="entregables-documentales-esperados">Entregables Documentales
+Esperados</h2>
+<table>
+<colgroup>
+<col style="width: 15%" />
+<col style="width: 35%" />
+<col style="width: 23%" />
+<col style="width: 25%" />
+</colgroup>
+<thead>
+<tr>
+<th>Entregable</th>
+<th>Documento formal propuesto</th>
+<th>Fuente principal</th>
+<th>Estado a comunicar</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>01</td>
+<td><code>documento_tecnico_entregable_01.docx</code></td>
+<td><code>01_repo_inicial</code>, <code>e1.md</code></td>
+<td>Histórico validado</td>
+</tr>
+<tr>
+<td>02</td>
+<td><code>documento_tecnico_entregable_02.docx</code></td>
+<td><code>02_funciones_usadas</code>, <code>e2.md</code></td>
+<td>Regenerado y enriquecido</td>
+</tr>
+<tr>
+<td>03</td>
+<td><code>documento_tecnico_entregable_03.docx</code></td>
+<td><code>03_calculos_pt</code>, <code>e3.md</code>,
+<code>ptcalc/R</code></td>
+<td>Histórico / requiere alineación</td>
+</tr>
+<tr>
+<td>04</td>
+<td><code>documento_tecnico_entregable_04.docx</code></td>
+<td><code>04_puntajes</code>, <code>e4.md</code>,
+<code>ptcalc/R/pt_scores.R</code></td>
+<td>Histórico / parcialmente vigente</td>
+</tr>
+<tr>
+<td>05</td>
+<td><code>documento_tecnico_entregable_05.docx</code></td>
+<td><code>05_prototipo_ui</code>, <code>e5.md</code></td>
+<td>Histórico / prototipo parcial</td>
+</tr>
+<tr>
+<td>06</td>
+<td><code>documento_tecnico_entregable_06.docx</code></td>
+<td><code>06_app_logica</code>, <code>e6.md</code>,
+<code>app.R</code></td>
+<td>Histórico / manual no vigente</td>
+</tr>
+<tr>
+<td>07</td>
+<td><code>documento_tecnico_entregable_07.docx</code></td>
+<td><code>07_dashboards</code>, <code>e7.md</code>,
+<code>app.R</code></td>
+<td>Parcial / evidencia histórica</td>
+</tr>
+<tr>
+<td>08</td>
+<td><code>documento_tecnico_entregable_08.docx</code></td>
+<td><code>08_beta</code>, <code>e8.md</code>, <code>app.R</code>,
+<code>ptcalc/R</code></td>
+<td>Histórico / beta no vigente</td>
+</tr>
+<tr>
+<td>09</td>
+<td><code>documento_tecnico_entregable_09.docx</code></td>
+<td><code>09_informe_final</code>, <code>e9.md</code>, anexos</td>
+<td>Requiere auditoría de evidencia</td>
+</tr>
+</tbody>
+</table>
+<h2 id="plan-detallado-por-entregable">Plan Detallado por
+Entregable</h2>
+<h3
+id="entregable-01-repositorio-de-código-y-scripts-iniciales">Entregable
+01: Repositorio de Código y Scripts Iniciales</h3>
+<p><strong>Propósito del documento:</strong> presentar el entregable
+como la línea base del proyecto: el punto de partida congelado antes de
+cambios, mejoras o refactorizaciones.</p>
+<p><strong>Enfoque para lector común:</strong> explicar que una línea
+base funciona como una copia de seguridad verificable. No es “la app
+final”, sino la evidencia de cómo estaba el sistema al inicio y contra
+qué se pueden comparar los cambios posteriores.</p>
+<p><strong>Secciones específicas a desarrollar:</strong></p>
+<table>
+<colgroup>
+<col style="width: 30%" />
+<col style="width: 70%" />
+</colgroup>
+<thead>
+<tr>
+<th>Sección</th>
+<th>Contenido requerido</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Qué se entrega</td>
+<td>Copia de <code>app_original.R</code>, carpeta <code>R/</code>,
+pruebas y resultados de verificación.</td>
+</tr>
+<tr>
+<td>Por qué importa</td>
+<td>Permite demostrar control de cambios, trazabilidad y preservación
+del estado inicial.</td>
+</tr>
+<tr>
+<td>Cómo se verificó</td>
+<td>Explicar existencia de archivos, comparación por hash SHA256 y
+revisión sintáctica R en lenguaje no técnico.</td>
+</tr>
+<tr>
+<td>Qué no demuestra</td>
+<td>No demuestra que la aplicación final esté validada; solo demuestra
+conservación del punto inicial.</td>
+</tr>
+<tr>
+<td>Evidencia consultable</td>
+<td><code>README.md</code>, <code>README.docx</code>,
+<code>tests/test_01_existencia_archivos.R</code>,
+<code>test_01_resultados.csv</code>, <code>e1.md</code>.</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Riesgo de redacción:</strong> evitar frases como “sistema
+validado” o “versión funcional final”. Debe decir “línea base histórica
+validada”.</p>
+<p><strong>Resultado esperado:</strong> documento formal que deje claro
+que E01 es evidencia de control documental y de integridad del punto de
+partida.</p>
+<h3 id="entregable-02-funciones-usadas-en-app.r-r-y-ptcalcr">Entregable
+02: Funciones Usadas en <code>app.R</code>, <code>R/</code> y
+<code>ptcalc/R/</code></h3>
+<p><strong>Propósito del documento:</strong> presentar el inventario
+funcional de la aplicación como mapa de capacidades: qué funciones
+existen, para qué sirven y dónde están documentadas.</p>
+<p><strong>Enfoque para lector común:</strong> no listar 77 funciones
+una por una en el cuerpo principal. Agruparlas por familias
+comprensibles: carga de datos, cálculos estadísticos,
+homogeneidad/estabilidad, puntajes, reportes, visualización y funciones
+obsoletas.</p>
+<p><strong>Secciones específicas a desarrollar:</strong></p>
+<table>
+<colgroup>
+<col style="width: 30%" />
+<col style="width: 70%" />
+</colgroup>
+<thead>
+<tr>
+<th>Sección</th>
+<th>Contenido requerido</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Qué se entrega</td>
+<td>Inventario CSV, documentación completa en DOCX/MD, extractor
+automático y pruebas de firmas.</td>
+</tr>
+<tr>
+<td>Evolución del entregable</td>
+<td>Explicar que pasó de 48 funciones escuetas a 77 funciones
+documentadas y categorizadas.</td>
+</tr>
+<tr>
+<td>Familias funcionales</td>
+<td>Traducir categorías técnicas a capacidades del sistema.</td>
+</tr>
+<tr>
+<td>Trazabilidad ISO</td>
+<td>Explicar que algunas funciones se asocian con ISO 13528:2022 e ISO
+17043:2023.</td>
+</tr>
+<tr>
+<td>Cómo se mantiene</td>
+<td>Describir <code>R/lista_funciones.R</code> como herramienta para
+regenerar documentación cuando cambie el código.</td>
+</tr>
+<tr>
+<td>Evidencia consultable</td>
+<td><code>funciones_extraidas.csv</code>,
+<code>documentacion_funciones.docx</code>, <code>README.md</code>,
+<code>tests/test_02_firma_funciones.R</code>,
+<code>test_02_resultados.csv</code>, <code>e2.md</code>.</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Riesgo de redacción:</strong> evitar que parezca manual para
+programadores. El detalle de firmas debe remitirse a
+<code>documentacion_funciones.docx</code>.</p>
+<p><strong>Resultado esperado:</strong> documento que explique el
+inventario como evidencia de orden, trazabilidad y mantenibilidad del
+aplicativo.</p>
+<h3 id="entregable-03-cálculos-pt-standalone">Entregable 03: Cálculos PT
+Standalone</h3>
+<p><strong>Propósito del documento:</strong> presentar el primer núcleo
+matemático independiente de la interfaz, explicando qué cálculos de
+ensayos de aptitud cubre y por qué se separó de Shiny.</p>
+<p><strong>Enfoque para lector común:</strong> explicar “standalone”
+como cálculos que pueden entenderse y probarse sin depender de botones,
+pantallas o navegación de la aplicación.</p>
+<p><strong>Secciones específicas a desarrollar:</strong></p>
+<table>
+<colgroup>
+<col style="width: 30%" />
+<col style="width: 70%" />
+</colgroup>
+<thead>
+<tr>
+<th>Sección</th>
+<th>Contenido requerido</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Qué se entrega</td>
+<td>Scripts de homogeneidad, estabilidad, estadística robusta, valor
+asignado y sigma_pt.</td>
+</tr>
+<tr>
+<td>Qué problema resuelve</td>
+<td>Separa la matemática del aplicativo visual para poder revisarla y
+probarla con más control.</td>
+</tr>
+<tr>
+<td>Conceptos explicados</td>
+<td>Homogeneidad, estabilidad, valor asignado, desviación estándar para
+evaluación y estadísticos robustos.</td>
+</tr>
+<tr>
+<td>Verificación</td>
+<td>Pruebas unitarias de cálculos y ejemplo paso a paso.</td>
+</tr>
+<tr>
+<td>Estado real</td>
+<td>Histórico; requiere alineación con <code>ptcalc/R/</code> antes de
+declararse vigente.</td>
+</tr>
+<tr>
+<td>Evidencia consultable</td>
+<td><code>R/*.R</code>, <code>ejemplo_calculo_paso_a_paso.docx</code>,
+<code>tests/test_03_calculos_pt.R</code>,
+<code>tests/test_03_resultados.csv</code>, <code>e3.md</code>,
+<code>ptcalc/R</code>.</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Riesgo de redacción:</strong> no afirmar que estos scripts
+son el motor vigente si existen divergencias frente a
+<code>ptcalc</code>. El documento debe ser honesto: evidencia histórica
+útil, no fuente operativa final.</p>
+<p><strong>Resultado esperado:</strong> documento que muestre que hubo
+desarrollo matemático verificable y que precise su relación con la
+implementación actual.</p>
+<h3 id="entregable-04-módulo-de-cálculo-de-puntajes">Entregable 04:
+Módulo de Cálculo de Puntajes</h3>
+<p><strong>Propósito del documento:</strong> explicar cómo el aplicativo
+evalúa el desempeño de laboratorios participantes mediante puntajes de
+aptitud.</p>
+<p><strong>Enfoque para lector común:</strong> presentar los puntajes
+como indicadores de desempeño, sin cargar el cuerpo principal con
+derivaciones matemáticas extensas. Las fórmulas detalladas van como
+referencia.</p>
+<p><strong>Secciones específicas a desarrollar:</strong></p>
+<table>
+<colgroup>
+<col style="width: 30%" />
+<col style="width: 70%" />
+</colgroup>
+<thead>
+<tr>
+<th>Sección</th>
+<th>Contenido requerido</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Qué se entrega</td>
+<td>Scripts de cálculo de puntajes, documento de fórmulas y
+pruebas.</td>
+</tr>
+<tr>
+<td>Qué significa evaluar desempeño</td>
+<td>Explicar categorías como satisfactorio, cuestionable y no
+satisfactorio.</td>
+</tr>
+<tr>
+<td>Puntajes cubiertos</td>
+<td>z, z’, zeta y En, explicados en lenguaje común y con uso
+práctico.</td>
+</tr>
+<tr>
+<td>Evidencia de cálculo</td>
+<td>Pruebas automatizadas y documento
+<code>formulas_y_ejemplos.docx</code>.</td>
+</tr>
+<tr>
+<td>Estado real</td>
+<td>Histórico / parcialmente vigente; las fórmulas base viven en
+<code>ptcalc/R/pt_scores.R</code> y parte del flujo está en
+<code>app.R</code>.</td>
+</tr>
+<tr>
+<td>Riesgo de etiquetas</td>
+<td>Normalizar y explicar diferencia entre “No satisfactorio” e
+“Insatisfactorio” si aparece en evidencia histórica.</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Evidencia consultable:</strong>
+<code>R/calcula_puntajes.R</code>, <code>R/crea_reporte.R</code>,
+<code>formulas_y_ejemplos.docx</code>,
+<code>tests/test_04_puntajes.R</code>, <code>e4.md</code>,
+<code>ptcalc/R/pt_scores.R</code>.</p>
+<p><strong>Resultado esperado:</strong> documento que permita defender
+cómo se evalúa el desempeño sin exigir al lector revisar código.</p>
+<h3 id="entregable-05-prototipo-estático-de-interfaz">Entregable 05:
+Prototipo Estático de Interfaz</h3>
+<p><strong>Propósito del documento:</strong> presentar el prototipo como
+evidencia de diseño, navegación y planeación de la experiencia de
+usuario.</p>
+<p><strong>Enfoque para lector común:</strong> explicar que un prototipo
+no es la aplicación final, sino una maqueta interactiva para revisar
+organización de pantallas, rutas de navegación y presentación
+esperada.</p>
+<p><strong>Secciones específicas a desarrollar:</strong></p>
+<table>
+<colgroup>
+<col style="width: 30%" />
+<col style="width: 70%" />
+</colgroup>
+<thead>
+<tr>
+<th>Sección</th>
+<th>Contenido requerido</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Qué se entrega</td>
+<td>Prototipo HTML, wireframes, diagrama de navegación y pruebas de
+estructura.</td>
+</tr>
+<tr>
+<td>Qué demuestra</td>
+<td>Planeación de interfaz, navegación y organización funcional
+inicial.</td>
+</tr>
+<tr>
+<td>Qué no demuestra</td>
+<td>No demuestra coincidencia exacta con <code>app.R</code> actual ni
+validación de cálculos.</td>
+</tr>
+<tr>
+<td>Relación con usuario final</td>
+<td>Explicar cómo ayuda a visualizar carga de datos, análisis,
+resultados y reportes.</td>
+</tr>
+<tr>
+<td>Estado real</td>
+<td>Histórico / prototipo parcial.</td>
+</tr>
+<tr>
+<td>Evidencia consultable</td>
+<td><code>html/prototipo.html</code>, <code>wireframes.docx</code>,
+<code>mmd/diagrama_navegacion.mmd</code>,
+<code>tests/test_05_navegacion.R</code>, <code>e5.md</code>.</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Riesgo de redacción:</strong> no presentar capturas o
+descripción del prototipo como si fueran la interfaz vigente.</p>
+<p><strong>Resultado esperado:</strong> documento que convierta el
+prototipo en evidencia formal de diseño, no en promesa de funcionalidad
+actual.</p>
+<h3
+id="entregable-06-lógica-de-la-aplicación-y-manual-de-usuario">Entregable
+06: Lógica de la Aplicación y Manual de Usuario</h3>
+<p><strong>Propósito del documento:</strong> explicar la integración
+entre cálculos y aplicación Shiny en una versión histórica de la app,
+junto con un manual de uso de esa etapa.</p>
+<p><strong>Enfoque para lector común:</strong> explicar Shiny como la
+tecnología que permite convertir cálculos R en una aplicación web
+interactiva. Aclarar que la lógica reactiva significa que los resultados
+se actualizan según datos y selecciones del usuario.</p>
+<p><strong>Secciones específicas a desarrollar:</strong></p>
+<table>
+<colgroup>
+<col style="width: 30%" />
+<col style="width: 70%" />
+</colgroup>
+<thead>
+<tr>
+<th>Sección</th>
+<th>Contenido requerido</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Qué se entrega</td>
+<td><code>app_v06.R</code>, manual de usuario, pruebas funcionales y log
+CSV.</td>
+</tr>
+<tr>
+<td>Qué avance representa</td>
+<td>Paso desde scripts separados hacia una aplicación interactiva con
+lógica integrada.</td>
+</tr>
+<tr>
+<td>Qué cubre el manual</td>
+<td>Instalación, ejecución y navegación de la versión v06.</td>
+</tr>
+<tr>
+<td>Qué no cubre</td>
+<td>Flujo completo actual con carga dinámica, preprocesador, reportes y
+funcionalidades posteriores.</td>
+</tr>
+<tr>
+<td>Estado real</td>
+<td>Histórico / manual no vigente.</td>
+</tr>
+<tr>
+<td>Evidencia consultable</td>
+<td><code>app_v06.R</code>, <code>manual_usuario.docx</code>,
+<code>tests/test_06_logica.R</code>,
+<code>tests/test_06_logica.csv</code>, <code>e6.md</code>,
+<code>app.R</code>.</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Riesgo de redacción:</strong> no entregar el manual v06 como
+manual final del aplicativo actual.</p>
+<p><strong>Resultado esperado:</strong> documento que explique la etapa
+de integración sin confundirla con la versión vigente.</p>
+<h3 id="entregable-07-dashboards-y-gráficos">Entregable 07: Dashboards y
+Gráficos</h3>
+<p><strong>Propósito del documento:</strong> presentar la incorporación
+de visualizaciones como medio para interpretar resultados de ensayos de
+aptitud.</p>
+<p><strong>Enfoque para lector común:</strong> explicar que los gráficos
+ayudan a identificar patrones, desempeños, alertas y comparaciones entre
+participantes o métodos, sin entrar en detalles de librerías salvo como
+soporte.</p>
+<p><strong>Secciones específicas a desarrollar:</strong></p>
+<table>
+<colgroup>
+<col style="width: 30%" />
+<col style="width: 70%" />
+</colgroup>
+<thead>
+<tr>
+<th>Sección</th>
+<th>Contenido requerido</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Qué se entrega</td>
+<td><code>app_v07.R</code>, diagrama de flujo, pruebas y guías de
+gráficos.</td>
+</tr>
+<tr>
+<td>Qué avance representa</td>
+<td>Paso desde tablas/resultados hacia paneles visuales.</td>
+</tr>
+<tr>
+<td>Qué visualizaciones se evidencian</td>
+<td>Gráficos y paneles integrados en la versión histórica.</td>
+</tr>
+<tr>
+<td>Relación con la app vigente</td>
+<td>Explicar que <code>app.R</code> actual contiene más vistas, heatmaps
+y reportes que deben mapearse aparte.</td>
+</tr>
+<tr>
+<td>Estado real</td>
+<td>Parcial / evidencia histórica.</td>
+</tr>
+<tr>
+<td>Evidencia consultable</td>
+<td><code>app_v07.R</code>, <code>md/diagrama_flujo.mmd</code>,
+<code>tests/test_07_graficos.R</code>,
+<code>tests/test_07_graficos.docx</code>, <code>e7.md</code>,
+<code>app.R</code>.</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Riesgo de redacción:</strong> no afirmar cobertura total de
+dashboards actuales con base solo en E07.</p>
+<p><strong>Resultado esperado:</strong> documento que defienda la
+evolución visual del proyecto y sus límites.</p>
+<h3 id="entregable-08-versión-beta-y-documentación-final">Entregable 08:
+Versión Beta y Documentación Final</h3>
+<p><strong>Propósito del documento:</strong> explicar la consolidación
+beta del aplicativo y su documentación técnica como hito de integración,
+separándola de la versión vigente.</p>
+<p><strong>Enfoque para lector común:</strong> explicar “beta” como una
+versión integrada de prueba o consolidación, no necesariamente la
+versión final actualmente operativa.</p>
+<p><strong>Secciones específicas a desarrollar:</strong></p>
+<table>
+<colgroup>
+<col style="width: 30%" />
+<col style="width: 70%" />
+</colgroup>
+<thead>
+<tr>
+<th>Sección</th>
+<th>Contenido requerido</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Qué se entrega</td>
+<td><code>app_final.R</code>, <code>funciones_finales.R</code>, manual
+de desarrollador y pruebas end-to-end.</td>
+</tr>
+<tr>
+<td>Qué representa</td>
+<td>Integración de módulos en una versión beta de trabajo.</td>
+</tr>
+<tr>
+<td>Qué validan las pruebas E2E</td>
+<td>Que el flujo completo de esa versión se puede recorrer y calcular
+sin errores esperados.</td>
+</tr>
+<tr>
+<td>Diferencia con versión vigente</td>
+<td>La app principal vigente es <code>app.R</code>; la lógica
+reutilizable actual debe contrastarse con <code>ptcalc/R/</code>.</td>
+</tr>
+<tr>
+<td>Estado real</td>
+<td>Histórico / beta no vigente.</td>
+</tr>
+<tr>
+<td>Evidencia consultable</td>
+<td><code>app_final.R</code>, <code>R/funciones_finales.R</code>,
+<code>manual_desarrollador.docx</code>,
+<code>tests/test_08_end_to_end.R</code>, <code>e8.md</code>,
+<code>app.R</code>, <code>ptcalc/R</code>.</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Riesgo de redacción:</strong> no llamar “final” a la beta en
+sentido contractual si ya no representa la aplicación vigente.</p>
+<p><strong>Resultado esperado:</strong> documento que rescate E08 como
+hito de integración sin crear una contradicción con el estado
+actual.</p>
+<h3 id="entregable-09-informe-final-y-validación-de-cálculos">Entregable
+09: Informe Final y Validación de Cálculos</h3>
+<p><strong>Propósito del documento:</strong> presentar la evidencia de
+validación, reproducibilidad y control de calidad de cálculos del
+aplicativo.</p>
+<p><strong>Enfoque para lector común:</strong> explicar validación como
+comparación controlada entre resultados del aplicativo y referencias o
+datos esperados. Evitar lenguaje absoluto si la evidencia externa no
+está completamente disponible.</p>
+<p><strong>Secciones específicas a desarrollar:</strong></p>
+<table>
+<colgroup>
+<col style="width: 30%" />
+<col style="width: 70%" />
+</colgroup>
+<thead>
+<tr>
+<th>Sección</th>
+<th>Contenido requerido</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Qué se entrega</td>
+<td>Informe de validación, anexo de cálculos, anexos CSV, script de
+generación y prueba de reproducibilidad.</td>
+</tr>
+<tr>
+<td>Qué intenta demostrar</td>
+<td>Que los cálculos pueden reproducirse y compararse contra referencias
+documentadas.</td>
+</tr>
+<tr>
+<td>Qué evidencia existe</td>
+<td>DOCX/PDF, anexos CSV, <code>genera_anexos.R</code>,
+<code>test_09_reproducibilidad.R</code>.</td>
+</tr>
+<tr>
+<td>Qué debe auditarse</td>
+<td>Confirmar referencias Excel/VIVO, pipeline completo de regeneración
+y correspondencia de anexos.</td>
+</tr>
+<tr>
+<td>Cómo redactar resultados</td>
+<td>Hablar de evidencia disponible y pruebas ejecutables, no de
+certificación absoluta si no está todo confirmado.</td>
+</tr>
+<tr>
+<td>Estado real</td>
+<td>Requiere auditoría de evidencia.</td>
+</tr>
+<tr>
+<td>Evidencia consultable</td>
+<td><code>informe_validacion.docx</code>,
+<code>informe_validacion.pdf</code>, <code>anexo_calculos.docx</code>,
+<code>anexos/*.csv</code>, <code>R/genera_anexos.R</code>,
+<code>tests/test_09_reproducibilidad.R</code>, <code>e9.md</code>.</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Riesgo de redacción:</strong> este es el entregable donde más
+fácil se puede “quedar mal” si se promete más de lo que la evidencia
+sostiene. Debe tener una sección explícita de alcance de validación y
+pendientes de confirmación.</p>
+<p><strong>Resultado esperado:</strong> documento robusto, cuidadoso y
+defendible sobre validación, con anexos claros y afirmaciones
+verificables.</p>
+<h2 id="reglas-de-redacción-por-riesgo">Reglas de Redacción por
+Riesgo</h2>
+<table>
+<colgroup>
+<col style="width: 10%" />
+<col style="width: 37%" />
+<col style="width: 51%" />
+</colgroup>
+<thead>
+<tr>
+<th>Caso</th>
+<th>Redacción permitida</th>
+<th>Redacción que debe evitarse</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Entregable histórico</td>
+<td>“Conserva evidencia de una fase anterior…”</td>
+<td>“Representa la versión actual…”</td>
+</tr>
+<tr>
+<td>Vigencia parcial</td>
+<td>“El contenido sigue siendo útil para…”</td>
+<td>“Cubre completamente…”</td>
+</tr>
+<tr>
+<td>Validación pendiente</td>
+<td>“La evidencia disponible muestra…”</td>
+<td>“Certifica de forma definitiva…”</td>
+</tr>
+<tr>
+<td>Código o pruebas</td>
+<td>“Existe una prueba automatizada que verifica…”</td>
+<td>“El sistema está libre de errores…”</td>
+</tr>
+<tr>
+<td>Documentos técnicos detallados</td>
+<td>“Para fórmulas y detalles, consultar…”</td>
+<td>Incluir todo el código o fórmulas extensas en el cuerpo
+principal.</td>
+</tr>
+</tbody>
+</table>
+<h2 id="log-de-ejecución">Log de Ejecución</h2>
+<ul>
+<li>[260628 08:27] Inicio del plan; revisión de <code>AGENTS.md</code>,
+estructura de <code>Entregables_pt_app</code>, overviews
+<code>e1.md</code> a <code>e9.md</code> y bitácora de actualización
+2026-06-16.</li>
+<li>[260628 08:27] Se identifica que los README/overviews actuales no
+son suficientes como entregables formales para una audiencia no
+desarrolladora.</li>
+<li>[260628 08:27] Se define enfoque: documento formal por entregable,
+con lenguaje claro, evidencia, estado real, limitaciones y remisión a
+anexos técnicos.</li>
+</ul>
+<h2 id="decisiones-iniciales">Decisiones Iniciales</h2>
+<ul>
+<li>No reemplazar los documentos técnicos detallados existentes; usarlos
+como anexos y fuentes de respaldo.</li>
+<li>No presentar los entregables históricos como si fueran la versión
+actual del aplicativo.</li>
+<li>Crear documentos independientes por entregable, no un único resumen
+general.</li>
+<li>Mantener una línea editorial común para que el paquete completo se
+vea coherente.</li>
+<li>Priorizar claridad y defensa institucional sobre detalle de
+código.</li>
+</ul>
+<h2 id="riesgos-iniciales">Riesgos Iniciales</h2>
+<ul>
+<li>El Entregable 09 requiere especial cuidado: no debe afirmarse
+reproducibilidad plena si la evidencia externa Excel/VIVO no está
+confirmada en el workspace.</li>
+<li>Los Entregables 03, 04, 06, 07 y 08 tienen diferencias frente a la
+aplicación vigente; los documentos deben explicarlas con
+transparencia.</li>
+<li>Si se dejan rutas locales absolutas o enlaces <code>file://</code>
+en documentos finales, pueden fallar al entregar el paquete fuera del
+equipo local.</li>
+<li>Un documento demasiado técnico puede no servir para evaluadores
+comunes; uno demasiado superficial puede parecer incompleto. La solución
+será cuerpo explicativo más anexos técnicos.</li>
+</ul>
+</body>
+</html>

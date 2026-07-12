@@ -1,78 +1,193 @@
-"archivo","nombre_funcion","descripcion","parametros","retorno","referencia_iso"
-"app.R","algo_key","","pollutant, n_lab, level) paste(pollutant, n_lab, level, sep = ""||""",NA,""
-"utils.R","algorithm_A","@export","x, max_iter = 100",NA,""
-"app.R","build_homogeneity_export_df","","",NA,""
-"app.R","build_stability_export_df","","",NA,""
-"app.R","build_xpt_summary_row","","pol, n, lev, subset_data, method_code",NA,""
-"pt_scores.R","calculate_en_score","@export","x, x_pt, U_x, U_xpt",NA,"ISO 13528:2022, Section 10.5"
-"app.R","calculate_expert_sigma_pt","","pollutant, x_pt",NA,""
-"app.R","calculate_expert_u_xpt","","x_pt",NA,""
-"pt_homogeneity.R","calculate_homogeneity_criterion","@export","sigma_pt",NA,"ISO 13528:2022, Section 9.2.3"
-"pt_homogeneity.R","calculate_homogeneity_criterion_expanded","@export","sigma_pt, sw, g",NA,"ISO 13528:2022, Section 9.2.4"
-"pt_homogeneity.R","calculate_homogeneity_stats","@export","sample_data",NA,"ISO 13528:2022, Section 9.2"
-"pt_robust_stats.R","calculate_mad_e","@export","x",NA,"ISO 13528:2022, Section 9.4"
-"app.R","calculate_method_scores_df","","method_code",NA,""
-"pt_robust_stats.R","calculate_niqr","@export","x",NA,"ISO 13528:2022, Section 9.4"
-"pt_homogeneity.R","calculate_stability_criterion","@export","sigma_pt",NA,"ISO 13528:2022, Section 9.3.3"
-"pt_homogeneity.R","calculate_stability_criterion_expanded","@export","c_criterion, u_hom_mean, u_stab_mean",NA,""
-"pt_homogeneity.R","calculate_stability_stats","@export","stab_sample_data, hom_general_mean_homog, hom_stab_x_pt, hom_stab_sigma_pt",NA,"ISO 13528:2022, Section 9.3"
-"pt_homogeneity.R","calculate_u_hom","@export","ss",NA,"ISO 13528:2022, Section 9.5"
-"pt_homogeneity.R","calculate_u_stab","@export","diff_hom_stab, c_criterion",NA,"ISO 13528:2022, Section 9.5"
-"pt_scores.R","calculate_z_prime_score","@export","x, x_pt, sigma_pt, u_xpt",NA,"ISO 13528:2022, Section 10.3"
-"pt_scores.R","calculate_z_score","@export","x, x_pt, sigma_pt",NA,"ISO 13528:2022, Section 10.2"
-"pt_scores.R","calculate_zeta_score","@export","x, x_pt, u_x, u_xpt",NA,"ISO 13528:2022, Section 10.4"
-"app.R","combine_scores_result","","res",NA,""
-"app.R","compute_combo_scores","","participants_df, x_pt, sigma_pt, u_xpt, combo_meta, k = 2, u_hom = 0, u_stab = 0",NA,""
-"report_template.Rmd","compute_homogeneity","","data_full, pol, lev",NA,""
-"app.R","compute_homogeneity_metrics","","target_pollutant, target_level",NA,""
-"app.R","compute_scores_for_selection","","target_pollutant, target_n_lab, target_level, summary_data, max_iter = 50, k_factor = 2",NA,""
-"app.R","compute_scores_metrics","","summary_df, target_pollutant, target_n_lab, target_level, sigma_pt, u_xpt, k, m = NULL, u_hom = 0, u_stab = 0",NA,""
-"app.R","compute_stability_metrics","","target_pollutant, target_level, hom_results",NA,""
-"app.R","count_eval","","eval_col, eval_type",NA,""
-"app.R","create_combo_plot","","df, score_col, title_suffix, limit_lines = c(2, 3), limit_colors = c(""orange"", ""red""), show_legend = TRUE",NA,""
-"app.R","empty_algo_df","","",NA,""
-"app.R","empty_consensus_df","","",NA,""
-"app.R","ensure_classification_columns","","df",NA,""
-"pt_scores.R","evaluate_en_score","@export","en",NA,""
-"pt_scores.R","evaluate_en_score_vec","@export","en",NA,""
-"pt_homogeneity.R","evaluate_homogeneity","@export","ss, c_criterion, c_expanded = NULL",NA,""
-"pt_homogeneity.R","evaluate_stability","@export","diff_hom_stab, c_criterion, c_expanded = NULL",NA,""
-"app.R","evaluate_u_xpt_sigma_criterion","","u_xpt_def, sigma_pt",NA,""
-"pt_scores.R","evaluate_z_score","@export","z",NA,""
-"pt_scores.R","evaluate_z_score_vec","@export","z",NA,""
-"app.R","format_convergence_method","","method",NA,""
-"app.R","format_num","","x, n_digits = 4",NA,""
-"app.R","format_numeric_columns","","df, columns = NULL",NA,""
-"app.R","get_algo_a_stabilization_iter","","res",NA,""
-"app.R","get_calaire_reference_for_combo","","target_pollutant, target_level",NA,""
-"app.R","get_combo_levels_order","","combos_filtered",NA,""
-"app.R","get_global_overview_data","","spec",NA,""
-"app.R","get_global_summary_row","","spec",NA,""
-"app.R","get_scores_result","","pollutant, n_lab, level",NA,""
-"app.R","get_wide_data","","df, target_pollutant",NA,""
-"app.R","infer_n_lab","","df, filename = NULL",NA,""
-"report_template.Rmd","is_nonempty_df","","x",NA,""
-"utils.R","mad_e_manual","@export","x",NA,""
-"utils.R","nIQR_manual","@export","x",NA,""
-"app.R","normalize_n","","df",NA,""
-"app.R","normalize_participant_uncertainty","","df",NA,""
-"app.R","normalize_pollutant_code","","pollutant",NA,""
-"app.R","normalize_u_df","","df, source_label, notify = TRUE",NA,""
-"report_template.Rmd","participant_count","","df",NA,""
-"app.R","plot_scores","","df, score_col, title, subtitle, ylab, warn_limits = NULL, action_limits = NULL",NA,""
-"app.R","read_hom_stab_csv","","path, label",NA,""
-"app.R","render_global_score_heatmap","","output_id, combo_key, score_col, eval_col, palette, title_prefix",NA,""
-"report_template.Rmd","round_summary_data","","",NA,""
-"pt_robust_stats.R","run_algorithm_a","@export","values, ids = NULL, max_iter = 50, tol = 1e-10",NA,"ISO 13528:2022, Annex C"
-"report_template.Rmd","run_algorithm_a_report","","values, max_iter = 50",NA,""
-"app.R","run_workflow_script","","script, args = character()",NA,""
-"app.R","safe_filename_stem","","x, fallback = ""Informe_EA""",NA,""
-"report_template.Rmd","safe_param_df","","x",NA,""
-"report_template.Rmd","safe_rename_by_position","","df, labels",NA,""
-"app.R","save_preprocessor_raw_files","","raw_files",NA,""
-"app.R","scalar_or_default","","x, default",NA,""
-"app.R","score_equation","","math",NA,""
-"report_template.Rmd","selected_summary_data","","",NA,""
-"app.R","server","","input, output, session",NA,""
-"pt_robust_stats.R","stable_sigfig_value","","x, digits = algo_a_significant_figures",NA,""
-"app.R","summarize_scores","","df",NA,""
+"archivo","nombre_funcion","categoria","descripcion","parametros","retorno","ejemplos","referencia_iso","exportada","lifecycle","archivo_ruta"
+"pt_robust_stats.R","calculate_mad_e","Estadisticos Robustos","Calculates 1.483 * MAD, providing a robust estimate of the standard deviation. The factor 1.483 ensures consistency with normal distribution.","x A numeric vector.","The scaled MAD (MADe), or NA if insufficient data.
+","# Calculate MADe for data with an outlier
+values <- c(10.1, 10.2, 9.9, 10.0, 50.0)  # 50 is outlier
+calculate_mad_e(values)  # Robust to the outlier
+","ISO 13528:2022, Section 9.4",TRUE,NA,"ptcalc/R/pt_robust_stats.R"
+"pt_robust_stats.R","calculate_niqr","Estadisticos Robustos","Calculates 0.7413 * IQR, providing a robust estimate of the standard deviation. The factor 0.7413 ensures consistency with normal distribution.","x A numeric vector.","The normalized IQR (nIQR), or NA if insufficient data.
+","# Calculate nIQR for proficiency testing data
+values <- c(10.1, 10.2, 9.9, 10.0, 10.3, 9.8, 10.1)
+calculate_niqr(values)
+","ISO 13528:2022, Section 9.4",TRUE,NA,"ptcalc/R/pt_robust_stats.R"
+"app.R","get_algo_a_stabilization_iter","Estadisticos Robustos","Extrae el numero de iteracion en la que el Algoritmo A alcanzo la convergencia, a partir del data frame de iteraciones.","res: lista de resultado de run_algorithm_a.","Entero con la iteracion de convergencia o NA.",NA,"ISO 13528:2022, Annex C",FALSE,NA,"app.R"
+"pt_robust_stats.R","run_algorithm_a","Estadisticos Robustos","Iterative algorithm for computing robust estimates of location (x*) and scale (s*) from proficiency testing data using winsorization.","values A numeric vector of participant results.
+ids Optional vector of participant identifiers (same length as values).
+max_iter Maximum number of iterations (default: 100).
+tol Numerical guard tolerance for x* and s* (default: 1e-10). The
+  primary convergence criterion is 3rd significant figure comparison per
+  ISO 13528:2022 NOTE 1; tol only catches machine-precision stalls.","A list containing:
+  - assigned_value: Robust mean (x*)
+  - robust_sd: Robust standard deviation (s*)
+  - iterations: Data frame of iteration history (includes signif4_* columns)
+  - iteration_detail: Data frame with per-participant detail per iteration
+  - weights: Data frame with final winsorized values per participant
+  - winsorized_values: Backward-compatible alias of weights
+  - converged: Logical indicating convergence
+  - convergence_method: `""signif3""` (ISO 13528:2022 NOTE 1) or
+    `""numerical_guard""` (machine-precision stall) or `NA` if not converged
+  - n_winsorized: Number of winsorized observations in final iteration
+  - n: Number of valid observations used
+  - n_participants: Backward-compatible alias of n
+  - error: Error message or NULL if successful
+","# Robust mean/sd with outlier in data
+values <- c(10.1, 10.2, 9.9, 10.0, 10.3, 50.0)  # 50 is outlier
+result <- run_algorithm_a(values)
+cat(""Robust mean:"", result$assigned_value, ""\n"")
+cat(""Robust SD:"", result$robust_sd, ""\n"")
+","ISO 13528:2022, Annex C",TRUE,NA,"ptcalc/R/pt_robust_stats.R"
+"report_template.Rmd","run_algorithm_a_report","Estadisticos Robustos","Wrapper del Algoritmo A para el reporte Rmd. Llama a run_algorithm_a de ptcalc con tolerancia 1e-03 y devuelve una lista simplificada (mean, sd, error).","values: vector numerico; max_iter: iteraciones maximas.","Lista con mean (valor asignado robusto), sd (desviacion robusta) y error.","run_algorithm_a_report(c(10, 10.1, 9.9, 50))","ISO 13528:2022, Annex C",FALSE,NA,"reports/report_template.Rmd"
+"pt_robust_stats.R","stable_sigfig_value","Estadisticos Robustos","Redondea un valor al numero de cifras significativas estables usado por el Algoritmo A para verificar convergencia.","x: valor numerico; digits: numero de cifras significativas (default 3).","Valor redondeado.",NA,"ISO 13528:2022, Annex C",FALSE,NA,"ptcalc/R/pt_robust_stats.R"
+"app.R","build_homogeneity_export_df","Homogeneidad y Estabilidad","Construye un data frame limpio con los resultados de homogeneidad para descarga.","Ninguno (usa reactives internos).","Data frame exportable.",NA,"ISO 13528:2022, Section 9.2",FALSE,NA,"app.R"
+"app.R","build_stability_export_df","Homogeneidad y Estabilidad","Construye un data frame limpio con los resultados de estabilidad para descarga.","Ninguno (usa reactives internos).","Data frame exportable.",NA,"ISO 13528:2022, Section 9.3",FALSE,NA,"app.R"
+"pt_homogeneity.R","calculate_homogeneity_criterion","Homogeneidad y Estabilidad","c = 0.3 * sigma_pt","sigma_pt Standard deviation for proficiency assessment.","The homogeneity criterion value.
+","# Criterion for sigma_pt = 0.5
+c <- calculate_homogeneity_criterion(sigma_pt = 0.5)
+cat(""Homogeneity criterion:"", c)  # 0.15
+","ISO 13528:2022, Section 9.2.3",TRUE,NA,"ptcalc/R/pt_homogeneity.R"
+"pt_homogeneity.R","calculate_homogeneity_criterion_expanded","Homogeneidad y Estabilidad","c_expanded = c_criterion * sqrt(1 + (u_sigma_pt/sigma_pt)^2)","sigma_pt Standard deviation for proficiency assessment (from MADe)
+u_sigma_pt Uncertainty of sigma_pt","The expanded criterion value",NA,"ISO 13528:2022, Section 9.2.4",TRUE,NA,"ptcalc/R/pt_homogeneity.R"
+"pt_homogeneity.R","calculate_homogeneity_stats","Homogeneidad y Estabilidad","Computes between-sample standard deviation (ss), within-sample standard deviation (sw), and related ANOVA components for homogeneity assessment. Also calculates robust sigma estimate (MADe) and its uncertainty.","sample_data Data frame or matrix with samples as rows and replicates as columns.","A list containing:
+  - g: Number of samples (groups)
+  - m: Number of replicates per sample
+  - general_mean_homog: Overall mean of ALL values
+  - sample_means: Vector of sample means
+  - x_pt: Median of first replicate values
+  - s_x_bar_sq: Variance of sample means
+  - s_xt: Standard deviation of sample means
+  - sw: Within-sample standard deviation
+  - sw_sq: Within-sample variance
+  - ss_sq: Between-sample variance component
+  - ss: Between-sample standard deviation
+  - median_of_diffs: Median of absolute differences between sample means
+  - MADe: Robust sigma estimate (1.483 * median_of_diffs)
+  - sigma_pt: Standard deviation for proficiency assessment (equals MADe)
+  - u_sigma_pt: Uncertainty of sigma_pt (1.23 * MADe / sqrt(g))
+  - error: Error message or NULL if successful
+","# Create sample data: 10 items with 2 replicates each
+sample_data <- matrix(rnorm(20, mean = 10, sd = 0.5), nrow = 10, ncol = 2)
+stats <- calculate_homogeneity_stats(sample_data)
+cat(""Between-sample SD (ss):"", stats$ss, ""\n"")
+cat(""Sigma PT (MADe):"", stats$sigma_pt, ""\n"")
+","ISO 13528:2022, Section 9.2",TRUE,NA,"ptcalc/R/pt_homogeneity.R"
+"pt_homogeneity.R","calculate_stability_criterion","Homogeneidad y Estabilidad","c_stab = 0.3 * sigma_pt (same as homogeneity criterion)","sigma_pt Standard deviation for proficiency assessment","The stability criterion value",NA,"ISO 13528:2022, Section 9.3.3",TRUE,NA,"ptcalc/R/pt_homogeneity.R"
+"pt_homogeneity.R","calculate_stability_criterion_expanded","Homogeneidad y Estabilidad","c_stab_expanded = c_criterion + 2 * sqrt(u_hom_mean^2 + u_stab_mean^2)","c_criterion Base stability criterion
+u_hom_mean Uncertainty of homogeneity mean
+u_stab_mean Uncertainty of stability mean","The expanded stability criterion",NA,NA,TRUE,NA,"ptcalc/R/pt_homogeneity.R"
+"pt_homogeneity.R","calculate_stability_stats","Homogeneidad y Estabilidad","Calculates statistics from stability data using same pattern as homogeneity assessment. Independent of homogeneity calculations. Compares stability mean to homogeneity mean to assess short-term stability of proficiency test items.","stab_sample_data Data frame or matrix with stability samples
+hom_general_mean_homog General mean from homogeneity study
+hom_stab_x_pt Median of 1st replicate values from HOMOGENEITY study (assigned value x_pt), used as REFERENCE for median_of_diffs calculation
+hom_stab_sigma_pt Standard deviation for proficiency assessment from HOMOGENEITY study (robust sigma estimate MADe)","A list containing:
+  - g: Number of stability samples (groups)
+  - m: Number of replicates per stability sample
+  - general_mean: Overall mean of ALL stability values
+  - sample_means: Vector of stability sample means
+  - x_pt: Median of first replicate values (calculated internally, same formula as homogeneity)
+  - s_x_bar_sq: Variance of stability sample means
+  - s_xt: Standard deviation of stability sample means
+  - sw: Within-sample standard deviation (stability)
+  - sw_sq: Within-sample variance (stability)
+  - ss_sq: Between-sample variance component (stability)
+  - ss: Between-sample standard deviation (stability)
+  - hom_stab_median_of_diffs: Median of absolute differences between 2nd replicate values (stability) and HOMOGENEITY's x_pt
+  - hom_stab_sigma_pt: Standard deviation from HOMOGENEITY study (passed through, not calculated internally)
+  - diff_hom_stab: Absolute difference |stability_mean - homogeneity_mean|
+  - error: Error message or NULL if successful",NA,"ISO 13528:2022, Section 9.3",TRUE,NA,"ptcalc/R/pt_homogeneity.R"
+"pt_homogeneity.R","calculate_u_hom","Homogeneidad y Estabilidad","u_hom = ss (between-sample standard deviation)","ss Between-sample standard deviation from homogeneity study","Uncertainty contribution from homogeneity",NA,"ISO 13528:2022, Section 9.5",TRUE,NA,"ptcalc/R/pt_homogeneity.R"
+"pt_homogeneity.R","calculate_u_stab","Homogeneidad y Estabilidad","u_stab = diff_hom_stab / sqrt(3) (if criterion not met) or 0 (if criterion is met)","diff_hom_stab Absolute difference between stability and homogeneity means
+c_criterion Stability criterion","Uncertainty contribution from stability",NA,"ISO 13528:2022, Section 9.5",TRUE,NA,"ptcalc/R/pt_homogeneity.R"
+"report_template.Rmd","compute_homogeneity","Homogeneidad y Estabilidad","Wrapper del calculo de homogeneidad para el reporte Rmd. Pasa datos en formato largo a ancho y llama a calculate_homogeneity_stats de ptcalc.","data_full: datos largos; pol: analito; lev: nivel.","Lista de estadisticos de homogeneidad o NULL si no hay datos/error.",NA,"ISO 13528:2022, Section 9.2",FALSE,NA,"reports/report_template.Rmd"
+"app.R","compute_homogeneity_metrics","Homogeneidad y Estabilidad","Calcula metricas completas de homogeneidad para un analito y nivel: estadisticos descriptivos, ANOVA, sigma_pt (MADe y nIQR), criterios ISO y conclusiones.","target_pollutant: analito; target_level: nivel.","Lista extensa con tablas, valores, criterios, conclusiones y clase CSS para la UI.",NA,"ISO 13528:2022, Section 9.2",FALSE,NA,"app.R"
+"app.R","compute_stability_metrics","Homogeneidad y Estabilidad","Calcula metricas de estabilidad comparando datos de estabilidad con los resultados de homogeneidad para un analito y nivel.","target_pollutant: analito; target_level: nivel; hom_results: resultado de compute_homogeneity_metrics().","Lista con estadisticos de estabilidad, criterios, conclusiones y contribucion u_stab.",NA,"ISO 13528:2022, Section 9.3",FALSE,NA,"app.R"
+"pt_homogeneity.R","evaluate_homogeneity","Homogeneidad y Estabilidad","","ss Between-sample standard deviation
+c_criterion Homogeneity criterion
+c_expanded Expanded homogeneity criterion (optional)","A list with:
+  - passes_criterion: Logical, TRUE if ss <= c_criterion
+  - passes_expanded: Logical, TRUE if ss <= c_expanded (or NA if c_expanded not provided)
+  - conclusion: Text description of result",NA,NA,TRUE,NA,"ptcalc/R/pt_homogeneity.R"
+"pt_homogeneity.R","evaluate_stability","Homogeneidad y Estabilidad","","diff_hom_stab Absolute difference between stability and homogeneity means
+c_criterion Stability criterion
+c_expanded Expanded stability criterion (optional)","A list with:
+  - passes_criterion: Logical, TRUE if diff <= c_criterion
+  - passes_expanded: Logical, TRUE if diff <= c_expanded (or NA if not provided)
+  - conclusion: Text description of result",NA,NA,TRUE,NA,"ptcalc/R/pt_homogeneity.R"
+"pt_scores.R","calculate_en_score","Puntajes PT","En = (x - x_pt) / sqrt(U_x^2 + U_xpt^2)","x Participant result.
+x_pt Assigned value.
+U_x Expanded uncertainty of participant's result.
+U_xpt Expanded uncertainty of the assigned value.","En-score value.
+","# En-score uses expanded uncertainties (k=2)
+en <- calculate_en_score(x = 10.5, x_pt = 10.0, U_x = 0.4, U_xpt = 0.2)
+cat(""En-score:"", en, ""Eval:"", evaluate_en_score(en))
+","ISO 13528:2022, Section 10.5",TRUE,NA,"ptcalc/R/pt_scores.R"
+"app.R","calculate_expert_sigma_pt","Puntajes PT","Calcula sigma_pt a partir de parametros expertos (modelo lineal a*x_pt + b) por analito, segun tabla interna de CALAIRE.","pollutant: codigo del analito; x_pt: valor asignado.","Valor numerico de sigma_pt o NA.",NA,NA,FALSE,NA,"app.R"
+"app.R","calculate_expert_u_xpt","Puntajes PT","Calcula la incertidumbre estandar del valor asignado como 0.3% del valor asignado (0.003 * x_pt).","x_pt: valor asignado.","Incertidumbre estandar u_xpt.",NA,NA,FALSE,NA,"app.R"
+"pt_scores.R","calculate_z_prime_score","Puntajes PT","z' = (x - x_pt) / sqrt(sigma_pt^2 + u_xpt^2)","x Participant result.
+x_pt Assigned value.
+sigma_pt Standard deviation for proficiency assessment.
+u_xpt Standard uncertainty of the assigned value.","z'-score value.
+","# z'-score accounts for uncertainty in assigned value
+zprime <- calculate_z_prime_score(x = 10.5, x_pt = 10.0, sigma_pt = 0.5, u_xpt = 0.1)
+","ISO 13528:2022, Section 10.3",TRUE,NA,"ptcalc/R/pt_scores.R"
+"pt_scores.R","calculate_z_score","Puntajes PT","z = (x - x_pt) / sigma_pt","x Participant result.
+x_pt Assigned value.
+sigma_pt Standard deviation for proficiency assessment.","z-score value.
+","# Calculate z-score for a participant
+z <- calculate_z_score(x = 10.5, x_pt = 10.0, sigma_pt = 0.5)
+cat(""z-score:"", z)  # 1.0 (Satisfactorio)
+","ISO 13528:2022, Section 10.2",TRUE,NA,"ptcalc/R/pt_scores.R"
+"pt_scores.R","calculate_zeta_score","Puntajes PT","zeta = (x - x_pt) / sqrt(u_x^2 + u_xpt^2)","x Participant result.
+x_pt Assigned value.
+u_x Standard uncertainty of participant's result.
+u_xpt Standard uncertainty of the assigned value.","zeta-score value.
+","# zeta-score uses participant's uncertainty
+zeta <- calculate_zeta_score(x = 10.5, x_pt = 10.0, u_x = 0.2, u_xpt = 0.1)
+","ISO 13528:2022, Section 10.4",TRUE,NA,"ptcalc/R/pt_scores.R"
+"app.R","compute_combo_scores","Puntajes PT","Calcula los cuatro puntajes (z, z', zeta, En) para un grupo de participantes y una combinacion analito/nivel/n_lab, usando u_xpt definida que incluye u_hom y u_stab.","participants_df: data frame de participantes; x_pt, sigma_pt, u_xpt: parametros de referencia; combo_meta: lista con title y label; k: factor de cobertura; u_hom, u_stab: incertidumbres adicionales.","Lista con data frame ampliado (incluyendo columnas *_score y *_eval) o mensaje de error.",NA,"ISO 13528:2022, Section 10",FALSE,NA,"app.R"
+"app.R","compute_scores_for_selection","Puntajes PT","Orquesta el flujo completo de puntajes para una seleccion de analito, n_lab y nivel: obtiene parametros de homogeneidad, carga datos de participantes, deriva incertidumbres y calcula puntajes.","target_pollutant, target_n_lab, target_level: seleccion; summary_data: datos consolidados; max_iter, k_factor: parametros.","Lista con resultados de puntajes, resumenes, graficos y errores si los hay.",NA,"ISO 13528:2022, Section 10",FALSE,NA,"app.R"
+"app.R","compute_scores_metrics","Puntajes PT","Calcula puntajes z, z', zeta y En para un conjunto de participantes dados x_pt, sigma_pt y u_xpt, incluyendo contribuciones de homogeneidad y estabilidad.","summary_df: datos resumidos; target_pollutant, target_n_lab, target_level: seleccion; sigma_pt, u_xpt, k: parametros; m: replicados; u_hom, u_stab: contribuciones adicionales.","Lista con data frame de puntajes, resumenes y metadata de la combinacion.",NA,"ISO 13528:2022, Section 10",FALSE,NA,"app.R"
+"app.R","ensure_classification_columns","Puntajes PT","Garantiza que un data frame contenga las columnas de clasificacion usadas por los reportes; las crea con NA si no existen.","df: data frame.","Data frame con columnas classification_z_en, classification_z_en_code, classification_zprime_en, classification_zprime_en_code.",NA,NA,FALSE,NA,"app.R"
+"pt_scores.R","evaluate_en_score","Puntajes PT","Classifies En-score performance: - |En| <= 1: Satisfactorio (Satisfactory) - |En| > 1: No satisfactorio (Unsatisfactory)","en En-score value","Character string with evaluation category",NA,NA,TRUE,NA,"ptcalc/R/pt_scores.R"
+"pt_scores.R","evaluate_en_score_vec","Puntajes PT","","en Vector of En-score values","Character vector with evaluation categories",NA,NA,TRUE,NA,"ptcalc/R/pt_scores.R"
+"app.R","evaluate_u_xpt_sigma_criterion","Puntajes PT","Evalua si la incertidumbre del valor asignado cumple el criterio ISO u(x_pt) <= 0.3 * sigma_pt.","u_xpt_def: incertidumbre definida; sigma_pt: desviacion estandar de evaluacion.","Cadena con la conclusion ('Cumple' / 'No cumple' / 'No evaluable').",NA,"ISO 13528:2022, Section 10",FALSE,NA,"app.R"
+"pt_scores.R","evaluate_z_score","Puntajes PT","Classifies score performance based on ISO 13528 criteria: - |z| <= 2: Satisfactorio (Satisfactory) - 2 < |z| < 3: Cuestionable (Questionable) - |z| >= 3: No satisfactorio (Unsatisfactory)","z Score value (z, z', or zeta)","Character string with evaluation category",NA,NA,TRUE,NA,"ptcalc/R/pt_scores.R"
+"pt_scores.R","evaluate_z_score_vec","Puntajes PT","","z Vector of score values","Character vector with evaluation categories",NA,NA,TRUE,NA,"ptcalc/R/pt_scores.R"
+"app.R","get_calaire_reference_for_combo","Carga y Normalizacion","Filtra el data frame de referencia CALAIRE para devolver la fila correspondiente a un analito y nivel.","target_pollutant: codigo del analito; target_level: nivel.","Data frame filtrado o NULL si no hay referencia.",NA,NA,FALSE,NA,"app.R"
+"app.R","get_wide_data","Carga y Normalizacion","Transforma datos en formato largo a formato ancho (una fila por item, columnas sample_1, sample_2, ...) filtrando por analito.","df: data frame largo; target_pollutant: analito a filtrar.","Data frame ancho o NULL si no hay datos.",NA,NA,FALSE,NA,"app.R"
+"app.R","infer_n_lab","Carga y Normalizacion","Infere la columna n_lab (numero de laboratorio) de un data frame. Primero busca una columna existente, luego un patron en el nombre de archivo y finalmente cuenta participantes distintos por combinacion.","df: data frame; filename: nombre de archivo opcional para extraer n_lab.","Data frame con columna n_lab anadida o preservada.","infer_n_lab(df, ""ronda_n12_o3.csv"")",NA,FALSE,NA,"app.R"
+"app.R","normalize_n","Carga y Normalizacion","Normaliza valores de n (numero de laboratorio / ronda) a entero, limpiando prefijos como 'N' o 'n'.","df: data frame con columna n_lab.","Data frame con n_lab como entero.",NA,NA,FALSE,NA,"app.R"
+"app.R","normalize_participant_uncertainty","Carga y Normalizacion","Normaliza la incertidumbre reportada por participantes. Detecta alias de incertidumbre expandida (u_exp, U(xi), etc.) y factor de cobertura k, y deriva u_value cuando no esta presente. Advierte si hay inconsistencia entre u_value y u_exp/k.","df: data frame con columnas de incertidumbre.","Data frame con columnas u_exp, k_factor y u_value normalizadas.",NA,NA,FALSE,NA,"app.R"
+"app.R","normalize_pollutant_code","Carga y Normalizacion","Normaliza codigos de analito a mayusculas, reemplaza subindices unicode por digitos y elimina caracteres no alfanumericos.","pollutant: vector de codigos.","Vector de codigos normalizados.","normalize_pollutant_code(""NO₂"") # devuelve ""NO2""",NA,FALSE,NA,"app.R"
+"app.R","normalize_u_df","Carga y Normalizacion","Normaliza un data frame de incertidumbres proveniente de un archivo consolidado: asegura columnas estandar, convierte formatos y emite notificaciones si detecta inconsistencias.","df: data frame; source_label: etiqueta descriptiva; notify: mostrar notificaciones.","Data frame normalizado.",NA,NA,FALSE,NA,"app.R"
+"app.R","read_hom_stab_csv","Carga y Normalizacion","Lee un CSV de homogeneidad o estabilidad con vroom y valida que contenga las columnas 'value', 'pollutant' y 'level'.","path: ruta al archivo; label: etiqueta ('homogeneidad' o 'estabilidad') para mensajes de error.","Data frame leido o mensaje de validacion Shiny si falla.","read_hom_stab_csv(""homogeneity.csv"", ""homogeneidad"")",NA,FALSE,NA,"app.R"
+"app.R","format_convergence_method","Formateo","Traduce el metodo de convergencia del Algoritmo A a una etiqueta legible en espanol.","method: cadena ('signif3', 'numerical_guard', NA).","Cadena descriptiva.","format_convergence_method(""signif3"")",NA,FALSE,NA,"app.R"
+"app.R","format_num","Formateo","Formatea un numero a n_digits decimales, manejando valores no finitos como cadena vacia.","x: valor numerico; n_digits: numero de decimales (default 4).","Cadena de texto formateada.","format_num(pi, 3) # ""3.142""",NA,FALSE,NA,"app.R"
+"app.R","format_numeric_columns","Formateo","Aplica format_num a un conjunto de columnas numericas de un data frame.","df: data frame; columns: nombres de columnas (default: todas las numericas).","Data frame con columnas formateadas como texto.",NA,NA,FALSE,NA,"app.R"
+"app.R","create_combo_plot","Visualizacion","Crea un grafico combinado (valores del participante vs referencia + evolucion del puntaje) por nivel, usando patchwork.","df: data frame; score_col: columna de puntaje; title_suffix: sufijo del titulo; limit_lines, limit_colors, show_legend: opciones graficas.","Objeto ggplot combinado.",NA,NA,FALSE,NA,"app.R"
+"app.R","plot_scores","Visualizacion","Genera un grafico ggplot de puntajes por participante con lineas de advertencia y accion opcionales.","df: data frame; score_col: columna de puntaje; title, subtitle, ylab: etiquetas; warn_limits, action_limits: vectores de limites.","Objeto ggplot.",NA,NA,FALSE,NA,"app.R"
+"app.R","render_global_score_heatmap","Visualizacion","Renderiza un heatmap interactivo de puntajes por participante y nivel usando plotly.","output_id: id del output Shiny; combo_key, score_col, eval_col: columnas a visualizar; palette: paleta de colores; title_prefix: prefijo del titulo.","Efecto secundario: asigna output[[output_id]].",NA,NA,FALSE,NA,"app.R"
+"app.R","build_xpt_summary_row","Reportes","Construye una fila del resumen de valor asignado para una combinacion analito/n_lab/nivel y un metodo dado. Los metodos son: 1=Referencia, 2a=Consenso MADe, 2b=Consenso nIQR, 3=Algoritmo A, 4=Expertos.","pol, n, lev: identificadores; subset_data: datos filtrados; method_code: codigo de metodo.","Data frame de una fila con Contaminante, Nivel, Metodo, x_pt, u_xpt, sigma_pt, etc.",NA,"ISO 13528:2022, Sections 8-9",FALSE,NA,"app.R"
+"app.R","calculate_method_scores_df","Reportes","Calcula el resumen de valor asignado aplicando build_xpt_summary_row() a todas las combinaciones de un data frame para un metodo dado (y el metodo experto como comparacion si aplica).","method_code: codigo de metodo.","Data frame con resultados por combinacion.",NA,"ISO 13528:2022, Sections 8-9",FALSE,NA,"app.R"
+"app.R","combine_scores_result","Reportes","Combina multiples resultados de puntajes (lista) en un unico data frame, anadiendo metadatos de combinacion.","res: lista de resultados de compute_scores_metrics() o similares.","Data frame combinado o mensaje de error.",NA,NA,FALSE,NA,"app.R"
+"app.R","count_eval","Reportes","Cuenta el numero de ocurrencias de una categoria de evaluacion en una columna.","eval_col: vector de categorias; eval_type: categoria a contar.","Entero con el conteo.",NA,NA,FALSE,NA,"app.R"
+"app.R","empty_algo_df","Reportes","Devuelve un data frame vacio con la estructura esperada para resultados del Algoritmo A (usado como plantilla).","Ninguno.","Data frame vacio.",NA,NA,FALSE,NA,"app.R"
+"app.R","empty_consensus_df","Reportes","Devuelve un data frame vacio con la estructura esperada para resumenes de consenso (usado como plantilla).","Ninguno.","Data frame vacio.",NA,NA,FALSE,NA,"app.R"
+"app.R","get_combo_levels_order","Reportes","Devuelve los niveles de un conjunto de combinaciones ordenados numericamente.","combos_filtered: data frame con columna level.","Vector de niveles ordenados.",NA,NA,FALSE,NA,"app.R"
+"app.R","get_global_overview_data","Reportes","Filtra la tabla global_report_overview() para la combinacion seleccionada en la UI.","spec: lista con title de la combinacion.","Tibble filtrado.",NA,NA,FALSE,NA,"app.R"
+"app.R","get_global_summary_row","Reportes","Filtra la tabla global_report_summary() para la combinacion y etiqueta seleccionadas en la UI.","spec: lista con label de la combinacion.","Tibble filtrado.",NA,NA,FALSE,NA,"app.R"
+"app.R","get_scores_result","Reportes","Obtiene el resultado de puntajes almacenado en reactiveValues para una combinacion analito/n_lab/nivel.","pollutant, n_lab, level: identificadores de la combinacion.","Lista con resultados o NULL.",NA,NA,FALSE,NA,"app.R"
+"report_template.Rmd","is_nonempty_df","Reportes","Verifica si un objeto es un data frame no vacio.","x: objeto.","Logical TRUE/FALSE.","is_nonempty_df(data.frame(a = 1))",NA,FALSE,NA,"reports/report_template.Rmd"
+"report_template.Rmd","participant_count","Reportes","Cuenta el numero de participantes unicos (excluyendo 'ref' y NA) en un data frame.","df: data frame con columna participant_id.","Entero.",NA,NA,FALSE,NA,"reports/report_template.Rmd"
+"report_template.Rmd","round_summary_data","Reportes","Filtra params$summary_data por n_lab si esta definido (alias de selected_summary_data sin filtro de level).","Ninguno (usa params del Rmd).","Data frame filtrado.",NA,NA,FALSE,NA,"reports/report_template.Rmd"
+"report_template.Rmd","safe_param_df","Reportes","Devuelve un data frame pasado por params o un data frame vacio si no es valido.","x: objeto (params$...).","Data frame.",NA,NA,FALSE,NA,"reports/report_template.Rmd"
+"report_template.Rmd","safe_rename_by_position","Reportes","Renombra las primeras columnas de un data frame segun un vector de etiquetas, si el data frame no esta vacio.","df: data frame; labels: vector de nombres.","Data frame renombrado.",NA,NA,FALSE,NA,"reports/report_template.Rmd"
+"app.R","scalar_or_default","Reportes","Devuelve el valor de una columna si es escalar unico, o un valor por defecto.","x: valor; default: valor por defecto.","Valor escalar o default.",NA,NA,FALSE,NA,"app.R"
+"report_template.Rmd","selected_summary_data","Reportes","Filtra params$summary_data por n_lab y level si estan definidos.","Ninguno (usa params del Rmd).","Data frame filtrado.",NA,NA,FALSE,NA,"reports/report_template.Rmd"
+"app.R","summarize_scores","Reportes","Resume un data frame de puntajes calculando totales y porcentajes de cada categoria de evaluacion.","df: data frame con columnas de evaluacion.","Data frame resumen.",NA,NA,FALSE,NA,"app.R"
+"app.R","run_workflow_script","Servidor Shiny","Ejecuta un script R externo a traves de Rscript en un proceso separado, capturando salida estandar y error.","script: ruta al script; args: vector de argumentos de linea de comandos.","Lista con status (codigo de salida) y output (texto concatenado).","run_workflow_script(""scripts/aplicativo/preprocesar_calaire.R"", c(""--input"", ""datos.csv""))",NA,FALSE,NA,"app.R"
+"app.R","save_preprocessor_raw_files","Servidor Shiny","Guarda en disco los archivos raw seleccionados por el preprocesador y devuelve sus rutas temporales.","raw_files: data frame con columnas name y datapath (tipico de input$file).","Vector de rutas de archivo guardadas.",NA,NA,FALSE,NA,"app.R"
+"app.R","server","Servidor Shiny","Funcion servidor de la aplicacion Shiny. Contiene toda la logica reactiva, helpers internos, carga de datos, calculos de homogeneidad/estabilidad/puntajes y generacion de reportes.","input, output, session: objetos Shiny estandar.","Efectos secundarios en la sesion Shiny; no retorna valor.",NA,NA,FALSE,NA,"app.R"
+"app.R","algo_key","UI / Utilidades","Genera una clave unica para una combinacion analito/n_lab/nivel usando '||' como separador.","pollutant, n_lab, level: identificadores.","Cadena de texto.","algo_key(""O3"", 12, ""Nivel 1"")",NA,FALSE,NA,"app.R"
+"app.R","safe_filename_stem","UI / Utilidades","Limpia una cadena para usarla como nombre base de archivo: elimina espacios, tildes y caracteres especiales, colapsa guiones bajos y recorta extremos.","x: valor a limpiar; fallback: nombre por defecto si x es vacio.","Cadena de texto segura para usar en nombres de archivo.","safe_filename_stem(""Informe O3 Nivel Alto"", ""Informe_EA"")",NA,FALSE,NA,"app.R"
+"app.R","score_equation","UI / Utilidades","Renderiza una ecuacion en LaTeX usando MathJax dentro de un div con estilo 'text-muted'.","math: cadena LaTeX sin delimitadores (se envuelve en \( ... \)).","Objeto Shiny (withMathJax + div).","score_equation(""z = \frac{x - x_{pt}}{\sigma_{pt}}"")",NA,FALSE,NA,"app.R"
+"utils.R","algorithm_A","Obsoleto","Version anterior del Algoritmo A (ISO 13528). Deprecada: usar run_algorithm_a().","x: vector numerico; max_iter: iteraciones maximas.","Lista con robust_mean y robust_sd.",NA,"ISO 13528:2022, Annex C",TRUE,"deprecated","R/utils.R"
+"utils.R","mad_e_manual","Obsoleto","Version manual de calculate_mad_e(). Deprecada.","x: vector numerico.","Valor MADe.",NA,"ISO 13528:2022, Section 9.4",TRUE,"deprecated","R/utils.R"
+"utils.R","nIQR_manual","Obsoleto","Version manual de calculate_niqr(). Deprecada.","x: vector numerico.","Valor nIQR.",NA,"ISO 13528:2022, Section 9.4",TRUE,"deprecated","R/utils.R"

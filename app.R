@@ -40,6 +40,8 @@ if (interactive()) {
   source("ptcalc/R/pt_homogeneity.R")
 }
 
+source("R/export_final_scores.R")
+
 `%||%` <- function(x, y) {
   if (is.null(x)) y else x
 }
@@ -1458,6 +1460,10 @@ server <- function(input, output, session) {
     if (length(records) > 0) do.call(rbind, records) else NULL
   }
 
+  build_final_scores_export_df <- function() {
+    format_final_scores_export_df(global_report_data())
+  }
+
   compute_scores_metrics <- function(summary_df, target_pollutant, target_n_lab, target_level, sigma_pt, u_xpt, k, m = NULL, u_hom = 0, u_stab = 0) {
     if (is.null(summary_df) || nrow(summary_df) == 0) {
       return(list(error = "No hay datos resumen disponibles para los puntajes PT."))
@@ -2084,6 +2090,8 @@ server <- function(input, output, session) {
               id = "global_report_tabs",
               tabPanel(
                  "Resumen global",
+                 downloadButton("download_final_scores_csv", "Exportar puntajes finales (CSV)", class = "btn-sm btn-outline-secondary mb-2"),
+                 hr(),
                  h4("Resumen x_pt"),
                  dataTableOutput("global_xpt_summary_table"),
                  hr(),
@@ -4815,6 +4823,25 @@ server <- function(input, output, session) {
         write.table(res$overview %>% select(-any_of("U(xi)")), file, sep = ",", row.names = FALSE,
                     append = TRUE, col.names = TRUE)
       }
+    }
+  )
+
+  output$download_final_scores_csv <- downloadHandler(
+    filename = function() {
+      paste0("Puntajes_Finales_PT_", Sys.Date(), ".csv")
+    },
+    content = function(file) {
+      df <- build_final_scores_export_df()
+      if (is.null(df)) {
+        df <- data.frame(Mensaje = "Ejecute 'Calcular puntajes' primero.")
+      }
+      write.csv(
+        df,
+        file,
+        row.names = FALSE,
+        fileEncoding = "UTF-8",
+        na = ""
+      )
     }
   )
 
