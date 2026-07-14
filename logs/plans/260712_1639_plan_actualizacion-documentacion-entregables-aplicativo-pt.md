@@ -287,3 +287,5 @@ El paquete se considerará listo únicamente cuando:
 - [260714 10:30] Prueba focal completada: 24 expectativas, 0 fallos, 0
   advertencias; inventario reproducible de 88 archivos, parseo R correcto y
   `git diff --check` limpio.
+- [260714 10:31] Commit principal de Fase 1: `1f01b51`; los cambios HTML y el
+  hallazgo preexistente de las 10:20 quedaron excluidos.
