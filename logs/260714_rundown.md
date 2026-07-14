@@ -5,7 +5,7 @@
 ## Current State
 
 - Fases 1–7 implementadas; el plan permanece `Pausado` por obligaciones externas.
-- Fase 6 publicada en `ad16214`; Fase 7 publicada en `d488e26`.
+- Fase 6 publicada en `ad16214`; cierre de Fase 7 publicado hasta `d8bf789`.
 - Auditoría E01–E09, manifiesto y checksums finales disponibles.
 - Controles focales: 283 PASS, 0 FAIL, 0 WARN.
 - Playwright: 19 escenarios, 21 capturas; revisión visual aprobada.
@@ -27,7 +27,7 @@
 ## Branch Status
 
 - Branch: `main`
-- Status: sincronizada con `origin/main` en `d488e26`; quedan cambios
-  preexistentes preservados y el registro final de hashes/commit.
-- Pending changes: movimiento HTML, artefactos `_problems/` y hallazgo 10:20
-  excluidos; metadatos finales se publican en el commit de registro.
+- Status: sincronizada con `origin/main` en `d8bf789`; árbol sucio únicamente
+  por cambios preexistentes y artefactos de fallos preservados.
+- Pending changes: movimiento HTML, artefactos `_problems/` y hallazgo 10:20,
+  todos excluidos del cierre y del manifiesto.
