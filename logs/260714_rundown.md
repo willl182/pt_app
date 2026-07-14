@@ -8,8 +8,9 @@
 - Fase 3 aporta 21 imágenes para CAP-01 a CAP-19, datos demo no sensibles,
   índice auditable y registro de ejecución.
 - Implementación publicada en `068ba8e`; evidencia final regenerada desde ese
-  commit y pendiente del commit documental de cierre.
-- Segunda revisión `revisor-fase` sin bloqueantes; prueba focal 95/95.
+  commit y cierre documental publicado en `50049c1`.
+- Segunda revisión `revisor-fase` sin bloqueantes; pruebas finales de Fase 3
+  con 102 expectativas y línea base con otras 24, sin fallos.
 
 ## Critical Technical Context
 
@@ -29,7 +30,6 @@
 ## Branch Status
 
 - Branch: `main`
-- Status: implementación `068ba8e` sincronizada con `origin/main`; cierre de
-  Fase 3 pendiente de commit/push.
-- Pending changes: evidencia regenerada, plan, inventario, pruebas y memoria de
-  cierre; además tres cambios preexistentes excluidos.
+- Status: Fase 3 publicada en `50049c1`; `main` sincronizada con `origin/main`.
+- Pending changes: movimiento HTML y hallazgo de las 10:20 preexistentes,
+  preservados fuera de los commits de fase.
