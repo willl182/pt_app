@@ -6,7 +6,7 @@
 
 **Commit funcional de referencia:** `068ba8e`
 
-**Estado general:** E01–E04 actualizados; E05–E09 continúan en actualización
+**Estado general:** E01–E08 actualizados; E09 continúa en actualización
 
 ## Convención de estado
 
@@ -26,10 +26,10 @@
 | E02 | Funciones usadas | Soporte técnico | `02_funciones_usadas/md/documentacion_funciones.md` | `02_funciones_usadas/documentacion_funciones.docx` | CSV regenerado y prueba de Fase 4 | Vigente verificado |
 | E03 | Cálculos PT | Usuario y auditoría | `03_calculos_pt/md/ejemplo_calculo_paso_a_paso.md` | `03_calculos_pt/ejemplo_calculo_paso_a_paso.docx` | Código `ptcalc` y prueba de Fase 4 | Vigente verificado |
 | E04 | Puntajes | Usuario y auditoría | `04_puntajes/md/formulas_y_ejemplos.md` | `04_puntajes/formulas_y_ejemplos.docx` | Código `ptcalc` y prueba de Fase 4 | Vigente verificado |
-| E05 | Interfaz | Usuario | `05_prototipo_ui/md/wireframes.md` | `05_prototipo_ui/wireframes.docx` | HTML, diagrama, pruebas y futuras CAP | Fuente histórica por actualizar |
-| E06 | Lógica y manual | Usuario y operación | `06_app_logica/md/manual_usuario.md` | `06_app_logica/manual_usuario.docx` | Pruebas E06 y futuras CAP | Fuente histórica por actualizar |
-| E07 | Dashboards | Usuario | `07_dashboards/md/documentacion_dashboards.md` | `07_dashboards/documentacion_dashboards.docx` | Diagrama, pruebas y futuras CAP | Pendiente de crear en Fase 5 |
-| E08 | Beta/final | Soporte técnico | `08_beta/md/manual_desarrollador.md` | `08_beta/manual_desarrollador.docx` | Pruebas E2E; copia de app histórica | Fuente histórica por actualizar |
+| E05 | Interfaz | Usuario | `05_prototipo_ui/md/wireframes.md` | DOCX y `html/recorrido_interfaz.html` | CAP-01, 04, 12 y 19; prototipo histórico | Vigente verificado |
+| E06 | Lógica y manual | Usuario y operación | `06_app_logica/md/manual_usuario.md` | `06_app_logica/manual_usuario.docx` | CAP-02 a 18 y prueba de Fase 5 | Vigente verificado |
+| E07 | Dashboards | Usuario | `07_dashboards/md/documentacion_dashboards.md` | `07_dashboards/documentacion_dashboards.docx` | CAP-05, 06, 08 y 10 a 16 | Vigente verificado |
+| E08 | Beta/final | Soporte técnico | `08_beta/md/manual_desarrollador.md` | `08_beta/manual_desarrollador.docx` | CAP-02, 17 a 19; copias históricas | Vigente verificado con riesgos explícitos |
 | E09 | Informe final | Validación y auditoría | `09_informe_final/md/informe_validacion.md` | `09_informe_final/informe_validacion.docx`, `.pdf` | Anexo, CSV y pruebas E09 | Fuente por auditar |
 
 Todas las rutas son relativas a `Entregables_pt_app/`. Los overviews `e1.md` a

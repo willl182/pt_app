@@ -1,324 +1,121 @@
-# Manual de Usuario - Aplicación PT Versión 06
-
-**Fecha:** 2026-01-24  
-**Versión:** 06 (Lógica de Negocio)  
-**Entregable:** 06 - Aplicación con lógica de negocio (sin gráficos)
-
+---
+title: "Manual de usuario del aplicativo PT"
+subtitle: "Entregable E06 — Operación y lógica"
+date: "2026-07-14"
+lang: es-CO
+version: "2.0"
+status: "Vigente verificado"
+audience: "Usuario y operación"
+deliverable: "E06"
+source_commit: "c7200b1"
 ---
 
-## Tabla de Contenidos
-
-1. [Introducción](#introducción)
-2. [Requisitos del Sistema](#requisitos-del-sistema)
-3. [Instalación y Ejecución](#instalación-y-ejecución)
-4. [Descripción de la Interfaz](#descripción-de-la-interfaz)
-5. [Flujo de Trabajo](#flujo-de-trabajo)
-6. [Cálculos Implementados](#cálculos-implementados)
-7. [Exportación de Datos](#exportación-de-datos)
-
----
-
-## Introducción
-
-La Aplicación PT Versión 06 es una herramienta web desarrollada en R Shiny para el análisis de ensayos de aptitud según las normas ISO 13528:2022 e ISO 17043:2023. Esta versión se enfoca en la lógica de negocio y cálculos de puntajes, sin incluir visualizaciones gráficas.
-
-### Características Principales
-
-- **Datos precargados**: Los 4 archivos CSV se cargan automáticamente al iniciar
-- **Cálculo de puntajes PT**: z, z', zeta y En
-- **Evaluación automática**: Clasificación de desempeño (Satisfactorio/Cuestionable/No satisfactorio)
-- **Exportación de resultados**: Descarga de tablas en formato CSV
-- **Interfaz simplificada**: Sin componentes de carga de archivos
-
----
-
-## Requisitos del Sistema
-
-### Software Requerido
-
-- **R** (versión 4.0 o superior)
-- **RStudio** (opcional pero recomendado)
-
-### Paquetes R
-
-Los siguientes paquetes deben estar instalados:
-
-```r
-# Ejecutar en consola R
-install.packages(c(
-  "shiny",
-  "tidyverse",
-  "DT"
-))
-```
-
-### Archivos de Datos
-
-Los siguientes archivos CSV deben estar ubicados en `data/` (directorio padre):
-
-1. `homogeneity.csv` - Datos de estudio de homogeneidad
-2. `stability.csv` - Datos de estudio de estabilidad
-3. `summary_n4.csv` - Datos consolidados de participantes
-4. `participants_data4.csv` - Tabla de instrumentación
-
----
-
-## Instalación y Ejecución
-
-### Paso 1: Ubicarse en el Directorio Correcto
-
-```bash
-cd /ruta/a/pt_app/Entregables_pt_app/06_app_logica
-```
-
-### Paso 2: Ejecutar la Aplicación
-
-#### Desde RStudio:
-
-1. Abrir el archivo `app_v06.R`
-2. Presionar **Run App** (el botón verde triangular) o usar `Ctrl+Shift+Enter`
-
-#### Desde la terminal:
-
-```bash
-Rscript app_v06.R
-```
-
-La aplicación se abrirá automáticamente en el navegador web en la dirección:
-```
-http://127.0.0.1:XXXX
-```
-
-Donde XXXX es un puerto asignado automáticamente por Shiny.
-
----
-
-## Descripción de la Interfaz
-
-La interfaz de la aplicación se divide en tres secciones principales:
-
-### Panel Lateral (Barra Izquierda)
-
-#### 1. Datos Precargados
-Lista informativa que muestra los archivos que se han cargado automáticamente:
-
-- homogeneity.csv
-- stability.csv
-- summary_n4.csv
-- participants_data4.csv
-
-**Nota**: Estos archivos se leen automáticamente del directorio `../data/` al iniciar la aplicación.
-
-#### 2. Análisis
-
-Contiene los selectores para configurar el cálculo de puntajes:
-
-- **Analito**: Seleccione el contaminante a analizar (ej. CO, SO2, O3, NO)
-- **Nivel**: Seleccione el nivel del ensayo (ej. Nivel 1-μmol/mol, Nivel 2-μmol/mol)
-- **n**: Seleccione el número de laboratorios participantes (ej. 4)
-
-#### 3. Botón de Acción
-
-- **Calcular Puntajes PT**: Ejecuta el cálculo de puntajes para la combinación seleccionada
-
-### Panel Principal (Área Derecha)
-
-La interfaz principal se organiza en pestañas:
-
-#### Pestaña 1: Resumen de Datos
-
-Muestra tablas con los datos precargados:
-
-1. **Datos de participantes**: Tabla con información de los laboratorios participantes (primeras 50 filas)
-2. **Datos de homogeneidad**: Tabla con resultados del estudio de homogeneidad (primeras 50 filas)
-3. **Datos de estabilidad**: Tabla con resultados del estudio de estabilidad (primeras 50 filas)
-4. **Descargar CSV de participantes**: Botón para exportar la tabla de participantes
-
-#### Pestaña 2: Puntajes PT
-
-Muestra los resultados de cálculos:
-
-1. **Parámetros de cálculo**: Tabla con:
-   - Valor asignado (x_pt)
-   - sigma_pt (MADe y nIQR)
-   - u_xpt (incertidumbre del valor asignado)
-   - Factor k
-   - Método usado
-
-2. **Resultados de puntajes**: Tabla detallada con:
-   - ID del participante
-   - Analito, nivel y n
-   - Valor medio y desviación estándar
-   - Valor asignado y parámetros (x_pt, sigma_pt, u_xpt)
-   - Puntajes: z, z', zeta, En
-   - Evaluación: Satisfactorio/Cuestionable/No satisfactorio
-
-3. **Resumen de evaluación**: Tabla de conteo por categoría de desempeño
-
-4. **Descargar CSV de puntajes**: Botón para exportar la tabla de puntajes
-
----
-
-## Flujo de Trabajo
-
-### Ejemplo de Uso Completo
-
-1. **Iniciar la aplicación**
-   - Ejecutar `app_v06.R` desde R o RStudio
-   - Esperar que se abra en el navegador
-
-2. **Seleccionar datos**
-   - En el panel lateral, seleccionar un analito (ej. "CO")
-   - Seleccionar un nivel (ej. "Nivel 2-μmol/mol")
-   - Seleccionar n (ej. "4")
-
-3. **Revisar datos de entrada**
-   - Ir a la pestaña "Resumen de Datos"
-   - Verificar que las tablas se hayan cargado correctamente
-
-4. **Calcular puntajes**
-   - Hacer clic en el botón "Calcular Puntajes PT"
-   - Esperar a que aparezcan los resultados
-
-5. **Revisar resultados**
-   - Ir a la pestaña "Puntajes PT"
-   - Revisar los parámetros de cálculo
-   - Examinar la tabla de puntajes
-   - Verificar el resumen de evaluación
-
-6. **Exportar resultados**
-   - Hacer clic en "Descargar CSV de puntajes" para guardar los resultados
-
----
-
-## Cálculos Implementados
-
-### Puntajes PT Calculados
-
-La aplicación calcula cuatro tipos de puntajes según ISO 13528:2022:
-
-#### 1. Puntaje z-score
-
-**Fórmula:**
-```
-z = (x - x_pt) / sigma_pt
-```
-
-**Criterios de evaluación:**
-- |z| ≤ 2: Satisfactorio
-- 2 < |z| < 3: Cuestionable
-- |z| ≥ 3: No satisfactorio
-
-#### 2. Puntaje z'-score (z-prime)
-
-**Fórmula:**
-```
-z' = (x - x_pt) / sqrt(sigma_pt^2 + u_xpt^2)
-```
-
-Incluye la incertidumbre del valor asignado en el denominador.
-
-**Criterios de evaluación:** Igual que z-score.
-
-#### 3. Puntaje zeta-score
-
-**Fórmula:**
-```
-zeta = (x - x_pt) / sqrt(u_x^2 + u_xpt^2)
-```
-
-Usa la incertidumbre del participante (u_x) y del valor asignado (u_xpt).
-
-**Criterios de evaluación:** Igual que z-score.
-
-#### 4. Puntaje En-score (Error normalizado)
-
-**Fórmula:**
-```
-En = (x - x_pt) / sqrt(U_x^2 + U_xpt^2)
-```
-
-Usa las incertidumbres expandidas (k=2).
-
-**Criterios de evaluación:**
-- |En| ≤ 1: Satisfactorio
-- |En| > 1: No satisfactorio
-
-### Estadísticos Robustos
-
-- **MADe** (Median Absolute Deviation escalado):
-  ```
-  MADe = 1.483 * MAD
-  ```
-
-- **nIQR** (Normalized Interquartile Range):
-  ```
-  nIQR = 0.7413 * IQR
-  ```
-
-Estos se usan para calcular sigma_pt robusto a valores atípicos.
-
----
-
-## Exportación de Datos
-
-### Descarga de Tablas CSV
-
-La aplicación permite exportar dos tipos de archivos:
-
-#### 1. Tabla de Participantes
-
-- **Nombre del archivo**: `participantes_YYYY-MM-DD.csv`
-- **Contenido**: Información de los laboratorios participantes
-- **Formato**: CSV con encabezados
-
-#### 2. Tabla de Puntajes
-
-- **Nombre del archivo**: `puntajes_[analito]_[nivel]_YYYY-MM-DD.csv`
-- **Contenido**: Resultados completos de puntajes PT
-- **Formato**: CSV con encabezados
-
-### Uso de Archivos Exportados
-
-Los archivos CSV se pueden abrir en:
-
-- **Microsoft Excel**: Abrir como archivo de texto delimitado por comas
-- **Google Sheets**: Importar como CSV
-- **R**: Leer con `read.csv()`
-- **Python**: Leer con `pandas.read_csv()`
-
----
-
-## Referencias Normativas
-
-- **ISO 13528:2022** - Statistical methods for use in proficiency testing
-- **ISO 17043:2023** - Conformity assessment - General requirements for proficiency testing
-
----
-
-## Soporte y Contacto
-
-Para preguntas o problemas técnicos relacionados con esta aplicación:
-
-- **Laboratorio CALAIRE**
-- **Universidad Nacional de Colombia - Sede Medellín**
-- **Instituto Nacional de Metrología (INM)**
-
-Correo electrónico: calaire_med@unal.edu.co
-
----
-
-## Registro de Cambios
-
-## Evidencia visual reproducible
-
-![CAP-02. Estado posterior a cargar los tres archivos válidos de
-demostración.](../../00_evidencia_visual/capturas/CAP-02_carga_valida.png)
-
-**Figura CAP-02.** Carga válida. El recorrido completo CAP-01 a CAP-19, incluida
-la recuperación ante un archivo incorrecto (CAP-18), se consulta en
-`../../00_evidencia_visual/indice_capturas.md`.
-
-| Versión | Fecha | Cambios |
-|---------|-------|---------|
-| 06 | 2026-01-24 | Versión inicial con lógica de negocio sin gráficos |
+# Ficha de control documental
+
+| Campo | Valor |
+|---|---|
+| Código | DOC-E06-USR-01 |
+| Fuente controlada | `06_app_logica/md/manual_usuario.md` |
+| Autoridad funcional | `app.R`; cálculos en `ptcalc/` |
+| Derivado | `06_app_logica/manual_usuario.docx` |
+| Revisión técnica | Completada; aprobación contractual pendiente |
+
+# Antes de empezar
+
+Este manual permite completar una ronda sin conocer R. Necesita CSV de
+homogeneidad, estabilidad y uno o más consolidados de participantes. La
+referencia CALAIRE puede venir como fila `participant_id='ref'` del consolidado
+o en un archivo separado. Conserve una copia inalterada de los originales y no
+incluya información personal innecesaria.
+
+## Preparación de archivos
+
+- CSV de homogeneidad y estabilidad: deben contener analito, nivel y columnas
+  de réplicas `sample_*` compatibles con el aplicativo.
+- Consolidado: debe identificar participante, analito, nivel, esquema y
+  resultado. Para zeta se requiere incertidumbre estándar `u_value`; para En,
+  incertidumbre expandida `u_exp` o `U(xi)` y factor `k`.
+- Use punto decimal y encabezados sin alterar. El preprocesador puede generar
+  los archivos cuando se parte de datos crudos.
+
+# Procedimiento completo
+
+1. Ejecute `Rscript app.R` desde la raíz o solicite al administrador la URL.
+2. En **Carga de datos**, seleccione los tres grupos de CSV. Active la referencia
+   separada solo si no viene en el consolidado. El estado debe confirmar carga
+   válida (CAP-02).
+3. Si parte de crudos, abra **Preprocesador de datos**, configure fuentes,
+   guarde crudos, ejecute y exporte referencia/participantes (CAP-03). Revise los
+   archivos antes de volver a cargarlos.
+4. En **Análisis de Homogeneidad y estabilidad**, pulse **Ejecutar**, elija
+   analito y nivel, y revise vista previa/validación. Lea por separado las
+   conclusiones MADe y nIQR (CAP-05 y CAP-06) y las contribuciones `u_hom` y
+   `u_stab` (CAP-07). Exporte los registros si necesita evidencia.
+5. En **Valores Atípicos**, seleccione combinación y examine Grubbs, histograma
+   y caja (CAP-08). Una señal amerita revisión; no autoriza borrar un resultado
+   automáticamente.
+6. En **Valor asignado**, seleccione analito, esquema y nivel. Ejecute el método
+   requerido: Algoritmo A (CAP-09), consenso (CAP-10) o compatibilidad (CAP-11).
+   Confirme convergencia y cantidad de datos antes de usar el resultado.
+7. En **Puntajes EA**, pulse **Calcular puntajes**. Confirme parámetros y método,
+   después lea resumen y pestañas z, z', zeta y En (CAP-12 a CAP-14). `N/A`
+   indica que faltó un denominador válido o una incertidumbre necesaria.
+8. En **Informe global**, elija la combinación y compare métodos en tablas y
+   mapas de calor (CAP-15). No compare magnitudes de analitos/unidades distintas
+   como si fueran equivalentes.
+9. En **Participantes**, filtre analito y nivel para revisar el detalle individual
+   (CAP-16). Verifique siempre el identificador antes de comunicar resultados.
+10. En **Generación de informes**, seleccione ronda/participante, método,
+    métrica, compatibilidad y `k`; complete identificación, genere vista previa y
+    descargue DOCX (CAP-17). Abra el archivo y revise contenido antes de emitirlo.
+
+![CAP-02. Carga válida.](../../00_evidencia_visual/capturas/CAP-02_carga_valida.png)
+
+**Figura CAP-02.** No continúe hasta que los tres grupos aparezcan cargados y
+la referencia corresponda a la modalidad elegida.
+
+![CAP-15. Informe global.](../../00_evidencia_visual/capturas/CAP-15_informe_global.png)
+
+**Figura CAP-15.** Los colores resumen desempeño; confirme el valor numérico,
+método y métrica antes de concluir.
+
+![CAP-17. Generación de informes.](../../00_evidencia_visual/capturas/CAP-17_generacion_informes.png)
+
+**Figura CAP-17.** Complete identificación y parámetros; la descarga disponible
+es Word (DOCX).
+
+# Interpretación mínima
+
+| Resultado | Lectura | Acción |
+|---|---|---|
+| Homogéneo/estable | Cumple el criterio implementado para esa combinación | Registrar método y evidencia |
+| Atípico Grubbs | Resultado estadísticamente señalado | Investigar; no excluir sin regla aprobada |
+| z, z', zeta con `|puntaje| ≤ 2` | Satisfactorio | Conservar trazabilidad |
+| `2 < |puntaje| < 3` | Cuestionable | Revisar método y datos |
+| `|puntaje| ≥ 3` | No satisfactorio | Investigar y documentar acción |
+| En con `|En| ≤ 1` | Satisfactorio | Confirmar incertidumbres y `k` |
+| `N/A` | No calculable con entradas actuales | Corregir datos; no tratar como cero |
+
+# Problemas frecuentes
+
+| Situación | Causa probable | Acción recomendada |
+|---|---|---|
+| Error al cargar (CAP-18) | CSV vacío, columnas o tipos incompatibles | Comparar con datos demo y corregir origen |
+| No aparecen selectores | Falta un archivo o combinación común | Revisar estado y claves analito/nivel/esquema |
+| zeta o En es `N/A` | Incertidumbre o `k` ausente/no válido | Completar `u_value`, `u_exp`/`U(xi)` y `k` |
+| Informe no se habilita | Puntajes no calculados o parámetros incompletos | Ejecutar puntajes y completar identificación |
+| Tabla se ajusta mal | Diagnóstico DT en pestaña oculta | Mostrar pestaña o redimensionar; revalidar tabla |
+
+# Alcance y trazabilidad
+
+Los cálculos se ejecutan con `app.R` y `ptcalc/`; `app_v06.R` es histórico. Las
+capturas y sus hashes están en `../../00_evidencia_visual/indice_capturas.md`.
+La aplicación apoya la evaluación, pero no sustituye aprobación técnica,
+control de datos ni revisión normativa. Fórmulas detalladas: E03 y E04.
+
+# Historial de cambios
+
+| Versión | Fecha | Cambio | Aprobación |
+|---|---|---|---|
+| 1.0 | 2026-01-24 | Manual de `app_v06.R` | Histórico |
+| 2.0 | 2026-07-14 | Flujo ciudadano completo de `app.R` | Pendiente |
