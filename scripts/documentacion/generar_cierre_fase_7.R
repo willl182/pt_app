@@ -24,7 +24,8 @@ files <- files[!dir.exists(files)]
 relative_paths <- substring(files, nchar(root_dir) + 2L)
 excluded <- c(
   "Entregables_pt_app/00_control_documental/manifiesto_entrega.csv",
-  "Entregables_pt_app/00_control_documental/checksums_entrega.sha256"
+  "Entregables_pt_app/00_control_documental/checksums_entrega.sha256",
+  "Entregables_pt_app/plan_documentos_formales_entregables_pt.html"
 )
 keep <- !relative_paths %in% excluded &
   !grepl("(^|/)_problems/", relative_paths) &

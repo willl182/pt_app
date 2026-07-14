@@ -52,7 +52,9 @@ bash scripts/documentacion/generar_entregables_fase_7.sh
 
 Los dos archivos de checksums se excluyen de su propia enumeración para evitar
 una dependencia circular. Los directorios `_problems/` producidos por reportes
-de pruebas fallidas tampoco forman parte de la entrega.
+de pruebas fallidas tampoco forman parte de la entrega. El archivo local
+`plan_documentos_formales_entregables_pt.html` se excluye porque corresponde a
+un movimiento preexistente no publicado y no es fuente oficial del paquete.
 
 ## Pendientes que requieren decisión externa
 

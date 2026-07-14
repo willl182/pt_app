@@ -113,7 +113,8 @@ output_relative <- file.path("Entregables_pt_app", "00_linea_base",
 keep <- relative_paths != output_relative &
   !relative_paths %in% c(
     "Entregables_pt_app/00_control_documental/manifiesto_entrega.csv",
-    "Entregables_pt_app/00_control_documental/checksums_entrega.sha256"
+    "Entregables_pt_app/00_control_documental/checksums_entrega.sha256",
+    "Entregables_pt_app/plan_documentos_formales_entregables_pt.html"
   ) &
   !grepl("(^|/)_problems/", relative_paths) &
   !grepl("(^|/)~[$]|[.]tmp$", relative_paths)

@@ -213,7 +213,7 @@ suite de validación acordada, commit y push.
 | Revisar experiencia de lectura | Completado | Recorrido ciudadano documentado desde elección del entregable hasta recuperación |
 | Revisar archivos finales | Completado | DOCX válidos como ZIP; PDF legible; revisión visual de E09 y 21 capturas sin cortes críticos |
 | Ejecutar controles automatizados | Completado | 283 expectativas focales PASS; Playwright 19 escenarios/21 capturas; suite histórica 313 PASS, 29 FAIL y 11 WARN por `final_docs/` ausente y orden de hashes documentado |
-| Preparar manifiesto de entrega | Completado | Manifiesto Markdown/CSV, 149 archivos con SHA-256 e instrucciones reproducibles |
+| Preparar manifiesto de entrega | Completado | Manifiesto Markdown/CSV, 148 archivos con SHA-256 e instrucciones reproducibles |
 | Cerrar bitácora y plan | Completado | Bitácora cerrada técnicamente; plan queda `Pausado` porque persisten aprobaciones externas y un riesgo funcional explícito |
 
 **Salida de fase:** paquete `Entregables_pt_app/` listo para revisión contractual,

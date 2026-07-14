@@ -91,7 +91,8 @@ testthat::test_that("master inventory is complete and structurally valid", {
     ) &
       !actual_relative %in% c(
         "Entregables_pt_app/00_control_documental/manifiesto_entrega.csv",
-        "Entregables_pt_app/00_control_documental/checksums_entrega.sha256"
+        "Entregables_pt_app/00_control_documental/checksums_entrega.sha256",
+        "Entregables_pt_app/plan_documentos_formales_entregables_pt.html"
       ) &
       !grepl("(^|/)_problems/", actual_relative) &
       !grepl("(^|/)~[$]|[.]tmp$", actual_relative)

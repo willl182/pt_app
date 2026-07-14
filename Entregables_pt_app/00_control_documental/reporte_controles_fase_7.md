@@ -17,7 +17,7 @@ git diff --check
 ```
 
 Resultado consolidado: **283 PASS, 0 FAIL, 0 WARN**. El último generador de
-Fase 7 produjo un inventario de 148 archivos, un manifiesto de 149 archivos y
+Fase 7 produjo un inventario de 147 archivos, un manifiesto de 148 archivos y
 20 expectativas de cierre aprobadas. `sha256sum --check` terminó correctamente.
 
 ## Evidencia visual y formatos
