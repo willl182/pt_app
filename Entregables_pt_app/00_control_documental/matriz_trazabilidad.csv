@@ -1,8 +1,8 @@
 requisito_id,origen_requisito,documento_id,entregable,fuente_controlada,evidencia_id,evidencia_fuente,estado,limitacion
-REQ-E01,Plan 260712_1639,DOC-E01-AUD-01,E01,01_repo_inicial/README.md,EVI-E01-001,00_linea_base/inventario_maestro.csv,En preparación,Fuente contractual primaria no disponible
-REQ-E02,Plan 260712_1639,DOC-E02-TEC-01,E02,02_funciones_usadas/md/documentacion_funciones.md,PRU-E02-001,02_funciones_usadas/tests/test_02_firma_funciones.R,Histórica,Debe reejecutarse contra código vigente
-REQ-E03,Plan 260712_1639,DOC-E03-USR-01,E03,03_calculos_pt/md/ejemplo_calculo_paso_a_paso.md,PRU-E03-001,03_calculos_pt/tests/test_03_calculos_pt.R,Histórica,Debe compararse con ptcalc vigente
-REQ-E04,Plan 260712_1639,DOC-E04-USR-01,E04,04_puntajes/md/formulas_y_ejemplos.md,PRU-E04-001,04_puntajes/tests/test_04_puntajes.R,Histórica,Debe compararse con ptcalc vigente
+REQ-E01,Plan 260712_1639,DOC-E01-AUD-01,E01,01_repo_inicial/README.md,EVI-E01-001,00_linea_base/inventario_maestro.csv,Vigente verificado,Fuente contractual primaria no disponible
+REQ-E02,Plan 260712_1639,DOC-E02-TEC-01,E02,02_funciones_usadas/md/documentacion_funciones.md,PRU-E02-001,../tests/testthat/test-entregables-fase-4.R,Vigente verificado,Aprobación externa pendiente
+REQ-E03,Plan 260712_1639,DOC-E03-USR-01,E03,03_calculos_pt/md/ejemplo_calculo_paso_a_paso.md,PRU-E03-001,../tests/testthat/test-entregables-fase-4.R,Vigente verificado,Revisión normativa independiente pendiente
+REQ-E04,Plan 260712_1639,DOC-E04-USR-01,E04,04_puntajes/md/formulas_y_ejemplos.md,PRU-E04-001,../tests/testthat/test-entregables-fase-4.R,Vigente verificado,Revisión normativa independiente pendiente
 REQ-E05,Plan 260712_1639,DOC-E05-USR-01,E05,05_prototipo_ui/md/wireframes.md,CAP-01,00_evidencia_visual/indice_capturas.csv,Pendiente,La captura se generará en Fase 3
 REQ-E06,Plan 260712_1639,DOC-E06-USR-01,E06,06_app_logica/md/manual_usuario.md,CAP-18,00_evidencia_visual/indice_capturas.csv,Pendiente,La captura se generará en Fase 3
 REQ-E07,Plan 260712_1639,DOC-E07-USR-01,E07,07_dashboards/md/documentacion_dashboards.md,CAP-15,00_evidencia_visual/indice_capturas.csv,Pendiente,Documento y captura aún no creados

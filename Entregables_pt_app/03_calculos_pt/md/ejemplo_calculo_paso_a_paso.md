@@ -1,321 +1,158 @@
-# Ejemplo de Cálculo Paso a Paso
-# Entregable: 03 - Cálculos PT
-# Referencia: ISO 13528:2022
+# Entregable 03 — Ejemplo reproducible de cálculos PT
 
----
+| Campo | Valor |
+|---|---|
+| Código | E03 |
+| Versión documental | 2.0 |
+| Fecha | 2026-07-14 |
+| Estado | Vigente contra `ptcalc` |
+| Audiencia principal | Usuario que necesita comprender el resultado |
+| Anexo técnico | Código reproducible incluido en este documento |
+| Aprobación externa | Pendiente |
 
-## Índice
+## Qué demuestra el ejemplo
 
-1. [Cálculo de Homogeneidad](#1-cálculo-de-homogeneidad)
-2. [Cálculo de Estabilidad](#2-cálculo-de-estabilidad)
-3. [Cálculo del Valor Asignado](#3-cálculo-del-valor-asignado)
-4. [Cálculo de sigma_pt](#4-cálculo-de-sigma_pt)
+El ejemplo recorre homogeneidad, estabilidad, estimadores robustos y valor
+asignado con datos sintéticos sin información sensible. Las cifras se calculan
+con el código vigente; no son transcripciones manuales de una versión anterior.
+La unidad ilustrativa es `µmol/mol`, pero todas las entradas de una operación
+real deben compartir la misma unidad.
 
----
-
-## 1. Cálculo de Homogeneidad
-
-### Datos de Entrada
-
-Usamos datos del archivo `data/homogeneity.csv` para CO a nivel 2-μmol/mol:
-
-```r
-# Cargar datos
-hom_data <- read.csv("data/homogeneity.csv")
-
-# Filtrar CO nivel 2-μmol/mol
-co_nivel2 <- hom_data[
-  hom_data$pollutant == "co" &
-  hom_data$level == "2-μmol/mol",
-]
-```
-
-Los datos tienen 20 muestras (g=20) con 2 réplicas cada una (m=2).
-
-### Paso 1: Organizar Datos en Matriz
-
-| Muestra | Réplica 1 | Réplica 2 | Media Muestra |
-|---------|-----------|-----------|--------------|
-| 1 | 2.011535 | 2.016170 | 2.013852 |
-| 2 | 2.020532 | 2.010638 | 2.015585 |
-| ... | ... | ... | ... |
-| 20 | 2.009505 | 2.014680 | 2.012093 |
-
-### Paso 2: Calcular Media Global
-
-$$\bar{\bar{x}} = \frac{1}{g} \sum_{i=1}^{g} \bar{x}_i$$
-
-$$\bar{\bar{x}} = \frac{1}{20} \sum \bar{x}_i = 2.0138 \, \mu mol/mol$$
-
-### Paso 3: Calcular Varianza Entre Medias de Muestra
-
-$$s_{\bar{x}}^2 = \frac{1}{g-1} \sum_{i=1}^{g} (\bar{x}_i - \bar{\bar{x}})^2$$
-
-$$s_{\bar{x}}^2 = 0.001234$$
-
-$$s_{\bar{x}} = \sqrt{s_{\bar{x}}^2} = 0.0351$$
-
-### Paso 4: Calcular Desviación Estándar Dentro de la Muestra (sw)
-
-Para m=2, usamos rangos:
-
-$$s_w = \sqrt{\frac{\sum_{i=1}^{g} (x_{i1} - x_{i2})^2}{2g}}$$
-
-$$s_w = \sqrt{\frac{0.0567}{40}} = 0.0377$$
-
-### Paso 5: Calcular Componente de Varianza Entre Muestras (ss)
-
-$$s_s^2 = \left| s_{\bar{x}}^2 - \frac{s_w^2}{m} \right|$$
-
-$$s_s^2 = \left| 0.001234 - \frac{0.001421}{2} \right| = 0.000523$$
-
-$$s_s = \sqrt{0.000523} = 0.0229$$
-
-### Paso 6: Calcular Criterio de Homogeneidad
-
-$$c = 0.3 \times \sigma_{pt}$$
-
-Asumiendo $\sigma_{pt} = 0.06$ (calculado de datos de participantes):
-
-$$c = 0.3 \times 0.06 = 0.018$$
-
-### Paso 7: Evaluar Homogeneidad
-
-Comparar $s_s$ con $c$:
-
-- $s_s = 0.0229$
-- $c = 0.0180$
-
-$$s_s > c \Rightarrow \text{NO CUMPLE CRITERIO DE HOMOGENEIDAD}$$
-
-### Interpretación
-
-Según ISO 13528:2022 §9.2, si $s_s > c$, el material no cumple con el criterio de homogeneidad básico. Se puede usar el criterio expandido:
-
-$$c_{exp} = \sqrt{c^2 \times 1.88 + s_w^2 \times 1.01}$$
-
-$$c_{exp} = \sqrt{0.018^2 \times 1.88 + 0.0377^2 \times 1.01} = 0.0443$$
-
-$$s_s = 0.0229 < c_{exp} = 0.0443 \Rightarrow \text{CUMPLE CRITERIO EXPANDIDO}$$
-
----
-
-## 2. Cálculo de Estabilidad
-
-### Datos de Entrada
-
-Usamos datos del archivo `data/stability.csv` para CO nivel 2-μmol/mol:
+## Datos de demostración
 
 ```r
-# Cargar datos
-stab_data <- read.csv("data/stability.csv")
+devtools::load_all("ptcalc")
 
-# Filtrar CO nivel 2-μmol/mol
-co_nivel2_stab <- stab_data[
-  stab_data$pollutant == "co" &
-  stab_data$level == "2-μmol/mol",
-]
+hom <- matrix(c(
+  9.98, 10.02, 10.01, 10.03, 9.99, 10.00, 10.04, 10.02,
+  9.97, 10.01, 10.00, 10.02, 10.03, 10.01, 9.98, 9.99,
+  10.02, 10.00, 10.01, 10.04
+), ncol = 2, byrow = TRUE)
+
+stab <- matrix(c(
+  10.00, 10.01, 10.02, 10.00,
+  9.99, 10.01, 10.03, 10.02
+), ncol = 2, byrow = TRUE)
+
+participants <- c(9.91, 9.96, 9.99, 10.00, 10.02, 10.04, 10.08, 10.60)
 ```
 
-### Paso 1: Calcular Media de Estabilidad
+Cada fila de `hom` o `stab` es un ítem y cada columna es una réplica. Antes de
+usar datos reales se debe verificar que haya al menos dos ítems y dos réplicas.
 
-Usando los 4 datos de estabilidad (2 muestras × 2 réplicas):
-
-$$\bar{x}_{stab} = 2.0093 \, \mu mol/mol$$
-
-### Paso 2: Calcular Diferencia con Media de Homogeneidad
-
-$$\Delta = |\bar{x}_{stab} - \bar{x}_{hom}|$$
-
-$$\Delta = |2.0093 - 2.0138| = 0.0045$$
-
-### Paso 3: Calcular Criterio de Estabilidad
-
-$$c_{stab} = 0.3 \times \sigma_{pt} = 0.018$$
-
-### Paso 4: Evaluar Estabilidad
-
-Comparar $\Delta$ con $c_{stab}$:
-
-$$\Delta = 0.0045 < c_{stab} = 0.018 \Rightarrow \text{CUMPLE CRITERIO DE ESTABILIDAD}$$
-
-### Interpretación
-
-Según ISO 13528:2022 §9.3, el material es estable si la diferencia entre medias de estabilidad y homogeneidad no excede el criterio de estabilidad.
-
----
-
-## 3. Cálculo del Valor Asignado
-
-### Datos de Entrada
-
-Usamos datos del archivo `data/summary_n4.csv` para CO nivel 2-μmol/mol:
+## 1. Homogeneidad
 
 ```r
-# Cargar datos
-summary_data <- read.csv("data/summary_n4.csv")
-
-# Filtrar CO nivel 2-μmol/mol
-co_nivel2_sum <- summary_data[
-  summary_data$pollutant == "co" &
-  summary_data$level == "2-μmol/mol" &
-  summary_data$sample_group == "1-10",
-]
-
-# Excluir referencia
-co_nivel2_part <- co_nivel2_sum[co_nivel2_sum$participant_id != "ref", ]
+h <- calculate_homogeneity_stats(hom)
+c_base <- calculate_homogeneity_criterion(h$MADe)
+c_exp_sq <- calculate_homogeneity_criterion_expanded(
+  sigma_pt = h$MADe,
+  sw = h$sw,
+  g = h$g
+)
+evaluation_h <- evaluate_homogeneity(h$ss, c_base, c_exp_sq)
 ```
 
-### Método 1: Valor de Referencia
+| Magnitud | Resultado | Unidad | Lectura |
+|---|---:|---|---|
+| Media general | 10.008500 | `µmol/mol` | Centro de todos los resultados |
+| `s_w` | 0.017748 | `µmol/mol` | Variación dentro de los ítems |
+| `s_s` | 0.009037 | `µmol/mol` | Variación estimada entre ítems |
+| MADe usado como `σ_pt` | 0.022245 | `µmol/mol` | Dispersión robusta para este ejemplo |
+| Criterio básico `0.3 σ_pt` | 0.006674 | `µmol/mol` | Límite básico |
+| Término expandido retornado | 0.000402 | `(µmol/mol)²` | Valor cuadrático calculado por tabla |
 
-$$x_{pt} = \bar{x}_{ref}$$
+Aquí `s_s` supera tanto el criterio básico como el valor expandido retornado.
+La conclusión no significa automáticamente que una ronda sea aceptada o
+rechazada: el proveedor debe justificar el criterio aplicable y conservar los
+datos y la decisión.
 
-Usando datos del participante "ref":
+Nota técnica: con argumentos nombrados `sw` y `g`, la función de `ptcalc`
+retorna el término cuadrático y la comparación vigente no aplica raíz. Además,
+`app.R` llama actualmente la función con tres argumentos posicionales, pero la
+firma de `ptcalc` tiene cuatro; esa ruta puede terminar con `Invalid arguments`.
+Se registra como defecto pendiente porque mezcla unidades y puede impedir la
+evaluación expandida. Este ejemplo reproduce el retorno comprobable de
+`ptcalc`, no presenta ese defecto como una conclusión normativa válida.
 
-$$x_{pt} = 2.0132 \, \mu mol/mol$$
-
-### Método 2a: Consenso con MADe
-
-$$x_{pt} = \tilde{x} \quad \text{(mediana de resultados de participantes)}$$
-
-$$x_{pt} = 2.0138 \, \mu mol/mol$$
-
-$$\sigma_{pt} = \text{MADe} = 0.06$$
-
-### Método 2b: Consenso con nIQR
-
-$$x_{pt} = \tilde{x} \quad \text{(mediana de resultados de participantes)}$$
-
-$$x_{pt} = 2.0138 \, \mu mol/mol$$
-
-$$\sigma_{pt} = \text{nIQR} = 0.05$$
-
-### Método 3: Algoritmo A
-
-**Iteración 0 (Inicialización):**
-
-$$x^* = \tilde{x} = 2.0138$$
-
-$$s^* = 1.483 \times \text{MAD}(x) = 0.06$$
-
-**Iteración 1:**
-
-Calcular residuales estandarizados:
-
-$$u_i = \frac{x_i - x^*}{1.5 \times s^*}$$
-
-Calcular pesos Huber:
-
-$$w_i = \begin{cases}
-1 & \text{si } |u_i| \leq 1 \\
-\frac{1}{u_i^2} & \text{si } |u_i| > 1
-\end{cases}$$
-
-Actualizar estimaciones:
-
-$$x^*_{new} = \frac{\sum w_i x_i}{\sum w_i}$$
-
-$$s^*_{new} = \sqrt{\frac{\sum w_i (x_i - x^*_{new})^2}{\sum w_i}}$$
-
-Repetir hasta convergencia.
-
-**Resultado final:**
-
-$$x_{pt} = 2.0135 \, \mu mol/mol$$
-
-$$\sigma_{pt} = 0.06$$
-
-### Comparación de Métodos
-
-| Método | xₚₜ (μmol/mol) | σₚₜ (μmol/mol) |
-|--------|-----------------|-----------------|
-| Referencia | 2.0132 | - |
-| Consenso MADe | 2.0138 | 0.06 |
-| Consenso nIQR | 2.0138 | 0.05 |
-| Algoritmo A | 2.0135 | 0.06 |
-
----
-
-## 4. Cálculo de sigma_pt
-
-### Método 1: MADe
-
-$$\sigma_{pt} = 1.483 \times \text{MAD}(x)$$
-
-$$\text{MAD} = \text{mediana}(|x_i - \tilde{x}|)$$
-
-$$\sigma_{pt} = 1.483 \times 0.0405 = 0.06$$
-
-### Método 2: nIQR
-
-$$\sigma_{pt} = 0.7413 \times \text{IQR}(x)$$
-
-$$\text{IQR} = Q_{75} - Q_{25}$$
-
-$$\sigma_{pt} = 0.7413 \times (2.045 - 2.000) = 0.033$$
-
-### Método 3: Algoritmo A
-
-El Algoritmo A calcula $s^*$ como parte del proceso iterativo descrito en la sección 3 (Método 3).
-
-$$\sigma_{pt} = s^* = 0.06$$
-
----
-
-## Uso de las Funciones
+## 2. Estabilidad
 
 ```r
-# Referencia vigente: ptcalc/R/pt_robust_stats.R y ptcalc/R/pt_homogeneity.R
-# Funciones adicionales del entregable 03:
-source("ptcalc/R/pt_robust_stats.R")
-source("ptcalc/R/pt_homogeneity.R")
-source("Entregables_pt_app/03_calculos_pt/R/stability.R")
-source("Entregables_pt_app/03_calculos_pt/R/valor_asignado.R")
-source("Entregables_pt_app/03_calculos_pt/R/sigma_pt.R")
-
-# Cargar datos
-hom_data <- read.csv("data/homogeneity.csv")
-stab_data <- read.csv("data/stability.csv")
-summary_data <- read.csv("data/summary_n4.csv")
-
-# 1. Calcular sigma_pt para todos los contaminantes/niveles
-sigma_dict <- crear_diccionario_sigma_pt(summary_data, metodo = "algoritmo_a")
-
-# 2. Calcular homogeneidad
-resultados_hom <- analizar_homogeneidad_todos(hom_data, sigma_dict)
-
-# 3. Calcular estabilidad
-resultados_stab <- analizar_estabilidad_todos(stab_data, hom_data, resultados_hom)
-
-# 4. Calcular valor asignado
-resultados_va <- calcular_valor_asignado_todos(summary_data, metodo = "algoritmo_a")
-
-# Ver resultados
-print(resultados_hom$`co_2-μmol/mol`)
-print(resultados_stab$`co_2-μmol/mol`)
-print(resultados_va$`co_2-μmol/mol`)
+s <- calculate_stability_stats(
+  stab_sample_data = stab,
+  hom_general_mean_homog = h$general_mean_homog,
+  hom_stab_x_pt = h$x_pt,
+  hom_stab_sigma_pt = h$MADe
+)
+c_stab <- calculate_stability_criterion(h$MADe)
+evaluation_s <- evaluate_stability(s$diff_hom_stab, c_stab)
 ```
 
----
+| Magnitud | Resultado (`µmol/mol`) |
+|---|---:|
+| Media de estabilidad | 10.010000 |
+| Diferencia absoluta frente a homogeneidad | 0.001500 |
+| Criterio `0.3 σ_pt` | 0.006674 |
 
-## Evidencia visual vigente
+Como `0.001500 ≤ 0.006674`, el conjunto ilustrativo cumple el criterio básico
+de estabilidad implementado. La comparación usa valores sin redondear; el
+redondeo de la tabla es solo de presentación.
 
-![CAP-05. Resultado de homogeneidad con conclusiones y cálculos
-intermedios.](../../00_evidencia_visual/capturas/CAP-05_homogeneidad_resultado.png)
+## 3. Valor asignado y dispersión robusta
 
-**Figura CAP-05.** Resultado reproducible de homogeneidad. Las capturas
-CAP-06 a CAP-11 complementan estabilidad, incertidumbre, atípicos, Algoritmo A,
-consenso y compatibilidad; véase `../../00_evidencia_visual/indice_capturas.md`.
+```r
+median_x <- median(participants)
+made <- calculate_mad_e(participants)
+niqr <- calculate_niqr(participants)
+algorithm_a <- run_algorithm_a(participants)
+```
 
-## Referencias
+| Método | Valor asignado | Dispersión | Uso |
+|---|---:|---:|---|
+| Mediana + MADe | 10.010000 | 0.059320 | Resumen robusto simple |
+| Mediana + nIQR | 10.010000 | 0.074130 | Alternativa robusta por cuartiles |
+| Algoritmo A | 10.017017 | 0.079528 | Estimación iterativa winsorizada |
 
-- ISO 13528:2022 - Statistical methods for use in proficiency testing by interlaboratory comparison
-  - Sección 8: Assigned values
-  - Sección 9.2: Homogeneity assessment
-  - Sección 9.3: Stability assessment
-  - Sección 9.4: Robust statistics
-  - Anexo C: Algorithm A
+El Algoritmo A converge por estabilidad en tres cifras significativas y
+winsoriza una observación. El valor de `10.60` no se borra: su influencia se
+limita durante la iteración y queda registrada en `algorithm_a$weights`.
 
----
+## 4. Incertidumbres que continúan hacia los puntajes
 
-*Documento generado para el Entregable 03 - Cálculos PT*
+La app puede combinar la incertidumbre del valor asignado con contribuciones de
+homogeneidad y estabilidad. `calculate_u_hom(ss)` toma `s_s`; y
+`calculate_u_stab(diff_hom_stab, c_criterion)` devuelve cero cuando la diferencia
+no rebasa el criterio; si lo rebasa, devuelve `diff_hom_stab / sqrt(3)`. La
+elección completa del método y de las contribuciones debe quedar registrada
+antes de calcular E04.
+
+## Cómo interpretar y reproducir
+
+1. Ejecute el código desde la raíz con `devtools::load_all("ptcalc")`.
+2. Compare con precisión completa (`all.equal` o tolerancia explícita).
+3. Redondee únicamente al presentar y conserve la unidad en cada tabla.
+4. Si una entrada es insuficiente o un denominador no es válido, no fuerce un
+   número: las funciones retornan un error estructurado o `NA` según el caso.
+
+## Evidencia y referencias
+
+![CAP-05. Resultado de homogeneidad.](../../00_evidencia_visual/capturas/CAP-05_homogeneidad_resultado.png)
+
+**Figura CAP-05.** Resultado en la interfaz vigente. CAP-06 a CAP-11 documentan
+estabilidad, incertidumbre, atípicos, Algoritmo A, consenso y compatibilidad;
+véase `../../00_evidencia_visual/indice_capturas.md`.
+
+- Código: `ptcalc/R/pt_homogeneity.R` y `ptcalc/R/pt_robust_stats.R`.
+- Estado exacto del repositorio anidado usado para calcular:
+  `../../00_linea_base/estado_ptcalc_fase4.md`.
+- Prueba documental: `tests/testthat/test-entregables-fase-4.R`.
+- Referencia declarada por el código: ISO 13528:2022, secciones 9.2–9.4 y anexo C.
+- Este documento evidencia coincidencia con la implementación; no sustituye una
+  revisión normativa independiente ni certifica conformidad por sí solo.
+
+## Historial de cambios
+
+| Versión | Fecha | Cambio |
+|---|---|---|
+| 1.0 | 2026-01-24 | Ejemplo inicial |
+| 2.0 | 2026-07-14 | Datos sintéticos reproducibles, código vigente, precisión y límites explícitos |

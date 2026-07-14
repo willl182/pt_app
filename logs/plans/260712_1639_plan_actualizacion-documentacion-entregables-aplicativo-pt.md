@@ -157,12 +157,12 @@ repetición limpia del recorrido Playwright, commit y push.
 
 | Item | Estado | Notas |
 |---|---|---|
-| Actualizar E01 | Pendiente | Inventario y explicación del paquete realmente entregado; diferenciar histórico de vigente |
-| Actualizar E02 | Pendiente | Regenerar catálogo desde código actual y añadir mapa de capacidades en lenguaje sencillo |
-| Actualizar E03 | Pendiente | Rehacer ejemplo reproducible con datos, fórmulas, unidades, redondeos, salida e interpretación actuales |
-| Actualizar E04 | Pendiente | Verificar fórmulas, incertidumbres, umbrales, etiquetas y ejemplos contra implementación/pruebas actuales |
-| Regenerar derivados | Pendiente | DOCX y otros formatos oficiales sin divergencia respecto de Markdown |
-| Verificar cifras y referencias | Pendiente | Pruebas automatizadas y revisión manual de unidades, símbolos, tablas y afirmaciones normativas |
+| Actualizar E01 | Completado | Snapshot inicial separado del código vigente; inventario maestro y ruta de verificación explícitos |
+| Actualizar E02 | Completado | Catálogo regenerado con 78 funciones y mapa ciudadano; alcance del núcleo escaneado delimitado |
+| Actualizar E03 | Completado | Ejemplo sintético reproducible; unidades, precisión, Algoritmo A y defecto expandido documentados |
+| Actualizar E04 | Completado | Fórmulas, incertidumbres, umbrales, fronteras, NA y ejemplo contrastados con `ptcalc` |
+| Regenerar derivados | Completado | Cinco DOCX generados desde Markdown con capturas embebidas y manifiesto SHA-256 verificable |
+| Verificar cifras y referencias | Completado | 102 expectativas aprobadas; revisión manual y tres rondas `revisor-fase` incorporadas |
 
 **Salida de fase:** E01–E04 actualizados, legibles y trazables.
 
@@ -316,3 +316,19 @@ El paquete se considerará listo únicamente cuando:
   puntajes, participante, vista menor, proveniencia, integración y 95 pruebas.
 - [260714 12:16] Fase 3 completada; queda como deuda no bloqueante corregir el
   `adjustWidth` de DataTables al redimensionar tablas ocultas.
+- [260714 13:16] Iniciada Fase 4 desde el rundown vigente; auditadas fuentes,
+  código, pruebas y cadena de generación de E01-E04.
+- [260714 13:32] Primera revisión `revisor-fase`: detectó afirmaciones erróneas
+  del criterio expandido y `u_stab`, manifiesto sin verificación real y rama
+  `sw/g` incompleta en E02; hallazgos corregidos.
+- [260714 13:42] Segunda revisión: confirmó correcciones y pidió separar la
+  unidad cuadrática, estabilizar inventario y registrar el repositorio anidado
+  `ptcalc` sucio; se incorporaron los tres puntos.
+- [260714 13:50] Revisión final `revisor-fase` aprobó el cierre. Pruebas finales:
+  Fase 4 29/29, control documental 35/35, puntajes 14/14 y línea base 24/24;
+  inventario de 133 archivos y `git diff --check` limpio.
+- [260714 13:51] Fase 4 completada y persistida con skill `saver`. Riesgos no
+  bloqueantes: defecto dimensional/posicional del criterio expandido, `ptcalc`
+  anidado no publicado, revisión normativa/contractual pendiente, alcance E02
+  limitado al núcleo declarado, regeneración consciente de derivados F2 y
+  deuda visual `DataTables::adjustWidth` de Fase 3.

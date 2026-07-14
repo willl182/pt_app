@@ -1,41 +1,37 @@
 # Session State: PT App - Actualización documental de entregables
 
-**Last Updated**: 2026-07-14 12:47
+**Last Updated**: 2026-07-14 13:51 -05:00
 
 ## Session Objective
 
-Completar la Fase 3 de evidencia visual reproducible con Playwright.
+Completar la Fase 4: actualización verificable de E01 a E04.
 
 ## Current State
 
-- [x] Fases 1 y 2 completadas y publicadas.
-- [x] Fase 3 completada: 19 escenarios CAP representados por 21 imágenes.
-- [x] Datos demo no sensibles con incertidumbres para z, z', zeta y En.
-- [x] CAP-16 muestra resultados de participante y CAP-19 descarga habilitada a
-  1024x768 después de cargar datos válidos.
-- [x] Índices CSV/Markdown, hashes y registro JSON regenerados desde el commit
-  de implementación `068ba8e`.
-- [x] Evidencia enlazada desde fuentes E01-E09.
-- [x] Dos revisiones `revisor-fase`; la segunda cerró sin bloqueantes.
-- [x] Prueba focal previa al cierre: 95 expectativas correctas.
-- [x] Cierre documental publicado en `50049c1`; `main` sincronizada con
-  `origin/main`.
+- [x] Fases 1 a 4 completadas.
+- [x] E01 diferencia snapshot histórico y aplicación vigente.
+- [x] E02 regenerado: 78 funciones únicas y mapa de capacidades.
+- [x] E03 reemplazado por ejemplo sintético reproducible.
+- [x] E04 contrastado con fórmulas, umbrales, NA e incertidumbres vigentes.
+- [x] Cinco DOCX y manifiesto SHA-256 regenerados.
+- [x] Tres revisiones `revisor-fase`; la última aprobó el cierre.
+- [x] 102 expectativas finales aprobadas e inventario de 133 archivos.
 
 ## Critical Technical Context
 
-- Reproducción: `npm ci` y
-  `scripts/documentacion/ejecutar_capturas.sh` desde la raíz.
-- Playwright 1.61.1 usa Chromium del sistema y datos en
-  `Entregables_pt_app/00_evidencia_visual/datos_demo/`.
-- El registro acepta explícitamente el 404 de favicon y el `adjustWidth` de
-  DataTables al redimensionar una tabla oculta; este último es deuda técnica.
-- Preservar fuera de commits el movimiento HTML y el hallazgo de las 10:20,
-  preexistentes a la fase.
-- Autoridad funcional: `app.R` y módulos vigentes; las copias v06/v07/final son
-  históricas.
+- `ptcalc/` es un repositorio anidado ignorado, HEAD `e87180b`, con cambios no
+  publicados usados por la app. Véase
+  `Entregables_pt_app/00_linea_base/estado_ptcalc_fase4.md`.
+- La ruta expandida de homogeneidad mantiene un defecto funcional: llamada
+  posicional incompatible y comparación de magnitudes con unidades distintas.
+- La cadena de Fase 4 es
+  `scripts/documentacion/generar_entregables_fase_4.sh`.
+- Preservar fuera de commits el movimiento HTML y
+  `logs/history/260714_1020_findings.md`, preexistentes.
+- Revisión normativa y aprobación contractual continúan pendientes.
 
 ## Next Steps
 
-1. Iniciar Fase 4 y actualizar E01-E04 contra código/pruebas vigentes.
-2. Corregir en mantenimiento el error no visible `adjustWidth` de DataTables.
-3. Mantener CAP-01 a CAP-19 estables o regenerarlos si cambia la interfaz.
+1. Iniciar Fase 5 para actualizar E05-E08.
+2. Resolver o planificar el versionado reproducible del repositorio `ptcalc`.
+3. No regenerar capturas salvo cambios de interfaz.

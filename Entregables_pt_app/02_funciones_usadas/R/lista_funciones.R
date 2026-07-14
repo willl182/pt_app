@@ -830,6 +830,40 @@ todas <- todas %>%
   mutate(categoria = factor(categoria, levels = orden_categorias)) %>%
   arrange(categoria, nombre_funcion)
 
+# La firma vigente ofrece dos ramas, pero su roxygen solo describe la primera.
+# Se completa aquí para que el catálogo refleje también la rama sw/g usada por
+# la aplicación, sin alterar el paquete ignorado que actúa como fuente funcional.
+todas <- todas %>%
+  mutate(
+    descripcion = if_else(
+      nombre_funcion == "calculate_homogeneity_criterion_expanded",
+      paste(
+        "Admite una rama con u_sigma_pt y otra con sw/g. La segunda retorna",
+        "F1 * (0.3 * sigma_pt)^2 + F2 * sw^2; ambas ramas no tienen la misma",
+        "forma dimensional."
+      ),
+      descripcion
+    ),
+    parametros = if_else(
+      nombre_funcion == "calculate_homogeneity_criterion_expanded",
+      paste(
+        "sigma_pt Desviacion para evaluacion;\n",
+        "u_sigma_pt Incertidumbre de sigma_pt para la primera rama;\n",
+        "sw Desviacion dentro del item para la rama de tabla;\n",
+        "g Numero de items, limitado al intervalo 7--20."
+      ),
+      parametros
+    ),
+    retorno = if_else(
+      nombre_funcion == "calculate_homogeneity_criterion_expanded",
+      paste(
+        "Criterio expandido para la rama u_sigma_pt o expresion cuadratica",
+        "para la rama sw/g."
+      ),
+      retorno
+    )
+  )
+
 # -------------------------------------------------------------------
 # 7. Guardar CSV ampliado
 # -------------------------------------------------------------------
@@ -984,7 +1018,12 @@ for (cat in levels(todas$categoria)) {
 }
 
 out_md <- "Entregables_pt_app/02_funciones_usadas/md/documentacion_funciones.md"
-writeLines(paste(contenido_md, collapse = ""), out_md)
+documento_md <- stringr::str_replace(
+  paste(contenido_md, collapse = ""),
+  "\\n+$",
+  "\\n"
+)
+writeLines(documento_md, out_md, sep = "")
 cat("Documentacion Markdown guardada en:", out_md, "\n")
 
 cat("\n=== RESUMEN POR CATEGORIA ===\n")

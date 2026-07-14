@@ -71,6 +71,9 @@ classify_document_state <- function(path) {
   }
   if (grepl("Entregables_pt_app/00_control_documental/", path,
             fixed = TRUE)) {
+    if (grepl("manifiesto_fase_4.csv$", path)) {
+      return("vigente_fase_4")
+    }
     return("vigente_fase_2")
   }
   "pendiente_revision"

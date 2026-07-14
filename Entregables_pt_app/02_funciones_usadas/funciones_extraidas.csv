@@ -44,8 +44,10 @@ cat(""Robust SD:"", result$robust_sd, ""\n"")
 c <- calculate_homogeneity_criterion(sigma_pt = 0.5)
 cat(""Homogeneity criterion:"", c)  # 0.15
 ","ISO 13528:2022, Section 9.2.3",TRUE,NA,"ptcalc/R/pt_homogeneity.R"
-"pt_homogeneity.R","calculate_homogeneity_criterion_expanded","Homogeneidad y Estabilidad","c_expanded = c_criterion * sqrt(1 + (u_sigma_pt/sigma_pt)^2)","sigma_pt Standard deviation for proficiency assessment (from MADe)
-u_sigma_pt Uncertainty of sigma_pt","The expanded criterion value",NA,"ISO 13528:2022, Section 9.2.4",TRUE,NA,"ptcalc/R/pt_homogeneity.R"
+"pt_homogeneity.R","calculate_homogeneity_criterion_expanded","Homogeneidad y Estabilidad","Admite una rama con u_sigma_pt y otra con sw/g. La segunda retorna F1 * (0.3 * sigma_pt)^2 + F2 * sw^2; ambas ramas no tienen la misma forma dimensional.","sigma_pt Desviacion para evaluacion;
+ u_sigma_pt Incertidumbre de sigma_pt para la primera rama;
+ sw Desviacion dentro del item para la rama de tabla;
+ g Numero de items, limitado al intervalo 7--20.","Criterio expandido para la rama u_sigma_pt o expresion cuadratica para la rama sw/g.",NA,"ISO 13528:2022, Section 9.2.4",TRUE,NA,"ptcalc/R/pt_homogeneity.R"
 "pt_homogeneity.R","calculate_homogeneity_stats","Homogeneidad y Estabilidad","Computes between-sample standard deviation (ss), within-sample standard deviation (sw), and related ANOVA components for homogeneity assessment. Also calculates robust sigma estimate (MADe) and its uncertainty.","sample_data Data frame or matrix with samples as rows and replicates as columns.","A list containing:
   - g: Number of samples (groups)
   - m: Number of replicates per sample
@@ -191,3 +193,4 @@ zeta <- calculate_zeta_score(x = 10.5, x_pt = 10.0, u_x = 0.2, u_xpt = 0.1)
 "utils.R","algorithm_A","Obsoleto","Version anterior del Algoritmo A (ISO 13528). Deprecada: usar run_algorithm_a().","x: vector numerico; max_iter: iteraciones maximas.","Lista con robust_mean y robust_sd.",NA,"ISO 13528:2022, Annex C",TRUE,"deprecated","R/utils.R"
 "utils.R","mad_e_manual","Obsoleto","Version manual de calculate_mad_e(). Deprecada.","x: vector numerico.","Valor MADe.",NA,"ISO 13528:2022, Section 9.4",TRUE,"deprecated","R/utils.R"
 "utils.R","nIQR_manual","Obsoleto","Version manual de calculate_niqr(). Deprecada.","x: vector numerico.","Valor nIQR.",NA,"ISO 13528:2022, Section 9.4",TRUE,"deprecated","R/utils.R"
+"app.R","build_final_scores_export_df","General","Sin descripcion disponible.",NA,NA,NA,NA,FALSE,NA,"app.R"

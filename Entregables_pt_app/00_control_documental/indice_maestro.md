@@ -1,9 +1,12 @@
 # Índice maestro de entregables
 
-**Versión del índice:** 1.0  
-**Fecha de corte:** 2026-07-14  
-**Commit funcional de referencia:** `1f01b51`  
-**Estado general:** Actualización en curso; fuentes vigentes por consolidar
+**Versión del índice:** 1.1
+
+**Fecha de corte:** 2026-07-14
+
+**Commit funcional de referencia:** `068ba8e`
+
+**Estado general:** E01–E04 actualizados; E05–E09 continúan en actualización
 
 ## Convención de estado
 
@@ -12,15 +15,17 @@
 - **Pendiente de crear:** no existe aún una fuente principal adecuada.
 - **Histórico:** se conserva como antecedente y no describe la versión vigente.
 - **Derivado:** DOCX/PDF generado desde una fuente; nunca se edita directamente.
+- **Vigente verificado:** fuente contrastada con el código y las pruebas
+  indicadas, sin implicar aprobación contractual o normativa externa.
 
 ## Documentos oficiales y anexos
 
 | ID | Entregable | Audiencia primaria | Fuente oficial controlada | Derivados actuales | Anexos/evidencia | Estado al corte |
 |---|---|---|---|---|---|---|
-| E01 | Repositorio inicial | Auditoría | `01_repo_inicial/README.md` | `01_repo_inicial/README.docx` | `00_linea_base/`, inventario y pruebas E01 | Fuente por actualizar; código histórico |
-| E02 | Funciones usadas | Soporte técnico | `02_funciones_usadas/md/documentacion_funciones.md` | `02_funciones_usadas/documentacion_funciones.docx` | CSV de funciones y pruebas E02 | Fuente por actualizar |
-| E03 | Cálculos PT | Usuario y auditoría | `03_calculos_pt/md/ejemplo_calculo_paso_a_paso.md` | `03_calculos_pt/ejemplo_calculo_paso_a_paso.docx` | Código y pruebas E03 | Fuente por actualizar |
-| E04 | Puntajes | Usuario y auditoría | `04_puntajes/md/formulas_y_ejemplos.md` | `04_puntajes/formulas_y_ejemplos.docx` | Código y pruebas E04 | Fuente por actualizar |
+| E01 | Repositorio inicial | Auditoría | `01_repo_inicial/README.md` | `01_repo_inicial/README.docx` | `00_linea_base/`, inventario y prueba de Fase 4 | Vigente verificado como registro histórico |
+| E02 | Funciones usadas | Soporte técnico | `02_funciones_usadas/md/documentacion_funciones.md` | `02_funciones_usadas/documentacion_funciones.docx` | CSV regenerado y prueba de Fase 4 | Vigente verificado |
+| E03 | Cálculos PT | Usuario y auditoría | `03_calculos_pt/md/ejemplo_calculo_paso_a_paso.md` | `03_calculos_pt/ejemplo_calculo_paso_a_paso.docx` | Código `ptcalc` y prueba de Fase 4 | Vigente verificado |
+| E04 | Puntajes | Usuario y auditoría | `04_puntajes/md/formulas_y_ejemplos.md` | `04_puntajes/formulas_y_ejemplos.docx` | Código `ptcalc` y prueba de Fase 4 | Vigente verificado |
 | E05 | Interfaz | Usuario | `05_prototipo_ui/md/wireframes.md` | `05_prototipo_ui/wireframes.docx` | HTML, diagrama, pruebas y futuras CAP | Fuente histórica por actualizar |
 | E06 | Lógica y manual | Usuario y operación | `06_app_logica/md/manual_usuario.md` | `06_app_logica/manual_usuario.docx` | Pruebas E06 y futuras CAP | Fuente histórica por actualizar |
 | E07 | Dashboards | Usuario | `07_dashboards/md/documentacion_dashboards.md` | `07_dashboards/documentacion_dashboards.docx` | Diagrama, pruebas y futuras CAP | Pendiente de crear en Fase 5 |

@@ -1,345 +1,138 @@
-# Fórmulas y Ejemplos - Puntajes PT
-# Entregable: 04 - Módulo de Cálculo de Puntajes
-# Referencia: ISO 13528:2022, Sección 10
-
----
-
-## Índice
-
-1. [Puntaje z](#1-puntaje-z)
-2. [Puntaje z' (z-prima)](#2-puntaje-z-z-prima)
-3. [Puntaje ζ (zeta)](#3-puntaje-ζ-zeta)
-4. [Puntaje En](#4-puntaje-en)
-5. [Ejemplos de Cálculo](#5-ejemplos-de-cálculo)
-
----
-
-## 1. Puntaje z
-
-### Fórmula
-
-$$z = \frac{x - x_{pt}}{\sigma_{pt}}$$
-
-Donde:
-- $x$: Resultado del participante
-- $x_{pt}$: Valor asignado
-- $\sigma_{pt}$: Desviación estándar para evaluación de aptitud
-
-### Criterios de Evaluación
-
-| Criterio | Evaluación |
-|----------|------------|
-| \|z\| <= 2 | Satisfactorio |
-| 2 < \|z\| < 3 | Cuestionable |
-| \|z\| >= 3 | No satisfactorio |
-
-### Ejemplo
-
-Usando datos de `summary_n4.csv` para CO nivel 2-μmol/mol:
-
-- Resultado del participante: $x = 2.01215 \, \mu mol/mol$
-- Valor asignado (Algoritmo A): $x_{pt} = 2.0135 \, \mu mol/mol$
-- Sigma_pt (Algoritmo A): $\sigma_{pt} = 0.06 \, \mu mol/mol$
-
-$$z = \frac{2.01215 - 2.0135}{0.06} = -0.0225$$
-
-$$|z| = 0.0225 \leq 2 \Rightarrow \text{Satisfactorio}$$
-
----
-
-## 2. Puntaje z' (z-prima)
-
-### Fórmula
-
-$$z' = \frac{x - x_{pt}}{\sqrt{\sigma_{pt}^2 + u_{xpt}^2}}$$
-
-Donde:
-- $x$: Resultado del participante
-- $x_{pt}$: Valor asignado
-- $\sigma_{pt}$: Desviación estándar para evaluación de aptitud
-- $u_{xpt}$: Incertidumbre estándar del valor asignado
-
-### Criterios de Evaluación
-
-Igual que puntaje z:
-- |z'| ≤ 2: Satisfactorio
-- 2 < |z'| < 3: Cuestionable
-- |z'| ≥ 3: No satisfactorio
-
-### Ejemplo
-
-Usando los mismos datos con incertidumbre del valor asignado:
-
-- $x = 2.01215 \, \mu mol/mol$
-- $x_{pt} = 2.0135 \, \mu mol/mol$
-- $\sigma_{pt} = 0.06 \, \mu mol/mol$
-- $u_{xpt} = 0.01 \, \mu mol/mol$
-
-$$\sigma_{efectivo} = \sqrt{0.06^2 + 0.01^2} = 0.06083$$
-
-$$z' = \frac{2.01215 - 2.0135}{0.06083} = -0.0222$$
-
-$$|z'| = 0.0222 \leq 2 \Rightarrow \text{Satisfactorio}$$
-
----
-
-## 3. Puntaje ζ (zeta)
-
-### Fórmula
-
-$$\zeta = \frac{x - x_{pt}}{\sqrt{u_x^2 + u_{xpt}^2}}$$
-
-Donde:
-- $x$: Resultado del participante
-- $x_{pt}$: Valor asignado
-- $u_x$: Incertidumbre estándar del resultado del participante
-- $u_{xpt}$: Incertidumbre estándar del valor asignado
-
-### Criterios de Evaluación
-
-Igual que puntaje z:
-- |ζ| ≤ 2: Satisfactorio
-- 2 < |ζ| < 3: Cuestionable
-- |ζ| ≥ 3: No satisfactorio
-
-### Ejemplo
-
-Usando datos con incertidumbres del participante y valor asignado:
-
-- $x = 2.01215 \, \mu mol/mol$
-- $x_{pt} = 2.0135 \, \mu mol/mol$
-- $u_x = 0.02 \, \mu mol/mol$ (incertidumbre del participante)
-- $u_{xpt} = 0.01 \, \mu mol/mol$
-
-$$\sigma_{efectivo} = \sqrt{0.02^2 + 0.01^2} = 0.02236$$
-
-$$\zeta = \frac{2.01215 - 2.0135}{0.02236} = -0.0604$$
-
-$$|\zeta| = 0.0604 \leq 2 \Rightarrow \text{Satisfactorio}$$
-
----
-
-## 4. Puntaje En
-
-### Fórmula
-
-$$E_n = \frac{x - x_{pt}}{\sqrt{U_x^2 + U_{xpt}^2}}$$
-
-Donde:
-- $x$: Resultado del participante
-- $x_{pt}$: Valor asignado
-- $U_x$: Incertidumbre expandida del resultado del participante (k=2)
-- $U_{xpt}$: Incertidumbre expandida del valor asignado (k=2)
-
-### Criterios de Evaluación
-
-| Criterio | Evaluación |
-|----------|------------|
-| \|E_n\| <= 1 | Satisfactorio |
-| \|E_n\| > 1 | No satisfactorio |
-
-### Ejemplo
-
-Usando datos con incertidumbres expandidas:
-
-- $x = 2.01215 \, \mu mol/mol$
-- $x_{pt} = 2.0135 \, \mu mol/mol$
-- $U_x = 0.04 \, \mu mol/mol$ (incertidumbre expandida k=2 del participante)
-- $U_{xpt} = 0.02 \, \mu mol/mol$
-
-$$U_{efectivo} = \sqrt{0.04^2 + 0.02^2} = 0.04472$$
-
-$$E_n = \frac{2.01215 - 2.0135}{0.04472} = -0.0302$$
-
-$$|E_n| = 0.0302 \leq 1 \Rightarrow \text{Satisfactorio}$$
-
----
-
-## 5. Ejemplos de Cálculo
-
-### Escenario 1: Participante Satisfactorio (Puntaje z)
-
-Datos de part_1 para CO nivel 2-μmol/mol:
-
-| Parámetro | Valor | Unidad |
-|-----------|-------|--------|
-| x (resultado participante) | 2.01215 | μmol/mol |
-| x_pt (valor asignado) | 2.0135 | μmol/mol |
-| σ_pt | 0.06 | μmol/mol |
-
-**Cálculo:**
-$$z = \frac{2.01215 - 2.0135}{0.06} = -0.0225$$
-
-**Evaluación:**
-$$|z| = 0.0225 \leq 2 \Rightarrow \textbf{Satisfactorio}$$
-
----
-
-### Escenario 2: Participante Cuestionable (Puntaje z)
-
-Datos de un participante con desviación moderada:
-
-| Parámetro | Valor | Unidad |
-|-----------|-------|--------|
-| x | 2.15 | μmol/mol |
-| x_pt | 2.0135 | μmol/mol |
-| σ_pt | 0.06 | μmol/mol |
-
-**Cálculo:**
-$$z = \frac{2.15 - 2.0135}{0.06} = 2.275$$
-
-**Evaluación:**
-$$2 < |z| = 2.275 < 3 \Rightarrow \textbf{Cuestionable}$$
-
----
-
-### Escenario 3: Participante No Satisfactorio (Puntaje z)
-
-Datos de un participante con desviación grande:
-
-| Parámetro | Valor | Unidad |
-|-----------|-------|--------|
-| x | 2.25 | μmol/mol |
-| x_pt | 2.0135 | μmol/mol |
-| σ_pt | 0.06 | μmol/mol |
-
-**Cálculo:**
-$$z = \frac{2.25 - 2.0135}{0.06} = 3.942$$
-
-**Evaluación:**
-$$|z| = 3.942 \geq 3 \Rightarrow \textbf{No satisfactorio}$$
-
----
-
-### Escenario 4: Comparación entre Puntajes z, z', ζ, En
-
-Para el mismo participante con diferentes tipos de incertidumbre:
-
-| Parámetro | Valor | Unidad |
-|-----------|-------|--------|
-| x | 2.18 | μmol/mol |
-| x_pt | 2.0135 | μmol/mol |
-| σ_pt | 0.06 | μmol/mol |
-| u_xpt | 0.01 | μmol/mol |
-| u_x | 0.02 | μmol/mol |
-| U_x | 0.04 | μmol/mol |
-| U_xpt | 0.02 | μmol/mol |
-
-**Puntaje z:**
-$$z = \frac{2.18 - 2.0135}{0.06} = 2.775$$
-Evaluación: **Cuestionable** (2 < 2.775 < 3)
-
-**Puntaje z':**
-$$z' = \frac{2.18 - 2.0135}{\sqrt{0.06^2 + 0.01^2}} = \frac{0.1665}{0.06083} = 2.737$$
-Evaluación: **Cuestionable** (2 < 2.737 < 3)
-
-**Puntaje ζ:**
-$$\zeta = \frac{2.18 - 2.0135}{\sqrt{0.02^2 + 0.01^2}} = \frac{0.1665}{0.02236} = 7.447$$
-Evaluación: **No satisfactorio** (|ζ| = 7.447 ≥ 3)
-
-**Puntaje En:**
-$$E_n = \frac{2.18 - 2.0135}{\sqrt{0.04^2 + 0.02^2}} = \frac{0.1665}{0.04472} = 3.723$$
-Evaluación: **No satisfactorio** (|En| = 3.723 > 1)
-
-**Observación:** Los puntajes ζ y En son más sensibles cuando la incertidumbre reportada por el participante es pequeña frente a la desviación respecto al valor asignado. Si el denominador aumenta por incertidumbres mayores, la magnitud del puntaje disminuye.
-
----
-
-## Nota de Actualización 2026-06-16
-
-Este documento conserva fórmulas y ejemplos del módulo histórico de puntajes. Para la aplicación vigente, contrastar las fórmulas con `ptcalc/R/pt_scores.R` y con los cálculos inline de reportes en `app.R` antes de usar este documento como especificación normativa única.
-
----
-
-## Uso de las Funciones
+# Entregable 04 — Fórmulas, uso e interpretación de puntajes PT
+
+| Campo | Valor |
+|---|---|
+| Código | E04 |
+| Versión documental | 2.0 |
+| Fecha | 2026-07-14 |
+| Estado | Vigente contra `ptcalc/R/pt_scores.R` |
+| Audiencia | Usuarios, responsables técnicos y auditores |
+| Aprobación externa | Pendiente |
+
+## Elección rápida
+
+| Puntaje | Denominador | Cuándo aporta información |
+|---|---|---|
+| z | `σ_pt` | Cuando la dispersión para evaluar aptitud está definida |
+| z' | `sqrt(σ_pt² + u_xpt²)` | Cuando debe incorporarse la incertidumbre estándar del valor asignado |
+| zeta | `sqrt(u_x² + u_xpt²)` | Para compatibilidad usando incertidumbres estándar |
+| En | `sqrt(U_x² + U_xpt²)` | Para compatibilidad usando incertidumbres expandidas coherentes |
+
+`x` es el resultado del participante y `x_pt` el valor asignado. `u` representa
+incertidumbre estándar; `U` representa incertidumbre expandida. No mezcle ambas
+escalas ni factores de cobertura distintos sin convertirlos y documentarlo.
+
+## Fórmulas implementadas
+
+$$z = \frac{x-x_{pt}}{\sigma_{pt}}$$
+
+$$z' = \frac{x-x_{pt}}{\sqrt{\sigma_{pt}^2+u_{xpt}^2}}$$
+
+$$\zeta = \frac{x-x_{pt}}{\sqrt{u_x^2+u_{xpt}^2}}$$
+
+$$E_n = \frac{x-x_{pt}}{\sqrt{U_x^2+U_{xpt}^2}}$$
+
+La implementación devuelve `NA_real_` si el denominador calculado no es finito
+o no es positivo. En la interfaz, ese caso debe leerse como “N/A”, no como cero
+ni como resultado satisfactorio.
+
+## Umbrales y etiquetas exactas
+
+| Puntajes | Intervalo | Etiqueta de la aplicación |
+|---|---|---|
+| z, z', zeta | valor no finito | `N/A` |
+| z, z', zeta | `|score| ≤ 2` | `Satisfactorio` |
+| z, z', zeta | `2 < |score| < 3` | `Cuestionable` |
+| z, z', zeta | `|score| ≥ 3` | `No satisfactorio` |
+| En | valor no finito | `N/A` |
+| En | `|En| ≤ 1` | `Satisfactorio` |
+| En | `|En| > 1` | `No satisfactorio` |
+
+Los valores exactamente iguales a 2 son satisfactorios; exactamente 3 son no
+satisfactorios; exactamente 1 en En es satisfactorio.
+
+## Ejemplo único verificable
+
+Entradas, todas en `µmol/mol`:
+
+| Símbolo | Valor |
+|---|---:|
+| `x` | 10.18 |
+| `x_pt` | 10.00 |
+| `σ_pt` | 0.08 |
+| `u_xpt` | 0.03 |
+| `u_x` | 0.05 |
+| `U_xpt` | 0.06 |
+| `U_x` | 0.10 |
+
+| Puntaje | Resultado sin clasificar | Presentación | Interpretación |
+|---|---:|---:|---|
+| z | 2.250000 | 2.250 | Cuestionable |
+| z' | 2.106741 | 2.107 | Cuestionable |
+| zeta | 3.086975 | 3.087 | No satisfactorio |
+| En | 1.543487 | 1.543 | No satisfactorio |
 
 ```r
-# Cargar todas las funciones
-source("../R/calcula_puntajes.R")
-source("../R/crea_reporte.R")
+devtools::load_all("ptcalc")
 
-# Cargar datos
-summary_data <- read.csv("../../data/summary_n4.csv")
+z <- calculate_z_score(10.18, 10.00, 0.08)
+z_prime <- calculate_z_prime_score(10.18, 10.00, 0.08, 0.03)
+zeta <- calculate_zeta_score(10.18, 10.00, 0.05, 0.03)
+en <- calculate_en_score(10.18, 10.00, 0.10, 0.06)
 
-# Calcular valor asignado y sigma_pt (usando funciones del entregable 03)
-source("../../Entregables_pt_app/03_calculos_pt/R/valor_asignado.R")
-source("../../Entregables_pt_app/03_calculos_pt/R/sigma_pt.R")
-
-va_dict <- calcular_valor_asignado_todos(summary_data, metodo = "algoritmo_a")
-sigma_dict <- calcular_sigma_pt_todos(summary_data, metodo = "algoritmo_a")
-
-# Calcular puntajes para todos los participantes
-puntajes <- calcular_puntajes_todos(
-  datos_participantes = summary_data,
-  valor_asignado_dict = lapply(va_dict, function(r) r$valor_asignado),
-  sigma_pt_dict = lapply(sigma_dict, function(r) r$sigma_pt)
+c(
+  z = evaluate_z_score(z),
+  z_prime = evaluate_z_score(z_prime),
+  zeta = evaluate_z_score(zeta),
+  en = evaluate_en_score(en)
 )
-
-# Ver resultados
-head(puntajes[, c("participant_id", "pollutant", "level", "x", "z", "evaluacion_z")])
-
-# Generar reporte completo
-reporte <- generar_reporte_pt(
-  datos_participantes = summary_data,
-  metodo_valor_asignado = "algoritmo_a",
-  metodo_sigma_pt = "algoritmo_a",
-  directorio_salida = "../output"
-)
-
-print(reporte$estadisticas_globales$estadisticas)
 ```
 
----
+El ejemplo muestra por qué dos puntajes sobre el mismo resultado no tienen que
+coincidir: responden a denominadores y preguntas diferentes. Un valor negativo
+indicaría que el resultado está por debajo de `x_pt`; la clasificación usa la
+magnitud absoluta.
 
-## Salida de Reporte
+## De la entrada a la salida de la app
 
-### Archivo: puntajes_completos.csv
+1. La app selecciona analito, nivel y ronda (`n_lab`).
+2. Obtiene `x_pt`, `σ_pt` y `u_xpt` del método elegido y de las contribuciones
+   disponibles de homogeneidad/estabilidad.
+3. Normaliza la incertidumbre del participante: puede derivar `u_x = U_x / k`
+   cuando se suministran incertidumbre expandida y factor de cobertura válidos.
+4. Calcula los puntajes disponibles y deja `N/A` los que carecen de entradas.
+5. Presenta tablas, gráficos y resúmenes; la exportación conserva valores y
+   clasificaciones. El redondeo visual no interviene en la clasificación.
 
-| pollutant | run | level | participant_id | x | x_pt | z | evaluacion_z | z_prima | evaluacion_z_prima | zeta | evaluacion_zeta | en | evaluacion_en |
-|-----------|-----|-------|----------------|---|------|---|--------------|----------|-------------------|-------|----------------|----|--------------|
-| co | corrida_1 | 0-μmol/mol | part_1 | -0.02798 | -0.02169 | -0.105 | Satisfactorio | NA | N/A | NA | N/A | NA | N/A |
-| ... | ... | ... | ... | ... | ... | ... | ... | ... | ... | ... | ... | ... | ... |
+Una clasificación aislada no explica la causa. Antes de tomar acciones revise
+unidad, transcripción, método, incertidumbre, trazabilidad del valor asignado y
+desempeño histórico del participante.
 
-### Archivo: resumen_participantes.csv
+## Casos que deben detener la interpretación
 
-| participant_id | total_observaciones | n_satisfactorio_z | n_cuestionable_z | n_no_satisfactorio_z | n_satisfactorio_en | n_no_satisfactorio_en |
-|---------------|-------------------|-------------------|-----------------|---------------------|-------------------|---------------------|
-| part_1 | 36 | 35 | 1 | 0 | 35 | 1 |
-| part_2 | 36 | 34 | 2 | 0 | 33 | 3 |
-| ref | 36 | 36 | 0 | 0 | 36 | 0 |
+- `σ_pt ≤ 0`, denominador cero, infinito o dato faltante.
+- Incertidumbre estándar mezclada con expandida.
+- `U` sin factor de cobertura conocido cuando se requiere convertir a `u`.
+- Resultado y valor asignado en unidades distintas.
+- Identificador de analito, nivel o ronda que no corresponde a la selección.
 
-### Archivo: estadisticas_globales.csv
+## Evidencia y referencias
 
-| tipo_puntaje | metrica | valor |
-|--------------|----------|-------|
-| z | n | 108 |
-| z | media | -0.023 |
-| z | sd | 0.156 |
-| z | max_abs | 0.876 |
-| z | % satisfactorio | 95.4 |
-| z | % cuestionable | 4.6 |
-| z | % no satisfactorio | 0.0 |
-| En | % satisfactorio | 95.4 |
-| En | % no satisfactorio | 4.6 |
+![CAP-12. Resumen de puntajes.](../../00_evidencia_visual/capturas/CAP-12_puntajes_resumen.png)
 
----
+**Figura CAP-12.** Resumen operativo. CAP-13 documenta z y z'; CAP-14 documenta
+zeta y En. Metadatos y hashes: `../../00_evidencia_visual/indice_capturas.md`.
 
-## Evidencia visual vigente
+- Autoridad matemática: `ptcalc/R/pt_scores.R`.
+- Orquestación vigente: funciones de puntajes en `app.R`.
+- Pruebas: `tests/testthat/test-final-scores-export.R` y
+  `tests/testthat/test-entregables-fase-4.R`.
+- Referencia declarada por el código: ISO 13528:2022, sección 10.
+- La coincidencia con el código no constituye certificación normativa externa.
 
-![CAP-12. Resumen de puntajes por
-participante.](../../00_evidencia_visual/capturas/CAP-12_puntajes_resumen.png)
+## Historial de cambios
 
-**Figura CAP-12.** Resumen operativo de puntajes. Las variantes z, z', zeta y
-En se documentan con CAP-13 y CAP-14 en el índice técnico común.
-
-## Referencias
-
-- ISO 13528:2022 - Statistical methods for use in proficiency testing by interlaboratory comparison
-  - Sección 10.2: z-scores
-  - Sección 10.3: z'-scores (z-prime)
-  - Sección 10.4: zeta-scores
-  - Sección 10.5: En-scores
-
----
-
-*Documento generado para el Entregable 04 - Módulo de Cálculo de Puntajes*
+| Versión | Fecha | Cambio |
+|---|---|---|
+| 1.0 | 2026-01-24 | Fórmulas y ejemplos iniciales |
+| 2.0 | 2026-07-14 | Fórmulas verificadas, límites exactos, NA, escalas de incertidumbre y ejemplo reproducible |

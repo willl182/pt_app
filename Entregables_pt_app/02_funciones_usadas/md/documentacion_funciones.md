@@ -1,8 +1,8 @@
 # Documentacion de Funciones
 
-**Fecha de generacion:** 2026-06-16 12:16:28
+**Fecha de generacion:** 2026-07-14 13:49:33
 
-**Total funciones documentadas:** 77
+**Total funciones documentadas:** 78
 
 **Funciones exportadas (`@export`):** 24
 
@@ -30,6 +30,7 @@
 | Servidor Shiny | 3 |
 | UI / Utilidades | 3 |
 | Obsoleto | 3 |
+| General | 1 |
 
 ---
 
@@ -323,18 +324,17 @@ cat("Homogeneity criterion:", c)  # 0.15
 
 ### `calculate_homogeneity_criterion_expanded` `[EXPORTADA]`
 
-c_expanded = c_criterion * sqrt(1 + (u_sigma_pt/sigma_pt)^2)
+Admite una rama con u_sigma_pt y otra con sw/g. La segunda retorna F1 * (0.3 * sigma_pt)^2 + F2 * sw^2; ambas ramas no tienen la misma forma dimensional.
 
 **Firma:** `calculate_homogeneity_criterion_expanded(sigma_pt, u_sigma_pt = NULL, sw = NULL, g = NULL)`
 
 **Parametros**
 
-- sigma_pt Standard deviation for proficiency assessment (from MADe)
-- u_sigma_pt Uncertainty of sigma_pt
+- sigma_pt Desviacion para evaluacion; u_sigma_pt Incertidumbre de sigma_pt para la primera rama; sw Desviacion dentro del item para la rama de tabla; g Numero de items, limitado al intervalo 7--20.
 
 **Valor de retorno**
 
-The expanded criterion value
+Criterio expandido para la rama u_sigma_pt o expresion cuadratica para la rama sw/g.
 
 **Archivo fuente:** `ptcalc/R/pt_homogeneity.R`
 
@@ -1931,15 +1931,6 @@ Lista con robust_mean y robust_sd.
 
 Se mantiene solo por compatibilidad hacia atras.
 
-## Evidencia visual vigente
-
-![CAP-09. Ejecución del Algoritmo A y resumen de iteraciones con datos de
-demostración.](../../00_evidencia_visual/capturas/CAP-09_algoritmo_a.png)
-
-**Figura CAP-09.** La pantalla confirma la disponibilidad operativa del
-Algoritmo A. Fecha, commit, datos y SHA-256 se controlan en
-`../../00_evidencia_visual/indice_capturas.csv`.
-
 **Archivo fuente:** `R/utils.R`
 
 **Referencia ISO:** ISO 13528:2022, Annex C
@@ -2010,3 +2001,12 @@ Se mantiene solo por compatibilidad hacia atras.
 
 ---
 
+## Categoria: General
+
+### `build_final_scores_export_df`
+
+Sin descripcion disponible.
+
+**Archivo fuente:** `app.R`
+
+---n

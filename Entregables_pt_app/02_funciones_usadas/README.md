@@ -1,16 +1,33 @@
-# Entregable 02 - Funciones Usadas en app.R, R/ y ptcalc/R/
+# Entregable 02 — Mapa de capacidades y catálogo de funciones
 
 **Fase:** 1 - Fundacion  
 **Fecha de creacion:** 2026-01-24  
-**Fecha de regeneracion:** 2026-06-16  
-**Estado:** Regenerado y enriquecido
+**Fecha de regeneración:** 2026-07-14
+
+**Versión documental:** 2.0
+
+**Estado:** Vigente contra `app.R`, `R/`, `ptcalc/R/` y el informe actual
+
+**Aprobación externa:** Pendiente
 
 ## Objetivo
 
-Documentar todas las funciones disponibles en la aplicacion con sus firmas,
-parametros, tipos de retorno, ejemplos, referencias ISO y trazabilidad al archivo
-fuente. Este entregable es la referencia tecnica del API interno del aplicativo
-PT App.
+Explicar qué capacidades ofrece el aplicativo y mantener un catálogo técnico
+regenerable con firma, origen, ciclo de vida y uso de cada función.
+
+## Qué puede hacer una persona con el aplicativo
+
+| Tarea | Capacidad implementada | Dónde se sustenta |
+|---|---|---|
+| Preparar y cargar datos | Lectura, validación y normalización de archivos | `app.R`, carga y normalización |
+| Evaluar material | Homogeneidad, estabilidad e incertidumbres asociadas | `ptcalc/R/pt_homogeneity.R` |
+| Obtener valores robustos | MADe, nIQR y Algoritmo A | `ptcalc/R/pt_robust_stats.R` |
+| Evaluar participantes | Puntajes z, z', zeta y En | `ptcalc/R/pt_scores.R` |
+| Interpretar resultados | Tablas, gráficos, clasificaciones y resúmenes | `app.R` y plantilla de informe |
+| Conservar evidencia | Exportaciones e informes por ronda/participante | `app.R`, `reports/` |
+
+El cuerpo de este README orienta al lector general. El catálogo detallado en
+`md/documentacion_funciones.md` está dirigido a soporte y auditoría.
 
 ## Descripcion
 
@@ -42,7 +59,7 @@ Este entregable contiene:
 
 ## Resumen de Funciones Encontradas
 
-**Total:** 77 funciones unicas
+**Total:** 78 funciones únicas
 
 **Funciones exportadas (`@export`):** 24  
 **Funciones obsoletas (`lifecycle::badge("deprecated")`):** 3
@@ -61,6 +78,7 @@ Este entregable contiene:
 | Servidor Shiny | 3 | Funcion servidor, ejecucion de scripts y preprocesador. |
 | UI / Utilidades | 3 | Ecuaciones MathJax, claves y limpieza de nombres de archivo. |
 | Obsoleto | 3 | Wrappers antiguos en `R/utils.R` (usar `ptcalc`). |
+| General | 1 | Función de arranque declarada fuera de las categorías anteriores. |
 
 ### Funciones principales por categoria
 
@@ -126,7 +144,8 @@ El script genera:
 - `reports/report_template.Rmd`
 
 Se excluyen scripts de preprocesamiento (`R/preprocessing/`) y casos de uso
-secundarios.
+secundarios. Por tanto, este catálogo describe el núcleo escaneado y no afirma
+ser un inventario de cada función existente en todo el repositorio.
 
 ## Formato de Documentacion
 
@@ -216,3 +235,20 @@ Este entregable enriquecido alimenta:
 - **ISO 13528:2022** - Statistical methods for proficiency testing
 - **ISO 17043:2023** - General requirements for proficiency testing
 - **AGENTS.md** - Guia de estilo y convenciones del codigo
+
+## Control y trazabilidad
+
+- Fuente regenerable: `R/lista_funciones.R`.
+- Inventario estructurado: `funciones_extraidas.csv`.
+- Evidencia visual: CAP-09 y el índice común en
+  `../00_evidencia_visual/indice_capturas.md`.
+- Prueba de fase: `tests/testthat/test-entregables-fase-4.R`.
+- Las referencias ISO son declaraciones trazables del código y quedan sujetas
+  a revisión normativa independiente.
+
+## Historial de cambios
+
+| Versión | Fecha | Cambio |
+|---|---|---|
+| 1.x | 2026-01-24 a 2026-06-16 | Catálogo inicial y enriquecimiento técnico |
+| 2.0 | 2026-07-14 | Regeneración vigente, mapa ciudadano de capacidades y alcance explícito |

@@ -1,67 +1,80 @@
-# Entregable 01 - Repositorio de Código y Scripts Iniciales
+# Entregable 01 — Repositorio inicial recibido
 
-**Fase:** 1 - Fundación  
-**Fecha de creación:** 2026-01-24  
-**Estado:** Completado
+| Campo | Valor |
+|---|---|
+| Código | E01 |
+| Versión documental | 2.0 |
+| Fecha de actualización | 2026-07-14 |
+| Estado | Vigente como registro histórico; no es el código operativo actual |
+| Fuente funcional vigente | `app.R`, `R/` y `ptcalc/R/` en la raíz del repositorio |
+| Aprobación externa | Pendiente |
+
+## Para qué sirve este entregable
+
+Este directorio conserva el código recibido al inicio del desarrollo. Permite
+reconstruir el punto de partida y comparar la evolución del aplicativo. No debe
+usarse para iniciar ni mantener la versión actual: la aplicación vigente se
+ejecuta desde el `app.R` ubicado en la raíz del repositorio.
+
+## Qué contiene
+
+| Archivo | Función | Vigencia |
+|---|---|---|
+| `app_original.R` | Copia de la aplicación en el corte inicial | Histórico |
+| `R/pt_homogeneity.R` | Cálculos iniciales de homogeneidad | Histórico |
+| `R/pt_robust_stats.R` | Estadísticos robustos iniciales | Histórico |
+| `R/pt_scores.R` | Puntajes PT iniciales | Histórico |
+| `R/utils.R` | Utilidades iniciales, luego reemplazadas | Obsoleto/histórico |
+| `tests/test_01_existencia_archivos.R` | Comprobación diseñada para el snapshot inicial | Evidencia histórica |
+| `test_01_resultados.csv` | Resultado conservado de esa comprobación | Evidencia histórica |
+
+Los archivos DOCX son derivados de sus fuentes Markdown. El inventario maestro
+vigente de todo el paquete, con tamaño, estado Git y SHA-256, se encuentra en
+`../00_linea_base/inventario_maestro.csv` y se regenera mediante
+`scripts/documentacion/generar_inventario_entregables.R` desde la raíz.
+
+## Cómo comprobar el paquete actual
+
+Desde la raíz del repositorio:
+
+```r
+Rscript scripts/documentacion/generar_inventario_entregables.R
+Rscript -e 'testthat::test_file("tests/testthat/test-linea-base-entregables.R")'
+```
+
+Esta es la comprobación recomendada. El test incluido dentro de E01 se conserva
+para auditoría del corte inicial y puede dejar de coincidir con el código
+vigente precisamente porque el aplicativo evolucionó.
+
+## Cómo identificar qué versión usar
+
+1. Para operar el aplicativo, use el `app.R` de la raíz.
+2. Para cálculos reutilizables, use `ptcalc/R/` mediante
+   `devtools::load_all("ptcalc")`.
+3. Para revisar el origen del proyecto, consulte este directorio.
+4. No trate `app_original.R`, `app_v06.R`, `app_v07.R` ni `app_final.R` como
+   fuentes vigentes sin contrastarlas con el commit documentado.
 
 ## Evidencia visual vigente
 
-![CAP-01. Inicio del aplicativo y zonas de carga de los archivos
-requeridos.](../00_evidencia_visual/capturas/CAP-01_inicio_carga.png)
+![CAP-01. Inicio del aplicativo y zonas de carga.](../00_evidencia_visual/capturas/CAP-01_inicio_carga.png)
 
-**Figura CAP-01.** Vista reproducible del aplicativo vigente. Fecha, commit,
-datos de demostración y SHA-256 se registran en
+**Figura CAP-01.** Interfaz vigente, no la interfaz del snapshot. Su fecha,
+commit, datos de demostración y SHA-256 están en
 `../00_evidencia_visual/indice_capturas.csv`.
 
-## Objetivo
+## Trazabilidad y límites
 
-Crear snapshot del código original como línea base del proyecto. Este entregable establece el punto de partida antes de realizar modificaciones.
+- Línea base funcional: `../00_linea_base/linea_base_version.md`.
+- Fuentes autorizadas: `../00_linea_base/fuentes_y_requisitos.md`.
+- Inventario completo: `../00_linea_base/inventario_maestro.csv`.
+- No se encontró contrato, TDR o acta primaria en el workspace; por ello este
+  documento describe el contenido verificable, pero no certifica por sí solo
+  la aceptación contractual.
 
-## Descripción
+## Historial de cambios
 
-Este entregable contiene copias exactas de:
-- La aplicación Shiny principal (`app_original.R`)
-- Las cuatro funciones principales de cálculo:
-  - `pt_homogeneity.R` - Cálculos de homogeneidad
-  - `pt_robust_stats.R` - Estadísticos robustos
-  - `pt_scores.R` - Cálculo de puntajes PT
-  - `utils.R` - Funciones utilitarias
-
-## Archivos Incluidos
-
-| Archivo | Descripción | Ubicación |
-|---------|-------------|-----------|
-| `README.md` | Este documento | `/` |
-| `app_original.R` | Copia de `pt_app/app.R` | `/` |
-| `R/pt_homogeneity.R` | Funciones de homogeneidad | `R/` |
-| `R/pt_robust_stats.R` | Estadísticos robustos | `R/` |
-| `R/pt_scores.R` | Cálculo de puntajes | `R/` |
-| `R/utils.R` | Utilidades | `R/` |
-| `tests/test_01_existencia_archivos.R` | Tests de verificación | `tests/` |
-| `tests/test_01_existencia_archivos.md` | Guía de uso | `tests/` |
-
-## Verificación de Integridad
-
-Todos los archivos han sido verificados para asegurar que son copias idénticas de los originales. El test `test_01_existencia_archivos.R` valida:
-
-1. Existencia de archivos origen en `pt_app/`
-2. Correspondencia de hash SHA256 entre original y copia
-3. Validación de sintaxis R básica
-
-## Uso de los Tests
-
-Para ejecutar las verificaciones:
-
-```r
-# Desde la raíz del proyecto
-source("Entregables_pt_app/01_repo_inicial/tests/test_01_existencia_archivos.R")
-```
-
-Ver el archivo `tests/test_01_existencia_archivos.md` para instrucciones detalladas.
-
-## Próximos Pasos
-
-Este entregable es la línea base. Los siguientes entregables utilizarán este código como referencia para:
-- Documentar funciones usadas (Entregable 02)
-- Implementar cálculos standalone (Entregable 03)
-- Desarrollar módulo de puntajes (Entregable 04)
+| Versión | Fecha | Cambio |
+|---|---|---|
+| 1.0 | 2026-01-24 | Registro del snapshot inicial |
+| 2.0 | 2026-07-14 | Separación explícita entre histórico y vigente; enlace al inventario auditable |
