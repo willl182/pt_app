@@ -104,12 +104,12 @@ sensibles, errores de consola, controles cortados ni resultados incoherentes.
 
 | Item | Estado | Notas |
 |---|---|---|
-| Congelar la identificación de la versión documental | Pendiente | Registrar fecha, rama, commit, estado del árbol y versión de R/paquetes relevantes; no modificar cambios ajenos existentes |
-| Inventariar todos los archivos de `Entregables_pt_app/` | Pendiente | Clasificar fuente, derivado, ejecutable, prueba, dato, evidencia e histórico |
-| Comparar con fuentes documentales paralelas | Pendiente | Revisar `testb/`, `dgpsea03/`, `VALIDACION DEFINITIVA/`, `docs/`, README raíz y bitácoras; rescatar evidencia sin copiar contradicciones |
-| Levantar mapa funcional del aplicativo actual | Pendiente | Pestañas, subpestañas, entradas, cálculos, salidas, descargas, mensajes, dependencias y rutas de datos |
-| Construir matriz de brechas por entregable | Pendiente | Marcar contenido vigente, obsoleto, ausente, duplicado, no verificable y pendiente de aprobación |
-| Identificar requisitos contractuales disponibles | Pendiente | Vincular contrato/TDR/actas si están en el repositorio; si no, registrar explícitamente la limitación y solicitar fuente al responsable |
+| Congelar la identificación de la versión documental | Completado | Corte `6e7dbcb` en `00_linea_base/linea_base_version.md`; se preservaron cambios HTML preexistentes |
+| Inventariar todos los archivos de `Entregables_pt_app/` | Completado | 88 archivos, excluido solo el CSV autorreferencial; rol, vigencia, tamaño, SHA-256 y estado Git reproducibles |
+| Comparar con fuentes documentales paralelas | Completado | Jerarquía y uso condicionado registrados en `fuentes_y_requisitos.md` y brechas; ninguna fuente paralela se asumió autoritativa |
+| Levantar mapa funcional del aplicativo actual | Completado | Ocho pestañas, subpestañas, entradas, cálculos, salidas, mensajes, dependencias y rutas documentados desde `app.R` vigente |
+| Construir matriz de brechas por entregable | Completado | E01-E09 y hallazgos transversales clasificados en `matriz_brechas.md` |
+| Identificar requisitos contractuales disponibles | Completado | Búsqueda reproducible sin contrato/TDR/acta primaria; solicitud al responsable y limitación explícitas |
 
 **Salida de fase:** inventario maestro, mapa funcional, matriz de brechas y lista
 de fuentes autorizadas.
@@ -248,7 +248,7 @@ El paquete se considerará listo únicamente cuando:
 
 | Riesgo/decisión | Tratamiento previsto |
 |---|---|
-| No se ha identificado todavía el contrato/TDR fuente | Buscarlo en Fase 1; si no está, no inferir obligaciones y registrar solicitud formal al responsable |
+| No se encontró contrato/TDR/acta primaria en el workspace | No inferir obligaciones; solicitar la fuente al responsable antes de declarar cobertura contractual completa |
 | Hay archivos históricos mezclados con fuentes actuales | Etiquetar versión y carácter histórico; definir una única fuente oficial por documento |
 | Existen documentos recientes fuera de `Entregables_pt_app/` | Usarlos como insumo sujeto a verificación, no como autoridad automática |
 | El árbol Git ya contiene un borrado y un archivo no rastreado relacionados con un plan HTML | Preservar esos cambios; no sobrescribirlos ni incorporarlos sin confirmar autoría/alcance |
@@ -270,3 +270,20 @@ El paquete se considerará listo únicamente cuando:
   técnica y evidencia de auditoría.
 - [260712 16:39] Plan creado; no se ha iniciado ninguna fase de ejecución ni se
   han realizado commits/push.
+- [260712 16:45] Plan publicado en `main` mediante commit `6e7dbcb`; los cambios
+  HTML preexistentes quedaron fuera del commit.
+- [260714 10:20] Estado persistido con skill `saver`; la Fase 1 continúa
+  pendiente de inicio.
+- [260714 10:22] Iniciada Fase 1 (mencionada inicialmente como Fase 0 en la
+  solicitud); congelados commit, rama, entorno y cambios preexistentes.
+- [260714 10:26] Generados inventario maestro, mapa funcional, matriz de
+  brechas E01-E09 y registro de fuentes/requisitos en
+  `Entregables_pt_app/00_linea_base/`.
+- [260714 10:27] Primera revisión `revisor-fase`: solicitó estado documental,
+  pruebas de completitud/hash y mayor detalle del mapa; hallazgos incorporados.
+- [260714 10:29] Segunda revisión `revisor-fase`: confirmó los tres bloqueantes
+  resueltos y detectó una inconsistencia menor en el comando de búsqueda
+  contractual; corregida junto con la comprobación exacta de estado Git.
+- [260714 10:30] Prueba focal completada: 24 expectativas, 0 fallos, 0
+  advertencias; inventario reproducible de 88 archivos, parseo R correcto y
+  `git diff --check` limpio.
