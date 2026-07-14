@@ -19,6 +19,17 @@ testthat::test_that("visual evidence covers CAP-01 through CAP-19", {
   testthat::expect_setequal(unique(index$id), sprintf("CAP-%02d", 1:19))
   testthat::expect_equal(sum(index$id == "CAP-13"), 2L)
   testthat::expect_equal(sum(index$id == "CAP-14"), 2L)
+  testthat::expect_setequal(
+    index$accion_previa[index$id == "CAP-13"],
+    c("Abrir puntajes Z'", "Abrir puntajes Z")
+  )
+  testthat::expect_setequal(
+    index$accion_previa[index$id == "CAP-14"],
+    c("Abrir puntajes Zeta", "Abrir puntajes En")
+  )
+  testthat::expect_match(
+    index$accion_previa[index$id == "CAP-19"], "Cargar datos válidos"
+  )
   testthat::expect_true(all(nzchar(index$accion_previa)))
   testthat::expect_true(all(nzchar(index$estado_esperado)))
   testthat::expect_true(all(nzchar(index$documentos_consumidores)))
@@ -48,10 +59,18 @@ testthat::test_that("capture and demonstration-data hashes are current", {
     )
   )
   testthat::expect_true(all(file.exists(demo_files)))
+  summary_demo <- utils::read.csv(demo_files[[3]], check.names = FALSE)
+  testthat::expect_true(all(
+    c("u_value", "u_exp", "k_factor") %in% names(summary_demo)
+  ))
   demo_text <- paste(unlist(lapply(demo_files, readLines, warn = FALSE)),
     collapse = "\n"
   )
   testthat::expect_false(grepl("@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}", demo_text))
+  testthat::expect_false(grepl("/home/", demo_text))
+  testthat::expect_true(all(
+    unique(summary_demo$participant_id) %in% c("ref", "part_1", "part_2", "part_3")
+  ))
 })
 
 testthat::test_that("execution record and source links are auditable", {
@@ -62,6 +81,11 @@ testthat::test_that("execution record and source links are auditable", {
   testthat::expect_identical(record$captures, 21L)
   testthat::expect_identical(record$playwright, "1.61.1")
   testthat::expect_match(record$commit, "^[0-9a-f]{40}$")
+  commit_check <- system2(
+    "git", c("cat-file", "-e", paste0(record$commit, "^{commit}")),
+    stdout = FALSE, stderr = FALSE
+  )
+  testthat::expect_identical(commit_check, 0L)
 
   sources <- c(
     "01_repo_inicial/README.md",

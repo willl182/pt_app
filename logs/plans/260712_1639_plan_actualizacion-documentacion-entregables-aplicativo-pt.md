@@ -139,13 +139,13 @@ pruebas de enlaces/estructura, commit y push.
 
 | Item | Estado | Notas |
 |---|---|---|
-| Preparar datos de demostración | Pendiente | Copias estables, sin información sensible, suficientes para recorrer todas las funciones documentadas |
-| Revisar y robustecer script Playwright | Pendiente | Selectores semánticos, esperas por estados reales, viewport fijo, salida determinista y fallo explícito si falta contenido |
-| Capturar camino feliz completo | Pendiente | CAP-01 a CAP-17, incluyendo todas las variantes de puntajes visibles |
-| Capturar validaciones y resolución menor | Pendiente | CAP-18 y CAP-19; mensajes legibles y acciones de recuperación |
-| Generar índice de capturas | Pendiente | Acción previa, selector/estado esperado, archivo, hash, fecha, commit y documentos consumidores |
-| Revisar calidad y privacidad | Pendiente | Nitidez, recorte, escala, ortografía, coherencia numérica, ausencia de datos personales y errores visibles |
-| Integrar capturas en fuentes | Pendiente | Numeración y pies consistentes; texto alternativo y referencias cruzadas |
+| Preparar datos de demostración | Completado | Copias no sensibles congeladas; resumen enriquecido con u_value, u_exp y k_factor para zeta/En |
+| Revisar y robustecer script Playwright | Completado | Playwright 1.61.1, selectores semánticos, esperas reactivas, fallos explícitos y ejecutor autocontenido |
+| Capturar camino feliz completo | Completado | CAP-01 a CAP-17; 21 imágenes para 19 escenarios, con variantes separadas z/z' y zeta/En |
+| Capturar validaciones y resolución menor | Completado | CAP-18 muestra error recuperable; CAP-19 usa datos válidos a 1024x768 y descarga habilitada |
+| Generar índice de capturas | Completado | CSV/Markdown con acción, estado, archivo, SHA-256, fecha, commit, viewport, datos y consumidores |
+| Revisar calidad y privacidad | Completado | Revisión visual y automatizada; diagnóstico DT no visible aceptado como deuda técnica residual |
+| Integrar capturas en fuentes | Completado | Fuentes E01-E09 enlazan evidencia con alt, pie y referencia al índice común |
 
 **Salida de fase:** script Playwright ejecutable, conjunto de capturas vigente,
 índice técnico y registro de ejecución.
@@ -302,3 +302,17 @@ El paquete se considerará listo únicamente cuando:
 - [260714 10:45] Fase 2 completada y estado persistido con skill `saver`.
 - [260714 10:46] Commit principal de Fase 2 `0f60396` publicado en `main`; los
   dos cambios HTML y el hallazgo preexistente de las 10:20 quedaron excluidos.
+- [260714 11:53] Iniciada Fase 3; revisados rundown, plan, script Playwright
+  histórico, datos de demostración e interfaz vigente.
+- [260714 12:02] Primera corrida completó 19 escenarios, pero la revisión
+  `revisor-fase` detectó bloqueantes en incertidumbres, variantes de puntajes,
+  participante, resolución menor y proveniencia del commit.
+- [260714 12:12] Bloqueantes corregidos: 21 imágenes para CAP-01 a CAP-19,
+  datos con incertidumbre, paneles poblados, ejecutor portable e integración
+  E01-E09.
+- [260714 12:14] Commit de implementación `068ba8e` publicado en `main` y
+  evidencia regenerada desde ese commit.
+- [260714 12:16] Segunda revisión `revisor-fase`: sin bloqueantes; confirmó
+  puntajes, participante, vista menor, proveniencia, integración y 95 pruebas.
+- [260714 12:16] Fase 3 completada; queda como deuda no bloqueante corregir el
+  `adjustWidth` de DataTables al redimensionar tablas ocultas.

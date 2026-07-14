@@ -4,39 +4,32 @@
 
 ## Current State
 
-- Fase 1 de línea base e inventario auditable completada.
-- Inventario maestro: 88 archivos, SHA-256 y clasificaciones verificadas.
-- Mapa funcional y matriz de brechas E01-E09 disponibles.
-- Prueba focal: 24 expectativas, 0 fallos y 0 advertencias.
-- Fase 2 de estructura editorial y control documental completada.
-- Plantilla, índice E01–E09, glosario, IDs, audiencias y matriz de trazabilidad
-  disponibles en `Entregables_pt_app/00_control_documental/`.
-- Cadena Markdown–DOCX–PDF verificada con 35 expectativas; inventario de 102
-  archivos verificado con otras 24 expectativas.
-- Implementación publicada en `0f60396`; cierre documental publicado en
-  `8dd660b`.
+- Fases 1, 2 y 3 completadas.
+- Fase 3 aporta 21 imágenes para CAP-01 a CAP-19, datos demo no sensibles,
+  índice auditable y registro de ejecución.
+- Implementación publicada en `068ba8e`; evidencia final regenerada desde ese
+  commit y pendiente del commit documental de cierre.
+- Segunda revisión `revisor-fase` sin bloqueantes; prueba focal 95/95.
 
 ## Critical Technical Context
 
-- Autoridad funcional: `app.R` y módulos vigentes realmente cargados/invocados.
-- Cuatro copias de aplicaciones dentro de los entregables son históricas.
-- No se encontró contrato/TDR/acta primaria; debe solicitarse al responsable.
-- Los dos cambios HTML preexistentes siguen preservados y fuera del alcance de
-  la fase.
-- Markdown es la fuente controlada; pandoc genera DOCX y LibreOffice genera PDF
-  con perfil temporal. El manifiesto conserva hashes de fuente y salidas.
-- La revisión `revisor-fase` cerró sin bloqueantes y sus cuatro hallazgos fueron
-  incorporados.
+- Ejecutar `npm ci` y `scripts/documentacion/ejecutar_capturas.sh`.
+- CAP-13 y CAP-14 usan dos archivos cada uno para documentar z/z' y zeta/En.
+- CAP-19 usa datos válidos a 1024x768 y muestra descarga habilitada.
+- El `adjustWidth` de DataTables en tablas ocultas es deuda técnica aceptada y
+  registrada; no afecta contenido ni cálculos visibles.
+- No incorporar el movimiento HTML ni `logs/history/260714_1020_findings.md`:
+  son cambios preexistentes.
 
 ## Next Steps
 
-1. Iniciar Fase 3 con datos de demostración no sensibles.
-2. Revisar y robustecer selectores Playwright contra la interfaz vigente.
-3. Generar CAP-01 a CAP-19, hashes e índice de capturas.
+1. Iniciar Fase 4 para actualizar E01-E04.
+2. Regenerar evidencia si se modifica la interfaz.
 
 ## Branch Status
 
 - Branch: `main`
-- Status: Fase 2 publicada en `0f60396`; `main` sincronizada con `origin/main`
-- Pending changes: dos cambios HTML y un hallazgo de las 10:20 preexistentes,
-  preservados fuera de los commits de fase
+- Status: implementación `068ba8e` sincronizada con `origin/main`; cierre de
+  Fase 3 pendiente de commit/push.
+- Pending changes: evidencia regenerada, plan, inventario, pruebas y memoria de
+  cierre; además tres cambios preexistentes excluidos.
