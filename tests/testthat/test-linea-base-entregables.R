@@ -88,7 +88,13 @@ testthat::test_that("master inventory is complete and structurally valid", {
   actual_relative <- actual_relative[
     actual_relative != file.path(
       "Entregables_pt_app", "00_linea_base", "inventario_maestro.csv"
-    ) & !grepl("(^|/)~[$]|[.]tmp$", actual_relative)
+    ) &
+      !actual_relative %in% c(
+        "Entregables_pt_app/00_control_documental/manifiesto_entrega.csv",
+        "Entregables_pt_app/00_control_documental/checksums_entrega.sha256"
+      ) &
+      !grepl("(^|/)_problems/", actual_relative) &
+      !grepl("(^|/)~[$]|[.]tmp$", actual_relative)
   ]
   testthat::expect_setequal(inventory$ruta, actual_relative)
 

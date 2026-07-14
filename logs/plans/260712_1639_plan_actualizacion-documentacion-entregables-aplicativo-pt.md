@@ -2,7 +2,7 @@
 
 **Timestamp:** 260712_1639
 **Slug:** actualizacion-documentacion-entregables-aplicativo-pt
-**Estado:** En progreso
+**Estado:** Pausado
 
 ## Objetivo
 
@@ -190,13 +190,13 @@ pruebas funcionales y visuales de E05–E08, commit y push.
 
 | Item | Estado | Notas |
 |---|---|---|
-| Delimitar alcance de validación | Pendiente | Qué versión, componentes, datos, métodos y criterios se validan; qué queda fuera |
-| Reejecutar evidencia reproducible | Pendiente | Pruebas vigentes, cálculos cruzados y generación de anexos desde un entorno registrado |
-| Actualizar informe de validación | Pendiente | Resumen ciudadano, metodología, resultados, desviaciones, riesgos y conclusión sustentada |
-| Actualizar anexo de cálculos | Pendiente | Entradas, pasos, fórmulas, precisión completa, redondeo de presentación y salida reproducible |
-| Consolidar matriz de validación | Pendiente | Requisito/capacidad, caso, resultado esperado, resultado obtenido, evidencia, estado y responsable |
-| Resolver referencias normativas | Pendiente | Verificar edición/año y sección; registrar acceso/control de las normas sin reproducir contenido protegido innecesariamente |
-| Regenerar DOCX/PDF y anexos | Pendiente | Índices, figuras, tablas, metadatos y archivos CSV consistentes |
+| Delimitar alcance de validación | Completado | Versión, componentes, datos, métodos, criterios y exclusiones explícitos en E09 |
+| Reejecutar evidencia reproducible | Completado | Anexos regenerados con entorno, commit, hashes y parche de `ptcalc` |
+| Actualizar informe de validación | Completado | Conclusión limitada: 11 PASS y 1 OPEN_RISK; aprobación externa pendiente |
+| Actualizar anexo de cálculos | Completado | Entradas, fórmulas, precisión y resultados reproducibles actualizados |
+| Consolidar matriz de validación | Completado | Doce casos con esperado, obtenido, evidencia, estado y responsable |
+| Resolver referencias normativas | Completado | Metadatos oficiales y limitación de acceso/control registrados sin reproducir normas |
+| Regenerar DOCX/PDF y anexos | Completado | Dos DOCX, un PDF, CSV y manifiesto de Fase 6 válidos |
 
 **Salida de fase:** E09 final con conclusión defendible y paquete de evidencia
 reproducible.
@@ -208,13 +208,13 @@ suite de validación acordada, commit y push.
 
 | Item | Estado | Notas |
 |---|---|---|
-| Auditar cobertura de los nueve entregables | Pendiente | Ningún requisito, documento oficial, anexo o captura queda sin estado explícito |
-| Verificar consistencia transversal | Pendiente | Nombres, versiones, cifras, umbrales, unidades, rutas, enlaces, referencias, fechas y terminología |
-| Revisar experiencia de lectura | Pendiente | Prueba con recorrido de persona no técnica: tarea, paso, resultado, interpretación y recuperación |
-| Revisar archivos finales | Pendiente | DOCX/PDF abren correctamente; tablas e imágenes no se cortan; índices y numeración coinciden |
-| Ejecutar controles automatizados | Pendiente | Tests del repositorio, tests de entregables, enlaces, inventario, hashes y ejecución Playwright desde limpio |
-| Preparar manifiesto de entrega | Pendiente | Índice, checksums, versión, instrucciones de apertura/reproducción y lista explícita de pendientes/aprobaciones |
-| Cerrar bitácora y plan | Pendiente | Registrar revisiones, resultados, commits, ubicación final y estado `Completado` solo si no quedan obligaciones abiertas |
+| Auditar cobertura de los nueve entregables | Completado | E01–E09 tienen fuente, derivado/evidencia y estado en auditoría e índice maestro |
+| Verificar consistencia transversal | Completado | Autoridad, terminología, fechas, enlaces, fórmulas, límites y trazabilidad revisados |
+| Revisar experiencia de lectura | Completado | Recorrido ciudadano documentado desde elección del entregable hasta recuperación |
+| Revisar archivos finales | Completado | DOCX válidos como ZIP; PDF legible; revisión visual de E09 y 21 capturas sin cortes críticos |
+| Ejecutar controles automatizados | Completado | 283 expectativas focales PASS; Playwright 19 escenarios/21 capturas; suite histórica 313 PASS, 29 FAIL y 11 WARN por `final_docs/` ausente y orden de hashes documentado |
+| Preparar manifiesto de entrega | Completado | Manifiesto Markdown/CSV, 149 archivos con SHA-256 e instrucciones reproducibles |
+| Cerrar bitácora y plan | Completado | Bitácora cerrada técnicamente; plan queda `Pausado` porque persisten aprobaciones externas y un riesgo funcional explícito |
 
 **Salida de fase:** paquete `Entregables_pt_app/` listo para revisión contractual,
 con manifiesto, trazabilidad, formatos finales y evidencia reproducible.
@@ -347,3 +347,22 @@ El paquete se considerará listo únicamente cuando:
 - [260714 14:31] Fase 5 completada y persistida con skill `saver`. Permanecen
   pendientes la aprobación contractual, el lockfile R, el estado publicable de
   `ptcalc`, el defecto expandido de homogeneidad y la deuda DT de Fase 3.
+- [260714 14:35] Fase 6 implementada: E09 actualizado con alcance acotado,
+  doce casos de validación, anexos reproducibles, referencias normativas y
+  derivados controlados; 56 expectativas aprobadas.
+- [260714 15:05] Iniciada Fase 7 desde el rundown de las 14:34; se detectó que
+  dicho rundown no incluía la implementación local todavía no confirmada de
+  Fase 6 y se tomó el árbol real como línea base.
+- [260714 15:14] Auditoría E01-E09, manifiesto final y prueba de cierre
+  implementados; Playwright regeneró 19 escenarios y 21 capturas.
+- [260714 15:20] Revisión visual completada: capturas sin controles críticos
+  cortados y E09 de cinco páginas legible; persiste diagnóstico aceptado de
+  `DataTables.adjustWidth` en tablas ocultas.
+- [260714 15:22] Controles focales: 283 expectativas, 0 fallos y 0 advertencias.
+  La corrida histórica previa produjo 313 PASS, 29 FAIL y 11 WARN; no se
+  presenta como saneada y su deuda `final_docs/` queda explícita.
+- [260714 15:25] Revisión `revisor-fase`: tres bloqueantes (rundown obsoleto,
+  proveniencia incompleta y bitácora desordenada), dos hallazgos medios y uno
+  bajo; todos incorporados o delimitados antes del cierre.
+- [260714 15:28] Commit de Fase 6 `ad16214` publicado en `origin/main`; incluye
+  fuentes E09, anexos, derivados, manifiesto, generador y pruebas.

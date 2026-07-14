@@ -1018,6 +1018,13 @@ for (cat in levels(todas$categoria)) {
 }
 
 out_md <- "Entregables_pt_app/02_funciones_usadas/md/documentacion_funciones.md"
+contenido_md <- c(
+  contenido_md,
+  "## Evidencia visual\n\n",
+  "La ejecución del Algoritmo A documentado en este catálogo se observa en ",
+  "**CAP-09**. Consulte `../../00_evidencia_visual/indice_capturas.md` para ",
+  "acción previa, datos, commit, resolución y SHA-256.\n"
+)
 documento_md <- stringr::str_replace(
   paste(contenido_md, collapse = ""),
   "\\n+$",

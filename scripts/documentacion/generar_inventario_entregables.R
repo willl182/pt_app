@@ -71,10 +71,19 @@ classify_document_state <- function(path) {
   }
   if (grepl("Entregables_pt_app/00_control_documental/", path,
             fixed = TRUE)) {
+    if (grepl("manifiesto_fase_6.csv$", path)) {
+      return("vigente_fase_6")
+    }
+    if (grepl("manifiesto_fase_5.csv$", path)) {
+      return("vigente_fase_5")
+    }
     if (grepl("manifiesto_fase_4.csv$", path)) {
       return("vigente_fase_4")
     }
     return("vigente_fase_2")
+  }
+  if (grepl("Entregables_pt_app/09_informe_final/", path, fixed = TRUE)) {
+    return("vigente_fase_6")
   }
   "pendiente_revision"
 }
@@ -102,6 +111,11 @@ relative_paths <- substring(files, nchar(root_dir) + 2L)
 output_relative <- file.path("Entregables_pt_app", "00_linea_base",
                              "inventario_maestro.csv")
 keep <- relative_paths != output_relative &
+  !relative_paths %in% c(
+    "Entregables_pt_app/00_control_documental/manifiesto_entrega.csv",
+    "Entregables_pt_app/00_control_documental/checksums_entrega.sha256"
+  ) &
+  !grepl("(^|/)_problems/", relative_paths) &
   !grepl("(^|/)~[$]|[.]tmp$", relative_paths)
 files <- files[keep]
 relative_paths <- relative_paths[keep]

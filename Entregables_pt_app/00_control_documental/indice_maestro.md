@@ -1,12 +1,14 @@
 # Índice maestro de entregables
 
-**Versión del índice:** 1.1
+**Versión del índice:** 1.3
 
 **Fecha de corte:** 2026-07-14
 
 **Commit funcional de referencia:** `068ba8e`
 
-**Estado general:** E01–E08 actualizados; E09 continúa en actualización
+**Estado general:** E01–E09 actualizados; aprobación contractual pendiente
+
+**Cierre transversal:** `auditoria_cierre.md` y `manifiesto_entrega.md`
 
 ## Convención de estado
 
@@ -30,7 +32,7 @@
 | E06 | Lógica y manual | Usuario y operación | `06_app_logica/md/manual_usuario.md` | `06_app_logica/manual_usuario.docx` | CAP-02 a 18 y prueba de Fase 5 | Vigente verificado |
 | E07 | Dashboards | Usuario | `07_dashboards/md/documentacion_dashboards.md` | `07_dashboards/documentacion_dashboards.docx` | CAP-05, 06, 08 y 10 a 16 | Vigente verificado |
 | E08 | Beta/final | Soporte técnico | `08_beta/md/manual_desarrollador.md` | `08_beta/manual_desarrollador.docx` | CAP-02, 17 a 19; copias históricas | Vigente verificado con riesgos explícitos |
-| E09 | Informe final | Validación y auditoría | `09_informe_final/md/informe_validacion.md` | `09_informe_final/informe_validacion.docx`, `.pdf` | Anexo, CSV y pruebas E09 | Fuente por auditar |
+| E09 | Informe final | Validación y auditoría | `09_informe_final/md/informe_validacion.md` | `09_informe_final/informe_validacion.docx`, `.pdf` | Matriz, cálculos, entorno y pruebas de Fase 6 | Vigente verificado con un riesgo técnico abierto |
 
 Todas las rutas son relativas a `Entregables_pt_app/`. Los overviews `e1.md` a
 `e9.md` son ayudas históricas y no son la fuente oficial. Las copias

@@ -1,38 +1,36 @@
-# Session State: PT App - Actualización documental de entregables
+# Session State: PT App - Cierre documental
 
-**Last Updated**: 2026-07-14 14:31 -05:00
+**Last Updated**: 2026-07-14 15:30 -05:00
 
 ## Session Objective
 
-Completar la Fase 5: actualización verificable de E05 a E08.
+Implementar la Fase 7 de auditoría cruzada y cierre del paquete documental.
 
 ## Current State
 
-- [x] Fases 1 a 5 completadas.
-- [x] E05 recorre los ocho módulos vigentes y separa el prototipo histórico.
-- [x] E06 ofrece un manual ciudadano completo.
-- [x] E07 explica dashboards, filtros, colores y límites de interpretación.
-- [x] E08 documenta operación, despliegue, seguridad y recuperación.
-- [x] Cuatro DOCX, un HTML y manifiesto SHA-256 regenerados.
-- [x] Dos revisiones `revisor-fase`; la segunda aprobó el cierre.
-- [x] 107 expectativas finales aprobadas e inventario de 136 archivos.
-- [x] Implementación de Fase 5 registrada en el commit `018d39f`.
+- [x] Fases 1–7 implementadas técnicamente.
+- [x] E01–E09 con fuente oficial, derivados/evidencia y estado explícito.
+- [x] Fase 6 publicada en `ad16214`.
+- [x] Auditoría transversal, manifiesto CSV/Markdown y checksums generados.
+- [x] 283 expectativas focales aprobadas sin fallos ni advertencias.
+- [x] Playwright completó 19 escenarios y 21 capturas.
+- [x] Revisión `revisor-fase` incorporada.
+- [ ] Publicar commit de cierre de Fase 7.
+- [ ] Recibir aprobación contractual/normativa y resolver riesgo funcional.
 
 ## Critical Technical Context
 
-- `ptcalc/` es un repositorio anidado ignorado, HEAD `e87180b`, con cambios no
-  publicados usados por la app. Véase
-  `Entregables_pt_app/00_linea_base/estado_ptcalc_fase4.md`.
-- La ruta expandida de homogeneidad mantiene un defecto funcional: llamada
-  posicional incompatible y comparación de magnitudes con unidades distintas.
-- La cadena de Fase 5 es
-  `scripts/documentacion/generar_entregables_fase_5.sh`.
-- Preservar fuera de commits el movimiento HTML y
-  `logs/history/260714_1020_findings.md`, preexistentes.
-- Revisión normativa y aprobación contractual continúan pendientes.
+- El plan queda `Pausado`, no `Completado`, por aprobación externa pendiente y
+  el riesgo abierto del criterio expandido de homogeneidad.
+- La suite histórica previa produjo 313 PASS, 29 FAIL y 11 WARN por el
+  subsistema ausente `final_docs/` y efectos de orden de hashes; el detalle está
+  en `00_control_documental/reporte_controles_fase_7.md`.
+- `ptcalc/` sigue en `e87180b` con cambios locales; E09 conserva hashes y parche.
+- Diagnóstico residual aceptado: `DataTables.adjustWidth` sobre tablas ocultas.
+- No incorporar el movimiento HTML ni `logs/history/260714_1020_findings.md`.
 
 ## Next Steps
 
-1. Iniciar Fase 6 para actualizar y reejecutar E09.
-2. Resolver o planificar el versionado reproducible del repositorio `ptcalc`.
-3. No regenerar capturas salvo cambios de interfaz.
+1. Publicar el commit de cierre de Fase 7 y registrar su hash en el plan.
+2. Obtener contrato/TDR/acta y aprobaciones responsables.
+3. Corregir/revalidar el criterio expandido y fijar/publicar `ptcalc`.

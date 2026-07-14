@@ -2009,4 +2009,10 @@ Sin descripcion disponible.
 
 **Archivo fuente:** `app.R`
 
----n
+---
+
+## Evidencia visual
+
+La ejecución del Algoritmo A documentado en este catálogo se observa en
+**CAP-09**. Consulte `../../00_evidencia_visual/indice_capturas.md` para acción
+previa, datos, commit, resolución y SHA-256.
