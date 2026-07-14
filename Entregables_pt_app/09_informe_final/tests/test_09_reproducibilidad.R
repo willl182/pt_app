@@ -1,299 +1,119 @@
 # ===================================================================
-# Titulo: test_09_reproducibilidad.R
-# Entregable: 09
-# Descripcion: Verifica que resultados sean reproducibles
-# Entrada: Funciones en funciones_finales.R, datos en data/
-# Salida: Validación de reproducibilidad
-# Autor: UNAL/INM
-# Fecha: 2026-01-24
+# Focused reproducibility tests for deliverable E09
 # ===================================================================
 
-library(testthat)
-library(tidyverse)
-
-# Función auxiliar para obtener rutas
-get_project_root <- function() {
-  current_wd <- getwd()
-  
-  if (basename(current_wd) == "tests") {
-    return(dirname(dirname(dirname(current_wd))))
+find_project_root <- function(path = getwd()) {
+  path <- normalizePath(path)
+  repeat {
+    if (file.exists(file.path(path, "app.R")) &&
+        file.exists(file.path(path, "ptcalc", "DESCRIPTION"))) {
+      return(path)
+    }
+    parent <- dirname(path)
+    if (identical(parent, path)) {
+      stop("Project root not found.")
+    }
+    path <- parent
   }
-  
-  if (basename(current_wd) == "09_informe_final") {
-    return(dirname(dirname(current_wd)))
-  }
-  
-  return(current_wd)
 }
 
-base_dir <- get_project_root()
-funciones_path <- file.path(base_dir, "Entregables_pt_app/08_beta/R/funciones_finales.R")
-data_dir <- file.path(base_dir, "data")
+root_dir <- find_project_root()
+devtools::load_all(file.path(root_dir, "ptcalc"), quiet = TRUE)
 
-# Cargar funciones
-source(funciones_path)
+hom <- matrix(c(
+  9.98, 10.02, 10.01, 10.03, 9.99, 10.00, 10.04, 10.02,
+  9.97, 10.01, 10.00, 10.02, 10.03, 10.01, 9.98, 9.99,
+  10.02, 10.00, 10.01, 10.04
+), ncol = 2, byrow = TRUE)
+participants <- c(9.91, 9.96, 9.99, 10.00, 10.02, 10.04, 10.08, 10.60)
 
-test_that("Reproducibilidad de nIQR - mismos datos deben dar mismo resultado", {
-  old_wd <- getwd()
-  if (basename(old_wd) == "tests") {
-    setwd("../..")
-  }
-  on.exit(setwd(old_wd))
-  
-  # Datos de prueba
-  datos <- c(10.2, 10.5, 10.3, 10.6, 10.4)
-  
-  # Ejecutar 3 veces
-  niqr1 <- calculate_niqr(datos)
-  niqr2 <- calculate_niqr(datos)
-  niqr3 <- calculate_niqr(datos)
-  
-  # Verificar que son idénticos
-  expect_equal(niqr1, niqr2)
-  expect_equal(niqr2, niqr3)
-  expect_equal(niqr1, niqr3)
-})
-
-test_that("Reproducibilidad de MADe - mismos datos deben dar mismo resultado", {
-  old_wd <- getwd()
-  if (basename(old_wd) == "tests") {
-    setwd("../..")
-  }
-  on.exit(setwd(old_wd))
-  
-  datos <- c(10.2, 10.5, 10.3, 10.6, 10.4)
-  
-  made1 <- calculate_mad_e(datos)
-  made2 <- calculate_mad_e(datos)
-  made3 <- calculate_mad_e(datos)
-  
-  expect_equal(made1, made2)
-  expect_equal(made2, made3)
-  expect_equal(made1, made3)
-})
-
-test_that("Reproducibilidad de Algoritmo A - mismos datos deben dar mismo resultado", {
-  old_wd <- getwd()
-  if (basename(old_wd) == "tests") {
-    setwd("../..")
-  }
-  on.exit(setwd(old_wd))
-  
-  valores <- c(10.2, 10.5, 10.3, 10.6, 10.4, 10.1, 10.8)
-  
-  result1 <- run_algorithm_a(valores)
-  result2 <- run_algorithm_a(valores)
-  result3 <- run_algorithm_a(valores)
-  
-  expect_equal(result1$assigned_value, result2$assigned_value)
-  expect_equal(result2$assigned_value, result3$assigned_value)
-  expect_equal(result1$robust_sd, result2$robust_sd)
-  expect_equal(result2$robust_sd, result3$robust_sd)
-})
-
-test_that("Reproducibilidad de puntajes z - mismos inputs deben dar mismo resultado", {
-  old_wd <- getwd()
-  if (basename(old_wd) == "tests") {
-    setwd("../..")
-  }
-  on.exit(setwd(old_wd))
-  
-  z1 <- calculate_z_score(x = 10.5, x_pt = 10.0, sigma_pt = 0.25)
-  z2 <- calculate_z_score(x = 10.5, x_pt = 10.0, sigma_pt = 0.25)
-  z3 <- calculate_z_score(x = 10.5, x_pt = 10.0, sigma_pt = 0.25)
-  
-  expect_equal(z1, z2)
-  expect_equal(z2, z3)
-})
-
-test_that("Reproducibilidad de puntajes z' - mismos inputs deben dar mismo resultado", {
-  old_wd <- getwd()
-  if (basename(old_wd) == "tests") {
-    setwd("../..")
-  }
-  on.exit(setwd(old_wd))
-  
-  zp1 <- calculate_z_prime_score(x = 10.5, x_pt = 10.0, sigma_pt = 0.25, u_xpt = 0.01)
-  zp2 <- calculate_z_prime_score(x = 10.5, x_pt = 10.0, sigma_pt = 0.25, u_xpt = 0.01)
-  zp3 <- calculate_z_prime_score(x = 10.5, x_pt = 10.0, sigma_pt = 0.25, u_xpt = 0.01)
-  
-  expect_equal(zp1, zp2)
-  expect_equal(zp2, zp3)
-})
-
-test_that("Reproducibilidad de puntajes zeta - mismos inputs deben dar mismo resultado", {
-  old_wd <- getwd()
-  if (basename(old_wd) == "tests") {
-    setwd("../..")
-  }
-  on.exit(setwd(old_wd))
-  
-  zeta1 <- calculate_zeta_score(x = 10.5, x_pt = 10.0, u_x = 0.05, u_xpt = 0.01)
-  zeta2 <- calculate_zeta_score(x = 10.5, x_pt = 10.0, u_x = 0.05, u_xpt = 0.01)
-  zeta3 <- calculate_zeta_score(x = 10.5, x_pt = 10.0, u_x = 0.05, u_xpt = 0.01)
-  
-  expect_equal(zeta1, zeta2)
-  expect_equal(zeta2, zeta3)
-})
-
-test_that("Reproducibilidad de puntajes En - mismos inputs deben dar mismo resultado", {
-  old_wd <- getwd()
-  if (basename(old_wd) == "tests") {
-    setwd("../..")
-  }
-  on.exit(setwd(old_wd))
-  
-  en1 <- calculate_en_score(x = 10.5, x_pt = 10.0, U_x = 0.10, U_xpt = 0.02)
-  en2 <- calculate_en_score(x = 10.5, x_pt = 10.0, U_x = 0.10, U_xpt = 0.02)
-  en3 <- calculate_en_score(x = 10.5, x_pt = 10.0, U_x = 0.10, U_xpt = 0.02)
-  
-  expect_equal(en1, en2)
-  expect_equal(en2, en3)
-})
-
-test_that("Valores esperados de cálculos básicos son correctos", {
-  old_wd <- getwd()
-  if (basename(old_wd) == "tests") {
-    setwd("../..")
-  }
-  on.exit(setwd(old_wd))
-  
-  # nIQR con datos simples
-  datos <- c(1, 2, 3, 4, 5)
-  niqr <- calculate_niqr(datos)
-  expect_true(is.finite(niqr))
-  expect_true(niqr > 0)
-  
-  # MADe con datos simples
-  made <- calculate_mad_e(datos)
-  expect_true(is.finite(made))
-  expect_true(made >= 0)
-})
-
-test_that("Evaluación de puntajes es consistente", {
-  old_wd <- getwd()
-  if (basename(old_wd) == "tests") {
-    setwd("../..")
-  }
-  on.exit(setwd(old_wd))
-  
-  # z-score: abs(z) <= 2 es Satisfactorio
-  expect_equal(evaluate_z_score(0), "Satisfactorio")
-  expect_equal(evaluate_z_score(2), "Satisfactorio")
-  expect_equal(evaluate_z_score(-2), "Satisfactorio")
-  
-  # z-score: 2 < abs(z) < 3 es Cuestionable
-  expect_equal(evaluate_z_score(2.1), "Cuestionable")
-  expect_equal(evaluate_z_score(2.9), "Cuestionable")
-  expect_equal(evaluate_z_score(-2.5), "Cuestionable")
-  
-  # z-score: abs(z) >= 3 es No satisfactorio
-  expect_equal(evaluate_z_score(3), "No satisfactorio")
-  expect_equal(evaluate_z_score(-3), "No satisfactorio")
-  expect_equal(evaluate_z_score(4), "No satisfactorio")
-  
-  # En-score: abs(En) <= 1 es Satisfactorio
-  expect_equal(evaluate_en_score(0), "Satisfactorio")
-  expect_equal(evaluate_en_score(1), "Satisfactorio")
-  expect_equal(evaluate_en_score(-1), "Satisfactorio")
-  
-  # En-score: abs(En) > 1 es No satisfactorio
-  expect_equal(evaluate_en_score(1.1), "No satisfactorio")
-  expect_equal(evaluate_en_score(-1.5), "No satisfactorio")
-})
-
-test_that("Homogeneidad - cálculo es determinista", {
-  old_wd <- getwd()
-  if (basename(old_wd) == "tests") {
-    setwd("../..")
-  }
-  on.exit(setwd(old_wd))
-  
-  # Crear matriz de datos
-  set.seed(123)
-  matriz1 <- matrix(rnorm(20, mean = 10, sd = 0.5), nrow = 5, ncol = 4)
-  matriz2 <- matriz1
-  
-  stats1 <- calculate_homogeneity_stats(matriz1)
-  stats2 <- calculate_homogeneity_stats(matriz2)
-  
-  expect_equal(stats1$g, stats2$g)
-  expect_equal(stats1$m, stats2$m)
-  expect_equal(stats1$grand_mean, stats2$grand_mean)
-  expect_equal(stats1$ss, stats2$ss)
-})
-
-test_that("Puntajes para múltiples participantes son consistentes", {
-  old_wd <- getwd()
-  if (basename(old_wd) == "tests") {
-    setwd("../..")
-  }
-  on.exit(setwd(old_wd))
-  
-  df1 <- data.frame(
-    participant_id = c("P01", "P02", "P03"),
-    mean_value = c(10.2, 9.8, 10.1),
-    sd_value = c(0.05, 0.06, 0.04)
+testthat::test_that("homogeneity components match frozen expectations", {
+  result <- calculate_homogeneity_stats(hom)
+  testthat::expect_equal(result$general_mean_homog, 10.0085, tolerance = 1e-12)
+  testthat::expect_equal(result$sw, 0.01774823935, tolerance = 1e-10)
+  testthat::expect_equal(result$ss, 0.00903696114, tolerance = 1e-10)
+  testthat::expect_equal(result$MADe, 0.022245, tolerance = 1e-12)
+  testthat::expect_equal(
+    calculate_homogeneity_criterion(result$MADe), 0.0066735,
+    tolerance = 1e-12
   )
-  
-  df2 <- df1
-  
-  result1 <- calculate_scores_participants(df1, 10.0, 0.25, 0.01, 2)
-  result2 <- calculate_scores_participants(df2, 10.0, 0.25, 0.01, 2)
-  
-  expect_equal(result1$z_score, result2$z_score)
-  expect_equal(result1$z_prime_score, result2$z_prime_score)
-  expect_equal(result1$zeta_score, result2$zeta_score)
-  expect_equal(result1$En_score, result2$En_score)
 })
 
-test_that("Resultados con datos reales son finitos", {
-  # Cargar datos reales
-  summary_data <- read.csv(file.path(data_dir, "summary_n4.csv"), check.names = FALSE)
-  
-  # Filtrar un analito/nivel específico
-  filtered <- summary_data[summary_data$pollutant == "co" & 
-                          summary_data$level == "2-μmol/mol" &
-                          summary_data$participant_id != "ref", ]
-  
-  if (nrow(filtered) > 0) {
-    valores <- filtered$mean_value
-    
-    # Verificar que cálculos producen valores finitos
-    niqr <- calculate_niqr(valores)
-    made <- calculate_mad_e(valores)
-    algo_a <- run_algorithm_a(valores)
-    
-    expect_true(is.finite(niqr))
-    expect_true(is.finite(made))
-    
-    if (!is.null(algo_a$error)) {
-      expect_true(is.finite(algo_a$assigned_value))
-      expect_true(is.finite(algo_a$robust_sd))
-    }
-  }
+testthat::test_that("stability matches frozen expectations", {
+  h <- calculate_homogeneity_stats(hom)
+  stab <- matrix(c(
+    10.00, 10.01, 10.02, 10.00,
+    9.99, 10.01, 10.03, 10.02
+  ), ncol = 2, byrow = TRUE)
+  result <- calculate_stability_stats(
+    stab, h$general_mean_homog, h$x_pt, h$MADe
+  )
+  testthat::expect_equal(result$general_mean, 10.01, tolerance = 1e-12)
+  testthat::expect_equal(result$diff_hom_stab, 0.0015, tolerance = 1e-12)
 })
 
-test_that("Orden de datos no afecta resultado final (para estadísticos robustos)", {
-  old_wd <- getwd()
-  if (basename(old_wd) == "tests") {
-    setwd("../..")
-  }
-  on.exit(setwd(old_wd))
-  
-  # Mismo conjunto de datos, diferente orden
-  set.seed(123)
-  datos1 <- rnorm(100, mean = 10, sd = 0.5)
-  set.seed(456)
-  datos2 <- sample(datos1)
-  
-  # Mediana y MADe son invariantes al orden
-  expect_equal(median(datos1), median(datos2))
-  
-  made1 <- calculate_mad_e(datos1)
-  made2 <- calculate_mad_e(datos2)
-  expect_equal(made1, made2)
+testthat::test_that("robust estimators and Algorithm A are reproducible", {
+  testthat::expect_equal(
+    unname(calculate_niqr(participants)), 0.05003775, tolerance = 1e-12
+  )
+  testthat::expect_equal(calculate_mad_e(participants), 0.05932, tolerance = 1e-12)
+  result <- run_algorithm_a(participants)
+  testthat::expect_true(result$converged)
+  testthat::expect_equal(result$n_winsorized, 1L)
+  testthat::expect_equal(result$assigned_value, 10.01702296, tolerance = 1e-8)
+  testthat::expect_equal(result$robust_sd, 0.07952769, tolerance = 1e-8)
 })
 
-cat("\n=== Test 09 completado ===\n")
-cat("Todos los tests de reproducibilidad pasaron.\n")
+testthat::test_that("score values and classification boundaries are explicit", {
+  testthat::expect_equal(calculate_z_score(10.08, 10, 0.05), 1.6)
+  testthat::expect_equal(
+    calculate_z_prime_score(10.08, 10, 0.05, 0.01),
+    1.56892908110547, tolerance = 1e-12
+  )
+  testthat::expect_equal(
+    calculate_zeta_score(10.08, 10, 0.03, 0.01),
+    2.52982212813471, tolerance = 1e-12
+  )
+  testthat::expect_equal(
+    calculate_en_score(10.08, 10, 0.06, 0.02),
+    1.26491106406735, tolerance = 1e-12
+  )
+  testthat::expect_equal(evaluate_z_score(2), "Satisfactorio")
+  testthat::expect_equal(evaluate_z_score(3), "No satisfactorio")
+  testthat::expect_equal(evaluate_en_score(1), "Satisfactorio")
+  testthat::expect_equal(evaluate_en_score(1.01), "No satisfactorio")
+})
+
+testthat::test_that("expanded criterion positional integration defect reproduces", {
+  h <- calculate_homogeneity_stats(hom)
+  testthat::expect_error(
+    calculate_homogeneity_criterion_expanded(h$MADe, h$sw, h$g),
+    "Invalid arguments", fixed = TRUE
+  )
+  named_result <- calculate_homogeneity_criterion_expanded(
+    sigma_pt = h$MADe, sw = h$sw, g = h$g
+  )
+  testthat::expect_equal(named_result, 0.00040187693223, tolerance = 1e-12)
+})
+
+testthat::test_that("invalid denominators return typed missing values", {
+  testthat::expect_identical(calculate_z_score(1, 1, 0), NA_real_)
+  testthat::expect_identical(calculate_en_score(1, 1, 0, 0), NA_real_)
+})
+
+testthat::test_that("generated validation evidence is internally coherent", {
+  annex_dir <- file.path(
+    root_dir, "Entregables_pt_app", "09_informe_final", "anexos"
+  )
+  matrix <- utils::read.csv(
+    file.path(annex_dir, "matriz_validacion.csv"), stringsAsFactors = FALSE
+  )
+  testthat::expect_equal(nrow(matrix), 12L)
+  testthat::expect_equal(sum(matrix$status == "PASS"), 11L)
+  testthat::expect_equal(sum(matrix$status == "OPEN_RISK"), 1L)
+  testthat::expect_true(all(c(
+    "calculos_reproducibles.csv", "algoritmo_a_iteraciones.csv",
+    "entorno_ejecucion.txt", "generacion_log.txt", "ptcalc_worktree.patch",
+    "ptcalc_fuentes_sha256.csv"
+  ) %in% list.files(annex_dir)))
+})

@@ -1,0 +1,569 @@
+diff --git c/DESCRIPTION w/DESCRIPTION
+index fa3bad6..14d6c9a 100644
+--- c/DESCRIPTION
++++ w/DESCRIPTION
+@@ -1,7 +1,7 @@
+ Package: ptcalc
+ Type: Package
+ Title: Proficiency Testing Calculations (ISO 13528/17043)
+-Version: 0.1.0
++Version: 0.1.1
+ Authors@R: c(
+     person("Wilson Rafael", "Salas Chavez", email = "wrsalasc@unal.edu.co", 
+            role = c("aut", "cre"), comment = c("Lead Developer", ORCID = "0000-0003-4757-117X")),
+diff --git c/NEWS.md w/NEWS.md
+index 6dd2109..e5f4d72 100644
+--- c/NEWS.md
++++ w/NEWS.md
+@@ -1,5 +1,13 @@
+ # ptcalc News
+ 
++## Version 0.1.1 (2026-04-22)
++
++### Changed
++- `sample_group` removida del contrato de entrada de datos. La columna nunca fue
++  utilizada por las funciones del paquete; si estaba presente en los datos de
++  entrada, era ignorada silenciosamente. Los flujos de datos que la incluyan
++  deben omitirla.
++
+ ## Version 0.1.0 (2025-01-26)
+ 
+ Initial release of ptcalc package for proficiency testing calculations.
+diff --git c/R/pt_homogeneity.R w/R/pt_homogeneity.R
+index 598ad24..3f9e31f 100644
+--- c/R/pt_homogeneity.R
++++ w/R/pt_homogeneity.R
+@@ -153,9 +153,24 @@ calculate_homogeneity_criterion <- function(sigma_pt) {
+ #' @param u_sigma_pt Uncertainty of sigma_pt
+ #' @return The expanded criterion value
+ #' @export
+-calculate_homogeneity_criterion_expanded <- function(sigma_pt, u_sigma_pt) {
+-  c_criterion <- 0.3 * sigma_pt
+-  c_criterion * sqrt(1 + (u_sigma_pt/sigma_pt)^2)
++calculate_homogeneity_criterion_expanded <- function(sigma_pt, u_sigma_pt = NULL, sw = NULL, g = NULL) {
++  if (!is.null(u_sigma_pt) && is.null(sw) && is.null(g)) {
++    c_criterion <- 0.3 * sigma_pt
++    c_criterion * sqrt(1 + (u_sigma_pt / sigma_pt)^2)
++  } else if (!is.null(sw) && !is.null(g)) {
++    f_table <- data.frame(
++      g = 7:20,
++      f1 = c(2.10, 2.01, 1.94, 1.88, 1.83, 1.79, 1.75, 1.72, 1.69, 1.67, 1.64, 1.62, 1.60, 1.59),
++      f2 = c(1.43, 1.25, 1.11, 1.01, 0.93, 0.86, 0.80, 0.75, 0.71, 0.68, 0.64, 0.62, 0.59, 0.57)
++    )
++    g_clamped <- max(7, min(20, g))
++    idx <- which(f_table$g == g_clamped)
++    f1 <- f_table$f1[idx]
++    f2 <- f_table$f2[idx]
++    f1 * (0.3 * sigma_pt)^2 + f2 * sw^2
++  } else {
++    stop("Invalid arguments: provide either u_sigma_pt or both sw and g")
++  }
+ }
+ 
+ #' Evaluate homogeneity against criterion
+diff --git c/R/pt_robust_stats.R w/R/pt_robust_stats.R
+index 59ab9fa..f23d6ad 100644
+--- c/R/pt_robust_stats.R
++++ w/R/pt_robust_stats.R
+@@ -71,42 +71,46 @@ calculate_mad_e <- function(x) {
+   1.483 * mad_value
+ }
+ 
+-# Helper: Check if two values are equal to 3 significant figures
+-same_3sf <- function(a, b) {
+-  if (!is.finite(a) || !is.finite(b)) {
+-    return(FALSE)
+-  }
+-  if (a == 0 && b == 0) {
+-    return(TRUE)
+-  }
+-  signif(a, 3) == signif(b, 3)
+-}
+-
+ #' ISO 13528 Algorithm A - Robust Mean and Standard Deviation
+ #'
+ #' Iterative algorithm for computing robust estimates of location (x*) and
+-#' scale (s*) from proficiency testing data using Winsorization.
++#' scale (s*) from proficiency testing data using winsorization.
+ #'
+ #' @details
+-#' Algorithm A is an iterative procedure that computes robust estimates:
+-#' 1. Initialize with median (x*) and scaled MAD (s*)
+-#' 2. Compute delta: δ = 1.5 × s*
+-#' 3. Winsorize values: clamp to \code{[x* - δ, x* + δ]}
+-#' 4. Update x* = mean(winsorized), s* = 1.134 × sqrt(Σ(x* - x)²/(p-1))
+-#' 5. Repeat until convergence (no change in 3rd significant figure)
++#' Algorithm A is the iterative winsorization procedure from ISO 13528:2022,
++#' Annex C:
++#' 1. Initialize: x* = median(xi), s* = 1.483 * MAD(xi)
++#' 2. Compute delta = 1.5 * s*
++#' 3. Winsorize: x*_i = clamp(xi, x* - delta, x* + delta)
++#' 4. Update: x* = mean(x*_i), s* = 1.134 * sd(x*_i)
++#' 5. Repeat until no change in 3rd significant figure of x* and s*
++#'    (ISO 13528:2022 NOTE 1). A numerical guard (tol = 1e-10) catches
++#'    machine-precision stalls.
+ #'
+-#' Reference: ISO 13528:2022, Annex C.3
++#' The factor 1.134 corrects the bias introduced by winsorization.
++#' The sd() uses (p - 1) denominator (sample standard deviation).
++#'
++#' Reference: ISO 13528:2022, Annex C
+ #'
+ #' @param values A numeric vector of participant results.
+ #' @param ids Optional vector of participant identifiers (same length as values).
+-#' @param max_iter Maximum number of iterations (default: 50).
++#' @param max_iter Maximum number of iterations (default: 100).
++#' @param tol Numerical guard tolerance for x* and s* (default: 1e-10). The
++#'   primary convergence criterion is 3rd significant figure comparison per
++#'   ISO 13528:2022 NOTE 1; tol only catches machine-precision stalls.
+ #' @return A list containing:
+ #'   - assigned_value: Robust mean (x*)
+ #'   - robust_sd: Robust standard deviation (s*)
+-#'   - iterations: Data frame of iteration history
+-#'   - winsorized_values: Data frame with original and winsorized values
++#'   - iterations: Data frame of iteration history (includes signif4_* columns)
++#'   - iteration_detail: Data frame with per-participant detail per iteration
++#'   - weights: Data frame with final winsorized values per participant
++#'   - winsorized_values: Backward-compatible alias of weights
+ #'   - converged: Logical indicating convergence
+-#'   - n_participants: Number of participants used
++#'   - convergence_method: `"signif3"` (ISO 13528:2022 NOTE 1) or
++#'     `"numerical_guard"` (machine-precision stall) or `NA` if not converged
++#'   - n_winsorized: Number of winsorized observations in final iteration
++#'   - n: Number of valid observations used
++#'   - n_participants: Backward-compatible alias of n
+ #'   - error: Error message or NULL if successful
+ #'
+ #' @examples
+@@ -118,7 +122,18 @@ same_3sf <- function(a, b) {
+ #'
+ #' @seealso \code{\link{calculate_niqr}}, \code{\link{calculate_mad_e}}
+ #' @export
+-run_algorithm_a <- function(values, ids = NULL, max_iter = 50) {
++run_algorithm_a <- function(values, ids = NULL, max_iter = 100, tol = 1e-10) {
++  algo_a_significant_figures <- 3L
++
++  stable_sigfig_value <- function(x, digits = algo_a_significant_figures) {
++    if (!is.finite(x) || x == 0) {
++      return(x)
++    }
++
++    decimal_places <- max(digits - 1L - floor(log10(abs(x))), 0L)
++    round(x, digits = decimal_places)
++  }
++
+   # Remove non-finite values
+   mask <- is.finite(values)
+   values <- values[mask]
+@@ -136,29 +151,56 @@ run_algorithm_a <- function(values, ids = NULL, max_iter = 50) {
+       assigned_value = NA_real_,
+       robust_sd = NA_real_,
+       iterations = data.frame(),
++      iteration_detail = data.frame(),
++      weights = data.frame(),
+       winsorized_values = data.frame(),
+       converged = FALSE,
++      n_winsorized = NA_integer_,
++      n = p,
+       n_participants = p
+     ))
+   }
+ 
+-  # Initial estimates: median and scaled MAD (Formula C.6)
++  # Step 1: Initial estimates (ISO 13528:2022, Annex C, step 1)
+   x_star <- stats::median(values, na.rm = TRUE)
+   s_star <- 1.483 * stats::median(abs(values - x_star), na.rm = TRUE)
++  initial_median <- x_star
++  initial_mad_e <- s_star
+ 
+-  # Handle s* = 0 case (ISO NOTE 2): use sample standard deviation as fallback
++  # Handle zero or near-zero dispersion
+   if (!is.finite(s_star) || s_star < .Machine$double.eps) {
+     s_star <- stats::sd(values, na.rm = TRUE)
++    initial_s_star_source <- "Desviacion tipica aritmetica"
++  } else {
++    initial_s_star_source <- "MADe"
+   }
++  initial_s_star <- s_star
+ 
+-  # If still zero dispersion, return with robust_sd = 0 (no error needed)
+   if (!is.finite(s_star) || s_star < .Machine$double.eps) {
++    weights_df <- data.frame(
++      id = ids,
++      value = values,
++      winsorized = values,
++      is_winsorized = FALSE,
++      original = values,
++      stringsAsFactors = FALSE
++    )
++
+     return(list(
+       assigned_value = x_star,
+       robust_sd = 0,
+-      iterations = data.frame(iteration = 0, x_star = x_star, s_star = 0, stringsAsFactors = FALSE),
+-      winsorized_values = data.frame(id = ids, original = values, winsorized = values, stringsAsFactors = FALSE),
++      iterations = data.frame(),
++      iteration_detail = data.frame(),
++      weights = weights_df,
++      winsorized_values = weights_df[, c("id", "original", "winsorized"), drop = FALSE],
+       converged = TRUE,
++      n_winsorized = 0L,
++      n = p,
++      initial_median = initial_median,
++      initial_mad_e = initial_mad_e,
++      initial_s_star = initial_s_star,
++      initial_s_star_source = initial_s_star_source,
++      tolerance = tol,
+       n_participants = p,
+       error = NULL
+     ))
+@@ -166,68 +208,151 @@ run_algorithm_a <- function(values, ids = NULL, max_iter = 50) {
+ 
+   # Iteration records
+   iteration_records <- list()
++  iteration_detail <- list()
+   converged <- FALSE
++  convergence_method <- NA_character_
+ 
+   for (iter in seq_len(max_iter)) {
++    # Step 2: Compute delta
+     delta <- 1.5 * s_star
+ 
+-    # Winsorize: clamp values to [x* - δ, x* + δ] (Formula C.8)
+-    x_winsorized <- pmax(pmin(values, x_star + delta), x_star - delta)
++    # Step 3: Winsorize
++    lower <- x_star - delta
++    upper <- x_star + delta
++    x_winsorized <- pmax(pmin(values, upper), lower)
++    is_winsorized <- (values < lower) | (values > upper)
+ 
+-    # Updated estimates (Formulas C.9, C.10)
++    # Step 4: Updated estimates
+     x_new <- mean(x_winsorized)
+     s_new <- 1.134 * sqrt(sum((x_winsorized - x_new)^2) / (p - 1))
+ 
+     if (!is.finite(s_new) || s_new < .Machine$double.eps) {
++      iterations_df <- if (length(iteration_records) > 0) {
++        do.call(rbind, iteration_records)
++      } else {
++        data.frame()
++      }
++
++      iteration_detail_df <- if (length(iteration_detail) > 0) {
++        do.call(rbind, iteration_detail)
++      } else {
++        data.frame()
++      }
++
++      weights_df <- data.frame(
++        id = ids,
++        value = values,
++        winsorized = x_winsorized,
++        is_winsorized = is_winsorized,
++        original = values,
++        stringsAsFactors = FALSE
++      )
++
+       return(list(
+-        error = "Algorithm A collapsed due to zero standard deviation.",
++        error = "Algorithm A collapsed: s* converged to zero.",
+         assigned_value = x_new,
+         robust_sd = 0,
+-        iterations = if (length(iteration_records) > 0) do.call(rbind, iteration_records) else data.frame(),
+-        winsorized_values = data.frame(),
++        iterations = iterations_df,
++        iteration_detail = iteration_detail_df,
++        weights = weights_df,
++        winsorized_values = weights_df[, c("id", "original", "winsorized"), drop = FALSE],
+         converged = FALSE,
++        n_winsorized = sum(is_winsorized),
++        n = p,
++        initial_median = initial_median,
++        initial_mad_e = initial_mad_e,
++        initial_s_star = initial_s_star,
++        initial_s_star_source = initial_s_star_source,
++        tolerance = tol,
+         n_participants = p
+       ))
+     }
+ 
+-    # Convergence check: 3rd significant figure
+-    if (same_3sf(x_star, x_new) && same_3sf(s_star, s_new)) {
+-      converged <- TRUE
+-      x_star <- x_new
+-      s_star <- s_new
+-      iteration_records[[iter]] <- data.frame(
+-        iteration = iter,
+-        x_star = x_new,
+-        s_star = s_new,
+-        stringsAsFactors = FALSE
+-      )
+-      break
+-    }
++    # Step 5: Convergence check
++    delta_x <- abs(x_new - x_star)
++    delta_s <- abs(s_new - s_star)
++    delta_max <- max(delta_x, delta_s)
+ 
+     iteration_records[[iter]] <- data.frame(
+       iteration = iter,
++      x_star_prev = x_star,
++      s_star_prev = s_star,
++      delta_winsor = delta,
++      lower_bound = lower,
++      upper_bound = upper,
++      n_winsorized = sum(is_winsorized),
++      x_star_new = x_new,
++      s_star_new = s_new,
++      delta_x = delta_x,
++      delta_s = delta_s,
++      delta_max = delta_max,
+       x_star = x_new,
+       s_star = s_new,
++      signif3_x_prev = stable_sigfig_value(x_star),
++      signif3_s_prev = stable_sigfig_value(s_star),
++      signif3_x_new = stable_sigfig_value(x_new),
++      signif3_s_new = stable_sigfig_value(s_new),
++      signif3_converged = stable_sigfig_value(x_new) == stable_sigfig_value(x_star) &&
++                          stable_sigfig_value(s_new) == stable_sigfig_value(s_star),
+       stringsAsFactors = FALSE
+     )
+ 
++    iteration_detail[[iter]] <- data.frame(
++      iteration = iter,
++      id = ids,
++      value = values,
++      winsorized = x_winsorized,
++      is_winsorized = is_winsorized,
++      x_star = x_star,
++      s_star = s_star,
++      delta = delta,
++      lower = lower,
++      upper = upper,
++      stringsAsFactors = FALSE
++    )
++
++    # Primary: ISO 13528:2022 NOTE 1 — 3rd significant figure
++    # Must compare before updating x_star/s_star
++    sig_converged <- stable_sigfig_value(x_new) == stable_sigfig_value(x_star) &&
++                     stable_sigfig_value(s_new) == stable_sigfig_value(s_star)
++    # Secondary: numerical guard against machine-precision stall
++    num_converged <- delta_x < tol && delta_s < tol
++
+     x_star <- x_new
+     s_star <- s_new
++
++    if (sig_converged || num_converged) {
++      converged <- TRUE
++      convergence_method <- if (sig_converged) "signif3" else "numerical_guard"
++      break
++    }
+   }
+ 
++  # Final winsorized values
++  delta_final <- 1.5 * s_star
++  lower_final <- x_star - delta_final
++  upper_final <- x_star + delta_final
++  winsorized_final <- pmax(pmin(values, upper_final), lower_final)
++  is_winsorized_final <- (values < lower_final) | (values > upper_final)
++
+   iterations_df <- if (length(iteration_records) > 0) {
+     do.call(rbind, iteration_records)
+   } else {
+     data.frame()
+   }
+ 
+-  delta <- 1.5 * s_star
+-  x_winsorized_final <- pmax(pmin(values, x_star + delta), x_star - delta)
++  iteration_detail_df <- if (length(iteration_detail) > 0) {
++    do.call(rbind, iteration_detail)
++  } else {
++    data.frame()
++  }
+ 
+-  winsorized_df <- data.frame(
++  weights_df <- data.frame(
+     id = ids,
++    value = values,
++    winsorized = winsorized_final,
++    is_winsorized = is_winsorized_final,
+     original = values,
+-    winsorized = x_winsorized_final,
+     stringsAsFactors = FALSE
+   )
+ 
+@@ -235,8 +360,18 @@ run_algorithm_a <- function(values, ids = NULL, max_iter = 50) {
+     assigned_value = x_star,
+     robust_sd = s_star,
+     iterations = iterations_df,
+-    winsorized_values = winsorized_df,
++    iteration_detail = iteration_detail_df,
++    weights = weights_df,
++    winsorized_values = weights_df[, c("id", "original", "winsorized"), drop = FALSE],
+     converged = converged,
++    convergence_method = convergence_method,
++    n_winsorized = sum(is_winsorized_final),
++    n = p,
++    initial_median = initial_median,
++    initial_mad_e = initial_mad_e,
++    initial_s_star = initial_s_star,
++    initial_s_star_source = initial_s_star_source,
++    tolerance = tol,
+     n_participants = p,
+     error = NULL
+   )
+diff --git c/R/ptcalc-package.R w/R/ptcalc-package.R
+index c33fe8c..fdc3947 100644
+--- c/R/ptcalc-package.R
++++ w/R/ptcalc-package.R
+@@ -1,6 +1,6 @@
+ #' ptcalc: Proficiency Testing Calculations
+ #'
+-#' Functions for proficiency testing analysis per ISO 13528:2022 and ISO 17043:2024.
++#' Functions for proficiency testing analysis per ISO 13528:2022 and ISO 17043:2023.
+ #'
+ #' @section Robust Statistics:
+ #' \itemize{
+diff --git c/man/calculate_homogeneity_criterion_expanded.Rd w/man/calculate_homogeneity_criterion_expanded.Rd
+index a5b6192..35d5c96 100644
+--- c/man/calculate_homogeneity_criterion_expanded.Rd
++++ w/man/calculate_homogeneity_criterion_expanded.Rd
+@@ -4,18 +4,32 @@
+ \alias{calculate_homogeneity_criterion_expanded}
+ \title{Calculate expanded homogeneity criterion}
+ \usage{
+-calculate_homogeneity_criterion_expanded(sigma_pt, u_sigma_pt)
++calculate_homogeneity_criterion_expanded(
++  sigma_pt,
++  u_sigma_pt = NULL,
++  sw = NULL,
++  g = NULL
++)
+ }
+ \arguments{
+-\item{sigma_pt}{Standard deviation for proficiency assessment (from MADe)}
++\item{sigma_pt}{Standard deviation for proficiency assessment (from MADe).}
+ 
+-\item{u_sigma_pt}{Uncertainty of sigma_pt}
++\item{u_sigma_pt}{Uncertainty of sigma_pt for the uncertainty branch.}
++
++\item{sw}{Within-item standard deviation for the lookup-table branch.}
++
++\item{g}{Number of items for the lookup-table branch; clamped to 7--20.}
+ }
+ \value{
+-The expanded criterion value
++The expanded criterion for the code{u_sigma_pt} branch, or the
++quadratic table expression for the code{sw}/code{g} branch.
+ }
+ \description{
+-c_expanded = c_criterion * sqrt(1 + (u_sigma_pt/sigma_pt)^2)
++Supports two calculation branches. With code{u_sigma_pt}, it returns
++code{0.3 * sigma_pt * sqrt(1 + (u_sigma_pt / sigma_pt)^2)}. With
++code{sw} and code{g}, it returns the quadratic expression
++code{F1 * (0.3 * sigma_pt)^2 + F2 * sw^2}; callers must not assume both
++branches have the same dimensional form.
+ }
+ \details{
+ Reference: ISO 13528:2022, Section 9.2.4
+diff --git c/man/ptcalc-package.Rd w/man/ptcalc-package.Rd
+index a952dc2..64e2c30 100644
+--- c/man/ptcalc-package.Rd
++++ w/man/ptcalc-package.Rd
+@@ -6,7 +6,7 @@
+ \alias{ptcalc}
+ \title{ptcalc: Proficiency Testing Calculations}
+ \description{
+-Functions for proficiency testing analysis per ISO 13528:2022 and ISO 17043:2024.
++Functions for proficiency testing analysis per ISO 13528:2022 and ISO 17043:2023.
+ }
+ \section{Robust Statistics}{
+ 
+@@ -42,6 +42,11 @@ Functions for proficiency testing analysis per ISO 13528:2022 and ISO 17043:2024
+ \author{
+ \strong{Maintainer}: Wilson Rafael Salas Chavez \email{wrsalasc@unal.edu.co} (\href{https://orcid.org/0000-0003-4757-117X}{ORCID}) (Lead Developer)
+ 
++Authors:
++\itemize{
++  \item Wilson Rafael Salas Chavez \email{wrsalasc@unal.edu.co} (\href{https://orcid.org/0000-0003-4757-117X}{ORCID}) (Lead Developer)
++}
++
+ Other contributors:
+ \itemize{
+   \item Universidad Nacional de Colombia (Laboratorio CALAIRE - Titular de Derechos) [copyright holder, funder]
+diff --git c/man/run_algorithm_a.Rd w/man/run_algorithm_a.Rd
+index 1cba977..3152170 100644
+--- c/man/run_algorithm_a.Rd
++++ w/man/run_algorithm_a.Rd
+@@ -4,42 +4,58 @@
+ \alias{run_algorithm_a}
+ \title{ISO 13528 Algorithm A - Robust Mean and Standard Deviation}
+ \usage{
+-run_algorithm_a(values, ids = NULL, max_iter = 50)
++run_algorithm_a(values, ids = NULL, max_iter = 100, tol = 1e-10)
+ }
+ \arguments{
+ \item{values}{A numeric vector of participant results.}
+ 
+ \item{ids}{Optional vector of participant identifiers (same length as values).}
+ 
+-\item{max_iter}{Maximum number of iterations (default: 50).}
++\item{max_iter}{Maximum number of iterations (default: 100).}
++
++\item{tol}{Numerical guard tolerance for x* and s* (default: 1e-10). The
++primary convergence criterion is 3rd significant figure comparison per
++ISO 13528:2022 NOTE 1; tol only catches machine-precision stalls.}
+ }
+ \value{
+ A list containing:
+ \itemize{
+ \item assigned_value: Robust mean (x*)
+ \item robust_sd: Robust standard deviation (s*)
+-\item iterations: Data frame of iteration history
+-\item winsorized_values: Data frame with original and winsorized values
++\item iterations: Data frame of iteration history (includes signif4_* columns)
++\item iteration_detail: Data frame with per-participant detail per iteration
++\item weights: Data frame with final winsorized values per participant
++\item winsorized_values: Backward-compatible alias of weights
+ \item converged: Logical indicating convergence
+-\item n_participants: Number of participants used
++\item convergence_method: \code{"signif3"} (ISO 13528:2022 NOTE 1) or
++\code{"numerical_guard"} (machine-precision stall) or \code{NA} if not converged
++\item n_winsorized: Number of winsorized observations in final iteration
++\item n: Number of valid observations used
++\item n_participants: Backward-compatible alias of n
+ \item error: Error message or NULL if successful
+ }
+ }
+ \description{
+ Iterative algorithm for computing robust estimates of location (x*) and
+-scale (s*) from proficiency testing data using Winsorization.
++scale (s*) from proficiency testing data using winsorization.
+ }
+ \details{
+-Algorithm A is an iterative procedure that computes robust estimates:
++Algorithm A is the iterative winsorization procedure from ISO 13528:2022,
++Annex C:
+ \enumerate{
+-\item Initialize with median (x*) and scaled MAD (s*)
+-\item Compute delta: δ = 1.5 × s*
+-\item Winsorize values: clamp to \code{[x* - δ, x* + δ]}
+-4. Update x* = mean(winsorized), s* = 1.134 × sqrt(Σ(x* - x)²/(p-1))
+-\item Repeat until convergence (no change in 3rd significant figure)
++\item Initialize: x* = median(xi), s* = 1.483 * MAD(xi)
++\item Compute delta = 1.5 * s*
++\item Winsorize: x*_i = clamp(xi, x* - delta, x* + delta)
++\item Update: x* = mean(x*_i), s* = 1.134 * sd(x*_i)
++\item Repeat until no change in 3rd significant figure of x* and s*
++(ISO 13528:2022 NOTE 1). A numerical guard (tol = 1e-10) catches
++machine-precision stalls.
+ }
+ 
+-Reference: ISO 13528:2022, Annex C.3
++The factor 1.134 corrects the bias introduced by winsorization.
++The sd() uses (p - 1) denominator (sample standard deviation).
++
++Reference: ISO 13528:2022, Annex C
+ }
+ \examples{
+ # Robust mean/sd with outlier in data
