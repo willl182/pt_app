@@ -231,7 +231,7 @@ hallazgos, skill `saver`, ejecución completa de controles, commit y push.
 | Corregir reajuste de DataTables | Completado | Reajuste protegido solo para tablas visibles al activar pestañas o redimensionar; prueba visual 1024x768 sin `adjustWidth` ni `ReferenceError` |
 | Sanear suite histórica | Completado | Once pruebas `final_docs/` obsoletas quedan en `SKIP` explícito, sustituidas por pruebas vigentes E01–E09; inventario y manifiestos se regeneran sin depender del orden |
 | Reejecutar controles | Completado | Suite raíz completa sin fallos ni advertencias, 11 SKIP explícitos; `ptcalc` 51 PASS y R CMD check limpio |
-| Cerrar revisión y publicación | En progreso | Hallazgos de `revisor-fase` incorporados; falta persistencia `saver` y publicación selectiva del repositorio raíz |
+| Cerrar revisión y publicación | Completado | Hallazgos incorporados, estado persistido y commit raíz `8801e4a` publicado selectivamente |
 
 **Alcance excluido por decisión del usuario:** no modificar la implementación,
 las pruebas ni la documentación funcional de homogeneidad. Se conserva el
@@ -403,3 +403,6 @@ El paquete se considerará listo únicamente cuando:
 - [260714 16:17] Suite raíz completa aprobada con 11 SKIP explícitos para
   `final_docs/` sustituido. Prueba visual de pestañas y resize aprobada sin el
   diagnóstico `DataTables.adjustWidth`.
+- [260714 16:19] Estado persistido con skill `saver`; commit raíz de Fase 8
+  `8801e4a` publicado en `origin/main`. Cambios HTML, `_problems/` y hallazgo
+  preexistente de las 10:20 permanecieron fuera del commit.

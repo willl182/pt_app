@@ -15,7 +15,7 @@ Completar la Fase 8 técnica sin introducir cambios nuevos en homogeneidad.
 - [x] Reajuste protegido de DataTables validado a 1024x768.
 - [x] Suite raíz completa aprobada; 11 pruebas `final_docs/` en SKIP explícito.
 - [x] Revisión `revisor-fase` incorporada.
-- [ ] Publicar el commit selectivo de Fase 8 en el repositorio raíz.
+- [x] Fase 8 publicada selectivamente en raíz mediante `8801e4a`.
 
 ## Critical Technical Context
 
@@ -29,5 +29,5 @@ Completar la Fase 8 técnica sin introducir cambios nuevos en homogeneidad.
 
 ## Next Steps
 
-1. Hacer commit y push selectivos del repositorio raíz.
-2. Registrar el hash de cierre en el plan y rundown.
+1. Mantener fuera de futuros commits los artefactos preexistentes preservados.
+2. Decidir por separado si se aborda el riesgo de homogeneidad.

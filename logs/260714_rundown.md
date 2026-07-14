@@ -4,7 +4,7 @@
 
 ## Current State
 
-- Fase 8 técnica implementada y revisada; pendiente únicamente el push raíz.
+- Fase 8 técnica implementada, revisada y publicada en raíz como `8801e4a`.
 - `ptcalc` 0.1.1 publicado en `eb562c6` con 51 PASS y check 0/0/0.
 - `renv.lock` fija `ptcalc` en `eb562c6`; restauración aislada aprobada.
 - Suite raíz completa aprobada con 11 SKIP explícitos y sin fallos.
@@ -21,13 +21,13 @@
 
 ## Next Steps
 
-1. Publicar commit selectivo de Fase 8 en `main`.
-2. Registrar el hash final en plan y rundown.
+1. Mantener fuera de futuros commits los artefactos preexistentes preservados.
+2. Decidir por separado si se aborda el riesgo de homogeneidad.
 
 ## Branch Status
 
 - Branch: `main`
-- Status: sincronizada con `origin/main` antes del commit de Fase 8; árbol
-  sucio por implementación actual y cambios preexistentes preservados.
-- Pending changes: DataTables, lockfile, pruebas, evidencia regenerada, plan y
-  memoria; fuera de alcance: movimiento HTML, `_problems/` y hallazgo 10:20.
+- Status: sincronizada con `origin/main` en `8801e4a`; árbol sucio únicamente
+  por cambios preexistentes preservados.
+- Pending changes: movimiento HTML, `_problems/` y hallazgo 10:20, todos fuera
+  del cierre de Fase 8.
