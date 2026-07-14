@@ -4,7 +4,7 @@
 
 ## Current State
 
-- Fase 8 técnica implementada, revisada y publicada en raíz como `8801e4a`.
+- Fase 8 implementada en `8801e4a`; cierre publicado hasta `04eff6b`.
 - `ptcalc` 0.1.1 publicado en `eb562c6` con 51 PASS y check 0/0/0.
 - `renv.lock` fija `ptcalc` en `eb562c6`; restauración aislada aprobada.
 - Suite raíz completa aprobada con 11 SKIP explícitos y sin fallos.
@@ -27,7 +27,7 @@
 ## Branch Status
 
 - Branch: `main`
-- Status: sincronizada con `origin/main` en `8801e4a`; árbol sucio únicamente
+- Status: sincronizada con `origin/main` en `04eff6b`; árbol sucio únicamente
   por cambios preexistentes preservados.
 - Pending changes: movimiento HTML, `_problems/` y hallazgo 10:20, todos fuera
   del cierre de Fase 8.

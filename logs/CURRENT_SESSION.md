@@ -1,6 +1,6 @@
 # Session State: PT App - Estabilización técnica
 
-**Last Updated**: 2026-07-14 16:17 -05:00
+**Last Updated**: 2026-07-14 16:27 -05:00
 
 ## Session Objective
 
@@ -15,7 +15,7 @@ Completar la Fase 8 técnica sin introducir cambios nuevos en homogeneidad.
 - [x] Reajuste protegido de DataTables validado a 1024x768.
 - [x] Suite raíz completa aprobada; 11 pruebas `final_docs/` en SKIP explícito.
 - [x] Revisión `revisor-fase` incorporada.
-- [x] Fase 8 publicada selectivamente en raíz mediante `8801e4a`.
+- [x] Fase 8 publicada en `8801e4a` y cierre registrado en `04eff6b`.
 
 ## Critical Technical Context
 
