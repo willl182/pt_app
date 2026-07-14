@@ -173,12 +173,12 @@ pruebas focalizadas de E01–E04, commit y push.
 
 | Item | Estado | Notas |
 |---|---|---|
-| Actualizar E05 | Pendiente | Sustituir la descripción puramente prototípica por un recorrido visual actual y conservar el prototipo como antecedente identificado |
-| Reescribir E06 | Pendiente | Manual ciudadano completo: preparar archivos, cargar, calcular, interpretar, exportar, generar informes y resolver errores |
-| Completar E07 | Pendiente | Crear documento principal para dashboards con lectura de cada tabla/gráfico y advertencias de interpretación |
-| Actualizar E08 | Pendiente | Manual operativo/técnico de versión vigente; instalación, dependencias, despliegue, mantenimiento, seguridad y recuperación |
-| Integrar evidencia visual | Pendiente | Insertar solo capturas relevantes, con llamada textual que explique qué debe observar el lector |
-| Regenerar derivados | Pendiente | DOCX/HTML oficiales coherentes con las fuentes y plantilla común |
+| Actualizar E05 | Completado | Recorrido vigente de ocho módulos; prototipo histórico separado y HTML controlado regenerado |
+| Reescribir E06 | Completado | Manual ciudadano desde preparación y carga hasta interpretación, informes y recuperación de errores |
+| Completar E07 | Completado | Guía narrativa de tablas, gráficos, colores, filtros, límites y uso responsable |
+| Actualizar E08 | Completado | Operación vigente, arquitectura, despliegue, seguridad, respaldo, diagnóstico y riesgos conocidos |
+| Integrar evidencia visual | Completado | CAP relevantes incorporadas con explicación, rutas verificadas e índice común |
+| Regenerar derivados | Completado | Cuatro DOCX y un HTML reproducibles; manifiesto SHA-256 verificado |
 
 **Salida de fase:** E05–E08 actualizados, con manual de usuario apto para una
 persona sin formación en sistemas.
@@ -334,3 +334,16 @@ El paquete se considerará listo únicamente cuando:
   deuda visual `DataTables::adjustWidth` de Fase 3.
 - [260714 13:52] Commit principal de Fase 4: `9884107`; stage selectivo confirmó
   que el movimiento HTML y el hallazgo preexistente de las 10:20 quedaron fuera.
+- [260714 14:17] Iniciada Fase 5 sobre una implementación preexistente sin
+  commit; se preservaron los cambios ajenos identificados en el rundown.
+- [260714 14:24] Primera revisión `revisor-fase` bloqueó por estados
+  documentales, derivado HTML incorrecto, recomendación CSV general y pruebas
+  insuficientes; los cuatro puntos fueron corregidos.
+- [260714 14:28] Segunda revisión aprobó la puerta. Controles finales: Fase 5
+  19/19, Fase 4 29/29, control documental 35/35 y línea base 24/24; inventario
+  regenerado con 136 archivos y `git diff --check` limpio.
+- [260714 14:30] Commit de implementación de Fase 5: `018d39f`; stage selectivo
+  excluyó artefactos de Fase 4, E01-E04, el movimiento HTML y el hallazgo 10:20.
+- [260714 14:31] Fase 5 completada y persistida con skill `saver`. Permanecen
+  pendientes la aprobación contractual, el lockfile R, el estado publicable de
+  `ptcalc`, el defecto expandido de homogeneidad y la deuda DT de Fase 3.

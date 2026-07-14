@@ -4,16 +4,15 @@
 
 ## Current State
 
-- Fases 1 a 4 completadas.
-- E01-E04 tienen fuentes vigentes, cinco DOCX derivados, catálogo regenerado,
-  ejemplos reproducibles, manifiesto SHA-256 e inventario de 133 archivos.
-- Puerta `revisor-fase` aprobada tras tres revisiones.
-- Controles finales: 29 + 35 + 14 + 24 expectativas, sin fallos.
-- Implementación de Fase 4: commit `9884107`.
+- Fases 1 a 5 completadas.
+- E05-E08 tienen fuentes vigentes, cuatro DOCX, un HTML y manifiesto SHA-256.
+- Puerta `revisor-fase` aprobada tras incorporar cuatro hallazgos.
+- Controles finales: 19 + 29 + 35 + 24 expectativas, sin fallos.
+- Implementación de Fase 5: commit `018d39f`; inventario de 136 archivos.
 
 ## Critical Technical Context
 
-- Ejecutar `scripts/documentacion/generar_entregables_fase_4.sh`; regenerar el
+- Ejecutar `scripts/documentacion/generar_entregables_fase_5.sh`; regenerar el
   inventario al final para mantener hashes coherentes.
 - `ptcalc/` es repo anidado dirty en `e87180b`; el commit raíz no basta para
   reproducirlo. Estado registrado en `00_linea_base/estado_ptcalc_fase4.md`.
@@ -23,11 +22,11 @@
 
 ## Next Steps
 
-1. Iniciar Fase 5 (E05-E08).
+1. Iniciar Fase 6 (E09).
 2. Fijar/publicar `ptcalc` y planificar la corrección del criterio expandido.
 
 ## Branch Status
 
 - Branch: `main`
-- Status: Fase 4 implementada en `9884107`; cierre documental pendiente de push.
+- Status: Fase 5 implementada en `018d39f`; cierre documental pendiente de push.
 - Pending changes: movimiento HTML y hallazgo 10:20 preexistentes excluidos.
