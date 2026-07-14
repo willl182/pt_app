@@ -332,3 +332,5 @@ El paquete se considerará listo únicamente cuando:
   anidado no publicado, revisión normativa/contractual pendiente, alcance E02
   limitado al núcleo declarado, regeneración consciente de derivados F2 y
   deuda visual `DataTables::adjustWidth` de Fase 3.
+- [260714 13:52] Commit principal de Fase 4: `9884107`; stage selectivo confirmó
+  que el movimiento HTML y el hallazgo preexistente de las 10:20 quedaron fuera.

@@ -16,6 +16,7 @@ Completar la Fase 4: actualización verificable de E01 a E04.
 - [x] Cinco DOCX y manifiesto SHA-256 regenerados.
 - [x] Tres revisiones `revisor-fase`; la última aprobó el cierre.
 - [x] 102 expectativas finales aprobadas e inventario de 133 archivos.
+- [x] Implementación de Fase 4 publicada en el commit `9884107`.
 
 ## Critical Technical Context
 

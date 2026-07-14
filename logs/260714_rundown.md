@@ -9,6 +9,7 @@
   ejemplos reproducibles, manifiesto SHA-256 e inventario de 133 archivos.
 - Puerta `revisor-fase` aprobada tras tres revisiones.
 - Controles finales: 29 + 35 + 14 + 24 expectativas, sin fallos.
+- Implementación de Fase 4: commit `9884107`.
 
 ## Critical Technical Context
 
@@ -28,6 +29,5 @@
 ## Branch Status
 
 - Branch: `main`
-- Status: Fase 4 lista para commit y push selectivos.
-- Pending changes: implementación Fase 4; movimiento HTML y hallazgo 10:20
-  preexistentes excluidos.
+- Status: Fase 4 implementada en `9884107`; cierre documental pendiente de push.
+- Pending changes: movimiento HTML y hallazgo 10:20 preexistentes excluidos.
