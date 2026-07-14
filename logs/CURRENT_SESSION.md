@@ -1,6 +1,6 @@
 # Session State: PT App - Actualización documental de entregables
 
-**Last Updated**: 2026-07-14 10:45
+**Last Updated**: 2026-07-14 11:51
 
 ## Session Objective
 
@@ -24,6 +24,8 @@ actualización integral de `Entregables_pt_app/`.
 - [x] Cadena Markdown–DOCX–PDF ejecutada y verificada con manifiesto SHA-256.
 - [x] Revisión `revisor-fase` sin bloqueantes; cuatro hallazgos incorporados.
 - [x] Pruebas: 35 expectativas de Fase 2 y 24 de línea base sin fallos.
+- [x] Fase 2 publicada en `main`: implementación `0f60396` y cierre
+  documental `8dd660b`.
 
 ## Critical Technical Context
 
@@ -41,6 +43,7 @@ actualización integral de `Entregables_pt_app/`.
   pandoc y LibreOffice con perfil temporal y registra hashes.
 - El inventario maestro contiene ahora 102 archivos y reconoce
   `vigente_fase_2`.
+- `main` está sincronizada con `origin/main` en `8dd660b`.
 
 ## Next Steps
 

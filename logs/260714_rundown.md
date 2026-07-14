@@ -13,6 +13,8 @@
   disponibles en `Entregables_pt_app/00_control_documental/`.
 - Cadena Markdown–DOCX–PDF verificada con 35 expectativas; inventario de 102
   archivos verificado con otras 24 expectativas.
+- Implementación publicada en `0f60396`; cierre documental publicado en
+  `8dd660b`.
 
 ## Critical Technical Context
 
