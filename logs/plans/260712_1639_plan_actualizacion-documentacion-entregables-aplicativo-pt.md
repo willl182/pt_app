@@ -299,5 +299,6 @@ El paquete se considerará listo únicamente cuando:
 - [260714 10:45] Pruebas finales: 35 expectativas de control documental y 24
   de línea base, sin fallos ni advertencias; inventario actualizado a 102
   archivos y `git diff --check` limpio.
-- [260714 10:45] Fase 2 completada y estado persistido con skill `saver`;
-  commit y push pendientes de ejecutar.
+- [260714 10:45] Fase 2 completada y estado persistido con skill `saver`.
+- [260714 10:46] Commit principal de Fase 2 `0f60396` publicado en `main`; los
+  dos cambios HTML y el hallazgo preexistente de las 10:20 quedaron excluidos.

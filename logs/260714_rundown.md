@@ -35,6 +35,6 @@
 ## Branch Status
 
 - Branch: `main`
-- Status: árbol sucio antes del commit de cierre de Fase 2
-- Pending changes: artefactos de Fase 2, inventario, plan y memoria; dos cambios
-  HTML y un hallazgo de las 10:20 preexistentes deben excluirse del commit
+- Status: Fase 2 publicada en `0f60396`; `main` sincronizada con `origin/main`
+- Pending changes: dos cambios HTML y un hallazgo de las 10:20 preexistentes,
+  preservados fuera de los commits de fase
