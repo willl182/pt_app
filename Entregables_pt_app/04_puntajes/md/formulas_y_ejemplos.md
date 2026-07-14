@@ -324,6 +324,14 @@ print(reporte$estadisticas_globales$estadisticas)
 
 ---
 
+## Evidencia visual vigente
+
+![CAP-12. Resumen de puntajes por
+participante.](../../00_evidencia_visual/capturas/CAP-12_puntajes_resumen.png)
+
+**Figura CAP-12.** Resumen operativo de puntajes. Las variantes z, z', zeta y
+En se documentan con CAP-13 y CAP-14 en el índice técnico común.
+
 ## Referencias
 
 - ISO 13528:2022 - Statistical methods for use in proficiency testing by interlaboratory comparison

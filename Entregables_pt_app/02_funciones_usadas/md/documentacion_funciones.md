@@ -1931,6 +1931,15 @@ Lista con robust_mean y robust_sd.
 
 Se mantiene solo por compatibilidad hacia atras.
 
+## Evidencia visual vigente
+
+![CAP-09. Ejecución del Algoritmo A y resumen de iteraciones con datos de
+demostración.](../../00_evidencia_visual/capturas/CAP-09_algoritmo_a.png)
+
+**Figura CAP-09.** La pantalla confirma la disponibilidad operativa del
+Algoritmo A. Fecha, commit, datos y SHA-256 se controlan en
+`../../00_evidencia_visual/indice_capturas.csv`.
+
 **Archivo fuente:** `R/utils.R`
 
 **Referencia ISO:** ISO 13528:2022, Annex C
@@ -2000,5 +2009,4 @@ Se mantiene solo por compatibilidad hacia atras.
 **Referencia ISO:** ISO 13528:2022, Section 9.4
 
 ---
-
 

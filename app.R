@@ -2793,7 +2793,7 @@ server <- function(input, output, session) {
       options = list(
         pageLength = 20,
         scrollX = TRUE,
-        language = list(url = "//cdn.datatables.net/plug-ins/1.10.11/i18n/Spanish.json")
+        language = list(url = "https://cdn.datatables.net/plug-ins/1.10.11/i18n/Spanish.json")
       ),
       rownames = FALSE
     )
@@ -3094,7 +3094,7 @@ server <- function(input, output, session) {
       options = list(
         pageLength = 20,
         scrollX = TRUE,
-        language = list(url = "//cdn.datatables.net/plug-ins/1.10.11/i18n/Spanish.json")
+        language = list(url = "https://cdn.datatables.net/plug-ins/1.10.11/i18n/Spanish.json")
       ),
       rownames = FALSE
     )

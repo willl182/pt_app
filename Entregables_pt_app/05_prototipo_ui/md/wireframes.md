@@ -510,6 +510,15 @@ Elementos (de izquierda a derecha):
 
 ## Estado del Prototipo
 
+## Evidencia visual de la implementación vigente
+
+![CAP-01. Pantalla vigente de carga de
+datos.](../../00_evidencia_visual/capturas/CAP-01_inicio_carga.png)
+
+**Figura CAP-01.** Implementación observada, diferenciada del prototipo
+histórico descrito en este documento. CAP-03 muestra el preprocesador y CAP-19
+la vista de 1024 × 768; metadatos y hashes están en el índice común.
+
 - **Completado:** 9 módulos documentados
 - **Porcentaje de avance:** 100%
 - **Siguiente paso:** Crear HTML estático y diagramas de navegación

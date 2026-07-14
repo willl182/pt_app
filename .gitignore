@@ -13,6 +13,7 @@ Thumbs.db
 .opencode/
 .gemini/
 *.code-workspace
+node_modules/
 
 
 

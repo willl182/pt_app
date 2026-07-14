@@ -429,6 +429,16 @@ documentación complementaria del repositorio en una próxima actualización.
 
 ---
 
+## Evidencia visual de ejecución
+
+![CAP-15. Informe global posterior al cálculo de
+puntajes.](../../00_evidencia_visual/capturas/CAP-15_informe_global.png)
+
+**Figura CAP-15.** Evidencia del informe global sobre datos de demostración.
+CAP-05, CAP-06, CAP-09 a CAP-15 complementan la trazabilidad visual; sus
+acciones previas, estados esperados, hashes y consumidores están en
+`../../00_evidencia_visual/indice_capturas.csv`.
+
 **Informe versión:** 2.0  
 **Fecha de emisión:** 2026-03-13  
 **Estado:** Vigente  

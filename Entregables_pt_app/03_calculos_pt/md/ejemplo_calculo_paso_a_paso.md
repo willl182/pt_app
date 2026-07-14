@@ -298,6 +298,15 @@ print(resultados_va$`co_2-μmol/mol`)
 
 ---
 
+## Evidencia visual vigente
+
+![CAP-05. Resultado de homogeneidad con conclusiones y cálculos
+intermedios.](../../00_evidencia_visual/capturas/CAP-05_homogeneidad_resultado.png)
+
+**Figura CAP-05.** Resultado reproducible de homogeneidad. Las capturas
+CAP-06 a CAP-11 complementan estabilidad, incertidumbre, atípicos, Algoritmo A,
+consenso y compatibilidad; véase `../../00_evidencia_visual/indice_capturas.md`.
+
 ## Referencias
 
 - ISO 13528:2022 - Statistical methods for use in proficiency testing by interlaboratory comparison

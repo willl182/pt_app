@@ -428,6 +428,15 @@ Todas las funciones en `funciones_finales.R` están documentadas con roxygen2 y 
 
 MIT License - Universidad Nacional de Colombia / Instituto Nacional de Metrología
 
+### Evidencia visual reproducible
+
+![CAP-17. Configuración vigente de generación de
+informes.](../../00_evidencia_visual/capturas/CAP-17_generacion_informes.png)
+
+**Figura CAP-17.** Pantalla generada por Playwright 1.61.1. El comando de
+reproducción, los datos congelados, hashes y diagnósticos están en
+`../../00_evidencia_visual/indice_capturas.md` y `registro_ejecucion.json`.
+
 ---
 
 **Documento versión:** 1.0  

@@ -310,6 +310,15 @@ Correo electrónico: calaire_med@unal.edu.co
 
 ## Registro de Cambios
 
+## Evidencia visual reproducible
+
+![CAP-02. Estado posterior a cargar los tres archivos válidos de
+demostración.](../../00_evidencia_visual/capturas/CAP-02_carga_valida.png)
+
+**Figura CAP-02.** Carga válida. El recorrido completo CAP-01 a CAP-19, incluida
+la recuperación ante un archivo incorrecto (CAP-18), se consulta en
+`../../00_evidencia_visual/indice_capturas.md`.
+
 | Versión | Fecha | Cambios |
 |---------|-------|---------|
 | 06 | 2026-01-24 | Versión inicial con lógica de negocio sin gráficos |

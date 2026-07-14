@@ -1,0 +1,10 @@
+{
+  "name": "pt-app-documentation",
+  "private": true,
+  "scripts": {
+    "capture:evidence": "node scripts/documentacion/capturar_evidencia_visual.js"
+  },
+  "devDependencies": {
+    "playwright": "1.61.1"
+  }
+}

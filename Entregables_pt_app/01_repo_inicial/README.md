@@ -4,6 +4,15 @@
 **Fecha de creación:** 2026-01-24  
 **Estado:** Completado
 
+## Evidencia visual vigente
+
+![CAP-01. Inicio del aplicativo y zonas de carga de los archivos
+requeridos.](../00_evidencia_visual/capturas/CAP-01_inicio_carga.png)
+
+**Figura CAP-01.** Vista reproducible del aplicativo vigente. Fecha, commit,
+datos de demostración y SHA-256 se registran en
+`../00_evidencia_visual/indice_capturas.csv`.
+
 ## Objetivo
 
 Crear snapshot del código original como línea base del proyecto. Este entregable establece el punto de partida antes de realizar modificaciones.

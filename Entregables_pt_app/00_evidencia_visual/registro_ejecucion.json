@@ -1,0 +1,52 @@
+{
+  "status": "ok",
+  "capturedAt": "2026-07-14T17:12:15.340Z",
+  "commit": "9aea5182618035efa10e8e1aa6fbad8e6f27283b",
+  "baseUrl": "http://127.0.0.1:3838",
+  "browserPath": "/usr/bin/chromium",
+  "playwright": "1.61.1",
+  "captures": 21,
+  "workingTreeChangesAtStart": [
+    "M .gitignore",
+    " M Entregables_pt_app/00_linea_base/inventario_maestro.csv",
+    " M Entregables_pt_app/01_repo_inicial/README.md",
+    " M Entregables_pt_app/02_funciones_usadas/md/documentacion_funciones.md",
+    " M Entregables_pt_app/03_calculos_pt/md/ejemplo_calculo_paso_a_paso.md",
+    " M Entregables_pt_app/04_puntajes/md/formulas_y_ejemplos.md",
+    " M Entregables_pt_app/05_prototipo_ui/md/wireframes.md",
+    " M Entregables_pt_app/06_app_logica/md/manual_usuario.md",
+    " M Entregables_pt_app/08_beta/md/manual_desarrollador.md",
+    " M Entregables_pt_app/09_informe_final/md/informe_validacion.md",
+    " M app.R",
+    " D plan_documentos_formales_entregables_pt.html",
+    "?? Entregables_pt_app/00_evidencia_visual/",
+    "?? Entregables_pt_app/07_dashboards/md/documentacion_dashboards.md",
+    "?? Entregables_pt_app/plan_documentos_formales_entregables_pt.html",
+    "?? logs/history/260714_1020_findings.md",
+    "?? package-lock.json",
+    "?? package.json",
+    "?? scripts/documentacion/capturar_evidencia_visual.js",
+    "?? scripts/documentacion/ejecutar_capturas.sh",
+    "?? tests/testthat/test-evidencia-visual-fase-3.R"
+  ],
+  "dataHashes": {
+    "homogeneity": "3fe056f967859be67eb3bdb1061bb02744f8d667f77f1146462f1130d117367d",
+    "stability": "83de7bb6210eb55d073b24a0c00c1a81a0bc462c8c790e9edbbd8d8695c1c3f6",
+    "summary": "51e5142c12c673355841e504d787c1fc63f455e29942ae048ec7a810f65f1329",
+    "invalid": "4162dc1bb8a3cae0ac267414100d8206e7472063eb4fa53a09c848b9ec741763"
+  },
+  "acceptedDiagnostics": [
+    "console: Failed to load resource: the server responded with a status of 404 (Not Found) (http://127.0.0.1:3838/favicon.ico:0)",
+    "pageerror: TypeError: Cannot read properties of undefined (reading 'style')\n    at Qt (<anonymous>:4:36894)\n    at O (<anonymous>:4:16240)\n    at B.<anonymous> (<anonymous>:4:64175)\n    at B.iterator (<anonymous>:4:52119)\n    at B.<anonymous> (<anonymous>:4:64146)\n    at Function.adjust (<anonymous>:4:53602)\n    at Object.adjustWidth (http://127.0.0.1:3838/datatables-binding-0.34.0/datatables.js:1514:30)\n    at Object.resize (http://127.0.0.1:3838/datatables-binding-0.34.0/datatables.js:1486:10)\n    at shinyBinding.resize (http://127.0.0.1:3838/htmlwidgets-1.6.4/htmlwidgets.js:549:24)\n    at http://127.0.0.1:3838/shiny-javascript-1.13.0/shiny.min.js:436:4555",
+    "pageerror: TypeError: Cannot read properties of undefined (reading 'style')\n    at Qt (<anonymous>:4:36894)\n    at O (<anonymous>:4:16240)\n    at B.<anonymous> (<anonymous>:4:64175)\n    at B.iterator (<anonymous>:4:52119)\n    at B.<anonymous> (<anonymous>:4:64146)\n    at Function.adjust (<anonymous>:4:53602)\n    at Object.adjustWidth (http://127.0.0.1:3838/datatables-binding-0.34.0/datatables.js:1514:30)\n    at Object.resize (http://127.0.0.1:3838/datatables-binding-0.34.0/datatables.js:1486:10)\n    at shinyBinding.resize (http://127.0.0.1:3838/htmlwidgets-1.6.4/htmlwidgets.js:549:24)\n    at http://127.0.0.1:3838/shiny-javascript-1.13.0/shiny.min.js:436:4555"
+  ],
+  "diagnosticAcceptance": [
+    "favicon.ico 404 no afecta contenido ni operación.",
+    "DataTables adjustWidth ocurre al redimensionar una tabla oculta; no es visible en la captura ni altera datos."
+  ],
+  "diagnostics": [
+    "console: Failed to load resource: the server responded with a status of 404 (Not Found) (http://127.0.0.1:3838/favicon.ico:0)",
+    "pageerror: TypeError: Cannot read properties of undefined (reading 'style')\n    at Qt (<anonymous>:4:36894)\n    at O (<anonymous>:4:16240)\n    at B.<anonymous> (<anonymous>:4:64175)\n    at B.iterator (<anonymous>:4:52119)\n    at B.<anonymous> (<anonymous>:4:64146)\n    at Function.adjust (<anonymous>:4:53602)\n    at Object.adjustWidth (http://127.0.0.1:3838/datatables-binding-0.34.0/datatables.js:1514:30)\n    at Object.resize (http://127.0.0.1:3838/datatables-binding-0.34.0/datatables.js:1486:10)\n    at shinyBinding.resize (http://127.0.0.1:3838/htmlwidgets-1.6.4/htmlwidgets.js:549:24)\n    at http://127.0.0.1:3838/shiny-javascript-1.13.0/shiny.min.js:436:4555",
+    "pageerror: TypeError: Cannot read properties of undefined (reading 'style')\n    at Qt (<anonymous>:4:36894)\n    at O (<anonymous>:4:16240)\n    at B.<anonymous> (<anonymous>:4:64175)\n    at B.iterator (<anonymous>:4:52119)\n    at B.<anonymous> (<anonymous>:4:64146)\n    at Function.adjust (<anonymous>:4:53602)\n    at Object.adjustWidth (http://127.0.0.1:3838/datatables-binding-0.34.0/datatables.js:1514:30)\n    at Object.resize (http://127.0.0.1:3838/datatables-binding-0.34.0/datatables.js:1486:10)\n    at shinyBinding.resize (http://127.0.0.1:3838/htmlwidgets-1.6.4/htmlwidgets.js:549:24)\n    at http://127.0.0.1:3838/shiny-javascript-1.13.0/shiny.min.js:436:4555"
+  ]
+}
