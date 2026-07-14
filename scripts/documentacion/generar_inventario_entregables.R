@@ -69,6 +69,10 @@ classify_document_state <- function(path) {
   if (grepl("Entregables_pt_app/00_linea_base/", path, fixed = TRUE)) {
     return("vigente_fase_1")
   }
+  if (grepl("Entregables_pt_app/00_control_documental/", path,
+            fixed = TRUE)) {
+    return("vigente_fase_2")
+  }
   "pendiente_revision"
 }
 

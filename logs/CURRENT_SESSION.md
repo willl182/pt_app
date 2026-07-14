@@ -1,11 +1,11 @@
 # Session State: PT App - Actualización documental de entregables
 
-**Last Updated**: 2026-07-14 10:30
+**Last Updated**: 2026-07-14 10:45
 
 ## Session Objective
 
-Ejecutar la Fase 1 de línea base e inventario auditable para la actualización
-integral de `Entregables_pt_app/`.
+Ejecutar la Fase 2 de estructura editorial y control documental para la
+actualización integral de `Entregables_pt_app/`.
 
 ## Current State
 
@@ -19,7 +19,11 @@ integral de `Entregables_pt_app/`.
   primaria dentro del workspace.
 - [x] Dos rondas de `revisor-fase`; todos los bloqueantes fueron incorporados.
 - [x] Prueba focal: 24 expectativas correctas, sin fallos ni advertencias.
-- [ ] Fase 2 pendiente: estructura editorial y control documental.
+- [x] Fase 2 completada: plantilla, índice E01–E09, glosario, IDs, audiencias y
+  matriz requisito–documento–evidencia.
+- [x] Cadena Markdown–DOCX–PDF ejecutada y verificada con manifiesto SHA-256.
+- [x] Revisión `revisor-fase` sin bloqueantes; cuatro hallazgos incorporados.
+- [x] Pruebas: 35 expectativas de Fase 2 y 24 de línea base sin fallos.
 
 ## Critical Technical Context
 
@@ -32,9 +36,14 @@ integral de `Entregables_pt_app/`.
   debe solicitarse la fuente primaria antes de afirmar cobertura contractual.
 - Preservar fuera del commit de fase la eliminación del HTML raíz y la copia
   HTML no rastreada en `Entregables_pt_app/`; son cambios preexistentes.
+- El control común está en `Entregables_pt_app/00_control_documental/`.
+- Markdown es fuente; DOCX/PDF son derivados. El script controlado ejecuta
+  pandoc y LibreOffice con perfil temporal y registra hashes.
+- El inventario maestro contiene ahora 102 archivos y reconoce
+  `vigente_fase_2`.
 
 ## Next Steps
 
-1. Iniciar Fase 2 y definir plantilla, índice contractual y glosario.
-2. Establecer IDs de evidencia y matriz requisito-documento-evidencia.
-3. Definir y probar la cadena Markdown a DOCX/PDF.
+1. Iniciar Fase 3 y preparar datos de demostración no sensibles.
+2. Revisar selectores y estados del flujo Playwright vigente.
+3. Generar CAP-01 a CAP-19 y su índice técnico reproducible.

@@ -122,12 +122,12 @@ la fase conforme a `AGENTS.md`.
 
 | Item | Estado | Notas |
 |---|---|---|
-| Definir plantilla común | Pendiente | Portada, ficha de control, objetivo, alcance, audiencia, prerrequisitos, procedimiento, resultados, problemas frecuentes, evidencia, referencias y cambios |
-| Crear índice maestro contractual | Pendiente | Nueve entregables, versión, estado, archivos oficiales, anexos y relación con requisitos |
-| Definir glosario ciudadano | Pendiente | PT, analito, ronda, ítem, valor asignado, incertidumbre, sigma PT, puntajes y categorías |
-| Fijar convención de evidencia | Pendiente | IDs para requisitos, capturas, pruebas, tablas, hallazgos y anexos |
-| Separar documentos por audiencia | Pendiente | Manual de usuario/operación, soporte técnico y validación/auditoría claramente diferenciados |
-| Definir cadena de generación | Pendiente | Markdown como fuente controlada; DOCX/PDF como derivados con estilos, metadatos e índices actualizables |
+| Definir plantilla común | Completado | Plantilla reutilizable con metadatos, ficha de control, recorrido ciudadano, evidencia, referencias, cambios y anexos |
+| Crear índice maestro contractual | Completado | E01–E09, audiencias, fuentes oficiales, derivados, anexos y estados; limitación contractual explícita |
+| Definir glosario ciudadano | Completado | Quince términos comunes, símbolos y regla editorial para primera mención |
+| Fijar convención de evidencia | Completado | IDs para requisitos, documentos, capturas, pruebas, tablas, hallazgos, anexos y evidencia compuesta |
+| Separar documentos por audiencia | Completado | Recorridos diferenciados para usuario/operación, soporte técnico y validación/auditoría |
+| Definir cadena de generación | Completado | Markdown como fuente; DOCX con pandoc y PDF con LibreOffice, manifiesto SHA-256 y prueba de contenido |
 
 **Salida de fase:** plantilla aprobable, índice maestro, glosario, esquema de IDs y
 matriz requisito–documento–evidencia.
@@ -289,3 +289,15 @@ El paquete se considerará listo únicamente cuando:
   `git diff --check` limpio.
 - [260714 10:31] Commit principal de Fase 1: `1f01b51`; los cambios HTML y el
   hallazgo preexistente de las 10:20 quedaron excluidos.
+- [260714 10:35] Iniciada Fase 2; definida la carpeta transversal
+  `00_control_documental/` y la separación de documentos por audiencia.
+- [260714 10:43] Cadena Markdown–DOCX–PDF ejecutada con pandoc y LibreOffice;
+  derivados válidos y manifiesto SHA-256 generado.
+- [260714 10:44] Revisión `revisor-fase`: sin bloqueantes; solicitó ejecutar la
+  cadena dentro de las pruebas, comprobar hashes/contenido, ajustar estados e
+  IDs y aislar dependencias. Todos los hallazgos fueron incorporados.
+- [260714 10:45] Pruebas finales: 35 expectativas de control documental y 24
+  de línea base, sin fallos ni advertencias; inventario actualizado a 102
+  archivos y `git diff --check` limpio.
+- [260714 10:45] Fase 2 completada y estado persistido con skill `saver`;
+  commit y push pendientes de ejecutar.
