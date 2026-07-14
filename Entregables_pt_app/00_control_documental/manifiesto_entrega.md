@@ -6,6 +6,7 @@
 **Raíz del paquete:** `Entregables_pt_app/`
 
 **Commit de implementación E09:** `ad16214`  
+**Commit de implementación Fase 7:** `d488e26`  
 **Estado evaluado:** commit publicado de Fase 6 más los cambios documentales de
 Fase 7 que se publican con este cierre  
 **Repositorio `ptcalc`:** `e87180bc3831324bd343ee52202f1d9754b7fcef`,

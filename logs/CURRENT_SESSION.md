@@ -15,7 +15,7 @@ Implementar la Fase 7 de auditoría cruzada y cierre del paquete documental.
 - [x] 283 expectativas focales aprobadas sin fallos ni advertencias.
 - [x] Playwright completó 19 escenarios y 21 capturas.
 - [x] Revisión `revisor-fase` incorporada.
-- [ ] Publicar commit de cierre de Fase 7.
+- [x] Fase 7 publicada en `d488e26`.
 - [ ] Recibir aprobación contractual/normativa y resolver riesgo funcional.
 
 ## Critical Technical Context
@@ -31,6 +31,5 @@ Implementar la Fase 7 de auditoría cruzada y cierre del paquete documental.
 
 ## Next Steps
 
-1. Publicar el commit de cierre de Fase 7 y registrar su hash en el plan.
-2. Obtener contrato/TDR/acta y aprobaciones responsables.
-3. Corregir/revalidar el criterio expandido y fijar/publicar `ptcalc`.
+1. Obtener contrato/TDR/acta y aprobaciones responsables.
+2. Corregir/revalidar el criterio expandido y fijar/publicar `ptcalc`.
