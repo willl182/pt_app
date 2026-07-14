@@ -1,0 +1,5 @@
+# Extracted from test-doc-merge-readme.R:3
+
+# test -------------------------------------------------------------------------
+path <- "../../final_docs/README.md"
+expect_true(file.exists(path))
