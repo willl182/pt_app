@@ -87,7 +87,31 @@ ui <- fluidPage(
   ),
 
   tags$head(
-    tags$link(rel = "stylesheet", type = "text/css", href = "appR.css")
+    tags$link(rel = "stylesheet", type = "text/css", href = "appR.css"),
+    tags$script(HTML("
+      (function registerDataTableAdjustment() {
+        if (!window.jQuery) {
+          document.addEventListener(
+            'DOMContentLoaded',
+            registerDataTableAdjustment,
+            { once: true }
+          );
+          return;
+        }
+        function adjustVisibleDataTables() {
+          if (!jQuery.fn.dataTable) return;
+          jQuery('table.dataTable:visible').each(function() {
+            if (jQuery.fn.dataTable.isDataTable(this)) {
+              jQuery(this).DataTable().columns.adjust();
+            }
+          });
+        }
+        jQuery(document).on('shown.bs.tab shown.bs.collapse', function() {
+          window.requestAnimationFrame(adjustVisibleDataTables);
+        });
+        jQuery(window).on('resize', adjustVisibleDataTables);
+      })();
+    "))
   ),
 
   # 1. Enhanced header with logo

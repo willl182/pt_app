@@ -4,30 +4,30 @@
 
 ## Current State
 
-- Fases 1–7 implementadas; el plan permanece `Pausado` por obligaciones externas.
-- Fase 6 publicada en `ad16214`; cierre de Fase 7 publicado hasta `d8bf789`.
-- Auditoría E01–E09, manifiesto y checksums finales disponibles.
-- Controles focales: 283 PASS, 0 FAIL, 0 WARN.
-- Playwright: 19 escenarios, 21 capturas; revisión visual aprobada.
+- Fase 8 técnica implementada y revisada; pendiente únicamente el push raíz.
+- `ptcalc` 0.1.1 publicado en `eb562c6` con 51 PASS y check 0/0/0.
+- `renv.lock` fija `ptcalc` en `eb562c6`; restauración aislada aprobada.
+- Suite raíz completa aprobada con 11 SKIP explícitos y sin fallos.
+- DataTables validado a 1024x768 sin `adjustWidth` ni `ReferenceError`.
 
 ## Critical Technical Context
 
-- No declarar aprobación contractual ni certificación normativa.
-- Riesgo abierto: criterio expandido de homogeneidad.
-- `ptcalc` anidado: `e87180b`, dirty; hashes y parche preservados en E09.
-- Suite histórica previa: 313 PASS, 29 FAIL, 11 WARN por `final_docs/` ausente y
-  orden de hashes; no se presenta como saneada.
-- Preservar fuera del commit el movimiento HTML y el hallazgo de las 10:20.
+- No se introdujeron cambios nuevos en homogeneidad por decisión del usuario.
+- `ptcalc/` está ignorado en raíz; el pin reproducible está en `renv.lock`.
+- Preservar fuera del commit el movimiento HTML, `_problems/` y el hallazgo
+  preexistente de las 10:20.
+- El plan global sigue `Pausado` por pendientes externos y el riesgo de
+  homogeneidad preservado.
 
 ## Next Steps
 
-1. Obtener contrato/TDR/acta, revisión normativa y aprobación formal.
-2. Corregir el riesgo funcional y publicar/fijar `ptcalc`.
+1. Publicar commit selectivo de Fase 8 en `main`.
+2. Registrar el hash final en plan y rundown.
 
 ## Branch Status
 
 - Branch: `main`
-- Status: sincronizada con `origin/main` en `d8bf789`; árbol sucio únicamente
-  por cambios preexistentes y artefactos de fallos preservados.
-- Pending changes: movimiento HTML, artefactos `_problems/` y hallazgo 10:20,
-  todos excluidos del cierre y del manifiesto.
+- Status: sincronizada con `origin/main` antes del commit de Fase 8; árbol
+  sucio por implementación actual y cambios preexistentes preservados.
+- Pending changes: DataTables, lockfile, pruebas, evidencia regenerada, plan y
+  memoria; fuera de alcance: movimiento HTML, `_problems/` y hallazgo 10:20.

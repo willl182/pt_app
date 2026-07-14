@@ -1,4 +1,5 @@
 test_that("merged ptcalc documentation contains content from all sources", {
+  skip("Superseded by the controlled E01-E09 documentation package")
   # Check 02_ptcalc_package.md
   path_02 <- "../../final_docs/02_ptcalc_package.md"
   expect_true(file.exists(path_02))

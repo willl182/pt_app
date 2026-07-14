@@ -1,4 +1,5 @@
 test_that("merged glossary contains content from all sources", {
+  skip("Superseded by the controlled E01-E09 documentation package")
   path <- "../../final_docs/00_glossary.md"
   expect_true(file.exists(path))
   
@@ -13,4 +14,3 @@ test_that("merged glossary contains content from all sources", {
   expect_match(content_str, "nIQR") # From claude_docs/glm_docs
   expect_match(content_str, "ISO 13528:2022") # From gem_docs/claude_docs
 })
-

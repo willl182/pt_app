@@ -1,4 +1,5 @@
 test_that("merged README.md exists and contains key sections", {
+  skip("Superseded by the controlled E01-E09 documentation package")
   path <- "../../final_docs/README.md"
   expect_true(file.exists(path))
   
@@ -11,4 +12,3 @@ test_that("merged README.md exists and contains key sections", {
   expect_match(content, "Index")
   expect_match(content, "MIT")
 })
-

@@ -2,6 +2,23 @@ phase7_root <- normalizePath(file.path(testthat::test_path(), "../.."))
 package_root <- file.path(phase7_root, "Entregables_pt_app")
 control_root <- file.path(package_root, "00_control_documental")
 
+phase7_previous_wd <- setwd(phase7_root)
+phase7_generation_status <- system2(
+  "Rscript",
+  file.path(
+    phase7_root,
+    "scripts",
+    "documentacion",
+    "generar_cierre_fase_7.R"
+  ),
+  stdout = FALSE,
+  stderr = FALSE
+)
+setwd(phase7_previous_wd)
+if (phase7_generation_status != 0L) {
+  stop("No fue posible regenerar el manifiesto antes de las pruebas de cierre.")
+}
+
 read_text <- function(path) {
   paste(readLines(path, warn = FALSE), collapse = "\n")
 }

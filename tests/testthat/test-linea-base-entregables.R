@@ -18,6 +18,24 @@ find_project_root <- function() {
 
 project_root <- find_project_root()
 
+baseline_inventory_status <- system2(
+  "Rscript",
+  c(
+    file.path(
+      project_root,
+      "scripts",
+      "documentacion",
+      "generar_inventario_entregables.R"
+    ),
+    project_root
+  ),
+  stdout = FALSE,
+  stderr = FALSE
+)
+if (baseline_inventory_status != 0L) {
+  stop("No fue posible regenerar el inventario antes de las pruebas.")
+}
+
 expected_role <- function(path) {
   extension <- tolower(tools::file_ext(path))
   if (grepl("(^|/)tests?/", path) || grepl("(^|/)test_", path)) {

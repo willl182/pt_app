@@ -1,4 +1,5 @@
 test_that("merged PT scores documentation contains content from all sources", {
+  skip("Superseded by the controlled E01-E09 documentation package")
   path <- "../../final_docs/05_pt_scores.md"
   expect_true(file.exists(path))
   

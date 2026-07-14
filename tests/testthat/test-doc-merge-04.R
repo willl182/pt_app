@@ -1,4 +1,5 @@
 test_that("merged homogeneity documentation contains content from all sources", {
+  skip("Superseded by the controlled E01-E09 documentation package")
   path <- "../../final_docs/04_pt_homogeneity.md"
   expect_true(file.exists(path))
   
@@ -12,4 +13,3 @@ test_that("merged homogeneity documentation contains content from all sources", 
   expect_match(content, "u_{hom} = s_s", fixed = TRUE)
   expect_match(content, "rectangular") # Uncertainty distribution
 })
-

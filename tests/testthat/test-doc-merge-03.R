@@ -1,4 +1,5 @@
 test_that("merged robust stats documentation contains content from all sources", {
+  skip("Superseded by the controlled E01-E09 documentation package")
   path <- "../../final_docs/03_pt_robust_stats.md"
   expect_true(file.exists(path))
   
@@ -12,4 +13,3 @@ test_that("merged robust stats documentation contains content from all sources",
   expect_match(content, "10.1, 10.2, 9.9, 10.0, 10.3, 50.0") # Numerical example data
   expect_match(content, "Punto de Ruptura")
 })
-

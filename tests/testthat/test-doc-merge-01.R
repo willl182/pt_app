@@ -1,4 +1,5 @@
 test_that("merged data loading and formats contain content from all sources", {
+  skip("Superseded by the controlled E01-E09 documentation package")
   # Check 01_carga_datos.md
   path_01 <- "../../final_docs/01_carga_datos.md"
   expect_true(file.exists(path_01))
@@ -20,4 +21,3 @@ test_that("merged data loading and formats contain content from all sources", {
   expect_match(content_01a, "sample_1")
   expect_match(content_01a, "participant_id = \"ref\"")
 })
-

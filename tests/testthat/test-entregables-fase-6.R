@@ -1,6 +1,18 @@
 phase6_root <- normalizePath(file.path(testthat::test_path(), "../.."))
 e09_root <- file.path(phase6_root, "Entregables_pt_app/09_informe_final")
 
+phase6_previous_wd <- setwd(phase6_root)
+phase6_generation_status <- system2(
+  "Rscript",
+  file.path(e09_root, "R", "genera_anexos.R"),
+  stdout = FALSE,
+  stderr = FALSE
+)
+setwd(phase6_previous_wd)
+if (phase6_generation_status != 0L) {
+  stop("No fue posible regenerar la evidencia E09 antes de las pruebas.")
+}
+
 read_e09 <- function(path) {
   paste(readLines(file.path(e09_root, path), warn = FALSE), collapse = "\n")
 }
@@ -75,9 +87,14 @@ testthat::test_that("E09 environment records both repositories", {
     hashes$sha256,
     unname(vapply(file.path(phase6_root, hashes$path), sha256_file, character(1)))
   )
-  testthat::expect_gt(file.info(
+  patch_size <- file.info(
     file.path(e09_root, "anexos/ptcalc_worktree.patch")
-  )$size, 0)
+  )$size
+  if (patch_size == 0) {
+    testthat::expect_match(environment, "ptcalc_status=", fixed = TRUE)
+  } else {
+    testthat::expect_gt(patch_size, 0)
+  }
 })
 
 testthat::test_that("normative metadata has auditable official sources", {

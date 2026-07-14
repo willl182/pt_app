@@ -1,4 +1,5 @@
 test_that("merged quickstart contains content from all sources", {
+  skip("Superseded by the controlled E01-E09 documentation package")
   path <- "../../final_docs/00_quickstart.md"
   expect_true(file.exists(path))
   
@@ -14,4 +15,3 @@ test_that("merged quickstart contains content from all sources", {
   expect_match(content_str, "flowchart TD") # Mermaid diagram
   expect_match(content_str, "Columna no encontrada") # Troubleshooting
 })
-

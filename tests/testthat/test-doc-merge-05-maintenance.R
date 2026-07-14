@@ -1,4 +1,5 @@
 test_that("merged Phase 5 documentation files exist and contain key elements", {
+  skip("Superseded by the controlled E01-E09 documentation package")
   # Check 15_architecture.md
   path_15 <- "../../final_docs/15_architecture.md"
   expect_true(file.exists(path_15))

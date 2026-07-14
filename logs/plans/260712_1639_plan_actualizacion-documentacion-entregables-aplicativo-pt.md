@@ -222,6 +222,27 @@ con manifiesto, trazabilidad, formatos finales y evidencia reproducible.
 **Puerta de calidad:** revisión final por `revisor-fase`, incorporación de
 hallazgos, skill `saver`, ejecución completa de controles, commit y push.
 
+### Fase 8: Estabilización técnica y reproducibilidad
+
+| Item | Estado | Notas |
+|---|---|---|
+| Publicar y fijar `ptcalc` | Completado | Versión 0.1.1 publicada en `eb562c6`; 51 pruebas PASS y check 0/0/0; no se añadieron cambios nuevos en homogeneidad |
+| Crear lockfile R | Completado | `renv.lock` fija 192 paquetes y `ptcalc` 0.1.1 en `eb562c6`; restauración aislada del núcleo y 15 dependencias aprobada |
+| Corregir reajuste de DataTables | Completado | Reajuste protegido solo para tablas visibles al activar pestañas o redimensionar; prueba visual 1024x768 sin `adjustWidth` ni `ReferenceError` |
+| Sanear suite histórica | Completado | Once pruebas `final_docs/` obsoletas quedan en `SKIP` explícito, sustituidas por pruebas vigentes E01–E09; inventario y manifiestos se regeneran sin depender del orden |
+| Reejecutar controles | Completado | Suite raíz completa sin fallos ni advertencias, 11 SKIP explícitos; `ptcalc` 51 PASS y R CMD check limpio |
+| Cerrar revisión y publicación | En progreso | Hallazgos de `revisor-fase` incorporados; falta persistencia `saver` y publicación selectiva del repositorio raíz |
+
+**Alcance excluido por decisión del usuario:** no modificar la implementación,
+las pruebas ni la documentación funcional de homogeneidad. Se conserva el
+estado previo existente en `ptcalc` sin añadir cambios de esta fase.
+
+**Salida de fase:** núcleo `ptcalc` publicado y fijado, entorno R bloqueado,
+tablas reactivas estables y suite histórica sin fallos heredados.
+
+**Puerta de calidad:** `revisor-fase`, actualización del plan, skill `saver`,
+suite completa y check de `ptcalc`, commit y push.
+
 ## Controles de aceptación
 
 El paquete se considerará listo únicamente cuando:
@@ -369,3 +390,16 @@ El paquete se considerará listo únicamente cuando:
 - [260714 15:32] Estado persistido con skill `saver`; commit de Fase 7
   `d488e26` publicado en `origin/main`. El plan permanece `Pausado` por las
   aprobaciones externas y el riesgo funcional documentado.
+- [260714 16:08] Iniciada Fase 8 con alcance técnico acotado por el usuario:
+  publicar `ptcalc`, crear lockfile, corregir DataTables y sanear la suite;
+  homogeneidad queda expresamente fuera de cambios nuevos.
+- [260714 16:12] Revisión `revisor-fase`: bloqueó el lockfile por SHA antiguo,
+  detectó `signif4_*` documental y exigió orden de publicación y staging
+  selectivo. Hallazgos incorporados.
+- [260714 16:13] `ptcalc` 0.1.1 publicado en `eb562c6`; 51 pruebas PASS y
+  `R CMD check` con 0 errores, 0 advertencias y 0 notas.
+- [260714 16:16] `renv.lock` actualizado a `eb562c6`; restauración aislada de
+  `ptcalc` y sus 15 dependencias completada desde el lockfile.
+- [260714 16:17] Suite raíz completa aprobada con 11 SKIP explícitos para
+  `final_docs/` sustituido. Prueba visual de pestañas y resize aprobada sin el
+  diagnóstico `DataTables.adjustWidth`.
