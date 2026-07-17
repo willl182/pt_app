@@ -1,293 +1,268 @@
-# PT Data Analysis Application
+# Aplicación para análisis de ensayos de aptitud
 
-**Version 0.4.0 | January 2026**
+**Versión 0.4.1 | Julio de 2026**
 
-This Shiny application provides a comprehensive toolkit for analyzing data from proficiency testing (PT) schemes. It implements statistical methods described in ISO 13528:2022 and ISO 17043:2023 for assessing homogeneity and stability of PT items and for calculating participant performance scores.
+Aplicación web desarrollada con R y Shiny para analizar datos de ensayos de aptitud (EA, o PT por *proficiency testing*). Incluye métodos estadísticos basados en ISO 13528:2022 e ISO/IEC 17043 para evaluar homogeneidad, estabilidad, valores asignados, incertidumbres y desempeño de participantes.
 
-## 📖 Documentation
+## Funciones principales
 
-**Spanish Documentation:** For complete documentation in Spanish, see [/es/README.md](es/README.md)
+- Carga, validación y exploración de archivos CSV.
+- Evaluación de homogeneidad y estabilidad de ítems de ensayo.
+- Estadística robusta mediante MADe, nIQR y Algoritmo A.
+- Cálculo de valores asignados por consenso o laboratorio de referencia.
+- Cálculo e interpretación de puntajes `z`, `z'`, `zeta` y `En`.
+- Evaluación de compatibilidad metrológica.
+- Tableros comparativos por contaminante, nivel, ronda y participante.
+- Generación de informes mediante R Markdown.
+- Trazabilidad de cálculos, controles y documentos de entrega.
 
-The `/es/` directory contains comprehensive user guides, API references, and technical documentation for version 0.4.0.
+## Inicio rápido
 
----
+### Requisitos
 
-## Getting Started
+- R instalado desde [CRAN](https://cran.r-project.org/).
+- Paquetes requeridos por la aplicación.
 
-### Prerequisites
+Instalación básica:
 
-To run the application, you need to have R and required packages installed.
+```r
+install.packages(c(
+  "shiny", "tidyverse", "vroom", "DT", "rhandsontable",
+  "shinythemes", "outliers", "patchwork", "bsplus", "plotly",
+  "rmarkdown", "bslib"
+))
+```
 
-1. **Install R:** Download and install R from [Comprehensive R Archive Network (CRAN)](https://cran.r-project.org/).
+### Ejecutar aplicación
 
-2. **Install Packages:** Open an R console and run the following command to install necessary packages:
-    ```r
-    install.packages(c("shiny", "tidyverse", "vroom", "DT", "rhandsontable", "shinythemes", "outliers", "patchwork", "bsplus", "plotly", "rmarkdown", "bslib"))
-    ```
+Desde raíz del repositorio:
 
-3. **Run the Application:** Open a terminal or command prompt, navigate to the directory containing the application files, and run the following command:
-    ```bash
-    Rscript app.R
-    ```
+```bash
+Rscript app.R
+```
 
-The application will start and can be accessed in your web browser, typically at `http://127.0.0.1:XXXX` (the port `XXXX` will be displayed in the console).
+R mostrará en consola dirección local, normalmente `http://127.0.0.1:XXXX`.
 
-### Preprocesamiento de datos
+### Cargar paquete `ptcalc` durante desarrollo
 
-Si se requiere procesar los datos antes de usar la app, no es necesario reinstalar R ni paquetes. Primero se puede validar que los scripts R parsean correctamente y luego ejecutar el preprocesador correspondiente:
+```r
+devtools::load_all("ptcalc")
+```
+
+Paquete interno `ptcalc` está en versión **0.1.1** y concentra cálculos reutilizables de estadística robusta, puntajes, homogeneidad y estabilidad.
+
+## Preprocesamiento de datos
+
+Para validar sintaxis de scripts y ejecutar preprocesamiento principal:
 
 ```bash
 Rscript -e 'for (f in c(list.files("R/preprocessing", full.names=TRUE, pattern="[.]R$"), "scripts/adicionales/preprocesar_part_1.R")) invisible(parse(file=f)); cat("parse OK\n")'
 Rscript scripts/adicionales/preprocesar_part_1.R
 ```
 
-La salida consolidada queda en `data/processed/part_1_ronda.csv` y el detalle horario auditado en `data/processed/h_part_1_ronda.csv`.
+Salidas principales:
 
----
+- `data/processed/part_1_ronda.csv`: consolidado de participantes.
+- `data/processed/h_part_1_ronda.csv`: detalle horario auditado.
 
-## Application Modules
+Casos de uso y datos reproducibles se gestionan desde `data_use_cases/`. Script `data_use_cases/scripts/simulate_participants.R` permite generar datos de participantes; archivos derivados no forman parte obligatoria del código fuente.
 
-### 1. Carga de datos (Data Loading)
+## Módulos de aplicación
 
-This module handles the initial loading of CSV files for analysis.
+### 1. Carga de datos
 
-**Inputs:**
-- `homogeneity.csv` - Homogeneity test data
-- `stability.csv` - Stability test data
-- `summary_n*.csv` - Participant summary data (one file per PT scheme)
+Carga archivos CSV, valida estructura y prepara datos para módulos analíticos. Aplicación admite datos de homogeneidad, estabilidad, resultados de participantes, valores de referencia e incertidumbres.
 
-### 2. Homogeneity & Stability Analysis
+### 2. Homogeneidad y estabilidad
 
-This module assesses whether proficiency test items are sufficiently homogeneous and stable for the PT scheme.
+Evalúa aptitud de ítems usados en ensayo:
 
-**Inputs:**
-- **Select Pollutant:** Choose pollutant to analyze (`co`, `no`, `no2`, `o3`, `so2`)
-- **Select PT Level:** Choose concentration level to analyze
+- selección de contaminante y nivel de concentración;
+- resumen estadístico y vista de datos;
+- ANOVA y estimación de variación entre muestras;
+- métodos robustos MADe y nIQR;
+- criterios ordinarios y expandidos;
+- comparación entre resultados de homogeneidad y estabilidad.
 
-**Outputs:**
-- Data preview
-- ANOVA summary
-- Homogeneity and stability assessments
+### 3. Preparación del ensayo de aptitud
 
-### 3. PT Preparation
+Organiza resultados de distintas rondas y esquemas:
 
-Analyzes participant results from different rounds.
+- pestañas dinámicas por contaminante;
+- gráficos de barras y distribuciones;
+- revisión de resultados por laboratorio;
+- prueba de Grubbs como apoyo para detección de valores atípicos.
 
-**Functionality:**
-- Dynamically creates tabs for each pollutant
-- Displays bar charts and distributions
-- Performs Grubbs' test for outliers
+### 4. Valor asignado y puntajes
 
-### 4. Valor Asignado / PT Scores
+Calcula valores de referencia y desempeño de participantes:
 
-Calculates reference values and participant performance scores.
+- Algoritmo A de ISO 13528:2022;
+- consenso mediante MADe o nIQR;
+- valor de laboratorio de referencia;
+- puntajes `z`, `z'`, `zeta` y `En`;
+- incertidumbre del valor asignado;
+- compatibilidad metrológica.
 
-**Functionality:**
-- **Value Assignment:** Supports Algorithm A, Consensus (MADe/nIQR), or Reference Laboratory methods
-- **Scoring:** Calculates z-scores, z'-scores, zeta-scores, and En-scores
-- **Metrological Compatibility:** Evaluates measurement system compatibility (ISO 13528:2022)
+### 5. Informe global y generación de informes
 
-### 5. Informe Global & Generación de Informes
+- mapa de calor de resultados por nivel y contaminante;
+- comparación entre contaminantes, rondas y esquemas;
+- tablas consolidadas de desempeño;
+- configuración y descarga de informes R Markdown;
+- selección de secciones de homogeneidad, estabilidad, puntajes y compatibilidad metrológica.
 
-**Informe Global:**
-- Heatmap visualization of results across all levels and pollutants
-- Cross-pollutant analysis
-- Cross-scheme comparison
+## Interfaz
 
-**Generación de informes:**
-- Interface to configure and download final RMarkdown reports
-- Customizable report sections including homogeneity, stability, PT scores, and metrological compatibility
+Interfaz usa componentes visuales inspirados en shadcn/ui:
 
----
+- encabezado institucional y navegación;
+- tarjetas para agrupar resultados;
+- alertas con estados y advertencias;
+- distintivos compactos de clasificación;
+- tablas interactivas con `DT`;
+- gráficos estáticos con `ggplot2` e interactivos con `plotly`;
+- pie de página institucional.
 
-## User Interface
+Estilos principales están en `www/appR.css`.
 
-The application features a modern UI design inspired by shadcn/ui components:
+## Ajustes recientes
 
-- **Enhanced Header:** Branded header with logo and navigation (see `www/appR.css` lines 830-902)
-- **shadcn Cards:** Modern card components for organized data presentation
-- **shadcn Alerts:** Color-coded alert boxes for important information and warnings
-- **shadcn Badges:** Compact badges for displaying status information
-- **Modern Footer:** Clean footer with institutional information (see `www/appR.css` lines 1219-1280)
+### Algoritmo A y cifras significativas
 
----
+- Convergencia primaria compara tercera cifra significativa de media robusta y desviación estándar robusta mediante `signif(x, 3)`, conforme nota 1 del anexo C de ISO 13528:2022.
+- Guardia numérica se conserva como respaldo ante límites de precisión de máquina.
+- Resultado de `run_algorithm_a()` informa método de convergencia mediante `convergence_method` (`signif3`, `numerical_guard` o `NA`).
+- Registro de iteraciones incluye campos de trazabilidad asociados con comparación de cifras significativas.
+- Tablas de Algoritmo A muestran valores originales, valores winsorizados e indicador de winsorización con nombres estables.
 
-## Developer Documentation
+### Presentación y clasificación de resultados
 
-### Technical Overview
+- Formato numérico centralizado mediante `format_num()` y `format_numeric_columns()`.
+- Etiquetas de convergencia traducidas para interfaz.
+- Clasificaciones de puntajes incluyen estados satisfactorio, cuestionable e insatisfactorio.
+- Preparación de tablas evita columnas duplicadas y conserva estructura esperada para puntajes y pesos.
 
-**Framework:** R / Shiny (v0.4.0)
+### Calidad y entrega
 
-**Core Libraries:**
-- `shiny` - Web application framework
-- `tidyverse` - Data manipulation and visualization
-- `vroom` - Fast CSV file reading
-- `DT` - Interactive data tables
-- `rhandsontable` - Editable tables (loaded but not actively used)
-- `shinythemes` / `bslib` - Custom application themes
-- `outliers` - Grubbs' test for outlier detection
-- `patchwork` - Plot composition
-- `plotly` - Interactive plots
-- `rmarkdown` - Report generation
+- Paquete `ptcalc` actualizado a versión 0.1.1.
+- Suite de pruebas estabilizada, con validación explícita de estructura de pesos del Algoritmo A.
+- Entregables técnicos organizados por fases y cerrados con manifiestos, matrices de trazabilidad, controles y checksums.
+- Datos procesados de casos de uso se tratan como artefactos regenerables mediante scripts, no como fuente primaria.
 
-**Data Sources:**
-- `homogeneity.csv` - Homogeneity test data
-- `stability.csv` - Stability test data
-- `summary_n*.csv` - Summary data from different PT schemes
+## Estructura del repositorio
 
-### Package Structure
-
-```
+```text
 pt_app/
-├── app.R                    # Main Shiny application (5,685 lines)
-├── www/
-│   └── appR.css            # Custom CSS styles (1,456 lines)
-├── ptcalc/                 # Calculation package (ISO 13528:2022)
-│   ├── R/                 # Package functions
-│   ├── DESCRIPTION         # Package metadata
-│   └── NEWS.md            # Package changelog
-├── reports/
-│   └── report_template.Rmd  # RMarkdown report template (552 lines)
-├── es/                   # Spanish documentation (25 files, ~7,678 lines)
-└── data/                  # Example data files
+├── app.R                       # Aplicación Shiny: interfaz y lógica del servidor
+├── R/
+│   └── preprocessing/          # Funciones de preprocesamiento
+├── ptcalc/                     # Paquete R de cálculos estadísticos
+│   ├── R/                      # Funciones del paquete
+│   ├── man/                    # Documentación generada
+│   ├── DESCRIPTION             # Metadatos y versión
+│   └── NEWS.md                 # Historial del paquete
+├── reports/                    # Plantillas y salidas de informes
+├── data/                       # Datos usados por aplicación
+├── data_use_cases/             # Casos de uso, scripts y artefactos derivados
+├── scripts/                    # Automatización y utilidades
+├── tests/testthat/             # Pruebas automatizadas
+├── www/                        # CSS y recursos web
+├── rsconnect/                  # Configuración de despliegue Shiny
+└── Entregables_pt_app/         # Paquete documental y evidencias finales
 ```
 
-### Development Setup
+## Arquitectura técnica
 
-For development, load the `ptcalc` package using:
+`app.R` contiene dos bloques principales:
 
-```r
-devtools::load_all("ptcalc")
-```
+- **`ui`**: navegación, controles, paneles, tablas y gráficos.
+- **`server`**: carga de datos, expresiones reactivas, cálculos, caché, informes y descargas.
 
-To test changes, restart the Shiny application.
+Bibliotecas principales:
 
-### Running Syntax Checks Without a System R Installation
+- `shiny` y `bslib`: aplicación e interfaz web;
+- `tidyverse`: transformación y visualización de datos;
+- `vroom`: lectura rápida de CSV;
+- `DT`: tablas interactivas;
+- `plotly`: gráficos interactivos;
+- `patchwork`: composición de gráficos;
+- `outliers`: prueba de Grubbs;
+- `rmarkdown`: generación de informes.
 
-Some execution environments (including this automated assessment sandbox) do not provide a native `Rscript` binary. For these cases, the repository ships with a lightweight replacement located at the project root. It performs structural validation of R files—verifying bracket balance and string termination—so that automated checks can still run.
+Lógica estadística reutilizable debe mantenerse en `ptcalc/` cuando corresponda. Cambios en aplicación requieren reiniciar sesión Shiny para cargar código actualizado.
 
-To invoke the stub:
+## Pruebas y validación
+
+Ejecutar suite completa:
 
 ```bash
-./Rscript -e "source('app.R')"
+Rscript -e 'testthat::test_dir("tests/testthat")'
 ```
 
-If you prefer calling `Rscript` without the leading `./`, add the repository root to your `PATH` for the current shell session:
+Validar paquete `ptcalc`:
 
 ```bash
-export PATH="$PWD:$PATH"
-Rscript -e "source('app.R')"
+Rscript -e 'devtools::test("ptcalc")'
+R CMD check ptcalc
 ```
 
-> **Note:** The stub does **not** evaluate R code. It only performs basic structural validation, so you should still run the app with a real R installation before deploying changes.
+Validar parseo de archivos R:
 
----
+```bash
+Rscript -e 'files <- list.files(".", pattern="[.]R$", recursive=TRUE, full.names=TRUE); for (f in files) parse(file=f); cat("parse OK\n")'
+```
 
-## File Structure
+Repositorio puede incluir ejecutable liviano `./Rscript` para validación estructural en entornos sin instalación nativa de R. Ese recurso no ejecuta semántica R ni reemplaza pruebas con instalación real antes de desplegar.
 
-The `app.R` script is divided into two main parts: User Interface (`ui`) and Server Logic (`server`).
+## Documentación y entregables
 
-### UI (`ui`) Structure
+Índice principal de entrega:
 
-The UI is defined using `fluidPage` and is structured as follows:
+- [`Entregables_pt_app/00_control_documental/README.md`](Entregables_pt_app/00_control_documental/README.md)
+- [`Entregables_pt_app/00_control_documental/indice_maestro.md`](Entregables_pt_app/00_control_documental/indice_maestro.md)
+- [`Entregables_pt_app/00_control_documental/matriz_trazabilidad.md`](Entregables_pt_app/00_control_documental/matriz_trazabilidad.md)
+- [`Entregables_pt_app/00_control_documental/auditoria_cierre.md`](Entregables_pt_app/00_control_documental/auditoria_cierre.md)
 
-1. **`titlePanel`** - Sets the main title of the application
-2. **Layout Options** - Collapsible panel allows users to adjust panel widths using a slider
-3. **`uiOutput("main_layout")`** - Main UI container rendered dynamically
-4. **`navlistPanel`** - Navigation structure with tabs for different modules
-5. **Module Layouts**:
-   - **Homogeneity & Stability**: Sidebar layout with input controls and tabsetPanel for results
-   - **PT Preparation**: Dynamic tabs created per pollutant
-   - **PT Scores**: Sidebar layout for value assignment and score calculation
+Documentación está organizada desde línea base y repositorio inicial hasta aplicación beta, manuales, validación e informe final. Referencias antiguas al directorio inexistente `es/` fueron eliminadas.
 
-### Server (`server`) Logic
+## Normas aplicadas
 
-1. **Data Loading:**
-   - `hom_data_full` and `stab_data_full` are read from `homogeneity.csv` and `stability.csv`
-   - `pt_prep_data` reads all `summary_n*.csv` files and combines them with `n_lab` column
+- **ISO 13528:2022**: métodos estadísticos para ensayos de aptitud.
+  - estadística robusta: MADe, nIQR y Algoritmo A;
+  - homogeneidad y estabilidad;
+  - valores asignados e incertidumbres;
+  - puntajes `z`, `z'`, `zeta` y `En`;
+  - compatibilidad metrológica.
+- **ISO/IEC 17043**: requisitos generales para proveedores de ensayos de aptitud.
 
-2. **Dynamic UI Rendering:**
-   - `output$main_layout`: Renders main `navlistPanel` based on user's layout selections
-   - Dynamic selectors for pollutants, levels, and schemes use `renderUI` and `uiOutput`
+Aplicación apoya ejecución y trazabilidad de cálculos. Uso final exige revisión técnica, control metrológico y validación según procedimiento aplicable.
 
-3. **Reactive Expressions for Analysis:**
-   - **`homogeneity_run`**: EventReactive triggered on "Run Analysis" button click
-   - **`homogeneity_run_stability`**: EventReactive for stability analysis
-   - **`scores_run`**: Reactive for z, z', zeta, and En score calculations
-   - **Cache System**: Trigger-based caching for performance optimization
+## Historial resumido
 
-4. **Outputs (`output$*`)**:
-   - **Tables**: `renderDataTable` for interactive tables, `renderTable` for static tables
-   - **Plots**: `renderPlot` with `ggplot2` for all visualizations
-   - **Text**: `renderPrint` and `renderUI` for formatted text and HTML
+### v0.4.1 — julio de 2026
 
----
+- Convergencia de Algoritmo A por tercera cifra significativa y guardia numérica.
+- Trazabilidad del método de convergencia e iteraciones.
+- Formato numérico centralizado.
+- Correcciones en tablas de pesos, winsorización y clasificación de puntajes.
+- Paquete `ptcalc` 0.1.1.
+- Estabilización de pruebas y cierre técnico del paquete de entregables.
 
-## ISO Standards
+### v0.4.0 — enero de 2026
 
-The application implements the following standards:
+- Compatibilidad metrológica.
+- Interfaz modernizada con componentes inspirados en shadcn/ui.
+- Encabezado y pie institucionales.
+- Caché para cálculos y salidas.
+- Generación ampliada de informes.
 
-- **ISO 13528:2022** - Statistical methods for use in proficiency testing
-  - Robust statistics (MADe, nIQR, Algorithm A)
-  - Homogeneity and stability assessment
-  - PT scores (z, z', zeta, En)
-  - Metrological compatibility
+### v0.3.0 — enero de 2026
 
-- **ISO 17043:2023** - General requirements for proficiency testing
+- Rediseño inicial de interfaz.
+- Primer módulo de compatibilidad metrológica.
+- Soporte de columna de ronda en datos de entrada.
 
----
+## Licencia
 
-## Support
-
-- **Spanish Documentation:** [/es/README.md](es/README.md) - Complete user and developer guides
-- **Data Format Reference:** [/es/01a_formatos_datos.md](es/01a_formatos_datos.md) - Complete CSV schema specification
-- **API Reference:** [/es/02a_api_ptcalc.md](es/02a_api_ptcalc.md) - ptcalc package API documentation
-
----
-
-## Changelog
-
-### v0.4.1 (April 2026)
-
-**Algorithm A Convergence — Technical Update:**
-- **Breaking Change**: Algoritmo A ahora usa **comparación de 3ª cifra significativa** como criterio primario de convergencia (`signif(x, 3)`), reemplazando la tolerancia absoluta anterior. La guardia numérica (`tol = 1e-10`) opera solo como respaldo ante colapso de precisión de máquina.
-- **Reference**: ISO 13528:2022, Annex C, NOTE 1 — "Convergence is judged by examining the third significant figure of the robust mean and robust standard deviation."
-- **Impact**: Resultados numéricamente idénticos en la mayoría de casos; menor número de iteraciones para datos de magnitud ~10–100; convergencia robusta independiente de la escala de los datos.
-- **Trazabilidad**: El output de `run_algorithm_a()` ahora incluye `convergence_method` ("signif3" | "numerical_guard" | `NA`) y columnas `signif3_*` en el registro de iteraciones para auditoría.
-
-**Display Format:**
-- Todas las tablas y previews numéricos migrados a formato de **3 cifras significativas** a través de `format_num()`.
-- Reglas de formato por rango: `< 0.001` → notación científica; `0.001–10` → 2 decimales; `10–100` → 1 decimal; `≥ 100` → entero.
-
----
-
-### v0.4.0 (January 2026)
-
-**Documentation:**
-- Complete documentation audit and update (25 files, ~7,678 lines in `/es/`)
-- Master documentation guide created
-- All obsolete references corrected
-- Language standardized (Spanish for `/es/` documentation)
-
-**Features:**
-- Metrological compatibility analysis (ISO 13528:2022)
-- Enhanced UI with shadcn-inspired components
-- Modern header and footer design
-- Improved caching system for performance
-
-**Technical:**
-- Updated to app.R: 5,685 lines
-- Updated appR.css: 1,456 lines
-- Updated report_template.Rmd: 552 lines
-
-### v0.3.0 (January 2026)
-
-- Modern UI redesign (shadcn components, header/footer)
-- Metrological compatibility feature
-- Enhanced data format (run column)
-
----
-
-## License
-
-MIT License - Universidad Nacional de Colombia / Instituto Nacional de Metrología
+MIT — Universidad Nacional de Colombia / Instituto Nacional de Metrología.
