@@ -1,0 +1,16 @@
+"file","pollutant","run","level","gen_nominal","n_minutes","runtime_span","runtime_start","runtime_end","n_full_hours","residual_minutes","residual_valid","n_computable_hours","n_reported_hours","meets_min_hours"
+"/home/w182/w421/pt_app/data_use_cases/data/raw/R3_O3.csv","o3",1,"1",0,60,60,0,59,1,0,FALSE,1,1,TRUE
+"/home/w182/w421/pt_app/data_use_cases/data/raw/R3_O3.csv","o3",3,"2",180,170,170,100,269,2,50,TRUE,3,3,TRUE
+"/home/w182/w421/pt_app/data_use_cases/data/raw/R3_O3.csv","o3",5,"3",120,170,170,280,449,2,50,TRUE,3,3,TRUE
+"/home/w182/w421/pt_app/data_use_cases/data/raw/R3_O3.csv","o3",7,"4",80,170,170,460,629,2,50,TRUE,3,3,TRUE
+"/home/w182/w421/pt_app/data_use_cases/data/raw/R3_O3.csv","o3",9,"5",40,171,171,640,810,2,51,TRUE,3,3,TRUE
+"/home/w182/w421/pt_app/data_use_cases/data/raw/R3_NO2.csv","no2",1,"1",0,60,60,0,59,1,0,FALSE,1,1,TRUE
+"/home/w182/w421/pt_app/data_use_cases/data/raw/R3_NO2.csv","no2",3,"2",144,140,140,100,239,2,20,FALSE,2,2,TRUE
+"/home/w182/w421/pt_app/data_use_cases/data/raw/R3_NO2.csv","no2",5,"3",112,170,170,250,419,2,50,TRUE,3,3,TRUE
+"/home/w182/w421/pt_app/data_use_cases/data/raw/R3_NO2.csv","no2",7,"4",64,170,170,430,599,2,50,TRUE,3,3,TRUE
+"/home/w182/w421/pt_app/data_use_cases/data/raw/R3_NO2.csv","no2",9,"5",32,171,171,610,780,2,51,TRUE,3,3,TRUE
+"/home/w182/w421/pt_app/data_use_cases/data/raw/R3_NO.csv","no",1,"1",0,60,60,0,59,1,0,FALSE,1,1,TRUE
+"/home/w182/w421/pt_app/data_use_cases/data/raw/R3_NO.csv","no",3,"2",179,170,170,100,269,2,50,TRUE,3,3,TRUE
+"/home/w182/w421/pt_app/data_use_cases/data/raw/R3_NO.csv","no",5,"3",119,180,180,345,524,3,0,FALSE,3,3,TRUE
+"/home/w182/w421/pt_app/data_use_cases/data/raw/R3_NO.csv","no",7,"4",80,170,170,535,704,2,50,TRUE,3,3,TRUE
+"/home/w182/w421/pt_app/data_use_cases/data/raw/R3_NO.csv","no",9,"5",41,171,171,715,885,2,51,TRUE,3,3,TRUE

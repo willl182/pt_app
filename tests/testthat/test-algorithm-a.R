@@ -157,6 +157,10 @@ test_that("algorithm a returns correct structure", {
   expect_true("id" %in% names(result$winsorized_values))
   expect_true("original" %in% names(result$winsorized_values))
   expect_true("winsorized" %in% names(result$winsorized_values))
+
+  expect_true(all(c(
+    "id", "original", "winsorized", "is_winsorized"
+  ) %in% names(result$weights)))
 })
 
 test_that("algorithm a with custom ids", {

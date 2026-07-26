@@ -5949,14 +5949,13 @@ server <- function(input, output, session) {
     z_sat <- c("z-score", "Satisfactorio", count_eval("z_eval", "Satisfactorio"))
     z_quest <- c("z-score", "Cuestionable", count_eval("z_eval", "Cuestionable"))
     z_unsat <- c("z-score", "No satisfactorio", count_eval("z_eval", "No satisfactorio"))
-    z_sat <- c("z-score", "Satisfactorio", count_eval("z_eval", "Satisfactorio"))
-    z_quest <- c("z-score", "Cuestionable", count_eval("z_eval", "Cuestionable"))
     zp_unsat <- c("z'-score", "No satisfactorio", count_eval("z_prime_eval", "No satisfactorio"))
     zp_sat <- c("z'-score", "Satisfactorio", count_eval("z_prime_eval", "Satisfactorio"))
     zp_quest <- c("z'-score", "Cuestionable", count_eval("z_prime_eval", "Cuestionable"))
     zeta_unsat <- c("zeta-score", "No satisfactorio", count_eval("zeta_eval", "No satisfactorio"))
     zeta_sat <- c("zeta-score", "Satisfactorio", count_eval("zeta_eval", "Satisfactorio"))
     zeta_quest <- c("zeta-score", "Cuestionable", count_eval("zeta_eval", "Cuestionable"))
+    en_sat <- c("En-score", "Satisfactorio", count_eval("En_eval", "Satisfactorio"))
     en_unsat <- c("En-score", "No satisfactorio", count_eval("En_eval", "No satisfactorio"))
 
     # Combinar
@@ -6940,9 +6939,13 @@ server <- function(input, output, session) {
       return(datatable(data.frame(Mensaje = res$error)))
     }
 
-    w_display <- res$weights
-    names(w_display) <- c("Participante", "Valor_original", "Valor_winsorizado_final", "Fue_winsorizado")
-    w_display <- w_display %>%
+    w_display <- res$weights %>%
+      transmute(
+        Participante = id,
+        Valor_original = original,
+        Valor_winsorizado_final = winsorized,
+        Fue_winsorizado = is_winsorized
+      ) %>%
       mutate(
         across(c(Valor_original, Valor_winsorizado_final), ~ format_num(.x)),
         Fue_winsorizado = ifelse(Fue_winsorizado, "SI", "NO")

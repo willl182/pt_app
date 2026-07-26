@@ -1,3 +1,3 @@
 fuente,formato,archivo,sha256_fuente,sha256_salida,fecha_generacion,commit,herramienta
-plantillas/ejemplo_controlado.md,DOCX,derivados/ejemplo_controlado.docx,16407e27e2167c5c014d47fe92ff20534b4125b9e4a04dd0ca38f3f67f8c4cf8,1b1337f6fd2168ed7a599cc9e731b9ebe15cf98c20b7a0f6991bdd4ccf439a20,2026-07-14T16:17:54-05:00,e9a7822,pandoc 3.10
-plantillas/ejemplo_controlado.md,PDF,derivados/ejemplo_controlado.pdf,16407e27e2167c5c014d47fe92ff20534b4125b9e4a04dd0ca38f3f67f8c4cf8,c61ab943c5c2e21c7fa44ad43a9db29836b5d2f29ebb0522b9025e06c548525a,2026-07-14T16:17:54-05:00,e9a7822,pandoc 3.10 + LibreOffice 26.2.3.2 620(Build:2)
+plantillas/ejemplo_controlado.md,DOCX,derivados/ejemplo_controlado.docx,16407e27e2167c5c014d47fe92ff20534b4125b9e4a04dd0ca38f3f67f8c4cf8,691ebd5e8192118d3cb546bef4eb1d8ec349e9842a81f83ab77f7048ba38dde2,2026-07-26T14:10:33-05:00,71d7f18,pandoc 3.10.1
+plantillas/ejemplo_controlado.md,PDF,derivados/ejemplo_controlado.pdf,16407e27e2167c5c014d47fe92ff20534b4125b9e4a04dd0ca38f3f67f8c4cf8,b357a9fb25668bd47d758d3a97a736545841cebd0a4b7a5ae447557077e16d4e,2026-07-26T14:10:33-05:00,71d7f18,pandoc 3.10.1 + LibreOffice 26.2.4.2 620(Build:2)
