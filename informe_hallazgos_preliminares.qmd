@@ -1,0 +1,193 @@
+---
+title: "Hallazgos preliminares — Rondas PT"
+subtitle: "R1, R2 y R3"
+date: "2026-07-30"
+lang: es
+format:
+  html:
+    toc: true
+    toc-title: "Contenido"
+    toc-location: left
+    number-sections: false
+    smooth-scroll: true
+    theme: cosmo
+    self-contained: true
+    code-copy: false
+    anchor-sections: true
+    link-external-newwindow: true
+    css: informe_hallazgos.css
+---
+
+::: {.callout-warning appearance="simple"}
+## Alcance del informe
+
+Este documento presenta **hallazgos preliminares obtenidos mediante inspección directa de los archivos**. No contiene resultados estadísticos definitivos: todavía no se han ejecutado el pipeline, las pruebas estadísticas ni las gráficas definidas en `plan_analisis.md` y `workflow_analisis.md`.
+:::
+
+## Resumen ejecutivo
+
+::: {.summary-grid}
+::: {.summary-card}
+### Diseño
+
+R1 y R2 corresponden al participante **P1**. R3 corresponde al participante **P2**. Analizador CalAire 4U actúa como referencia en todas las rondas.
+:::
+
+::: {.summary-card}
+### Comparación principal
+
+R2 y R3 comparten O3, NO y NO2. Comparación entre participantes será descriptiva porque cada participante tiene una sola ronda.
+:::
+
+::: {.summary-card}
+### Calidad de datos
+
+Se observaron interrupciones temporales, valores `Samp<`, celdas vacías, excursiones en O3 y desfases entre lectura y etiqueta del generador.
+:::
+
+::: {.summary-card}
+### Decisión clave
+
+Sesgos no serán corregidos. Se conservarán y reportarán con su contexto metrológico y de calidad de datos.
+:::
+:::
+
+## 1. Diseño de las rondas
+
+| Ronda | Analitos | Participante | Referencia |
+|---|---|---|---|
+| R1 | SO2 y CO | P1 | CalAire 4U |
+| R2 | O3, NO y NO2 | P1 | CalAire 4U |
+| R3 | O3, NO y NO2 | P2 (`ZFT5R6`) | CalAire 4U |
+
+R2 y R3 permiten comparar los mismos analitos, pero no representan seguimiento temporal de un mismo participante. Continuidad temporal sólo corresponde al analizador de referencia, bajo supuesto confirmado externamente de que `4UXXXX` y `4UDY72` identifican el mismo equipo físico.
+
+## 2. Niveles nominales verificados
+
+| Analito y ronda | Niveles nominales | Unidad |
+|---|---|---|
+| O3 R2 y R3 | 0, 180, 120, 80 y 40 | ppb |
+| NO R2 | 0, 180, 119, 78 y 37 | ppb |
+| NO R3 | 0, 179, 119, 80 y 41 | ppb |
+| NO2 R2 | 0, 140, 105, 60 y 30 | ppb |
+| NO2 R3 | 0, 144, 112, 64 y 32 | ppb |
+| SO2 R1 | 0, 179, 119, 80 y 40 | ppb |
+| CO R1 | 0, 6.3, 4.2, 2.8 y 1.4 | ppm |
+
+::: {.callout-note appearance="simple"}
+## Reglas de comparabilidad
+
+- Diferencias nominales de **NO** se consideran tolerables.
+- Para **NO2**, niveles 1, 2, 4 y 5 se mantienen en comparación R2–R3.
+- **NO2 nivel 3** —105 frente a 112 ppb— queda fuera sólo de comparación cruzada R2–R3.
+- Cero se conserva para todos los analitos y se compara en concentración absoluta.
+- CO permanece separado por estar expresado en ppm.
+:::
+
+## 3. Hallazgos de calidad de datos
+
+### 3.1 Interrupciones temporales
+
+- `R2C_NO2.csv` presenta interrupción cercana a **12 horas**. Período de cero queda truncado.
+- `R3_NO2.csv` presenta interrupción cercana a **14 horas**, entre 16 de julio 09:00 y 23:01. Número de observaciones del nivel 2 queda reducido.
+
+Interrupciones no justifican borrar niveles completos. Deben documentarse en tablas, gráficas e interpretación.
+
+### 3.2 Valores no numéricos y ausentes
+
+- `R3_NO.csv` contiene una ocurrencia de `Samp<` en tres canales del participante.
+- Cada celda afectada se convierte en `NA` puntual, sin eliminar fila completa ni observaciones cercanas.
+- Existen celdas vacías en archivos de R2, especialmente `R2B_NO.csv` y `R2C_NO2.csv`.
+
+### 3.3 Desfase del generador en NO
+
+`R2B_NO.csv` contiene aproximadamente seis registros con lecturas elevadas mientras nominal continúa marcado como cero. Esto indica desfase entre cambio real de concentración y etiqueta del generador. Registros deben marcarse mediante control de calidad y no interpretarse como cero estable.
+
+### 3.4 Excursiones en O3
+
+`R2A_O3.csv` presenta excursiones visibles durante nivel 2. Deben marcarse como posibles valores atípicos y reportarse en variantes con y sin esos puntos, sin descarte silencioso.
+
+### 3.5 NO2 en R3
+
+Mediciones de referencia superan nominales declarados en varios niveles de `R3_NO2.csv`. Patrón no parece limitado al nivel 2: también existe diferencia clara en nivel 3 y diferencias menores en niveles 4 y 5.
+
+::: {.callout-important appearance="simple"}
+## Interpretación provisional
+
+Conviene describir este comportamiento como posible corrimiento sistemático de concentración generada durante R3, no como anomalía exclusiva del nivel 2. No se aplicará corrección: sesgos se conservarán y reportarán tal como resulten.
+:::
+
+Nivel 2 combina dos limitaciones: nominal declarado de 144 ppb frente a mediciones cercanas a 154 ppb en ambos equipos, y período truncado por interrupción temporal.
+
+### 3.6 Ceros repetidos en R3
+
+Período de cero de `R3_NO.csv` y `R3_NO2.csv` contiene las mismas 60 observaciones iniciales. No representa dos mediciones independientes. Deben evitarse doble conteo e interpretación como evidencia independiente.
+
+### 3.7 Resolución del participante P1 en cero
+
+En varios ceros de R2, participante P1 reporta numerosos valores exactamente iguales a cero, mientras referencia conserva variación decimal. Esto puede reflejar truncamiento, resolución limitada o formato de exportación.
+
+Desviación estándar pequeña o nula de P1 no debe interpretarse automáticamente como mejor estabilidad. Comparación de ruido de cero entre P1 y P2 puede reflejar diferencias de resolución instrumental además de desempeño real.
+
+### 3.8 Canales NO, NO2 y NOx
+
+Archivos multicanal de R3 permiten revisar conservación:
+
+$$NO + NO_2 \approx NO_x$$
+
+En `R3_NO2.csv`, NO varía de forma inversa a NO2 mientras NOx permanece aproximadamente constante. Comportamiento compatible con titulación en fase gaseosa. Canal NO concomitante no debe describirse como valor fijo cercano a 155 ppb; ese valor corresponde principalmente a uno de los niveles.
+
+## 4. Comparaciones válidas
+
+### Dentro de cada ronda
+
+Referencia y participante compartieron tiempo, mezcla y nivel. Pueden calcularse:
+
+- diferencias punto a punto;
+- sesgo y dispersión;
+- deriva dentro de nivel;
+- límites de Bland–Altman.
+
+### Entre R2 y R3
+
+Rondas ocurrieron en fechas diferentes, con participantes y mezclas diferentes. Comparaciones deben usar agregados por nivel, sin emparejar registros minuto a minuto.
+
+| Caso | Escala válida |
+|---|---|
+| Nivel cero | Concentración absoluta en ppb |
+| Niveles distintos de cero | Error relativo para comparación inter-ronda |
+| O3 y NO | También concentración, por comparabilidad nominal aceptada |
+| NO2 | Niveles 1, 2, 4 y 5; nivel 3 excluido de comparación cruzada |
+
+## 5. Interpretación preliminar
+
+Archivos permiten estudiar tres componentes:
+
+1. Desempeño de referencia frente a participante dentro de cada ronda.
+2. Cambio temporal del analizador de referencia entre R2 y R3.
+3. Diferencia descriptiva entre P1 y P2, descontando en lo posible cambio de referencia.
+
+::: {.callout-caution appearance="simple"}
+## Resultado todavía pendiente
+
+Aún no puede afirmarse qué participante tuvo mejor desempeño ni si referencia presentó deriva significativa. Conclusiones requieren análisis por nivel, controles de calidad e intervalos de confianza.
+:::
+
+Comparación P1–P2 seguirá siendo descriptiva porque existe una sola ronda por participante. Diferencias pueden incluir efectos de participante, fecha, mezcla generada, resolución de exportación y condiciones experimentales.
+
+## 6. Conclusiones
+
+- Estructura permite comparaciones previstas, con restricciones claras entre análisis intra-ronda e inter-ronda.
+- Cero se conserva en todos los analitos; en R3, ceros de NO y NO2 no son independientes.
+- CO debe analizarse por separado por diferencia de unidad.
+- NO presenta diferencias nominales aceptables entre R2 y R3.
+- NO2 nivel 3 se excluye únicamente de comparación cruzada R2–R3.
+- `R3_NO2` muestra indicios de corrimiento en varios niveles, no sólo en nivel 2.
+- Interrupciones de `R2C_NO2` y `R3_NO2`, excursiones de O3, desfase de NO y valores `Samp<` requieren flags explícitos.
+- Ceros exactos de P1 limitan interpretación de ruido instrumental.
+- Ningún sesgo debe corregirse antes del análisis; debe reportarse valor observado y contexto.
+- Resultados cuantitativos definitivos quedan pendientes de ejecución del workflow.
+
+::: {.next-step}
+**Próximo paso:** ejecutar controles de calidad definidos en `02_qc.R`, revisar flags y luego producir estadísticas y gráficas del workflow.
+:::

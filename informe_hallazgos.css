@@ -1,0 +1,97 @@
+body {
+  color: #24303f;
+  line-height: 1.65;
+}
+
+#quarto-content {
+  max-width: 1280px;
+}
+
+h1, h2, h3 {
+  color: #17324d;
+  font-weight: 700;
+}
+
+h2 {
+  border-bottom: 2px solid #dbe6ef;
+  padding-bottom: 0.35rem;
+  margin-top: 2.4rem;
+}
+
+.summary-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+  margin: 1.25rem 0 2rem;
+}
+
+.summary-card {
+  background: #f5f8fb;
+  border: 1px solid #dbe6ef;
+  border-left: 4px solid #277da1;
+  border-radius: 0.5rem;
+  padding: 1rem 1.1rem;
+}
+
+.summary-card h3 {
+  font-size: 1rem;
+  margin: 0 0 0.45rem;
+}
+
+.summary-card p {
+  margin: 0;
+}
+
+table {
+  width: 100%;
+  margin: 1.1rem 0 1.5rem;
+}
+
+thead th {
+  background: #eaf1f6;
+  color: #17324d;
+}
+
+tbody tr:nth-child(even) {
+  background: #f8fafc;
+}
+
+code {
+  color: #8a3654;
+  background: #f5edf0;
+  padding: 0.08rem 0.25rem;
+  border-radius: 0.2rem;
+}
+
+.next-step {
+  margin-top: 2rem;
+  padding: 1rem 1.2rem;
+  background: #edf7f2;
+  border: 1px solid #b9ddcc;
+  border-left: 4px solid #2a9d6f;
+  border-radius: 0.5rem;
+}
+
+.callout {
+  border-radius: 0.5rem;
+}
+
+@media (max-width: 760px) {
+  .summary-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media print {
+  #TOC, .quarto-secondary-nav {
+    display: none !important;
+  }
+
+  body {
+    font-size: 11pt;
+  }
+
+  .summary-card, .callout, .next-step {
+    break-inside: avoid;
+  }
+}

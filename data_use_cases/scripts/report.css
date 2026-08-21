@@ -1,0 +1,81 @@
+main.content {
+  max-width: 1180px;
+}
+
+.table-container,
+.cell-output-display {
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+table {
+  display: block;
+  width: max-content;
+  max-width: 100%;
+  overflow-x: auto;
+  border-collapse: collapse;
+  margin: 1rem 0 1.5rem;
+  font-size: 0.88rem;
+  line-height: 1.35;
+}
+
+thead {
+  background: #eef4f8;
+  border-bottom: 2px solid #607d8b;
+}
+
+th,
+td {
+  padding: 0.48rem 0.7rem !important;
+  border-right: 1px solid #d9e1e5;
+  border-bottom: 1px solid #d9e1e5;
+  white-space: nowrap;
+  vertical-align: top;
+}
+
+th:first-child,
+td:first-child {
+  border-left: 1px solid #d9e1e5;
+}
+
+th {
+  color: #1f2933;
+  font-weight: 700;
+  text-align: left !important;
+}
+
+tbody tr:nth-child(even) {
+  background: #f7f9fa;
+}
+
+tbody tr:hover {
+  background: #e8f2f8;
+}
+
+caption {
+  caption-side: top;
+  padding: 0 0 0.55rem;
+  color: #455a64;
+  font-size: 0.92rem;
+  font-weight: 600;
+  text-align: left;
+}
+
+img {
+  max-width: 100%;
+  height: auto;
+}
+
+@media print {
+  table {
+    display: table;
+    width: 100%;
+    font-size: 7.5pt;
+  }
+
+  th,
+  td {
+    padding: 3pt 4pt !important;
+    white-space: normal;
+  }
+}

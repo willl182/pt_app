@@ -1,0 +1,525 @@
+---
+title: "Informe de análisis de rondas PT"
+subtitle: "R1, R2 y R3"
+lang: es
+format:
+  html:
+    toc: true
+    toc-depth: 3
+    number-sections: false
+    embed-resources: true
+    code-fold: false
+    css: report.css
+execute:
+  echo: false
+  warning: false
+  message: false
+  error: false
+jupyter: false
+---
+
+```{r}
+#| label: configuracion
+#| include: false
+
+options(
+  scipen = 999,
+  digits = 4,
+  knitr.kable.NA = "—"
+)
+knitr::opts_chunk$set(results = "asis")
+
+buscar_raiz <- function(inicio = getwd()) {
+  actual <- normalizePath(inicio, winslash = "/", mustWork = TRUE)
+  repeat {
+    marcador_plan <- file.exists(file.path(actual, "plan_analisis.md"))
+    marcador_datos <- dir.exists(file.path(actual, "data_use_cases"))
+    if (marcador_plan && marcador_datos) return(actual)
+    padre <- dirname(actual)
+    if (identical(padre, actual)) break
+    actual <- padre
+  }
+  stop(
+    "No se encontró la raíz del proyecto. Renderice desde un directorio contenido ",
+    "en el repositorio que tenga plan_analisis.md y data_use_cases/.",
+    call. = FALSE
+  )
+}
+
+raiz <- buscar_raiz()
+dir_outputs <- file.path(raiz, "data_use_cases", "outputs")
+dir_tablas <- file.path(dir_outputs, "tables")
+dir_figuras <- file.path(dir_outputs, "figs")
+dir_tidy <- file.path(dir_outputs, "tidy")
+
+ruta_tabla <- function(nombre) file.path(dir_tablas, nombre)
+ruta_figura <- function(nombre) file.path(dir_figuras, nombre)
+
+leer_csv_si_existe <- function(ruta) {
+  if (!file.exists(ruta)) return(NULL)
+  tryCatch(
+    utils::read.csv(
+      ruta,
+      stringsAsFactors = FALSE,
+      check.names = FALSE,
+      na.strings = c("", "NA")
+    ),
+    error = function(e) structure(NULL, error_lectura = conditionMessage(e))
+  )
+}
+
+mostrar_tabla <- function(datos, titulo = NULL, digitos = 3, max_filas = 30L) {
+  if (is.null(datos)) {
+    cat("*Salida no disponible; no se presentan resultados para este componente.*\n\n")
+    return(invisible(NULL))
+  }
+  if (!is.data.frame(datos) || nrow(datos) == 0L) {
+    cat("*La salida existe, pero no contiene filas para presentar.*\n\n")
+    return(invisible(NULL))
+  }
+  vista <- utils::head(datos, max_filas)
+  cat(as.character(
+    knitr::kable(vista, caption = titulo, digits = digitos, format = "html")
+  ))
+  cat("\n\n")
+  if (nrow(datos) > max_filas) {
+    cat(sprintf(
+      "\n*Se muestran %d de %d filas. El archivo CSV conserva la tabla completa.*\n\n",
+      max_filas, nrow(datos)
+    ))
+  }
+  invisible(NULL)
+}
+
+mostrar_figura <- function(nombre, pie = NULL) {
+  ruta <- ruta_figura(nombre)
+  if (!file.exists(ruta)) {
+    cat(sprintf("*Figura no disponible: `%s`.*\n\n", nombre))
+    return(invisible(FALSE))
+  }
+  print(knitr::include_graphics(ruta))
+  if (!is.null(pie)) cat(sprintf("\n*%s*\n\n", pie))
+  invisible(TRUE)
+}
+
+mostrar_figuras_patron <- function(patron, pie = NULL) {
+  rutas <- if (dir.exists(dir_figuras)) {
+    list.files(dir_figuras, pattern = patron, full.names = TRUE)
+  } else {
+    character()
+  }
+  if (length(rutas) == 0L) {
+    cat(sprintf("*No se encontraron figuras que cumplan el patrón `%s`.*\n\n", patron))
+    return(invisible(FALSE))
+  }
+  for (ruta in sort(rutas)) {
+    cat(sprintf("\n**%s**\n\n", basename(ruta)))
+    print(knitr::include_graphics(ruta))
+  }
+  if (!is.null(pie)) cat(sprintf("\n*%s*\n\n", pie))
+  invisible(TRUE)
+}
+
+archivos_esperados <- data.frame(
+  componente = c(
+    "Datos consolidados con QC", "Control de calidad", "Conversiones no numéricas",
+    "Bloque A", "Ceros ppb", "Ceros ppm", "Matriz C", "Cierre C",
+    "Participante P1", "Conservación NOx", "Descartes"
+  ),
+  archivo = c(
+    file.path("tidy", "consolidado_qc.csv"),
+    file.path("tables", "qc_flags.csv"),
+    file.path("tables", "ingest_conversiones.csv"),
+    file.path("tables", "A_por_nivel.csv"),
+    file.path("tables", "B_ceros_ppb.csv"),
+    file.path("tables", "B_ceros_ppm.csv"),
+    file.path("tables", "C_matriz.csv"),
+    file.path("tables", "C_cierre.csv"),
+    file.path("tables", "D_participante_p1.csv"),
+    file.path("tables", "E_nox_r3.csv"),
+    file.path("tables", "descartes.csv")
+  ),
+  stringsAsFactors = FALSE
+)
+archivos_esperados$disponible <- file.exists(file.path(dir_outputs, archivos_esperados$archivo))
+archivos_esperados$estado <- ifelse(archivos_esperados$disponible, "Disponible", "No disponible")
+
+qc_flags <- leer_csv_si_existe(ruta_tabla("qc_flags.csv"))
+conversiones <- leer_csv_si_existe(ruta_tabla("ingest_conversiones.csv"))
+a_nivel <- leer_csv_si_existe(ruta_tabla("A_por_nivel.csv"))
+b_ceros_ppb <- leer_csv_si_existe(ruta_tabla("B_ceros_ppb.csv"))
+b_ceros_ppm <- leer_csv_si_existe(ruta_tabla("B_ceros_ppm.csv"))
+c_matriz <- leer_csv_si_existe(ruta_tabla("C_matriz.csv"))
+c_cierre <- leer_csv_si_existe(ruta_tabla("C_cierre.csv"))
+d_p1 <- leer_csv_si_existe(ruta_tabla("D_participante_p1.csv"))
+e_nox <- leer_csv_si_existe(ruta_tabla("E_nox_r3.csv"))
+descartes <- leer_csv_si_existe(ruta_tabla("descartes.csv"))
+```
+
+Este informe consume exclusivamente los archivos ya producidos en
+`data_use_cases/outputs/`. No recalcula estadísticas desde los datos crudos ni
+completa valores ausentes. Cuando una salida no existe, se indica de manera
+explícita en lugar de sustituirla por una estimación.
+
+# 1. Diseño del ejercicio y control de calidad
+
+## Diseño y alcance
+
+CalAire constituye la referencia en las tres rondas. El participante P1 intervino
+en R1 y R2; P2 intervino en R3. La referencia es el único equipo con continuidad
+entre R2 y R3.
+
+```{r}
+#| label: tabla-diseno
+
+diseno <- data.frame(
+  ronda = c("R1", "R2", "R3"),
+  fecha = c("23–24 abr 2026", "30 abr–2 may 2026", "15–16 jul 2026"),
+  analitos = c("SO2, CO", "O3, NO, NO2", "O3, NO, NO2"),
+  participante = c("P1", "P1", "P2 (ZFT5R6)"),
+  referencia = c("CalAire 4U", "CalAire 4U", "CalAire 4U")
+)
+mostrar_tabla(diseno, "Diseño de las rondas", max_filas = Inf)
+```
+
+R1 y R2 comparten participante, pero no analitos. Por ello, su comparación sólo
+es descriptiva y se limita a métricas independientes del analito. R2 y R3
+comparten analitos, pero tienen participantes diferentes; la comparación temporal
+directa corresponde únicamente al analizador de referencia.
+
+## Niveles nominales
+
+```{r}
+#| label: tabla-nominales
+
+nominales <- data.frame(
+  ronda = c("R1", "R1", "R2A", "R2B", "R2C", "R3", "R3", "R3"),
+  analito = c("SO2", "CO", "O3", "NO", "NO2", "O3", "NO", "NO2"),
+  nivel_1 = c(0, 0, 0, 0, 0, 0, 0, 0),
+  nivel_2 = c(179, 6.3, 180, 180, 140, 180, 179, 144),
+  nivel_3 = c(119, 4.2, 120, 119, 105, 120, 119, 112),
+  nivel_4 = c(80, 2.8, 80, 78, 60, 80, 80, 64),
+  nivel_5 = c(40, 1.4, 40, 37, 30, 40, 41, 32),
+  unidad = c("ppb", "ppm", "ppb", "ppb", "ppb", "ppb", "ppb", "ppb")
+)
+mostrar_tabla(nominales, "Concentraciones nominales declaradas", max_filas = Inf)
+```
+
+`level` identifica el índice PT de 1 a 5 y no la concentración nominal. CO se
+mantiene en ppm y no se combina numéricamente con los analitos expresados en ppb.
+
+## Disponibilidad de salidas
+
+```{r}
+#| label: tabla-disponibilidad
+mostrar_tabla(
+  archivos_esperados[, c("componente", "archivo", "estado")],
+  "Salidas consultadas al renderizar el informe",
+  max_filas = Inf
+)
+```
+
+## Control de calidad
+
+Los indicadores de calidad son informativos: el flujo no elimina filas durante
+la etapa de QC. Las estadísticas posteriores deben restringirse a niveles
+estables (`level` 1–5), excluir transitorios y declarar los descartes. Los
+atípicos Hampel deben presentarse en variantes con y sin atípicos, nunca retirarse
+en silencio.
+
+```{r}
+#| label: tabla-qc
+mostrar_tabla(qc_flags, "Conteo de indicadores de control de calidad", max_filas = 60)
+```
+
+```{r}
+#| label: tabla-conversiones
+mostrar_tabla(
+  conversiones,
+  "Literales de instrumento convertidos explícitamente a NA puntual",
+  max_filas = Inf
+)
+```
+
+```{r}
+#| label: tabla-descartes
+mostrar_tabla(descartes, "Puntos excluidos por nivel y motivo", max_filas = 50)
+```
+
+Problemas conocidos que deben conservarse en la interpretación: cero truncado de
+R2C_NO2 por un salto temporal cercano a 12 horas; desfase aproximado de seis
+minutos de la etiqueta del generador en la rampa inicial de R2B_NO; excursiones
+de proceso en R2A_O3; literal `Samp<` en R3_NO convertido a NA puntual; y nivel 2
+de R3_NO2 con nominal declarado de 144 ppb frente a lecturas cercanas a 154 ppb
+en ambos equipos, sin corrección del sesgo.
+
+# 2. Desempeño por nivel
+
+La unidad de análisis es `(ronda, analito, nivel, rol)`. Para cada grupo se
+reportan tamaño muestral, media, desviación estándar, CV, sesgo frente al nominal
+y deriva intra-nivel. La diferencia referencia menos participante y sus límites
+de concordancia de Bland–Altman se calculan únicamente dentro de una misma ronda,
+donde las observaciones comparten minuto y mezcla de gas.
+
+```{r}
+#| label: tabla-bloque-a
+mostrar_tabla(a_nivel, "Desempeño por ronda, analito, nivel y rol", max_filas = 50)
+```
+
+## Series temporales
+
+```{r}
+#| label: figuras-p1
+#| fig-align: center
+mostrar_figuras_patron(
+  "^P1_serie_.*\\.png$",
+  "Las zonas de estabilización se conservan para contexto visual, pero no forman parte de las estadísticas de niveles estables."
+)
+```
+
+## Distribución dentro de cada nivel
+
+```{r}
+#| label: figuras-p2
+#| fig-align: center
+mostrar_figuras_patron(
+  "^P2_niveles_.*\\.png$",
+  "Cada panel utiliza su propia escala vertical; las magnitudes deben leerse en el eje de cada faceta."
+)
+```
+
+## Concordancia dentro de ronda
+
+```{r}
+#| label: figura-p4
+#| fig-align: center
+mostrar_figura(
+  "P4_bland_altman.png",
+  "Bland–Altman se aplica sólo a pares intra-ronda apareados punto a punto."
+)
+```
+
+# 3. Comparación de ceros
+
+El offset (media del cero) y el ruido (desviación estándar) son propiedades
+diferentes y se presentan por separado. El nivel 1 no admite error relativo
+porque su nominal es cero. CO se informa en ppm y el resto de los analitos en ppb,
+sin conversión a fracción de span.
+
+## Analitos en ppb
+
+```{r}
+#| label: tabla-ceros-ppb
+mostrar_tabla(b_ceros_ppb, "Ceros de SO2, O3, NO y NO2 (ppb)", max_filas = 50)
+```
+
+```{r}
+#| label: figura-ceros-ppb
+#| fig-align: center
+mostrar_figura(
+  "P3_ceros_ppb.png",
+  "Los puntos crudos permiten distinguir offset, dispersión y cobertura desigual."
+)
+```
+
+## CO en ppm
+
+```{r}
+#| label: tabla-ceros-ppm
+mostrar_tabla(b_ceros_ppm, "Cero de CO (ppm)", max_filas = 50)
+```
+
+```{r}
+#| label: figura-ceros-ppm
+#| fig-align: center
+mostrar_figura("P3_ceros_ppm.png")
+```
+
+El cero de R2C_NO2 tiene cobertura reducida por el salto temporal y su dispersión
+no debe interpretarse en igualdad de condiciones con los demás ceros. Ninguna
+ronda incluye un cero de cierre, por lo que no es posible estimar deriva de cero
+intra-ronda.
+
+# 4. Matriz R2 × R3
+
+La matriz compara cuatro series: `ref_R2`, `P1`, `ref_R3` y `P2`. Los pares C2 y
+C3 son intra-ronda y están apareados; C1, C4, C5 y C6 son inter-ronda y no están
+apareados. En los niveles 2–5, los pares inter-ronda se comparan mediante
+estadísticos agregados por nivel en error relativo. El nivel 1 se compara en ppb
+absolutos.
+
+```{r}
+#| label: tabla-reglas-matriz
+
+reglas_c <- data.frame(
+  par = paste0("C", 1:6),
+  comparacion = c(
+    "ref_R2 ↔ ref_R3", "ref_R2 ↔ P1", "ref_R3 ↔ P2",
+    "ref_R2 ↔ P2", "ref_R3 ↔ P1", "P1 ↔ P2"
+  ),
+  clase = c("inter", "intra", "intra", "inter", "inter", "inter"),
+  apareamiento = c("No", "Sí", "Sí", "No", "No", "No"),
+  interpretacion = c(
+    "Deriva temporal de la referencia",
+    "Desempeño de P1 en R2",
+    "Desempeño de P2 en R3",
+    "P2 frente al estado de la referencia en R2",
+    "P1 frente al estado de la referencia en R3",
+    "Comparación descriptiva entre laboratorios"
+  )
+)
+mostrar_tabla(reglas_c, "Definición metodológica de las seis comparaciones", max_filas = Inf)
+```
+
+```{r}
+#| label: tabla-matriz-c
+mostrar_tabla(c_matriz, "Resultados de la matriz C", max_filas = 60)
+```
+
+## Niveles 2–5: error relativo
+
+```{r}
+#| label: figura-p5
+#| fig-align: center
+mostrar_figura(
+  "P5_matriz_C.png",
+  "El nivel 3 de NO2 se excluye de este bloque (105 ppb en R2 frente a 112 ppb en R3). El nivel 2 de R3_NO2 se mantiene sin corregir su sesgo."
+)
+```
+
+## Nivel 1: cero en escala absoluta
+
+```{r}
+#| label: figura-p5c
+#| fig-align: center
+mostrar_figura(
+  "P5c_ceros_matriz.png",
+  "El cero se expresa en ppb absolutos porque el error relativo no está definido cuando el nominal es cero."
+)
+```
+
+## Cierre de la matriz
+
+El contraste descriptivo `C3 − C2` frente a `C1` evalúa si el cambio de la brecha
+entre participantes puede explicarse por el desplazamiento de la referencia. No
+constituye un contraste causal ni una comparación apareada entre rondas.
+
+```{r}
+#| label: tabla-cierre-c
+mostrar_tabla(c_cierre, "Cierre C3 − C2 frente a C1", max_filas = 50)
+```
+
+```{r}
+#| label: figura-p5b
+#| fig-align: center
+mostrar_figura("P5b_cierre.png")
+```
+
+C6 se limita a una descripción: existe una sola ronda por participante y las
+mezclas de gas corresponden a fechas distintas. No se reportan pruebas formales,
+correlaciones ni Bland–Altman para pares inter-ronda.
+
+# 5. Deriva del analizador de referencia
+
+C1 (`ref_R2` frente a `ref_R3`) es el resultado temporal principal, bajo el
+supuesto de que `4UXXXX` y `4UDY72` identifican el mismo equipo físico. Para los
+niveles positivos, la deriva se expresa como cambio del error relativo agregado
+por nivel; para el cero, como cambio absoluto en ppb. Esta comparación no está
+apareada y no comparte una misma mezcla de gas.
+
+```{r}
+#| label: tabla-c1
+
+if (!is.null(c_matriz) && all(c("par") %in% names(c_matriz))) {
+  c1 <- c_matriz[toupper(as.character(c_matriz$par)) == "C1", , drop = FALSE]
+  mostrar_tabla(c1, "C1: cambio de la referencia entre R2 y R3", max_filas = 50)
+} else {
+  mostrar_tabla(NULL)
+}
+```
+
+```{r}
+#| label: figura-referencia-ppb
+#| fig-align: center
+mostrar_figura(
+  "P6_referencia_ppb.png",
+  "Sesgo relativo de la referencia para los analitos expresados en ppb."
+)
+```
+
+```{r}
+#| label: figura-referencia-ppm
+#| fig-align: center
+mostrar_figura(
+  "P6_referencia_ppm.png",
+  "CO se presenta por separado en ppm y no forma parte de la comparación R2 × R3."
+)
+```
+
+Si el supuesto de identidad física del equipo de referencia se invalida, C1 debe
+reinterpretarse como comparación entre equipos y no como deriva temporal.
+
+# 6. Caracterización del participante P1 a través de R1 y R2
+
+P1 participó en ambas rondas, separadas aproximadamente por una semana, pero los
+analitos son diferentes: SO2 y CO en R1; O3, NO y NO2 en R2. En consecuencia, se
+comparan de forma descriptiva el ruido de cero, el signo y magnitud del sesgo
+relativo y la pendiente intra-nivel. No existe un par por analito y no procede un
+contraste inferencial entre R1 y R2.
+
+```{r}
+#| label: tabla-p1
+mostrar_tabla(d_p1, "Caracterización descriptiva de P1", max_filas = 50)
+```
+
+```{r}
+#| label: figura-p7
+#| fig-align: center
+mostrar_figura(
+  "P7_participante_p1.png",
+  "Las métricas cruzan analitos y, en el caso de CO, unidades; se interpretan como perfiles separados."
+)
+```
+
+# 7. Conservación de NOx en R3
+
+R3_NO y R3_NO2 contienen canales simultáneos de NO, NO2 y NOx para ambos equipos.
+El residuo de conservación se define como `NO + NO2 − NOx` y se resume por equipo
+y nivel. Una desviación sistemática señala falta de cierre entre canales, no un
+error de la mezcla. Este chequeo es unilateral: R2 no dispone de canales
+concomitantes equivalentes.
+
+```{r}
+#| label: tabla-nox
+mostrar_tabla(e_nox, "Residuo de conservación de NOx en R3", max_filas = 50)
+```
+
+```{r}
+#| label: figura-p8
+#| fig-align: center
+mostrar_figura(
+  "P8_nox_r3.png",
+  "En R3_NO2, el NO residual de la titulación en fase gas es un canal concomitante y no debe confundirse con el analito bajo prueba."
+)
+```
+
+# 8. Limitaciones
+
+1. No hay cero de cierre en ninguna ronda; no puede estimarse deriva de cero intra-ronda.
+2. El cero de R2C_NO2 está truncado por un salto temporal de aproximadamente 12 horas; su tamaño muestral y su desviación estándar no son directamente comparables con los demás ceros.
+3. R2B_NO presenta un desfase aproximado de seis minutos entre la etiqueta del generador y la rampa observada; los cortes se basan en el índice de nivel validado, no sólo en `*_gen`.
+4. R1 no tiene una ronda equivalente por analito. SO2 y CO participan en los bloques de desempeño, ceros y caracterización de P1, pero no en la matriz R2 × R3.
+5. CO se conserva en ppm y no se compara numéricamente con analitos expresados en ppb.
+6. El participante cambia entre R2 y R3. Las diferencias de participante no representan deriva; la referencia es el único eje con continuidad temporal.
+7. Hay una sola ronda por participante. C6 es descriptivo y no sostiene inferencia entre laboratorios.
+8. Los nominales difieren entre R2 y R3. Las diferencias de NO se aceptan como tolerables; NO2 se compara sólo en error relativo y excluye el nivel 3. El cero se mantiene en escala absoluta.
+9. Las comparaciones inter-ronda no comparten tiempo ni mezcla de gas. No se aplican diferencias pareadas, correlaciones ni Bland–Altman a C1, C4, C5 o C6.
+10. En R3_NO2 nivel 2, ambos equipos miden alrededor de 154 ppb frente a un nominal declarado de 144 ppb. El nivel se conserva y no se corrige el sesgo.
+11. La conservación de NOx sólo puede evaluarse en R3, porque R2 es monocanal.
+12. La interpretación de C1 como deriva depende de que el identificador anonimizado de R2 y `4UDY72` en R3 correspondan al mismo equipo físico.
+13. Este documento depende de salidas producidas por etapas anteriores. Una tabla o figura ausente se declara como no disponible y no se reemplaza con cálculos ad hoc dentro del informe.
+
+La metodología separa comparaciones intra-ronda apareadas de comparaciones
+inter-ronda agregadas, mantiene las unidades originales y conserva las anomalías
+documentadas sin ajustar sesgos. Estas restricciones delimitan el alcance de las
+conclusiones que podrán formularse cuando estén disponibles todas las salidas.

@@ -1,0 +1,1229 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Contribución de la curva de calibración a la
+incertidumbre</title>
+<style>
+:root{
+  --bg:#fbfaf8; --panel:#ffffff; --ink:#1c1b19; --muted:#6b6862;
+  --line:#e6e2dc; --accent:#2f6f4e; --accent-soft:#eaf2ed;
+  --warn:#8a5a1a; --code-bg:#f4f2ee;
+  --serif:"Iowan Old Style","Palatino Linotype",Palatino,Georgia,serif;
+  --sans:"Inter",-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+  --mono:"JetBrains Mono","SF Mono",Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --bg:#15171a; --panel:#1c1f23; --ink:#e8e6e1; --muted:#9b988f;
+    --line:#2c3036; --accent:#6fbf95; --accent-soft:#1e2a24;
+    --warn:#d4a25a; --code-bg:#22262b;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#15171a; --panel:#1c1f23; --ink:#e8e6e1; --muted:#9b988f;
+  --line:#2c3036; --accent:#6fbf95; --accent-soft:#1e2a24;
+  --warn:#d4a25a; --code-bg:#22262b;
+}
+:root[data-theme="light"]{
+  --bg:#fbfaf8; --panel:#ffffff; --ink:#1c1b19; --muted:#6b6862;
+  --line:#e6e2dc; --accent:#2f6f4e; --accent-soft:#eaf2ed;
+  --warn:#8a5a1a; --code-bg:#f4f2ee;
+}
+*{box-sizing:border-box}
+body{
+  margin:0; background:var(--bg); color:var(--ink);
+  font-family:var(--serif); font-size:17.5px; line-height:1.68;
+  -webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:1180px;margin:0 auto;padding:0 24px 96px;display:grid;grid-template-columns:minmax(0,1fr);gap:0}
+@media(min-width:1000px){
+  .wrap{grid-template-columns:230px minmax(0,760px);gap:56px;justify-content:center;align-items:start}
+}
+
+/* ---- header ---- */
+header.doc{
+  grid-column:1/-1; margin:0 -24px 44px; padding:56px 24px 34px;
+  border-bottom:1px solid var(--line);
+  background:linear-gradient(180deg,var(--accent-soft),transparent);
+}
+header.doc .inner{max-width:1046px;margin:0 auto}
+header.doc .kicker{
+  font-family:var(--sans);font-size:12px;letter-spacing:.14em;text-transform:uppercase;
+  color:var(--accent);font-weight:600;margin-bottom:12px
+}
+header.doc h1{
+  font-size:clamp(28px,4.4vw,42px);line-height:1.15;margin:0 0 14px;font-weight:600;letter-spacing:-.015em
+}
+header.doc .meta{font-family:var(--sans);font-size:13.5px;color:var(--muted);display:flex;flex-wrap:wrap;gap:6px 22px}
+header.doc .meta code{background:none;padding:0;color:var(--muted)}
+
+/* ---- toc ---- */
+nav#TOC{
+  font-family:var(--sans);font-size:13.5px;line-height:1.5;
+  border-left:2px solid var(--line);padding-left:16px;margin:0 0 40px
+}
+@media(min-width:1000px){nav#TOC{position:sticky;top:32px;margin:0}}
+nav#TOC::before{
+  content:"Contenido";display:block;font-size:11px;letter-spacing:.14em;text-transform:uppercase;
+  color:var(--muted);font-weight:600;margin-bottom:10px
+}
+nav#TOC ul{list-style:none;margin:0;padding:0}
+nav#TOC li{margin:.42em 0}
+nav#TOC a{color:var(--muted);text-decoration:none;display:block}
+nav#TOC a:hover{color:var(--accent)}
+
+/* ---- content ---- */
+main{min-width:0}
+main>h1{display:none}
+main>p:first-of-type{font-family:var(--sans);font-size:14px;color:var(--muted);line-height:1.6}
+h2{
+  font-size:22px;font-weight:600;letter-spacing:-.01em;margin:52px 0 16px;
+  padding-bottom:8px;border-bottom:1px solid var(--line)
+}
+h2:first-child{margin-top:0}
+h3{font-size:17.5px;font-weight:600;margin:32px 0 10px;color:var(--accent)}
+p{margin:0 0 1.05em}
+strong{font-weight:600}
+a{color:var(--accent)}
+code{font-family:var(--mono);font-size:.85em;background:var(--code-bg);padding:.14em .38em;border-radius:4px}
+hr{border:0;border-top:1px solid var(--line);margin:40px 0}
+
+blockquote{
+  margin:24px 0;padding:14px 20px;border-left:3px solid var(--warn);
+  background:var(--code-bg);border-radius:0 6px 6px 0;
+  font-size:15.5px;color:var(--muted)
+}
+blockquote p{margin:0}
+
+ul,ol{padding-left:1.3em;margin:0 0 1.05em}
+li{margin:.42em 0}
+
+/* ---- tables ---- */
+.tbl{overflow-x:auto;margin:24px 0;border:1px solid var(--line);border-radius:10px;background:var(--panel)}
+table{border-collapse:collapse;width:100%;font-family:var(--sans);font-size:14px;font-variant-numeric:tabular-nums}
+caption{caption-side:bottom;text-align:left;padding:10px 14px;font-family:var(--sans);font-size:12.5px;color:var(--muted)}
+th{
+  text-align:left;font-weight:600;font-size:11.5px;letter-spacing:.07em;text-transform:uppercase;
+  color:var(--muted);padding:11px 14px;border-bottom:1px solid var(--line);white-space:nowrap
+}
+td{padding:9px 14px;border-bottom:1px solid var(--line)}
+tbody tr:last-child td{border-bottom:0}
+tbody tr:hover{background:var(--accent-soft)}
+td:first-child{font-weight:600;white-space:nowrap}
+td:not(:first-child),th:not(:first-child){text-align:right}
+
+/* ---- math ---- */
+math{font-size:1.02em}
+.display,p>math[display="block"]{display:block}
+div.math,p:has(>math[display="block"]){
+  margin:22px 0;padding:16px 18px;background:var(--panel);
+  border:1px solid var(--line);border-radius:8px;overflow-x:auto;text-align:center
+}
+
+/* ---- theme toggle ---- */
+#themeBtn{
+  position:fixed;top:16px;right:16px;z-index:10;
+  font-family:var(--sans);font-size:12px;color:var(--muted);
+  background:var(--panel);border:1px solid var(--line);border-radius:999px;
+  padding:7px 13px;cursor:pointer
+}
+#themeBtn:hover{color:var(--accent);border-color:var(--accent)}
+@media print{#themeBtn,nav#TOC{display:none}.wrap{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<button id="themeBtn" type="button">tema</button>
+<div class="wrap">
+<header class="doc"><div class="inner">
+  <div class="kicker">Incertidumbre de medición · Ensayo de aptitud</div>
+  <h1>Contribución de la curva de calibración a la incertidumbre</h1>
+  <div class="meta">
+    <span>30 julio 2026</span>
+    <span><code>scripts/08_u_calibracion.R</code></span>
+    <span>GUM H.3 · EN 14211/14212</span>
+  </div>
+</div></header>
+<ul>
+<li><a
+href="#contribución-de-la-curva-de-calibración-a-la-incertidumbre"
+id="toc-contribución-de-la-curva-de-calibración-a-la-incertidumbre">Contribución
+de la curva de calibración a la incertidumbre</a>
+<ul>
+<li><a href="#qué-se-está-midiendo" id="toc-qué-se-está-midiendo">1. Qué
+se está midiendo</a></li>
+<li><a href="#fuente-de-los-datos" id="toc-fuente-de-los-datos">2.
+Fuente de los datos</a></li>
+<li><a href="#los-dos-métodos-usados" id="toc-los-dos-métodos-usados">3.
+Los dos métodos usados</a></li>
+<li><a href="#parámetros-del-ajuste" id="toc-parámetros-del-ajuste">4.
+Parámetros del ajuste</a></li>
+<li><a href="#resultado-u-por-curva-en-cada-nivel-pt"
+id="toc-resultado-u-por-curva-en-cada-nivel-pt">5. Resultado: u por
+curva en cada nivel PT</a></li>
+<li><a href="#lectura-de-los-resultados"
+id="toc-lectura-de-los-resultados">6. Lectura de los resultados</a></li>
+<li><a href="#cómo-se-integra-al-presupuesto-de-incertidumbre"
+id="toc-cómo-se-integra-al-presupuesto-de-incertidumbre">7. Cómo se
+integra al presupuesto de incertidumbre</a></li>
+<li><a href="#presupuesto-completo-por-gas-y-nivel"
+id="toc-presupuesto-completo-por-gas-y-nivel">8. Presupuesto completo
+por gas y nivel</a></li>
+<li><a href="#alcance-y-limitaciones" id="toc-alcance-y-limitaciones">9.
+Alcance y limitaciones</a></li>
+</ul></li>
+</ul>
+<main>
+<h1
+id="contribución-de-la-curva-de-calibración-a-la-incertidumbre">Contribución
+de la curva de calibración a la incertidumbre</h1>
+<p><strong>Fecha:</strong> 2026-07-30 <strong>Scripts:</strong>
+<code>scripts/08_u_calibracion.R</code> — implementa este método leyendo
+los formatos <code>.xlsm</code> directamente y reproduce las cifras de
+las secciones 4 y 5.</p>
+<blockquote>
+<p>Las versiones originales, con los puntos de calibración escritos a
+mano, quedaron en
+<code>scripts/superseded/08_u_curva_calibracion.R</code> y
+<code>scripts/superseded/09_aplicar_u_curva_niveles.R</code>.
+<strong>Salidas:</strong>
+<code>outputs/tables/u_curva_referencia_niveles.csv</code>,
+<code>outputs/tables/u_curva_por_nivel.csv</code></p>
+</blockquote>
+<hr />
+<h2 id="qué-se-está-midiendo">1. Qué se está midiendo</h2>
+<p>Cuando el analizador de referencia se calibra multipunto, se le
+entregan concentraciones conocidas del calibrador (patrón, eje
+<em>x</em>) y se registra lo que el analizador lee (eje <em>y</em>). Con
+esos 5 puntos se ajusta una recta:</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>y</mi><mo>=</mo><msub><mi>y</mi><mn>1</mn></msub><mo>+</mo><msub><mi>y</mi><mn>2</mn></msub><mo>⋅</mo><mi>x</mi></mrow><annotation encoding="application/x-tex">y = y_1 + y_2 \cdot x</annotation></semantics></math></p>
+<p>Esa recta nunca pasa exactamente por los 5 puntos. Esa desviación es
+incertidumbre: si mañana el analizador lee 80 ppb, no sabemos con
+certeza absoluta que la concentración real sea 80. <strong>Esa duda es
+la contribución de la curva de calibración</strong>, y es lo que se
+cuantifica aquí.</p>
+<p>Es un componente aparte de la repetibilidad. La repetibilidad dice
+<em>“cuánto varían mis 3 lecturas entre sí”</em>; la curva dice
+<em>“cuán bien traduce mi analizador lectura a concentración”</em>. Se
+suman en cuadratura, no se sustituyen.</p>
+<h2 id="fuente-de-los-datos">2. Fuente de los datos</h2>
+<table>
+<colgroup>
+<col style="width: 20%" />
+<col style="width: 20%" />
+<col style="width: 20%" />
+<col style="width: 20%" />
+<col style="width: 20%" />
+</colgroup>
+<thead>
+<tr>
+<th>Gas</th>
+<th>Formato</th>
+<th>Equipo</th>
+<th>Fecha</th>
+<th>Rango</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>O3</td>
+<td>F-PSEY-49</td>
+<td>THERMO 49C s/n 59756-324</td>
+<td>2026-04-29</td>
+<td>250 ppb</td>
+</tr>
+<tr>
+<td>NO / NOx / NO2</td>
+<td>F-PSEY-61</td>
+<td>HORIBA APNA-370 s/n 139992</td>
+<td>2026-04-29</td>
+<td>200 ppb</td>
+</tr>
+<tr>
+<td>SO2</td>
+<td>F-PSEY-62</td>
+<td>HORIBA APSA-370 s/n 139991</td>
+<td>2026-04-22</td>
+<td>200 ppb</td>
+</tr>
+<tr>
+<td>CO</td>
+<td>F-PSEY-47</td>
+<td>TAPI T300 s/n 509</td>
+<td>2026-04-22</td>
+<td>10 ppm</td>
+</tr>
+</tbody>
+</table>
+<p>De cada formato se usan 5 puntos: el <strong>cero dejado</strong> más
+los 4 puntos multipunto (20 %, 40 %, 70 %, 90 %). El punto “90 %
+encontrado” se excluye por ser pre-ajuste.</p>
+<p>Verificación: los ajustes calculados reproducen exactamente la
+pendiente y el intercepto que reporta cada hoja de cálculo, así que se
+está trabajando sobre la misma recta que certificó el laboratorio.</p>
+<h2 id="los-dos-métodos-usados">3. Los dos métodos usados</h2>
+<h3 id="método-a-gum-h.3-estadístico">Método A — GUM H.3
+(estadístico)</h3>
+<p>Usa la dispersión real de los 5 puntos alrededor de la recta.</p>
+<ol type="1">
+<li>Varianza residual:
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mi>s</mi><mn>2</mn></msup><mo>=</mo><mstyle displaystyle="true"><mfrac><mrow><mo>∑</mo><mo stretchy="false" form="prefix">(</mo><mtext mathvariant="normal">residuo</mtext><msup><mo stretchy="false" form="postfix">)</mo><mn>2</mn></msup></mrow><mrow><mi>n</mi><mo>−</mo><mn>2</mn></mrow></mfrac></mstyle></mrow><annotation encoding="application/x-tex">s^2 = \dfrac{\sum (\text{residuo})^2}{n-2}</annotation></semantics></math>,
+con
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>n</mi><mo>=</mo><mn>5</mn></mrow><annotation encoding="application/x-tex">n = 5</annotation></semantics></math>.</li>
+<li>Incertidumbre del valor ajustado en la concentración
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>c</mi><annotation encoding="application/x-tex">c</annotation></semantics></math>:
+<math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>u</mi><mtext mathvariant="normal">ajuste</mtext></msub><mo stretchy="false" form="prefix">(</mo><mi>c</mi><mo stretchy="false" form="postfix">)</mo><mo>=</mo><mi>s</mi><msqrt><mrow><mstyle displaystyle="true"><mfrac><mn>1</mn><mi>n</mi></mfrac></mstyle><mo>+</mo><mstyle displaystyle="true"><mfrac><mrow><mo stretchy="false" form="prefix">(</mo><mi>c</mi><mo>−</mo><mover><mi>x</mi><mo accent="true">‾</mo></mover><msup><mo stretchy="false" form="postfix">)</mo><mn>2</mn></msup></mrow><mrow><mo>∑</mo><mo stretchy="false" form="prefix">(</mo><msub><mi>x</mi><mi>k</mi></msub><mo>−</mo><mover><mi>x</mi><mo accent="true">‾</mo></mover><msup><mo stretchy="false" form="postfix">)</mo><mn>2</mn></msup></mrow></mfrac></mstyle></mrow></msqrt></mrow><annotation encoding="application/x-tex">u_{\text{ajuste}}(c) = s\sqrt{\dfrac{1}{n} + \dfrac{(c - \bar{x})^2}{\sum(x_k - \bar{x})^2}}</annotation></semantics></math></li>
+<li>Se pasa a escala de concentración dividiendo por la pendiente:
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>u</mi><mtext mathvariant="normal">curva</mtext></msub><mo>=</mo><msub><mi>u</mi><mtext mathvariant="normal">ajuste</mtext></msub><mi>/</mi><mo stretchy="false" form="prefix">|</mo><msub><mi>y</mi><mn>2</mn></msub><mo stretchy="false" form="prefix">|</mo></mrow><annotation encoding="application/x-tex">u_{\text{curva}} = u_{\text{ajuste}} / |y_2|</annotation></semantics></math>.</li>
+</ol>
+<p><strong>Comportamiento:</strong> forma de U. Mínima cerca del
+promedio de los puntos de calibración (~90 ppb), crece hacia el cero y
+hacia el tope de escala. Es el comportamiento correcto: extrapolar hacia
+los extremos de la recta es más incierto.</p>
+<h3 id="método-b-falta-de-ajuste-en-14211-en-14212-peor-caso">Método B —
+Falta de ajuste, EN 14211 / EN 14212 (peor caso)</h3>
+<p>Usa solo el error más grande observado.</p>
+<ol type="1">
+<li>Residuo máximo, en % del fondo de escala:
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>r</mi><mrow><mi>m</mi><mi>a</mi><mi>x</mi></mrow></msub><annotation encoding="application/x-tex">r_{max}</annotation></semantics></math>.</li>
+<li>Distribución rectangular:
+<math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>u</mi><mrow><mi>l</mi><mo>,</mo><msub><mi>l</mi><mi>h</mi></msub></mrow></msub><mo>=</mo><mfrac><msub><mi>r</mi><mrow><mi>m</mi><mi>a</mi><mi>x</mi></mrow></msub><mn>100</mn></mfrac><mo>⋅</mo><mfrac><msub><mi>l</mi><mi>h</mi></msub><msqrt><mn>3</mn></msqrt></mfrac></mrow><annotation encoding="application/x-tex">u_{l,l_h} = \frac{r_{max}}{100} \cdot \frac{l_h}{\sqrt{3}}</annotation></semantics></math></li>
+</ol>
+<p><strong>Comportamiento:</strong> proporcional al nivel. Vale cero en
+el cero (lo cual es irreal) y es máxima en el tope.</p>
+<h3 id="cuál-se-usa">Cuál se usa</h3>
+<p>Se toma <strong>el mayor de los dos en cada nivel</strong>. Razón: se
+complementan. GUM manda en niveles bajos y en el cero, donde el método B
+da un valor artificialmente nulo; el método B manda en el tope de
+escala, donde protege contra la no linealidad que GUM subestima si los
+residuos quedaron pequeños por azar.</p>
+<h2 id="parámetros-del-ajuste">4. Parámetros del ajuste</h2>
+<table style="width:100%;">
+<colgroup>
+<col style="width: 14%" />
+<col style="width: 14%" />
+<col style="width: 14%" />
+<col style="width: 14%" />
+<col style="width: 14%" />
+<col style="width: 14%" />
+<col style="width: 14%" />
+</colgroup>
+<thead>
+<tr>
+<th>Gas</th>
+<th>Pendiente</th>
+<th>Intercepto</th>
+<th>s residual</th>
+<th>u(intercepto)</th>
+<th>u(pendiente)</th>
+<th>r_max %FS</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>O3</td>
+<td>0.998264</td>
+<td>−0.148</td>
+<td>1.161 ppb</td>
+<td>0.866</td>
+<td>0.00793</td>
+<td>0.963</td>
+</tr>
+<tr>
+<td>NO</td>
+<td>1.003766</td>
+<td>−0.606</td>
+<td>0.414 ppb</td>
+<td>0.311</td>
+<td>0.00283</td>
+<td>0.268</td>
+</tr>
+<tr>
+<td>NOx</td>
+<td>0.998696</td>
+<td>+0.299</td>
+<td>0.401 ppb</td>
+<td>0.301</td>
+<td>0.00275</td>
+<td>0.281</td>
+</tr>
+<tr>
+<td>NO2 (GPT)</td>
+<td>0.996681</td>
+<td>+0.836</td>
+<td>0.632 ppb</td>
+<td>0.464</td>
+<td>0.00539</td>
+<td>0.579</td>
+</tr>
+<tr>
+<td>SO2</td>
+<td>0.998063</td>
+<td>+0.104</td>
+<td>0.440 ppb</td>
+<td>0.330</td>
+<td>0.00317</td>
+<td>0.283</td>
+</tr>
+<tr>
+<td>CO</td>
+<td>0.990632</td>
+<td>+0.0265</td>
+<td>0.058 ppm</td>
+<td>0.0432</td>
+<td>0.0118</td>
+<td>1.168</td>
+</tr>
+</tbody>
+</table>
+<h2 id="resultado-u-por-curva-en-cada-nivel-pt">5. Resultado: u por
+curva en cada nivel PT</h2>
+<p>Valores en la misma unidad del gas (nmol/mol, salvo CO en
+µmol/mol).</p>
+<table style="width:100%;">
+<colgroup>
+<col style="width: 16%" />
+<col style="width: 16%" />
+<col style="width: 16%" />
+<col style="width: 16%" />
+<col style="width: 16%" />
+<col style="width: 16%" />
+</colgroup>
+<thead>
+<tr>
+<th>Nivel</th>
+<th>O3</th>
+<th>NO</th>
+<th>NO2</th>
+<th>SO2</th>
+<th>CO</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1 (cero)</td>
+<td>0.868</td>
+<td>0.310</td>
+<td>0.465</td>
+<td>0.330</td>
+<td>0.0436</td>
+</tr>
+<tr>
+<td>2</td>
+<td>0.642 (40)</td>
+<td>0.227 (41)</td>
+<td>0.344 (32)</td>
+<td>0.241 (40)</td>
+<td>0.0319 (1.4)</td>
+</tr>
+<tr>
+<td>3</td>
+<td>0.523 (80)</td>
+<td>0.186 (80)</td>
+<td>0.284 (64)</td>
+<td>0.197 (80)</td>
+<td>0.0261 (2.8)</td>
+</tr>
+<tr>
+<td>4</td>
+<td>0.667 (120)</td>
+<td>0.204 (119)</td>
+<td>0.375 (112)</td>
+<td>0.227 (119)</td>
+<td>0.0301 (4.2)</td>
+</tr>
+<tr>
+<td>5</td>
+<td>1.001 (180)</td>
+<td>0.316 (179)</td>
+<td>0.499 (144)</td>
+<td>0.361 (179)</td>
+<td>0.0478 (6.3)</td>
+</tr>
+</tbody>
+</table>
+<p><em>(entre paréntesis, la concentración nominal del nivel)</em></p>
+<p>En términos relativos, en el nivel más alto de cada gas:</p>
+<table>
+<thead>
+<tr>
+<th>Gas</th>
+<th>u_curva relativa</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>O3</td>
+<td>0.56 %</td>
+</tr>
+<tr>
+<td>NO</td>
+<td>0.18 %</td>
+</tr>
+<tr>
+<td>NO2</td>
+<td>0.35 %</td>
+</tr>
+<tr>
+<td>SO2</td>
+<td>0.20 %</td>
+</tr>
+<tr>
+<td>CO</td>
+<td>0.76 %</td>
+</tr>
+</tbody>
+</table>
+<h2 id="lectura-de-los-resultados">6. Lectura de los resultados</h2>
+<ul>
+<li><strong>O3 es el gas con mayor aporte absoluto.</strong> Viene casi
+todo de un solo punto: el 79.8 ppb leyó 77.78, un residuo de −1.73 ppb.
+Ese punto solo eleva la s residual de O3 a casi el triple de la de
+NO.</li>
+<li><strong>CO es el peor en términos relativos</strong> (r_max 1.17
+%FS), por el residuo +0.074 ppm en el punto de 1.4 ppm. En valor
+absoluto es pequeño, pero relativo al nivel bajo pesa.</li>
+<li><strong>NO, NOx y SO2 son los ajustes más limpios</strong>, con
+residuos por debajo de 0.51 ppb en todos los puntos.</li>
+<li><strong>El nivel cero siempre tiene la u más alta</strong> de la
+serie por el método GUM, porque está en el extremo de la recta y lejos
+del centroide de calibración.</li>
+</ul>
+<h2 id="cómo-se-integra-al-presupuesto-de-incertidumbre">7. Cómo se
+integra al presupuesto de incertidumbre</h2>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>u</mi><mi>c</mi></msub><mo>=</mo><msqrt><mrow><msubsup><mi>u</mi><mtext mathvariant="normal">repetibilidad</mtext><mn>2</mn></msubsup><mo>+</mo><msubsup><mi>u</mi><mtext mathvariant="normal">curva</mtext><mn>2</mn></msubsup><mo>+</mo><msubsup><mi>u</mi><mtext mathvariant="normal">patrón</mtext><mn>2</mn></msubsup><mo>+</mo><mi>…</mi></mrow></msqrt></mrow><annotation encoding="application/x-tex">u_c = \sqrt{u_{\text{repetibilidad}}^2 + u_{\text{curva}}^2 + u_{\text{patrón}}^2 + \ldots}</annotation></semantics></math></p>
+<p>donde
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>u</mi><mtext mathvariant="normal">repetibilidad</mtext></msub><mo>=</mo><mi>s</mi><mi>/</mi><msqrt><mn>3</mn></msqrt></mrow><annotation encoding="application/x-tex">u_{\text{repetibilidad}} = s/\sqrt{3}</annotation></semantics></math>
+sobre las 3 lecturas horarias (ya calculada en el pipeline como
+<code>u_value</code>), y
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>u</mi><mtext mathvariant="normal">curva</mtext></msub><annotation encoding="application/x-tex">u_{\text{curva}}</annotation></semantics></math>
+es la tabla de la sección 5. La incertidumbre expandida es
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>U</mi><mo>=</mo><mi>k</mi><mo>⋅</mo><msub><mi>u</mi><mi>c</mi></msub></mrow><annotation encoding="application/x-tex">U = k \cdot u_c</annotation></semantics></math>
+con
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>k</mi><mo>=</mo><mn>2</mn></mrow><annotation encoding="application/x-tex">k = 2</annotation></semantics></math>.</p>
+<p>En la práctica: se busca la fila del gas y del nivel en
+<code>outputs/u_curva_referencia_niveles.csv</code> y se suma en
+cuadratura al resto de componentes de esa medición.</p>
+<h2 id="presupuesto-completo-por-gas-y-nivel">8. Presupuesto completo
+por gas y nivel</h2>
+<p>Fuente: <code>outputs/tables/presupuesto_incertidumbre.csv</code>
+(<code>scripts/09_presupuesto_incertidumbre.R</code>). Todas las
+columnas de incertidumbre en la unidad del gas: ppb, salvo CO en ppm.
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>u</mi><mi>c</mi></msub><annotation encoding="application/x-tex">u_c</annotation></semantics></math>
+es la suma en cuadratura de las cinco componentes;
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>U</mi><mo>=</mo><mn>2</mn><msub><mi>u</mi><mi>c</mi></msub></mrow><annotation encoding="application/x-tex">U = 2u_c</annotation></semantics></math>.</p>
+<p>Componentes: <code>u_rep</code> repetibilidad de las 3 lecturas
+horarias; <code>u_curva</code> la sección 5; <code>u_patron</code> el
+patrón entregado al analizador; <code>u_aire_cero</code> el generador de
+aire cero; <code>u_conv</code> la eficiencia de conversión, solo aplica
+a NO2 por GPT y vale cero en el nivel cero.</p>
+<blockquote>
+<p><strong>Atención al índice <code>level</code>.</strong> En esta
+tabla, tomada del pipeline, <code>level</code> es el índice PT y va del
+nominal más alto al más bajo (level 2 = tope de escala). La tabla de la
+sección 5 usa el orden inverso (nivel 5 = tope). Al cruzar ambas, guíese
+por la concentración nominal, no por el número de nivel.</p>
+</blockquote>
+<table>
+<colgroup>
+<col style="width: 8%" />
+<col style="width: 8%" />
+<col style="width: 8%" />
+<col style="width: 8%" />
+<col style="width: 8%" />
+<col style="width: 8%" />
+<col style="width: 8%" />
+<col style="width: 8%" />
+<col style="width: 8%" />
+<col style="width: 8%" />
+<col style="width: 8%" />
+<col style="width: 8%" />
+</colgroup>
+<thead>
+<tr>
+<th>Gas</th>
+<th>Ronda</th>
+<th>Level</th>
+<th>Nominal</th>
+<th>u_rep</th>
+<th>u_curva</th>
+<th>u_patron</th>
+<th>u_aire_cero</th>
+<th>u_conv</th>
+<th>u_c</th>
+<th>U (k=2)</th>
+<th>U rel %</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>CO</td>
+<td>R1</td>
+<td>1</td>
+<td>0</td>
+<td>0.0175</td>
+<td>0.0436</td>
+<td>0.0500</td>
+<td>0.0104</td>
+<td>0</td>
+<td>0.0694</td>
+<td>0.139</td>
+<td>—</td>
+</tr>
+<tr>
+<td>CO</td>
+<td>R1</td>
+<td>2</td>
+<td>6.30</td>
+<td>0.0263</td>
+<td>0.0478</td>
+<td>0.0500</td>
+<td>0.0104</td>
+<td>0</td>
+<td>0.0747</td>
+<td>0.149</td>
+<td>2.37</td>
+</tr>
+<tr>
+<td>CO</td>
+<td>R1</td>
+<td>3</td>
+<td>4.20</td>
+<td>0.0200</td>
+<td>0.0301</td>
+<td>0.0500</td>
+<td>0.0104</td>
+<td>0</td>
+<td>0.0625</td>
+<td>0.125</td>
+<td>2.98</td>
+</tr>
+<tr>
+<td>CO</td>
+<td>R1</td>
+<td>4</td>
+<td>2.80</td>
+<td>0.0148</td>
+<td>0.0261</td>
+<td>0.0500</td>
+<td>0.0104</td>
+<td>0</td>
+<td>0.0592</td>
+<td>0.118</td>
+<td>4.23</td>
+</tr>
+<tr>
+<td>CO</td>
+<td>R1</td>
+<td>5</td>
+<td>1.40</td>
+<td>0.0123</td>
+<td>0.0319</td>
+<td>0.0500</td>
+<td>0.0104</td>
+<td>0</td>
+<td>0.0614</td>
+<td>0.123</td>
+<td>8.78</td>
+</tr>
+<tr>
+<td>NO</td>
+<td>R2B</td>
+<td>1</td>
+<td>0</td>
+<td>0.216</td>
+<td>0.310</td>
+<td>0.500</td>
+<td>0.442</td>
+<td>0</td>
+<td>0.767</td>
+<td>1.53</td>
+<td>—</td>
+</tr>
+<tr>
+<td>NO</td>
+<td>R2B</td>
+<td>2</td>
+<td>180</td>
+<td>0.0774</td>
+<td>0.318</td>
+<td>0.500</td>
+<td>0.442</td>
+<td>0</td>
+<td>0.743</td>
+<td>1.49</td>
+<td>0.826</td>
+</tr>
+<tr>
+<td>NO</td>
+<td>R2B</td>
+<td>3</td>
+<td>119</td>
+<td>0.0740</td>
+<td>0.204</td>
+<td>0.500</td>
+<td>0.442</td>
+<td>0</td>
+<td>0.702</td>
+<td>1.40</td>
+<td>1.18</td>
+</tr>
+<tr>
+<td>NO</td>
+<td>R2B</td>
+<td>4</td>
+<td>78.0</td>
+<td>0.0555</td>
+<td>0.187</td>
+<td>0.500</td>
+<td>0.442</td>
+<td>0</td>
+<td>0.695</td>
+<td>1.39</td>
+<td>1.78</td>
+</tr>
+<tr>
+<td>NO</td>
+<td>R2B</td>
+<td>5</td>
+<td>37.0</td>
+<td>0.145</td>
+<td>0.234</td>
+<td>0.500</td>
+<td>0.442</td>
+<td>0</td>
+<td>0.722</td>
+<td>1.44</td>
+<td>3.90</td>
+</tr>
+<tr>
+<td>NO</td>
+<td>R3</td>
+<td>1</td>
+<td>0</td>
+<td>0.0437</td>
+<td>0.841</td>
+<td>0.500</td>
+<td>0.442</td>
+<td>0</td>
+<td>1.07</td>
+<td>2.15</td>
+<td>—</td>
+</tr>
+<tr>
+<td>NO</td>
+<td>R3</td>
+<td>2</td>
+<td>179</td>
+<td>0.135</td>
+<td>0.860</td>
+<td>0.500</td>
+<td>0.442</td>
+<td>0</td>
+<td>1.10</td>
+<td>2.19</td>
+<td>1.23</td>
+</tr>
+<tr>
+<td>NO</td>
+<td>R3</td>
+<td>3</td>
+<td>119</td>
+<td>0.650</td>
+<td>0.555</td>
+<td>0.500</td>
+<td>0.442</td>
+<td>0</td>
+<td>1.08</td>
+<td>2.17</td>
+<td>1.82</td>
+</tr>
+<tr>
+<td>NO</td>
+<td>R3</td>
+<td>4</td>
+<td>80.0</td>
+<td>0.0608</td>
+<td>0.505</td>
+<td>0.500</td>
+<td>0.442</td>
+<td>0</td>
+<td>0.839</td>
+<td>1.68</td>
+<td>2.10</td>
+</tr>
+<tr>
+<td>NO</td>
+<td>R3</td>
+<td>5</td>
+<td>41.0</td>
+<td>0.0715</td>
+<td>0.617</td>
+<td>0.500</td>
+<td>0.442</td>
+<td>0</td>
+<td>0.912</td>
+<td>1.82</td>
+<td>4.45</td>
+</tr>
+<tr>
+<td>NO2</td>
+<td>R2C</td>
+<td>1</td>
+<td>0</td>
+<td>0.193</td>
+<td>0.465</td>
+<td>0.500</td>
+<td>0.358</td>
+<td>0</td>
+<td>0.795</td>
+<td>1.59</td>
+<td>—</td>
+</tr>
+<tr>
+<td>NO2</td>
+<td>R2C</td>
+<td>2</td>
+<td>140</td>
+<td>0.119</td>
+<td>0.481</td>
+<td>0.500</td>
+<td>0.358</td>
+<td>1.51</td>
+<td>1.70</td>
+<td>3.40</td>
+<td>2.43</td>
+</tr>
+<tr>
+<td>NO2</td>
+<td>R2C</td>
+<td>3</td>
+<td>105</td>
+<td>0.0503</td>
+<td>0.351</td>
+<td>0.500</td>
+<td>0.358</td>
+<td>1.13</td>
+<td>1.33</td>
+<td>2.67</td>
+<td>2.54</td>
+</tr>
+<tr>
+<td>NO2</td>
+<td>R2C</td>
+<td>4</td>
+<td>60.0</td>
+<td>0.0498</td>
+<td>0.287</td>
+<td>0.500</td>
+<td>0.358</td>
+<td>0.646</td>
+<td>0.938</td>
+<td>1.88</td>
+<td>3.13</td>
+</tr>
+<tr>
+<td>NO2</td>
+<td>R2C</td>
+<td>5</td>
+<td>30.0</td>
+<td>0.0493</td>
+<td>0.351</td>
+<td>0.500</td>
+<td>0.358</td>
+<td>0.323</td>
+<td>0.780</td>
+<td>1.56</td>
+<td>5.20</td>
+</tr>
+<tr>
+<td>NO2</td>
+<td>R3</td>
+<td>1</td>
+<td>0</td>
+<td>0.0352</td>
+<td>0.699</td>
+<td>0.500</td>
+<td>0.358</td>
+<td>0</td>
+<td>0.932</td>
+<td>1.86</td>
+<td>—</td>
+</tr>
+<tr>
+<td>NO2</td>
+<td>R3</td>
+<td>2</td>
+<td>144</td>
+<td>0.0663</td>
+<td>0.766</td>
+<td>0.500</td>
+<td>0.358</td>
+<td>1.55</td>
+<td>1.84</td>
+<td>3.67</td>
+<td>2.55</td>
+</tr>
+<tr>
+<td>NO2</td>
+<td>R3</td>
+<td>3</td>
+<td>112</td>
+<td>0.0401</td>
+<td>0.548</td>
+<td>0.500</td>
+<td>0.358</td>
+<td>1.21</td>
+<td>1.46</td>
+<td>2.92</td>
+<td>2.61</td>
+</tr>
+<tr>
+<td>NO2</td>
+<td>R3</td>
+<td>4</td>
+<td>64.0</td>
+<td>0.0963</td>
+<td>0.392</td>
+<td>0.500</td>
+<td>0.358</td>
+<td>0.689</td>
+<td>1.01</td>
+<td>2.02</td>
+<td>3.15</td>
+</tr>
+<tr>
+<td>NO2</td>
+<td>R3</td>
+<td>5</td>
+<td>32.0</td>
+<td>0.0695</td>
+<td>0.496</td>
+<td>0.500</td>
+<td>0.358</td>
+<td>0.344</td>
+<td>0.864</td>
+<td>1.73</td>
+<td>5.40</td>
+</tr>
+<tr>
+<td>O3</td>
+<td>R2A</td>
+<td>1</td>
+<td>0</td>
+<td>0.204</td>
+<td>0.868</td>
+<td>0.335</td>
+<td>0.0231</td>
+<td>0</td>
+<td>0.953</td>
+<td>1.91</td>
+<td>—</td>
+</tr>
+<tr>
+<td>O3</td>
+<td>R2A</td>
+<td>2</td>
+<td>180</td>
+<td>0.757</td>
+<td>1.00</td>
+<td>0.794</td>
+<td>0.0231</td>
+<td>0</td>
+<td>1.49</td>
+<td>2.97</td>
+<td>1.65</td>
+</tr>
+<tr>
+<td>O3</td>
+<td>R2A</td>
+<td>3</td>
+<td>120</td>
+<td>0.139</td>
+<td>0.667</td>
+<td>0.641</td>
+<td>0.0231</td>
+<td>0</td>
+<td>0.936</td>
+<td>1.87</td>
+<td>1.56</td>
+</tr>
+<tr>
+<td>O3</td>
+<td>R2A</td>
+<td>4</td>
+<td>80.0</td>
+<td>0.0441</td>
+<td>0.523</td>
+<td>0.539</td>
+<td>0.0231</td>
+<td>0</td>
+<td>0.753</td>
+<td>1.51</td>
+<td>1.88</td>
+</tr>
+<tr>
+<td>O3</td>
+<td>R2A</td>
+<td>5</td>
+<td>40.0</td>
+<td>0.0362</td>
+<td>0.642</td>
+<td>0.437</td>
+<td>0.0231</td>
+<td>0</td>
+<td>0.778</td>
+<td>1.56</td>
+<td>3.89</td>
+</tr>
+<tr>
+<td>O3</td>
+<td>R3</td>
+<td>1</td>
+<td>0</td>
+<td>0.0379</td>
+<td>0.598</td>
+<td>0.335</td>
+<td>0.0231</td>
+<td>0</td>
+<td>0.687</td>
+<td>1.37</td>
+<td>—</td>
+</tr>
+<tr>
+<td>O3</td>
+<td>R3</td>
+<td>2</td>
+<td>180</td>
+<td>0.108</td>
+<td>0.621</td>
+<td>0.794</td>
+<td>0.0231</td>
+<td>0</td>
+<td>1.01</td>
+<td>2.03</td>
+<td>1.13</td>
+</tr>
+<tr>
+<td>O3</td>
+<td>R3</td>
+<td>3</td>
+<td>120</td>
+<td>0.206</td>
+<td>0.404</td>
+<td>0.641</td>
+<td>0.0231</td>
+<td>0</td>
+<td>0.786</td>
+<td>1.57</td>
+<td>1.31</td>
+</tr>
+<tr>
+<td>O3</td>
+<td>R3</td>
+<td>4</td>
+<td>80.0</td>
+<td>0.0933</td>
+<td>0.361</td>
+<td>0.539</td>
+<td>0.0231</td>
+<td>0</td>
+<td>0.656</td>
+<td>1.31</td>
+<td>1.64</td>
+</tr>
+<tr>
+<td>O3</td>
+<td>R3</td>
+<td>5</td>
+<td>40.0</td>
+<td>0.0471</td>
+<td>0.443</td>
+<td>0.437</td>
+<td>0.0231</td>
+<td>0</td>
+<td>0.624</td>
+<td>1.25</td>
+<td>3.12</td>
+</tr>
+<tr>
+<td>SO2</td>
+<td>R1</td>
+<td>1</td>
+<td>0</td>
+<td>0.0103</td>
+<td>0.330</td>
+<td>0.500</td>
+<td>0.0358</td>
+<td>0</td>
+<td>0.600</td>
+<td>1.20</td>
+<td>—</td>
+</tr>
+<tr>
+<td>SO2</td>
+<td>R1</td>
+<td>2</td>
+<td>179</td>
+<td>0.650</td>
+<td>0.361</td>
+<td>0.500</td>
+<td>0.0358</td>
+<td>0</td>
+<td>0.897</td>
+<td>1.79</td>
+<td>1.00</td>
+</tr>
+<tr>
+<td>SO2</td>
+<td>R1</td>
+<td>3</td>
+<td>119</td>
+<td>0.294</td>
+<td>0.227</td>
+<td>0.500</td>
+<td>0.0358</td>
+<td>0</td>
+<td>0.624</td>
+<td>1.25</td>
+<td>1.05</td>
+</tr>
+<tr>
+<td>SO2</td>
+<td>R1</td>
+<td>4</td>
+<td>80.0</td>
+<td>0.168</td>
+<td>0.197</td>
+<td>0.500</td>
+<td>0.0358</td>
+<td>0</td>
+<td>0.564</td>
+<td>1.13</td>
+<td>1.41</td>
+</tr>
+<tr>
+<td>SO2</td>
+<td>R1</td>
+<td>5</td>
+<td>40.0</td>
+<td>0.107</td>
+<td>0.241</td>
+<td>0.500</td>
+<td>0.0358</td>
+<td>0</td>
+<td>0.566</td>
+<td>1.13</td>
+<td>2.83</td>
+</tr>
+</tbody>
+</table>
+<p><em>(U rel % no aplica en el nivel cero: el nominal es 0)</em></p>
+<h3 id="componente-dominante-en-el-tope-de-escala">Componente dominante
+en el tope de escala</h3>
+<table>
+<thead>
+<tr>
+<th>Gas</th>
+<th>Nivel declarado</th>
+<th>u_c</th>
+<th>U (k=2)</th>
+<th>U rel %</th>
+<th>Dominante</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>CO</td>
+<td>6.3 ppm</td>
+<td>0.0747</td>
+<td>0.149</td>
+<td>2.37</td>
+<td>u_patron</td>
+</tr>
+<tr>
+<td>NO</td>
+<td>180 ppb</td>
+<td>0.743</td>
+<td>1.49</td>
+<td>0.826</td>
+<td>u_patron</td>
+</tr>
+<tr>
+<td>NO2</td>
+<td>144 ppb</td>
+<td>1.84</td>
+<td>3.67</td>
+<td>2.55</td>
+<td>u_conv</td>
+</tr>
+<tr>
+<td>O3</td>
+<td>180 ppb</td>
+<td>1.49</td>
+<td>2.97</td>
+<td>1.65</td>
+<td>u_curva</td>
+</tr>
+<tr>
+<td>SO2</td>
+<td>179 ppb</td>
+<td>0.897</td>
+<td>1.79</td>
+<td>1.00</td>
+<td>u_rep</td>
+</tr>
+</tbody>
+</table>
+<p>La curva de calibración solo domina el presupuesto en O3. En NO, NOx
+y CO manda la incertidumbre del patrón; en NO2 la eficiencia de
+conversión GPT; en SO2 la repetibilidad. Es decir: reducir la
+contribución de la curva solo mejora de forma apreciable el resultado de
+O3.</p>
+<h2 id="alcance-y-limitaciones">9. Alcance y limitaciones</h2>
+<ul>
+<li><strong>Cobertura por ronda:</strong> SO2 y CO solo se midieron en
+la <strong>ronda 1</strong>; O3, NO y NO2 en la ronda 3.
+<code>outputs/u_curva_por_nivel.csv</code> aplica la combinación
+únicamente sobre las filas de ronda 3 que existen en el consolidado;
+para SO2 y CO la tabla de referencia queda disponible para aplicarla a
+los datos de ronda 1.</li>
+<li><strong>Vigencia temporal:</strong> las calibraciones son de abril
+de 2026 y las rondas PT de julio. Se asume que la curva se mantiene
+válida en ese intervalo; cualquier deriva entre ambas fechas es un
+componente adicional no incluido aquí.</li>
+<li><strong>Solo 5 puntos, 3 grados de libertad.</strong> Con
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>n</mi><mo>−</mo><mn>2</mn><mo>=</mo><mn>3</mn></mrow><annotation encoding="application/x-tex">n-2 = 3</annotation></semantics></math>,
+la estimación de
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>s</mi><annotation encoding="application/x-tex">s</annotation></semantics></math>
+es poco robusta. Un solo punto atípico —como el de 79.8 ppb en O3—
+domina el resultado.</li>
+<li><strong>No incluye la incertidumbre del patrón mismo</strong>
+(calibrador dinámico, cilindro certificado, generador de aire cero). Ese
+es un componente separado que se suma aparte.</li>
+<li><strong>CO en ppm.</strong> Los cálculos de CO están en µmol/mol;
+convertir antes de mezclar con los demás gases en cualquier tabla
+común.</li>
+</ul>
+</main>
+</div>
+<script>
+(function(){
+  var r=document.documentElement, b=document.getElementById('themeBtn');
+  var saved=localStorage.getItem('uc-theme'); if(saved) r.setAttribute('data-theme',saved);
+  b.addEventListener('click',function(){
+    var cur=r.getAttribute('data-theme');
+    if(!cur) cur=matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';
+    var next=cur==='dark'?'light':'dark';
+    r.setAttribute('data-theme',next); localStorage.setItem('uc-theme',next);
+  });
+  document.querySelectorAll('main table').forEach(function(t){
+    if(t.parentElement.classList.contains('tbl'))return;
+    var d=document.createElement('div'); d.className='tbl';
+    t.parentNode.insertBefore(d,t); d.appendChild(t);
+  });
+})();
+</script>
+</body>
+</html>

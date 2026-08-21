@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="es" xml:lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="generator" content="pandoc 3.10.1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+  <meta name="dcterms.date" content="2026-07-30" />
+  <title>Hallazgos preliminares — Rondas PT</title>
+  <style>
+
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: 1.5em;}
+div.column{flex: auto;}
+@media screen {
+div.columns{gap: min(4vw, 1.5em);}
+div.column{overflow-x: auto;}
+}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+
+ul.task-list[class]{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+font-size: inherit;
+width: 0.8em;
+margin: 0 0.8em 0.2em -1.6em;
+vertical-align: middle;
+}
+.display.math{display: block; text-align: center; margin: 0.5rem auto;}
+</style>
+  <style type="text/css">body {
+color: #24303f;
+line-height: 1.65;
+}
+#quarto-content {
+max-width: 1280px;
+}
+h1, h2, h3 {
+color: #17324d;
+font-weight: 700;
+}
+h2 {
+border-bottom: 2px solid #dbe6ef;
+padding-bottom: 0.35rem;
+margin-top: 2.4rem;
+}
+.summary-grid {
+display: grid;
+grid-template-columns: repeat(2, minmax(0, 1fr));
+gap: 1rem;
+margin: 1.25rem 0 2rem;
+}
+.summary-card {
+background: #f5f8fb;
+border: 1px solid #dbe6ef;
+border-left: 4px solid #277da1;
+border-radius: 0.5rem;
+padding: 1rem 1.1rem;
+}
+.summary-card h3 {
+font-size: 1rem;
+margin: 0 0 0.45rem;
+}
+.summary-card p {
+margin: 0;
+}
+table {
+width: 100%;
+margin: 1.1rem 0 1.5rem;
+}
+thead th {
+background: #eaf1f6;
+color: #17324d;
+}
+tbody tr:nth-child(even) {
+background: #f8fafc;
+}
+code {
+color: #8a3654;
+background: #f5edf0;
+padding: 0.08rem 0.25rem;
+border-radius: 0.2rem;
+}
+.next-step {
+margin-top: 2rem;
+padding: 1rem 1.2rem;
+background: #edf7f2;
+border: 1px solid #b9ddcc;
+border-left: 4px solid #2a9d6f;
+border-radius: 0.5rem;
+}
+.callout {
+border-radius: 0.5rem;
+}
+@media (max-width: 760px) {
+.summary-grid {
+grid-template-columns: 1fr;
+}
+}
+@media print {
+#TOC, .quarto-secondary-nav {
+display: none !important;
+}
+body {
+font-size: 11pt;
+}
+.summary-card, .callout, .next-step {
+break-inside: avoid;
+}
+}
+</style>
+</head>
+<body>
+<header id="title-block-header">
+<h1 class="title">Hallazgos preliminares — Rondas PT</h1>
+<p class="subtitle">R1, R2 y R3</p>
+<p class="date">2026-07-30</p>
+</header>
+<nav id="TOC" role="doc-toc">
+<ul>
+<li><a href="#alcance-del-informe" id="toc-alcance-del-informe">Alcance
+del informe</a></li>
+<li><a href="#resumen-ejecutivo" id="toc-resumen-ejecutivo">Resumen
+ejecutivo</a></li>
+<li><a href="#diseño-de-las-rondas" id="toc-diseño-de-las-rondas">1.
+Diseño de las rondas</a></li>
+<li><a href="#niveles-nominales-verificados" id="toc-niveles-nominales-verificados">2. Niveles nominales
+verificados</a></li>
+<li><a href="#reglas-de-comparabilidad" id="toc-reglas-de-comparabilidad">Reglas de comparabilidad</a></li>
+<li><a href="#hallazgos-de-calidad-de-datos" id="toc-hallazgos-de-calidad-de-datos">3. Hallazgos de calidad de
+datos</a>
+<ul>
+<li><a href="#interrupciones-temporales" id="toc-interrupciones-temporales">3.1 Interrupciones
+temporales</a></li>
+<li><a href="#valores-no-numéricos-y-ausentes" id="toc-valores-no-numéricos-y-ausentes">3.2 Valores no numéricos y
+ausentes</a></li>
+<li><a href="#desfase-del-generador-en-no" id="toc-desfase-del-generador-en-no">3.3 Desfase del generador en
+NO</a></li>
+<li><a href="#excursiones-en-o3" id="toc-excursiones-en-o3">3.4
+Excursiones en O3</a></li>
+<li><a href="#no2-en-r3" id="toc-no2-en-r3">3.5 NO2 en R3</a></li>
+</ul></li>
+<li><a href="#interpretación-provisional" id="toc-interpretación-provisional">Interpretación provisional</a></li>
+<li><a href="#ceros-repetidos-en-r3" id="toc-ceros-repetidos-en-r3">3.6
+Ceros repetidos en R3</a></li>
+<li><a href="#resolución-del-participante-p1-en-cero" id="toc-resolución-del-participante-p1-en-cero">3.7 Resolución del
+participante P1 en cero</a></li>
+<li><a href="#canales-no-no2-y-nox" id="toc-canales-no-no2-y-nox">3.8
+Canales NO, NO2 y NOx</a></li>
+<li><a href="#comparaciones-válidas" id="toc-comparaciones-válidas">4.
+Comparaciones válidas</a>
+<ul>
+<li><a href="#dentro-de-cada-ronda" id="toc-dentro-de-cada-ronda">Dentro
+de cada ronda</a></li>
+<li><a href="#entre-r2-y-r3" id="toc-entre-r2-y-r3">Entre R2 y
+R3</a></li>
+</ul></li>
+<li><a href="#interpretación-preliminar" id="toc-interpretación-preliminar">5. Interpretación preliminar</a></li>
+<li><a href="#resultado-todavía-pendiente" id="toc-resultado-todavía-pendiente">Resultado todavía
+pendiente</a></li>
+<li><a href="#conclusiones" id="toc-conclusiones">6.
+Conclusiones</a></li>
+</ul>
+</nav>
+<section id="alcance-del-informe" class="callout-warning" data-appearance="simple">
+<h2>Alcance del informe</h2>
+<p>Este documento presenta <strong>hallazgos preliminares obtenidos
+mediante inspección directa de los archivos</strong>. No contiene
+resultados estadísticos definitivos: todavía no se han ejecutado el
+pipeline, las pruebas estadísticas ni las gráficas definidas en
+<code>plan_analisis.md</code> y <code>workflow_analisis.md</code>.</p>
+</section>
+<h2 id="resumen-ejecutivo">Resumen ejecutivo</h2>
+<div class="summary-grid">
+<section id="diseño" class="summary-card">
+<h3>Diseño</h3>
+<p>R1 y R2 corresponden al participante <strong>P1</strong>. R3
+corresponde al participante <strong>P2</strong>. Analizador CalAire 4U
+actúa como referencia en todas las rondas.</p>
+</section>
+<section id="comparación-principal" class="summary-card">
+<h3>Comparación principal</h3>
+<p>R2 y R3 comparten O3, NO y NO2. Comparación entre participantes será
+descriptiva porque cada participante tiene una sola ronda.</p>
+</section>
+<section id="calidad-de-datos" class="summary-card">
+<h3>Calidad de datos</h3>
+<p>Se observaron interrupciones temporales, valores
+<code>Samp&lt;</code>, celdas vacías, excursiones en O3 y desfases entre
+lectura y etiqueta del generador.</p>
+</section>
+<section id="decisión-clave" class="summary-card">
+<h3>Decisión clave</h3>
+<p>Sesgos no serán corregidos. Se conservarán y reportarán con su
+contexto metrológico y de calidad de datos.</p>
+</section>
+</div>
+<h2 id="diseño-de-las-rondas">1. Diseño de las rondas</h2>
+<table>
+<thead>
+<tr>
+<th>Ronda</th>
+<th>Analitos</th>
+<th>Participante</th>
+<th>Referencia</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>R1</td>
+<td>SO2 y CO</td>
+<td>P1</td>
+<td>CalAire 4U</td>
+</tr>
+<tr>
+<td>R2</td>
+<td>O3, NO y NO2</td>
+<td>P1</td>
+<td>CalAire 4U</td>
+</tr>
+<tr>
+<td>R3</td>
+<td>O3, NO y NO2</td>
+<td>P2 (<code>ZFT5R6</code>)</td>
+<td>CalAire 4U</td>
+</tr>
+</tbody>
+</table>
+<p>R2 y R3 permiten comparar los mismos analitos, pero no representan
+seguimiento temporal de un mismo participante. Continuidad temporal sólo
+corresponde al analizador de referencia, bajo supuesto confirmado
+externamente de que <code>4UXXXX</code> y <code>4UDY72</code>
+identifican el mismo equipo físico.</p>
+<h2 id="niveles-nominales-verificados">2. Niveles nominales
+verificados</h2>
+<table>
+<thead>
+<tr>
+<th>Analito y ronda</th>
+<th>Niveles nominales</th>
+<th>Unidad</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>O3 R2 y R3</td>
+<td>0, 180, 120, 80 y 40</td>
+<td>ppb</td>
+</tr>
+<tr>
+<td>NO R2</td>
+<td>0, 180, 119, 78 y 37</td>
+<td>ppb</td>
+</tr>
+<tr>
+<td>NO R3</td>
+<td>0, 179, 119, 80 y 41</td>
+<td>ppb</td>
+</tr>
+<tr>
+<td>NO2 R2</td>
+<td>0, 140, 105, 60 y 30</td>
+<td>ppb</td>
+</tr>
+<tr>
+<td>NO2 R3</td>
+<td>0, 144, 112, 64 y 32</td>
+<td>ppb</td>
+</tr>
+<tr>
+<td>SO2 R1</td>
+<td>0, 179, 119, 80 y 40</td>
+<td>ppb</td>
+</tr>
+<tr>
+<td>CO R1</td>
+<td>0, 6.3, 4.2, 2.8 y 1.4</td>
+<td>ppm</td>
+</tr>
+</tbody>
+</table>
+<section id="reglas-de-comparabilidad" class="callout-note" data-appearance="simple">
+<h2>Reglas de comparabilidad</h2>
+<ul>
+<li>Diferencias nominales de <strong>NO</strong> se consideran
+tolerables.</li>
+<li>Para <strong>NO2</strong>, niveles 1, 2, 4 y 5 se mantienen en
+comparación R2–R3.</li>
+<li><strong>NO2 nivel 3</strong> —105 frente a 112 ppb— queda fuera sólo
+de comparación cruzada R2–R3.</li>
+<li>Cero se conserva para todos los analitos y se compara en
+concentración absoluta.</li>
+<li>CO permanece separado por estar expresado en ppm.</li>
+</ul>
+</section>
+<h2 id="hallazgos-de-calidad-de-datos">3. Hallazgos de calidad de
+datos</h2>
+<h3 id="interrupciones-temporales">3.1 Interrupciones temporales</h3>
+<ul>
+<li><code>R2C_NO2.csv</code> presenta interrupción cercana a <strong>12
+horas</strong>. Período de cero queda truncado.</li>
+<li><code>R3_NO2.csv</code> presenta interrupción cercana a <strong>14
+horas</strong>, entre 16 de julio 09:00 y 23:01. Número de observaciones
+del nivel 2 queda reducido.</li>
+</ul>
+<p>Interrupciones no justifican borrar niveles completos. Deben
+documentarse en tablas, gráficas e interpretación.</p>
+<h3 id="valores-no-numéricos-y-ausentes">3.2 Valores no numéricos y
+ausentes</h3>
+<ul>
+<li><code>R3_NO.csv</code> contiene una ocurrencia de
+<code>Samp&lt;</code> en tres canales del participante.</li>
+<li>Cada celda afectada se convierte en <code>NA</code> puntual, sin
+eliminar fila completa ni observaciones cercanas.</li>
+<li>Existen celdas vacías en archivos de R2, especialmente
+<code>R2B_NO.csv</code> y <code>R2C_NO2.csv</code>.</li>
+</ul>
+<h3 id="desfase-del-generador-en-no">3.3 Desfase del generador en
+NO</h3>
+<p><code>R2B_NO.csv</code> contiene aproximadamente seis registros con
+lecturas elevadas mientras nominal continúa marcado como cero. Esto
+indica desfase entre cambio real de concentración y etiqueta del
+generador. Registros deben marcarse mediante control de calidad y no
+interpretarse como cero estable.</p>
+<h3 id="excursiones-en-o3">3.4 Excursiones en O3</h3>
+<p><code>R2A_O3.csv</code> presenta excursiones visibles durante nivel
+2. Deben marcarse como posibles valores atípicos y reportarse en
+variantes con y sin esos puntos, sin descarte silencioso.</p>
+<h3 id="no2-en-r3">3.5 NO2 en R3</h3>
+<p>Mediciones de referencia superan nominales declarados en varios
+niveles de <code>R3_NO2.csv</code>. Patrón no parece limitado al nivel
+2: también existe diferencia clara en nivel 3 y diferencias menores en
+niveles 4 y 5.</p>
+<section id="interpretación-provisional" class="callout-important" data-appearance="simple">
+<h2>Interpretación provisional</h2>
+<p>Conviene describir este comportamiento como posible corrimiento
+sistemático de concentración generada durante R3, no como anomalía
+exclusiva del nivel 2. No se aplicará corrección: sesgos se conservarán
+y reportarán tal como resulten.</p>
+</section>
+<p>Nivel 2 combina dos limitaciones: nominal declarado de 144 ppb frente
+a mediciones cercanas a 154 ppb en ambos equipos, y período truncado por
+interrupción temporal.</p>
+<h3 id="ceros-repetidos-en-r3">3.6 Ceros repetidos en R3</h3>
+<p>Período de cero de <code>R3_NO.csv</code> y <code>R3_NO2.csv</code>
+contiene las mismas 60 observaciones iniciales. No representa dos
+mediciones independientes. Deben evitarse doble conteo e interpretación
+como evidencia independiente.</p>
+<h3 id="resolución-del-participante-p1-en-cero">3.7 Resolución del
+participante P1 en cero</h3>
+<p>En varios ceros de R2, participante P1 reporta numerosos valores
+exactamente iguales a cero, mientras referencia conserva variación
+decimal. Esto puede reflejar truncamiento, resolución limitada o formato
+de exportación.</p>
+<p>Desviación estándar pequeña o nula de P1 no debe interpretarse
+automáticamente como mejor estabilidad. Comparación de ruido de cero
+entre P1 y P2 puede reflejar diferencias de resolución instrumental
+además de desempeño real.</p>
+<h3 id="canales-no-no2-y-nox">3.8 Canales NO, NO2 y NOx</h3>
+<p>Archivos multicanal de R3 permiten revisar conservación:</p>
+<p><span class="math display"><em>N</em><em>O</em> + <em>N</em><em>O</em><sub>2</sub> ≈ <em>N</em><em>O</em><sub><em>x</em></sub></span></p>
+<p>En <code>R3_NO2.csv</code>, NO varía de forma inversa a NO2 mientras
+NOx permanece aproximadamente constante. Comportamiento compatible con
+titulación en fase gaseosa. Canal NO concomitante no debe describirse
+como valor fijo cercano a 155 ppb; ese valor corresponde principalmente
+a uno de los niveles.</p>
+<h2 id="comparaciones-válidas">4. Comparaciones válidas</h2>
+<h3 id="dentro-de-cada-ronda">Dentro de cada ronda</h3>
+<p>Referencia y participante compartieron tiempo, mezcla y nivel. Pueden
+calcularse:</p>
+<ul>
+<li>diferencias punto a punto;</li>
+<li>sesgo y dispersión;</li>
+<li>deriva dentro de nivel;</li>
+<li>límites de Bland–Altman.</li>
+</ul>
+<h3 id="entre-r2-y-r3">Entre R2 y R3</h3>
+<p>Rondas ocurrieron en fechas diferentes, con participantes y mezclas
+diferentes. Comparaciones deben usar agregados por nivel, sin emparejar
+registros minuto a minuto.</p>
+<table>
+<colgroup>
+<col style="width: 50%" />
+<col style="width: 50%" />
+</colgroup>
+<thead>
+<tr>
+<th>Caso</th>
+<th>Escala válida</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Nivel cero</td>
+<td>Concentración absoluta en ppb</td>
+</tr>
+<tr>
+<td>Niveles distintos de cero</td>
+<td>Error relativo para comparación inter-ronda</td>
+</tr>
+<tr>
+<td>O3 y NO</td>
+<td>También concentración, por comparabilidad nominal aceptada</td>
+</tr>
+<tr>
+<td>NO2</td>
+<td>Niveles 1, 2, 4 y 5; nivel 3 excluido de comparación cruzada</td>
+</tr>
+</tbody>
+</table>
+<h2 id="interpretación-preliminar">5. Interpretación preliminar</h2>
+<p>Archivos permiten estudiar tres componentes:</p>
+<ol type="1">
+<li>Desempeño de referencia frente a participante dentro de cada
+ronda.</li>
+<li>Cambio temporal del analizador de referencia entre R2 y R3.</li>
+<li>Diferencia descriptiva entre P1 y P2, descontando en lo posible
+cambio de referencia.</li>
+</ol>
+<section id="resultado-todavía-pendiente" class="callout-caution" data-appearance="simple">
+<h2>Resultado todavía pendiente</h2>
+<p>Aún no puede afirmarse qué participante tuvo mejor desempeño ni si
+referencia presentó deriva significativa. Conclusiones requieren
+análisis por nivel, controles de calidad e intervalos de confianza.</p>
+</section>
+<p>Comparación P1–P2 seguirá siendo descriptiva porque existe una sola
+ronda por participante. Diferencias pueden incluir efectos de
+participante, fecha, mezcla generada, resolución de exportación y
+condiciones experimentales.</p>
+<h2 id="conclusiones">6. Conclusiones</h2>
+<ul>
+<li>Estructura permite comparaciones previstas, con restricciones claras
+entre análisis intra-ronda e inter-ronda.</li>
+<li>Cero se conserva en todos los analitos; en R3, ceros de NO y NO2 no
+son independientes.</li>
+<li>CO debe analizarse por separado por diferencia de unidad.</li>
+<li>NO presenta diferencias nominales aceptables entre R2 y R3.</li>
+<li>NO2 nivel 3 se excluye únicamente de comparación cruzada R2–R3.</li>
+<li><code>R3_NO2</code> muestra indicios de corrimiento en varios
+niveles, no sólo en nivel 2.</li>
+<li>Interrupciones de <code>R2C_NO2</code> y <code>R3_NO2</code>,
+excursiones de O3, desfase de NO y valores <code>Samp&lt;</code>
+requieren flags explícitos.</li>
+<li>Ceros exactos de P1 limitan interpretación de ruido
+instrumental.</li>
+<li>Ningún sesgo debe corregirse antes del análisis; debe reportarse
+valor observado y contexto.</li>
+<li>Resultados cuantitativos definitivos quedan pendientes de ejecución
+del workflow.</li>
+</ul>
+<div class="next-step">
+<p><strong>Próximo paso:</strong> ejecutar controles de calidad
+definidos en <code>02_qc.R</code>, revisar flags y luego producir
+estadísticas y gráficas del workflow.</p>
+</div>
+</body>
+</html>

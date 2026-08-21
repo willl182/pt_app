@@ -1,0 +1,7 @@
+"archivo","gas","fecha","serie","etiqueta_inicial","etiqueta_final","par_comparable","gain_inicial","gain_final","offset_inicial","offset_final","cambio_gain_pct","cambio_offset","u_deriva_rel_pct"
+"F-PSEY-47 Calibracion Analizador TAPI CO 22 abril 2026.xlsm","co","2025-04-22","509","Slope inicial:","Slope final:",TRUE,0.931,0.936,-0.018,-0.018,0.537056928034372,0,0.310069961970798
+"F-PSEY-47 Multi CO Jaison.xlsm","co","2026-06-25","509","Slope inicial:","Slope final:",TRUE,0.943,0.938,-0.018,-0.018,-0.530222693531284,0,0.306124214840735
+"F-PSEY-49 Calibracion Analizador E&T O3 29-04-2026.xlsm","o3","2026-04-29","59756-324","Gain inicial:","Gain final:",TRUE,1.105,1.098,4.3,1.7,-0.633484162895918,-2.6,0.365742251975323
+"F-PSEY-49 Calibracion Analizador E&T O3 14-07-2026.xlsm","o3","2026-07-14","59756-324","Gain inicial:","Gain final:",TRUE,1.098,1.028,-0.4,-0.1,-6.3752276867031,0.3,3.68073942106319
+"F-PSEY-62 Calibracion Analizador E&T&H SO2 HORIBA 22 abril 2026.xlsm","so2","2026-04-22","139991","SO2 GAIN inicial:","SO2 GAIN final:",TRUE,1.0044,0.9887,,,-1.56312226204699,,0.902469058769125
+"F-PSEY-62 E&T&H Multi SO2 Jaison.xlsm","so2","2026-06-25","W570KVL5","SO2 GAIN inicial:","SO2 GAIN final:",TRUE,0.97975,1.0245,,,4.56749170706813,,2.63704256659717

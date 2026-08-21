@@ -1,0 +1,31 @@
+"pollutant","level","source","run","unit","instrument","mean_h1","mean_h2","mean_h3","mean_value","sd_value","u_value","u_exp","k_factor","n_hours","hour_starts","participant_id","tipo","n_lab","serial"
+"o3","0-nmol/mol","ronda_participante",1,"nmol/mol","ZFT5R6",0.331,NA,NA,0.331,0.553,0.071,NA,NA,1,"2026-07-15 13:30:00","ZFT5R6","participante",1,NA
+"o3","180-nmol/mol","ronda_participante",3,"nmol/mol","ZFT5R6",181.518,183.4,184.502,183.14,1.509,0.871,NA,NA,3,"2026-07-15 15:10:00|2026-07-15 16:10:00|2026-07-15 17:10:00","ZFT5R6","participante",1,NA
+"o3","120-nmol/mol","ronda_participante",5,"nmol/mol","ZFT5R6",123.368,123.499,123.713,123.527,0.174,0.1,NA,NA,3,"2026-07-15 18:10:00|2026-07-15 19:10:00|2026-07-15 20:10:00","ZFT5R6","participante",1,NA
+"o3","80-nmol/mol","ronda_participante",7,"nmol/mol","ZFT5R6",82.46,82.839,82.508,82.602,0.206,0.119,NA,NA,3,"2026-07-15 21:10:00|2026-07-15 22:10:00|2026-07-15 23:10:00","ZFT5R6","participante",1,NA
+"o3","40-nmol/mol","ronda_participante",9,"nmol/mol","ZFT5R6",41.298,41.239,41.335,41.291,0.048,0.028,NA,NA,3,"2026-07-16 00:10:00|2026-07-16 01:10:00|2026-07-16 02:10:00","ZFT5R6","participante",1,NA
+"no2","0-nmol/mol","ronda_participante",1,"nmol/mol","ZFT5R6",-0.66,NA,NA,-0.66,0.075,0.01,NA,NA,1,"2026-07-16 08:00:00","ZFT5R6","participante",1,NA
+"no2","144-nmol/mol","ronda_participante",3,"nmol/mol","ZFT5R6",154.256,154.203,NA,154.23,0.037,0.026,NA,NA,2,"2026-07-16 23:40:00|2026-07-17 00:40:00","ZFT5R6","participante",1,NA
+"no2","112-nmol/mol","ronda_participante",5,"nmol/mol","ZFT5R6",123.045,122.876,122.824,122.915,0.116,0.067,NA,NA,3,"2026-07-17 02:10:00|2026-07-17 03:10:00|2026-07-17 04:10:00","ZFT5R6","participante",1,NA
+"no2","64-nmol/mol","ronda_participante",7,"nmol/mol","ZFT5R6",67.961,67.719,67.835,67.838,0.121,0.07,NA,NA,3,"2026-07-17 05:10:00|2026-07-17 06:10:00|2026-07-17 07:10:00","ZFT5R6","participante",1,NA
+"no2","32-nmol/mol","ronda_participante",9,"nmol/mol","ZFT5R6",35.682,35.261,34.968,35.304,0.359,0.207,NA,NA,3,"2026-07-17 08:10:00|2026-07-17 09:10:00|2026-07-17 10:10:00","ZFT5R6","participante",1,NA
+"no","0-nmol/mol","ronda_participante",1,"nmol/mol","ZFT5R6",0.078,NA,NA,0.078,0.151,0.019,NA,NA,1,"2026-07-16 08:00:00","ZFT5R6","participante",1,NA
+"no","179-nmol/mol","ronda_participante",3,"nmol/mol","ZFT5R6",180.515,179.657,179.54,179.904,0.532,0.307,NA,NA,3,"2026-07-16 09:40:00|2026-07-16 10:40:00|2026-07-16 11:40:00","ZFT5R6","participante",1,NA
+"no","119-nmol/mol","ronda_participante",5,"nmol/mol","ZFT5R6",118.97,120.268,120.648,119.962,0.88,0.508,NA,NA,3,"2026-07-16 13:45:00|2026-07-16 14:45:00|2026-07-16 15:45:00","ZFT5R6","participante",1,NA
+"no","80-nmol/mol","ronda_participante",7,"nmol/mol","ZFT5R6",79.65,79.63,79.779,79.686,0.081,0.047,NA,NA,3,"2026-07-16 16:55:00|2026-07-16 17:55:00|2026-07-16 18:55:00","ZFT5R6","participante",1,NA
+"no","41-nmol/mol","ronda_participante",9,"nmol/mol","ZFT5R6",37.998,37.987,38.03,38.005,0.022,0.013,NA,NA,3,"2026-07-16 19:55:00|2026-07-16 20:55:00|2026-07-16 21:55:00","ZFT5R6","participante",1,NA
+"o3","0-nmol/mol","ronda",1,"nmol/mol","calaire_ref",-0.335,NA,NA,-0.335,0.225,0.029,NA,NA,1,"2026-07-15 13:30:00","calaire_ref","referencia",1,"4UDY72"
+"o3","180-nmol/mol","ronda",3,"nmol/mol","calaire_ref",180.865,180.788,181.141,180.931,0.186,0.107,NA,NA,3,"2026-07-15 15:10:00|2026-07-15 16:10:00|2026-07-15 17:10:00","calaire_ref","referencia",1,"4UDY72"
+"o3","120-nmol/mol","ronda",5,"nmol/mol","calaire_ref",121.084,121.526,121.777,121.462,0.351,0.203,NA,NA,3,"2026-07-15 18:10:00|2026-07-15 19:10:00|2026-07-15 20:10:00","calaire_ref","referencia",1,"4UDY72"
+"o3","80-nmol/mol","ronda",7,"nmol/mol","calaire_ref",80.819,80.714,80.56,80.698,0.13,0.075,NA,NA,3,"2026-07-15 21:10:00|2026-07-15 22:10:00|2026-07-15 23:10:00","calaire_ref","referencia",1,"4UDY72"
+"o3","40-nmol/mol","ronda",9,"nmol/mol","calaire_ref",40.285,40.47,40.446,40.4,0.101,0.058,NA,NA,3,"2026-07-16 00:10:00|2026-07-16 01:10:00|2026-07-16 02:10:00","calaire_ref","referencia",1,"4UDY72"
+"no2","0-nmol/mol","ronda",1,"nmol/mol","calaire_ref",0.304,NA,NA,0.304,0.239,0.031,NA,NA,1,"2026-07-16 08:00:00","calaire_ref","referencia",1,"4UDY72"
+"no2","144-nmol/mol","ronda",3,"nmol/mol","calaire_ref",154.021,153.955,NA,153.988,0.047,0.033,NA,NA,2,"2026-07-16 23:40:00|2026-07-17 00:40:00","calaire_ref","referencia",1,"4UDY72"
+"no2","112-nmol/mol","ronda",5,"nmol/mol","calaire_ref",122.135,122.049,122.02,122.068,0.06,0.035,NA,NA,3,"2026-07-17 02:10:00|2026-07-17 03:10:00|2026-07-17 04:10:00","calaire_ref","referencia",1,"4UDY72"
+"no2","64-nmol/mol","ronda",7,"nmol/mol","calaire_ref",66.206,65.951,65.774,65.977,0.217,0.125,NA,NA,3,"2026-07-17 05:10:00|2026-07-17 06:10:00|2026-07-17 07:10:00","calaire_ref","referencia",1,"4UDY72"
+"no2","32-nmol/mol","ronda",9,"nmol/mol","calaire_ref",33.394,33.476,33.569,33.48,0.088,0.051,NA,NA,3,"2026-07-17 08:10:00|2026-07-17 09:10:00|2026-07-17 10:10:00","calaire_ref","referencia",1,"4UDY72"
+"no","0-nmol/mol","ronda",1,"nmol/mol","calaire_ref",-0.159,NA,NA,-0.159,0.251,0.032,NA,NA,1,"2026-07-16 08:00:00","calaire_ref","referencia",1,"4UDY72"
+"no","179-nmol/mol","ronda",3,"nmol/mol","calaire_ref",181.583,181.688,181.866,181.712,0.143,0.083,NA,NA,3,"2026-07-16 09:40:00|2026-07-16 10:40:00|2026-07-16 11:40:00","calaire_ref","referencia",1,"4UDY72"
+"no","119-nmol/mol","ronda",5,"nmol/mol","calaire_ref",119.826,120.933,121.324,120.694,0.777,0.449,NA,NA,3,"2026-07-16 13:45:00|2026-07-16 14:45:00|2026-07-16 15:45:00","calaire_ref","referencia",1,"4UDY72"
+"no","80-nmol/mol","ronda",7,"nmol/mol","calaire_ref",80.354,80.259,80.487,80.367,0.115,0.066,NA,NA,3,"2026-07-16 16:55:00|2026-07-16 17:55:00|2026-07-16 18:55:00","calaire_ref","referencia",1,"4UDY72"
+"no","41-nmol/mol","ronda",9,"nmol/mol","calaire_ref",38.787,38.575,38.529,38.63,0.138,0.08,NA,NA,3,"2026-07-16 19:55:00|2026-07-16 20:55:00|2026-07-16 21:55:00","calaire_ref","referencia",1,"4UDY72"

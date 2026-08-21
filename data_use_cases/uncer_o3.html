@@ -1,0 +1,464 @@
+<title>Incertidumbre del Ozono</title>
+<style>
+:root{
+  --ground:#FBFAFD;
+  --panel:#FFFFFF;
+  --panel-2:#F3F1F8;
+  --ink:#191627;
+  --ink-2:#4B4661;
+  --ink-3:#7A748F;
+  --rule:#DDD9E8;
+  --uv:#5B3FD1;
+  --uv-soft:#EDE8FC;
+  --cyan:#0E6E7C;
+  --cyan-soft:#E0F1F3;
+  --warn:#9A5B00;
+  --warn-soft:#FBEEDA;
+  --crit:#A32638;
+  --crit-soft:#FBE7EA;
+  --serif:"Charter","Iowan Old Style","Palatino Linotype",Palatino,Georgia,serif;
+  --sans:ui-sans-serif,system-ui,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  --mono:ui-monospace,"SFMono-Regular","JetBrains Mono","Cascadia Mono",Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --ground:#131120;
+    --panel:#1B1830;
+    --panel-2:#231F3C;
+    --ink:#EDEAF7;
+    --ink-2:#B9B3CE;
+    --ink-3:#8B85A3;
+    --rule:#332E4E;
+    --uv:#A392FF;
+    --uv-soft:#2A2350;
+    --cyan:#5FD0DE;
+    --cyan-soft:#12333A;
+    --warn:#E6B15F;
+    --warn-soft:#3A2C10;
+    --crit:#F1889A;
+    --crit-soft:#3B1922;
+  }
+}
+:root[data-theme="dark"]{
+  --ground:#131120;
+  --panel:#1B1830;
+  --panel-2:#231F3C;
+  --ink:#EDEAF7;
+  --ink-2:#B9B3CE;
+  --ink-3:#8B85A3;
+  --rule:#332E4E;
+  --uv:#A392FF;
+  --uv-soft:#2A2350;
+  --cyan:#5FD0DE;
+  --cyan-soft:#12333A;
+  --warn:#E6B15F;
+  --warn-soft:#3A2C10;
+  --crit:#F1889A;
+  --crit-soft:#3B1922;
+}
+*{box-sizing:border-box}
+body{
+  margin:0;
+  background:var(--ground);
+  color:var(--ink);
+  font-family:var(--sans);
+  font-size:16px;
+  line-height:1.62;
+  -webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:64rem;margin:0 auto;padding:3rem 1.5rem 6rem;display:flex;flex-direction:column;gap:3.5rem}
+header.doc{display:flex;flex-direction:column;gap:1rem;border-bottom:2px solid var(--ink);padding-bottom:1.5rem}
+.eyebrow{font-family:var(--mono);font-size:.72rem;letter-spacing:.16em;text-transform:uppercase;color:var(--uv)}
+h1{font-family:var(--serif);font-weight:600;font-size:clamp(2.1rem,5vw,3.2rem);line-height:1.08;margin:0;text-wrap:balance;letter-spacing:-.015em}
+.sub{font-size:1.05rem;color:var(--ink-2);max-width:62ch;margin:0}
+.meta{display:grid;grid-template-columns:repeat(auto-fit,minmax(11rem,1fr));gap:.9rem 1.5rem;font-family:var(--mono);font-size:.78rem;color:var(--ink-2)}
+.meta b{display:block;color:var(--ink-3);font-weight:400;letter-spacing:.1em;text-transform:uppercase;font-size:.66rem;margin-bottom:.15rem}
+section{display:flex;flex-direction:column;gap:1.1rem;scroll-margin-top:2rem}
+.head{display:flex;align-items:baseline;gap:.9rem;border-top:1px solid var(--rule);padding-top:1.1rem}
+.num{font-family:var(--mono);font-size:.8rem;color:var(--uv);background:var(--uv-soft);border-radius:2px;padding:.15rem .45rem;flex:none}
+h2{font-family:var(--serif);font-size:1.7rem;font-weight:600;margin:0;letter-spacing:-.01em;text-wrap:balance}
+h3{font-family:var(--sans);font-size:1rem;font-weight:650;margin:1rem 0 0;letter-spacing:.005em}
+p{margin:0;max-width:70ch}
+ul,ol{margin:0;padding-left:1.15rem;display:flex;flex-direction:column;gap:.4rem;max-width:70ch}
+code{font-family:var(--mono);font-size:.86em;background:var(--panel-2);padding:.1em .32em;border-radius:3px}
+.formula{
+  font-family:var(--mono);font-size:.88rem;line-height:1.8;
+  background:var(--panel);border:1px solid var(--rule);border-left:3px solid var(--uv);
+  border-radius:3px;padding:1rem 1.1rem;overflow-x:auto;white-space:pre;color:var(--ink);
+}
+pre.code{
+  font-family:var(--mono);font-size:.82rem;line-height:1.62;
+  background:var(--panel-2);border:1px solid var(--rule);border-radius:4px;
+  padding:1rem 1.1rem;overflow-x:auto;margin:0;color:var(--ink);
+}
+.scroll{overflow-x:auto;border:1px solid var(--rule);border-radius:4px;background:var(--panel)}
+table{border-collapse:collapse;width:100%;font-size:.85rem;font-variant-numeric:tabular-nums}
+th,td{padding:.5rem .7rem;text-align:right;border-bottom:1px solid var(--rule);white-space:nowrap}
+th{font-family:var(--mono);font-size:.68rem;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3);font-weight:500;background:var(--panel-2);position:sticky;top:0}
+th:first-child,td:first-child{text-align:left}
+tbody tr:last-child td{border-bottom:none}
+td.dom{color:var(--uv);font-weight:650}
+caption{caption-side:bottom;text-align:left;padding:.6rem .7rem;font-size:.76rem;color:var(--ink-3);font-family:var(--mono)}
+.note{border-left:3px solid var(--cyan);background:var(--cyan-soft);padding:.85rem 1rem;border-radius:0 3px 3px 0;font-size:.92rem;max-width:72ch}
+.gap{border-left:3px solid var(--warn);background:var(--warn-soft);padding:.85rem 1rem;border-radius:0 3px 3px 0;font-size:.92rem;max-width:72ch}
+.stop{border-left:3px solid var(--crit);background:var(--crit-soft);padding:.85rem 1rem;border-radius:0 3px 3px 0;font-size:.92rem;max-width:72ch}
+.tag{font-family:var(--mono);font-size:.68rem;letter-spacing:.08em;text-transform:uppercase}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(15rem,1fr));gap:1rem}
+.card{background:var(--panel);border:1px solid var(--rule);border-radius:4px;padding:1rem;display:flex;flex-direction:column;gap:.35rem}
+.card .k{font-family:var(--mono);font-size:.7rem;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-3)}
+.card .v{font-family:var(--serif);font-size:1.5rem;line-height:1.1}
+.card .d{font-size:.82rem;color:var(--ink-2)}
+.chain{display:flex;flex-direction:column;gap:0}
+.step{display:grid;grid-template-columns:auto 1fr;gap:1rem;padding:.85rem 0;border-bottom:1px dashed var(--rule)}
+.step:last-child{border-bottom:none}
+.step .s{font-family:var(--mono);font-size:.75rem;color:var(--cyan);padding-top:.2rem}
+.step .t{display:flex;flex-direction:column;gap:.25rem}
+.step .t b{font-weight:650}
+.step .t span{font-size:.88rem;color:var(--ink-2)}
+footer{border-top:1px solid var(--rule);padding-top:1.2rem;font-size:.8rem;color:var(--ink-3);font-family:var(--mono);display:flex;flex-direction:column;gap:.3rem}
+a{color:var(--uv)}
+a:focus-visible,:focus-visible{outline:2px solid var(--uv);outline-offset:2px}
+@media (max-width:640px){.head{flex-direction:column;gap:.4rem}th,td{padding:.4rem .55rem}}
+</style>
+
+<div class="wrap">
+
+<header class="doc">
+  <div class="eyebrow">POE de incertidumbre · Documento derivado · Analito único</div>
+  <h1>Incertidumbre del Ozono</h1>
+  <p class="sub">Estimación y cálculo de la incertidumbre de medición del O<sub>3</sub> en la serie de referencia CalAire de los ensayos de aptitud: fuentes, fórmulas, diseño experimental, datos y la ruta exacta en R que produce cada número.</p>
+  <div class="meta">
+    <div><b>Analito</b>O3 · nmol/mol (ppb)</div>
+    <div><b>Analizador ref.</b>THERMO 49C s/n 59756-324</div>
+    <div><b>Patrón</b>F-PSMT-01 s/n 554</div>
+    <div><b>Rondas cubiertas</b>R2A (2026-04-30) · R3 (2026-07-15)</div>
+    <div><b>Niveles PT</b>0 · 40 · 80 · 120 · 180 ppb</div>
+    <div><b>Factor de cobertura</b>k = 2 (≈95 %)</div>
+  </div>
+</header>
+
+<section>
+  <div class="head"><span class="num">01</span><h2>Qué se estima y por qué el O<sub>3</sub> es distinto</h2></div>
+  <p>El O<sub>3</sub> no se puede almacenar en cilindro: se genera en el momento con un calibrador dinámico y se certifica contra un fotómetro UV de 254 nm. Eso cambia la estructura del presupuesto frente a los demás gases:</p>
+  <ul>
+    <li><b>No lleva término de dilución.</b> El certificado del calibrador F-PSMT-01 cubre la concentración generada de punta a punta, así que la incertidumbre de los controladores de flujo ya está dentro de <code>u_patron</code>. En SO<sub>2</sub>, CO, NO y NO<sub>2</sub> ese término falta y es un hueco abierto del presupuesto.</li>
+    <li><b>No lleva eficiencia de convertidor.</b> <code>u_conv</code> vale 0: es un término exclusivo del NO<sub>2</sub> por GPT.</li>
+    <li><b>Su patrón depende del nivel.</b> <code>U(X) = 0.0051·X + 0.67</code> nmol/mol, no una constante como el cilindro certificado de los otros gases.</li>
+    <li><b>Es el único gas donde la curva de calibración llega a dominar</b> el presupuesto (45 % de la varianza en R2A a 180 ppb).</li>
+  </ul>
+  <div class="cards">
+    <div class="card"><span class="k">U en 180 ppb · R3</span><span class="v">2.03 ppb</span><span class="d">1.13 % relativo. Dominante: patrón (61 %).</span></div>
+    <div class="card"><span class="k">U en 40 ppb · R3</span><span class="v">1.25 ppb</span><span class="d">3.12 % relativo. Curva y patrón casi empatados.</span></div>
+    <div class="card"><span class="k">Componentes</span><span class="v">4 de 5</span><span class="d">rep · curva · patrón · aire cero. Convertidor no aplica.</span></div>
+  </div>
+</section>
+
+<section>
+  <div class="head"><span class="num">02</span><h2>Modelo de medición</h2></div>
+  <p>El valor reportado de la referencia en un nivel PT es la media de las medias horarias válidas de ese nivel. La incertidumbre combinada suma en cuadratura cuatro efectos independientes:</p>
+  <div class="formula">u_c(O3) = sqrt( u_rep² + u_curva² + u_patron² + u_aire_cero² )
+
+U = k · u_c        k = 2
+
+u_rep        repetibilidad Tipo A, corregida por autocorrelación AR(1)
+u_curva      curva de calibración del analizador, max(GUM H.3, EN 14211)
+u_patron     certificado del calibrador dinámico, U(X) = 0.0051·X + 0.67, k=2
+u_aire_cero  impureza residual del generador de aire cero (rectangular)</div>
+  <p>La independencia entre los cuatro términos es una asunción del modelo: repetibilidad, ajuste de la recta, patrón generador y aire cero provienen de experimentos y equipos distintos, sin covarianza estimada.</p>
+</section>
+
+<section>
+  <div class="head"><span class="num">03</span><h2>Diseño experimental que alimenta el cálculo</h2></div>
+  <p>Tres experimentos distintos alimentan el presupuesto. Ninguno se diseñó solo para incertidumbre; los tres se reutilizan.</p>
+
+  <h3>a. Rondas PT — serie de referencia (fuente de <code>u_rep</code>)</h3>
+  <ul>
+    <li>Escalón de concentración por nivel: el calibrador entrega una meseta y el analizador registra en resolución de <b>1 minuto</b>.</li>
+    <li>Los minutos se agrupan en <b>bloques de hora de reloj</b>, con mínimo 45 min válidos (75 %). Si el nivel arranca a mitad de hora y ningún bloque de reloj alcanza el 75 %, se rebloquea por hora corrida desde el inicio del nivel.</li>
+    <li>Se conservan hasta <b>3 bloques por nivel</b> (<code>PROTOCOL_N = 3</code>), que son las 3 medias horarias que exige el protocolo.</li>
+    <li>Filtros previos: se excluyen registros con <code>flag_na</code> o <code>flag_outlier</code> del QC.</li>
+  </ul>
+  <div class="scroll">
+    <table>
+      <caption>Cobertura real por nivel. n_min = minutos válidos; ρ₁ = autocorrelación de retardo 1; n_eff = tamaño efectivo bajo AR(1).</caption>
+      <thead><tr><th>Ronda</th><th>Serial</th><th>Nivel</th><th>Media obs.</th><th>Bloques</th><th>n_min</th><th>s_w</th><th>ρ₁</th><th>n_eff</th><th>s_b</th></tr></thead>
+      <tbody>
+        <tr><td>R2A</td><td>4UXXXX</td><td>0</td><td>−0.345</td><td>1</td><td>57</td><td>0.456</td><td>0.839</td><td>4.99</td><td>—</td></tr>
+        <tr><td>R2A</td><td>4UXXXX</td><td>40</td><td>39.468</td><td>3</td><td>161</td><td>0.257</td><td>0.523</td><td>50.4</td><td>0.063</td></tr>
+        <tr><td>R2A</td><td>4UXXXX</td><td>80</td><td>80.418</td><td>2</td><td>114</td><td>0.314</td><td>0.384</td><td>50.7</td><td>0.007</td></tr>
+        <tr><td>R2A</td><td>4UXXXX</td><td>120</td><td>121.032</td><td>2</td><td>116</td><td>0.395</td><td>0.586</td><td>30.3</td><td>0.196</td></tr>
+        <tr><td>R2A</td><td>4UXXXX</td><td>180</td><td>181.219</td><td>2</td><td>111</td><td>2.021</td><td>0.879</td><td>7.13</td><td>0.874</td></tr>
+        <tr><td>R3</td><td>4UDY72</td><td>0</td><td>−0.343</td><td>1</td><td>55</td><td>0.195</td><td>0.351</td><td>26.4</td><td>—</td></tr>
+        <tr><td>R3</td><td>4UDY72</td><td>40</td><td>40.394</td><td>3</td><td>163</td><td>0.309</td><td>0.581</td><td>43.2</td><td>0.071</td></tr>
+        <tr><td>R3</td><td>4UDY72</td><td>80</td><td>80.720</td><td>3</td><td>168</td><td>0.397</td><td>0.596</td><td>42.6</td><td>0.162</td></tr>
+        <tr><td>R3</td><td>4UDY72</td><td>120</td><td>121.392</td><td>3</td><td>157</td><td>0.415</td><td>0.636</td><td>35.0</td><td>0.357</td></tr>
+        <tr><td>R3</td><td>4UDY72</td><td>180</td><td>180.938</td><td>3</td><td>150</td><td>0.421</td><td>0.474</td><td>53.6</td><td>0.187</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="note"><span class="tag">Lectura</span> El nivel 180 de R2A es el punto anómalo de toda la serie de O<sub>3</sub>: s_w = 2.02 ppb con ρ₁ = 0.88, es decir 111 minutos que valen apenas 7 mediciones independientes. Es deriva del generador durante la meseta, no ruido del analizador. Ese solo nivel produce el <code>u_rep</code> más alto del gas (0.757 ppb).</div>
+
+  <h3>b. Calibración multipunto del analizador (fuente de <code>u_curva</code>)</h3>
+  <ul>
+    <li>Formato <b>F-PSEY-49</b>, dos ejecuciones: 2026-04-29 (vigente para R2A) y 2026-07-14 (vigente para R3).</li>
+    <li><b>5 puntos</b>: cero dejado + 20 %, 40 %, 70 %, 90 % del fondo de escala de 250 ppb. El punto "90 % encontrado" se descarta por ser pre-ajuste.</li>
+    <li>Regla de vigencia: se usa la calibración más reciente <i>anterior</i> al inicio de la ronda.</li>
+    <li>Verificación: la pendiente y el intercepto recalculados en R reproducen exactamente los de la hoja de cálculo firmada.</li>
+  </ul>
+
+  <h3>c. Verificación del generador de aire cero (fuente de <code>u_aire_cero</code>)</h3>
+  <p>Formato <b>F-PSEY-51</b> (2026-07-28): generador TAPI 751H de estación contrastado contra cilindro de aire de referencia PRAXAIR. Error medido en O<sub>3</sub>: <b>+0.040 ppb</b>.</p>
+
+  <h3>d. Estudio R&amp;R UNAL (control, no entra al presupuesto)</h3>
+  <p><code>Datos R&amp;R Jaison O3 JUN.txt</code>: mesetas de 25–50 min bloqueadas a 20 min, segundo analista, mismo equipo. Sirve para verificar que la dispersión no depende del operador. Resultado O<sub>3</sub>: s_w UNAL 0.374 vs s_w referencia 0.476 ppb, razón 0.78 — equivalentes. No se suma nada al presupuesto por reproducibilidad entre analistas.</p>
+</section>
+
+<section>
+  <div class="head"><span class="num">04</span><h2>Fuente 1 — Repetibilidad <code>u_rep</code></h2></div>
+  <p>El protocolo declara <code>u = s/√3</code> sobre las 3 medias horarias. Ese estimador es correcto para el valor que se reporta, pero se apoya en 2 grados de libertad. Con los datos de 1 minuto disponibles se descompone la varianza en dos escalas y se corrige la autocorrelación.</p>
+  <div class="formula">s_w  = sqrt( Σ gl_i·s_i² / Σ gl_i )      ruido minuto a minuto dentro del bloque
+s_b  = sd( medias de bloque )            deriva de corto plazo entre bloques
+
+rho1  = Σ e_t·e_{t+1} / Σ e_t²           autocorrelación de retardo 1, acotada a [0, 0.99]
+n_eff = n · (1 − rho1) / (1 + rho1)      tamaño efectivo bajo AR(1)
+
+u_protocolo = s_b / sqrt(n_bloques)      estimador GUM Tipo A del protocolo
+u_ingenua   = s_w / sqrt(n_min)          lo que calcula hoy el pipeline (subestima)
+u_efectiva  = s_w / sqrt(n_eff)          corregida por autocorrelación
+
+u_rep = max( u_protocolo , u_efectiva )</div>
+  <p>Se toma el mayor de los dos estimadores válidos porque miden cosas distintas y ninguno domina al otro en todos los niveles: el del protocolo captura la deriva entre bloques que el ruido interno no ve, y el efectivo captura el ruido cuando solo hubo un bloque y <code>s_b</code> no es estimable.</p>
+  <div class="scroll">
+    <table>
+      <caption>u_rep por nivel, en ppb. El factor de subestimación es u_rep / u_ingenua.</caption>
+      <thead><tr><th>Ronda</th><th>Nivel</th><th>u_protocolo</th><th>u_ingenua</th><th>u_efectiva</th><th>u_rep</th><th>Factor subest.</th></tr></thead>
+      <tbody>
+        <tr><td>R2A</td><td>0</td><td>—</td><td>0.060</td><td>0.204</td><td class="dom">0.204</td><td>3.38×</td></tr>
+        <tr><td>R2A</td><td>40</td><td>0.036</td><td>0.020</td><td>0.036</td><td class="dom">0.036</td><td>1.79×</td></tr>
+        <tr><td>R2A</td><td>80</td><td>0.005</td><td>0.029</td><td>0.044</td><td class="dom">0.044</td><td>1.50×</td></tr>
+        <tr><td>R2A</td><td>120</td><td>0.139</td><td>0.037</td><td>0.072</td><td class="dom">0.139</td><td>3.79×</td></tr>
+        <tr><td>R2A</td><td>180</td><td>0.618</td><td>0.192</td><td>0.757</td><td class="dom">0.757</td><td>3.95×</td></tr>
+        <tr><td>R3</td><td>0</td><td>—</td><td>0.026</td><td>0.038</td><td class="dom">0.038</td><td>1.44×</td></tr>
+        <tr><td>R3</td><td>40</td><td>0.041</td><td>0.024</td><td>0.047</td><td class="dom">0.047</td><td>1.94×</td></tr>
+        <tr><td>R3</td><td>80</td><td>0.093</td><td>0.031</td><td>0.061</td><td class="dom">0.093</td><td>3.05×</td></tr>
+        <tr><td>R3</td><td>120</td><td>0.206</td><td>0.033</td><td>0.070</td><td class="dom">0.206</td><td>6.23×</td></tr>
+        <tr><td>R3</td><td>180</td><td>0.108</td><td>0.034</td><td>0.058</td><td class="dom">0.108</td><td>3.14×</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="stop"><span class="tag">Pendiente de corregir</span> La columna <code>u_value</code> que escribe <code>R/preprocessing/hourly_averages.R</code> es exactamente <code>u_ingenua</code>: <code>sd_h/√60</code>, sin corregir autocorrelación. Para O<sub>3</sub> subestima entre 1.4× y 6.2×. El script <code>10_aplicar_u_a_rondas.R</code> la <b>sobrescribe</b> con <code>u_c</code> del presupuesto al generar <code>data/processed/con_incertidumbre/</code>. No sume las dos: sustituya.</div>
+</section>
+
+<section>
+  <div class="head"><span class="num">05</span><h2>Fuente 2 — Curva de calibración <code>u_curva</code></h2></div>
+  <p>La recta <code>y = y₁ + y₂·x</code> ajustada sobre los 5 puntos nunca los cruza exactamente. Esa desviación es la duda al traducir lectura a concentración, y es un componente aparte de la repetibilidad. Se calcula por dos métodos y se toma el mayor en cada nivel.</p>
+
+  <h3>Método A — GUM H.3 (estadístico)</h3>
+  <div class="formula">s² = Σ residuo² / (n − 2)                        n = 5, gl = 3
+
+u_ajuste(c) = s · sqrt( 1/n + (c − x̄)² / Σ(x_k − x̄)² )
+
+u_curva_GUM = u_ajuste(c) / |y₂|                 a escala de concentración</div>
+  <p>Comportamiento en U: mínima cerca del centroide de calibración (~90 ppb), crece hacia el cero y hacia el tope de escala. Es el comportamiento correcto — los extremos de la recta son los menos respaldados por datos.</p>
+
+  <h3>Método B — Falta de ajuste, EN 14211 (peor caso)</h3>
+  <div class="formula">r_max = residuo máximo, en % del fondo de escala
+
+u_curva_LOF = (r_max / 100) · l_h / sqrt(3)      distribución rectangular</div>
+  <p>Proporcional al nivel; vale cero en el cero, lo cual es irreal. Por eso ninguno de los dos se usa solo:</p>
+  <div class="formula">u_curva = max( u_curva_GUM , u_curva_LOF )</div>
+  <p>Se toma el máximo, no la suma: son dos estimaciones del <i>mismo</i> efecto y sumarlas lo contaría dos veces. GUM manda en niveles bajos y en el cero; EN 14211 manda en el tope, donde protege contra no-linealidad que GUM subestimaría si los residuos salieron pequeños por azar.</p>
+
+  <div class="scroll">
+    <table>
+      <caption>Parámetros de las dos calibraciones vigentes de O3, formato F-PSEY-49.</caption>
+      <thead><tr><th>Calibración</th><th>Pendiente</th><th>Intercepto</th><th>s residual</th><th>u(pendiente)</th><th>r_max %FS</th><th>R²</th></tr></thead>
+      <tbody>
+        <tr><td>2026-04-29 → R2A</td><td>0.998264</td><td>−0.148</td><td>1.161</td><td>0.00793</td><td>0.963</td><td>0.999811</td></tr>
+        <tr><td>2026-07-14 → R3</td><td>0.998418</td><td>+0.670</td><td>0.800</td><td>0.00547</td><td>0.583</td><td>0.999910</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="scroll">
+    <table>
+      <caption>u_curva por nivel en ppb, con el método que ganó en cada celda.</caption>
+      <thead><tr><th>Ronda</th><th>Nivel</th><th>u_GUM</th><th>u_LOF</th><th>u_curva</th><th>Método</th></tr></thead>
+      <tbody>
+        <tr><td>R2A</td><td>0</td><td>0.868</td><td>0.000</td><td class="dom">0.868</td><td>GUM H.3</td></tr>
+        <tr><td>R2A</td><td>40</td><td>0.642</td><td>0.222</td><td class="dom">0.642</td><td>GUM H.3</td></tr>
+        <tr><td>R2A</td><td>80</td><td>0.523</td><td>0.445</td><td class="dom">0.523</td><td>GUM H.3</td></tr>
+        <tr><td>R2A</td><td>120</td><td>0.581</td><td>0.667</td><td class="dom">0.667</td><td>EN 14211</td></tr>
+        <tr><td>R2A</td><td>180</td><td>0.900</td><td>1.001</td><td class="dom">1.001</td><td>EN 14211</td></tr>
+        <tr><td>R3</td><td>0</td><td>0.598</td><td>0.000</td><td class="dom">0.598</td><td>GUM H.3</td></tr>
+        <tr><td>R3</td><td>40</td><td>0.443</td><td>0.135</td><td class="dom">0.443</td><td>GUM H.3</td></tr>
+        <tr><td>R3</td><td>80</td><td>0.361</td><td>0.269</td><td class="dom">0.361</td><td>GUM H.3</td></tr>
+        <tr><td>R3</td><td>120</td><td>0.400</td><td>0.404</td><td class="dom">0.404</td><td>EN 14211</td></tr>
+        <tr><td>R3</td><td>180</td><td>0.621</td><td>0.606</td><td class="dom">0.621</td><td>GUM H.3</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="note"><span class="tag">Por qué O3 tiene la peor curva</span> En la calibración de abril, el punto de 79.8 ppb leyó 77.78: residuo de −1.73 ppb. Ese único punto triplica la s residual del O<sub>3</sub> frente a la del NO. Con 5 puntos y 3 grados de libertad, un solo atípico gobierna el componente. La calibración de julio corrige buena parte: s residual baja de 1.161 a 0.800 ppb.</div>
+</section>
+
+<section>
+  <div class="head"><span class="num">06</span><h2>Fuente 3 — Patrón generador <code>u_patron</code></h2></div>
+  <p>Certificado del calibrador dinámico <b>F-PSMT-01 s/n 554</b>, hoja <code>Uexp</code>. El informe entrega la incertidumbre expandida como función de la concentración generada:</p>
+  <div class="formula">U(X) = 0.0051 · X + 0.67   nmol/mol,  k = 2,  válido 0 – 500 nmol/mol
+
+u_patron = U(X) / 2</div>
+  <div class="scroll">
+    <table>
+      <caption>u_patron evaluado en los niveles PT. Idéntico en ambas rondas: mismo certificado.</caption>
+      <thead><tr><th>Nivel (ppb)</th><th>U(X) k=2</th><th>u_patron</th><th>u_patron rel.</th></tr></thead>
+      <tbody>
+        <tr><td>0</td><td>0.670</td><td>0.335</td><td>—</td></tr>
+        <tr><td>40</td><td>0.874</td><td>0.437</td><td>1.09 %</td></tr>
+        <tr><td>80</td><td>1.078</td><td>0.539</td><td>0.67 %</td></tr>
+        <tr><td>120</td><td>1.282</td><td>0.641</td><td>0.53 %</td></tr>
+        <tr><td>180</td><td>1.588</td><td>0.794</td><td>0.44 %</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p>Este es el término irreducible del presupuesto sin cambiar de patrón. En R3 aporta entre el 24 % y el 68 % de la varianza según el nivel.</p>
+</section>
+
+<section>
+  <div class="head"><span class="num">07</span><h2>Fuente 4 — Aire cero <code>u_aire_cero</code></h2></div>
+  <p>El error medido en F-PSEY-51 es un sesgo conocido pero <b>no corregido</b> en los datos. Un sesgo no corregido entra como distribución rectangular sobre su propio valor:</p>
+  <div class="formula">error medido O3 = +0.040 ppb
+
+u_aire_cero = |error| / sqrt(3) = 0.0231 ppb     constante en todos los niveles</div>
+  <p>Es el componente más pequeño del presupuesto de O<sub>3</sub> por dos órdenes de magnitud: aporta menos del 0.14 % de la varianza en todos los niveles. Se conserva por completitud del modelo, no por peso. Contraste: en NO el mismo componente vale 0.442 ppb y pesa 16–35 %.</p>
+</section>
+
+<section>
+  <div class="head"><span class="num">08</span><h2>Combinación y presupuesto final</h2></div>
+  <div class="formula">u_c = sqrt( u_rep² + u_curva² + u_patron² + u_aire_cero² )
+U   = 2 · u_c
+aporte_i (%) = 100 · u_i² / u_c²</div>
+  <div class="scroll">
+    <table>
+      <caption>Presupuesto completo de O3, en ppb. Fuente: outputs/tables/presupuesto_incertidumbre.csv. Celda resaltada = componente dominante de la fila.</caption>
+      <thead><tr><th>Ronda</th><th>Nivel</th><th>u_rep</th><th>u_curva</th><th>u_patron</th><th>u_aire_cero</th><th>u_c</th><th>U (k=2)</th><th>U rel.</th></tr></thead>
+      <tbody>
+        <tr><td>R2A</td><td>0</td><td>0.204</td><td class="dom">0.868</td><td>0.335</td><td>0.023</td><td>0.953</td><td>1.905</td><td>—</td></tr>
+        <tr><td>R2A</td><td>40</td><td>0.036</td><td class="dom">0.642</td><td>0.437</td><td>0.023</td><td>0.778</td><td>1.556</td><td>3.89 %</td></tr>
+        <tr><td>R2A</td><td>80</td><td>0.044</td><td>0.523</td><td class="dom">0.539</td><td>0.023</td><td>0.753</td><td>1.506</td><td>1.88 %</td></tr>
+        <tr><td>R2A</td><td>120</td><td>0.139</td><td class="dom">0.667</td><td>0.641</td><td>0.023</td><td>0.936</td><td>1.872</td><td>1.56 %</td></tr>
+        <tr><td>R2A</td><td>180</td><td>0.757</td><td class="dom">1.001</td><td>0.794</td><td>0.023</td><td>1.485</td><td>2.970</td><td>1.65 %</td></tr>
+        <tr><td>R3</td><td>0</td><td>0.038</td><td class="dom">0.598</td><td>0.335</td><td>0.023</td><td>0.687</td><td>1.374</td><td>—</td></tr>
+        <tr><td>R3</td><td>40</td><td>0.047</td><td class="dom">0.443</td><td>0.437</td><td>0.023</td><td>0.624</td><td>1.249</td><td>3.12 %</td></tr>
+        <tr><td>R3</td><td>80</td><td>0.093</td><td>0.361</td><td class="dom">0.539</td><td>0.023</td><td>0.656</td><td>1.311</td><td>1.64 %</td></tr>
+        <tr><td>R3</td><td>120</td><td>0.206</td><td>0.404</td><td class="dom">0.641</td><td>0.023</td><td>0.786</td><td>1.571</td><td>1.31 %</td></tr>
+        <tr><td>R3</td><td>180</td><td>0.108</td><td>0.621</td><td class="dom">0.794</td><td>0.023</td><td>1.014</td><td>2.028</td><td>1.13 %</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="scroll">
+    <table>
+      <caption>Reparto de la varianza, en %. Suma 100 por fila.</caption>
+      <thead><tr><th>Ronda</th><th>Nivel</th><th>rep</th><th>curva</th><th>patrón</th><th>aire cero</th></tr></thead>
+      <tbody>
+        <tr><td>R2A</td><td>0</td><td>4.6</td><td class="dom">83.0</td><td>12.4</td><td>0.06</td></tr>
+        <tr><td>R2A</td><td>40</td><td>0.2</td><td class="dom">68.1</td><td>31.5</td><td>0.09</td></tr>
+        <tr><td>R2A</td><td>80</td><td>0.3</td><td>48.3</td><td class="dom">51.2</td><td>0.09</td></tr>
+        <tr><td>R2A</td><td>120</td><td>2.2</td><td class="dom">50.8</td><td>46.9</td><td>0.06</td></tr>
+        <tr><td>R2A</td><td>180</td><td>26.0</td><td class="dom">45.4</td><td>28.6</td><td>0.02</td></tr>
+        <tr><td>R3</td><td>0</td><td>0.3</td><td class="dom">75.8</td><td>23.8</td><td>0.11</td></tr>
+        <tr><td>R3</td><td>40</td><td>0.6</td><td class="dom">50.3</td><td>49.0</td><td>0.14</td></tr>
+        <tr><td>R3</td><td>80</td><td>2.0</td><td>30.3</td><td class="dom">67.6</td><td>0.12</td></tr>
+        <tr><td>R3</td><td>120</td><td>6.9</td><td>26.4</td><td class="dom">66.6</td><td>0.09</td></tr>
+        <tr><td>R3</td><td>180</td><td>1.1</td><td>37.5</td><td class="dom">61.3</td><td>0.05</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p>Dos lecturas operativas. Primero: <b>mire la U absoluta, no la relativa</b>, al comparar niveles — la U relativa se dispara en niveles bajos porque curva y patrón aportan casi lo mismo en valor absoluto sobre una concentración cada vez menor. Segundo: la mejora de la calibración de julio se ve directa — U a 180 ppb cae de 2.97 a 2.03 ppb entre R2A y R3, y el peso de la curva pasa de 45 % a 37 %.</p>
+</section>
+
+<section>
+  <div class="head"><span class="num">09</span><h2>Ruta de cálculo en R</h2></div>
+  <p>Cadena de scripts en <code>data_use_cases/scripts/</code>. Cada uno hace <code>source()</code> del anterior si su objeto no está en memoria, así que basta ejecutar el último de la rama que interese.</p>
+  <div class="chain">
+    <div class="step"><span class="s">00</span><div class="t"><b><code>00_ingest.R</code> → <code>01_tidy.R</code> → <code>02_qc.R</code></b><span>Lee los crudos de 1 min, arma el largo (<code>pt_qc</code>) y marca <code>flag_na</code>, <code>flag_outlier</code>, <code>flag_gen_mismatch</code>. Salida de control: <code>outputs/tables/qc_flags.csv</code>.</span></div></div>
+    <div class="step"><span class="s">06</span><div class="t"><b><code>06_rr_unal.R</code></b><span>Construye <code>pt_rr_mesetas</code> del estudio R&amp;R y el pareo contra la referencia. Salidas: <code>rr_unal_repetibilidad.csv</code>, <code>rr_unal_reproducibilidad.csv</code>, <code>rr_unal_pareo_sesgo.csv</code>.</span></div></div>
+    <div class="step"><span class="s">07</span><div class="t"><b><code>07_u_repetibilidad.R</code></b><span>Bloqueo, <code>lag1_autocorrelation()</code>, <code>effective_size()</code>, <code>decompose_level()</code>. Constantes: <code>REF_BLOCK_MIN 60</code>, <code>REF_BLOCK_MIN_VALID 45</code>, <code>RR_BLOCK_MIN 20</code>, <code>PROTOCOL_N 3</code>. Salidas: <code>u_rep_bloques.csv</code>, <code>u_rep_por_nivel.csv</code>, <code>u_rep_resumen.csv</code>.</span></div></div>
+    <div class="step"><span class="s">08</span><div class="t"><b><code>08_u_calibracion.R</code></b><span>Lee los <code>.xlsm</code> F-PSEY-49 directamente, ajusta la recta de 5 puntos, calcula GUM H.3 y falta de ajuste EN 14211 y toma el máximo. Salidas: <code>u_cal_curvas.csv</code>, <code>u_cal_deriva.csv</code>, <code>u_curva_referencia_niveles.csv</code>, <code>u_curva_por_nivel.csv</code>.</span></div></div>
+    <div class="step"><span class="s">09</span><div class="t"><b><code>09_presupuesto_incertidumbre.R</code></b><span>Combina en cuadratura. Constantes de O<sub>3</sub>: <code>O3_STANDARD_SLOPE 0.0051</code>, <code>O3_STANDARD_INTERCEPT 0.67</code>, <code>O3_STANDARD_K 2</code>, <code>O3_STANDARD_MAX 500</code>, <code>BUDGET_K 2</code>. Lee F-PSEY-51 para el aire cero. Salidas: <code>presupuesto_incertidumbre.csv</code>, <code>presupuesto_resumen.csv</code>, <code>u_referencia_aplicable.csv</code>.</span></div></div>
+    <div class="step"><span class="s">10</span><div class="t"><b><code>10_aplicar_u_a_rondas.R</code></b><span>Cruza por <code>pollutant</code> + <code>level</code> sobre <code>data/processed/ronda_*_r.csv</code>, sobrescribe <code>u_value</code> con <code>u_c</code>, agrega <code>u_exp</code> y <code>k_factor</code>, y escribe en <code>data/processed/con_incertidumbre/</code>. Los originales no se tocan.</span></div></div>
+  </div>
+  <h3>Función central, tal como está implementada</h3>
+  <pre class="code">lag1_autocorrelation &lt;- function(blocks) {
+  numerator &lt;- 0; denominator &lt;- 0
+  for (values in blocks) {
+    values &lt;- values[is.finite(values)]
+    if (length(values) &lt; 3L) next
+    residual &lt;- values - mean(values)
+    numerator   &lt;- numerator + sum(residual[-length(residual)] * residual[-1L])
+    denominator &lt;- denominator + sum(residual^2)
+  }
+  if (denominator &lt;= 0) return(NA_real_)
+  max(min(numerator / denominator, 0.99), 0)
+}
+
+effective_size &lt;- function(n, rho) {
+  if (!is.finite(rho) || rho &lt;= 0) return(n)
+  max(n * (1 - rho) / (1 + rho), 1)
+}
+
+standard_uncertainty &lt;- function(analyte, level) {   # rama O3
+  if (identical(analyte, "o3")) {
+    if (level &gt; O3_STANDARD_MAX) return(NA_real_)
+    expanded &lt;- O3_STANDARD_SLOPE * level + O3_STANDARD_INTERCEPT
+    return(expanded / O3_STANDARD_K)
+  }
+  ...
+}</pre>
+  <h3>Cruce con los datos de la ronda</h3>
+  <pre class="code">ref &lt;- read.csv("data/processed/ronda_3_r.csv")
+u   &lt;- read.csv("outputs/tables/u_referencia_aplicable.csv")
+ref &lt;- merge(ref, u[, c("pollutant", "level", "u_c", "u_exp", "k_factor")],
+             by = c("pollutant", "level"), all.x = TRUE)
+o3  &lt;- subset(ref, pollutant == "o3")</pre>
+  <div class="note"><span class="tag">Convención de archivos</span> <code>ronda_N_r.csv</code> es la referencia (la que cubre este presupuesto). <code>ronda_N_p_ronda.csv</code> es el participante y su incertidumbre es del laboratorio participante, no de CalAire. <code>h_ronda_*.csv</code> son medias horarias sin consolidar por nivel. Para O<sub>3</sub>: R2A en <code>ronda_2a_r.csv</code>, R3 en <code>ronda_3_r.csv</code>.</div>
+  <div class="stop"><span class="tag">Ojo con el índice de nivel</span> En las tablas del pipeline, <code>level</code> es el <b>índice PT 1..5</b> y va del nominal más alto al más bajo: level 2 = 180 ppb, level 5 = 40 ppb, level 1 = cero. La numeración de los cuadros de calibración usa el orden inverso. Al cruzar tablas, guíese siempre por la concentración nominal, nunca por el número de nivel.</div>
+</section>
+
+<section>
+  <div class="head"><span class="num">10</span><h2>Uso de <code>u</code> en los puntajes del ensayo</h2></div>
+  <p>El presupuesto entra en la app por dos vías distintas, y no deben confundirse.</p>
+  <ol>
+    <li><b>Como incertidumbre del participante</b> <code>u(x_i)</code>: la app acepta <code>u_value</code>, o bien <code>u_exp</code>/<code>U(xi)</code> junto con <code>k</code>, verificando internamente <code>u = U/k</code>. Alimenta zeta y En.</li>
+    <li><b>Como incertidumbre del valor asignado</b> <code>u(x_pt)</code>: la app la estima de la homogeneidad, del nIQR, del consenso por Algoritmo A, o por valor de experto — y la combina con homogeneidad y estabilidad.</li>
+  </ol>
+  <div class="formula">u_xpt_def = sqrt( u_xpt² + u_hom² + u_stab² )
+
+z      = (x − x_pt) / sigma_pt
+z'     = (x − x_pt) / sqrt( sigma_pt² + u_xpt_def² )
+zeta   = (x − x_pt) / sqrt( u_x² + u_xpt_def² )
+En     = (x − x_pt) / sqrt( U_x² + U_xpt² )        con U = 2u
+
+criterio ISO 13528:  u_xpt_def &lt;= 0.3 · sigma_pt</div>
+  <p>Cuando el valor asignado se fija por el patrón de referencia CalAire y no por consenso, el <code>u_c</code> de la tabla de la sección 8 es la entrada correcta para <code>u_xpt</code> en el nivel de O<sub>3</sub> correspondiente, y <code>U = 2u_c</code> la entrada de <code>U_xpt</code> en En.</p>
+  <div class="gap"><span class="tag">Incertidumbre del participante</span> Hoy los participantes no tienen presupuesto propio: no hay formatos de calibración ni verificación de aire cero de sus equipos. El script 10 usa el presupuesto de la referencia degradado un 15 % (<code>PARTICIPANT_U_FACTOR &lt;- 1.15</code>) como sustituto conservador. Es un supuesto, no un dato — reemplácelo en cuanto exista el presupuesto real del participante.</div>
+</section>
+
+<section>
+  <div class="head"><span class="num">11</span><h2>Limitaciones y componentes no incluidos</h2></div>
+  <ul>
+    <li><b>Deriva del analizador entre calibraciones, no incluida.</b> El formato de julio registra un cambio de gain de 1.098 a 1.028 durante la propia calibración: −6.38 %, que corresponde a <code>u_deriva</code> relativa de 3.68 %. Es, con diferencia, el componente ausente más grande del presupuesto de O<sub>3</sub>. En abril el mismo cambio fue de −0.63 % (u 0.37 %). Decidir si entra al modelo es la acción pendiente de mayor impacto.</li>
+    <li><b>Solo 5 puntos y 3 grados de libertad</b> en cada curva. Un atípico gobierna <code>s</code>; el caso de 79.8 ppb en abril lo demuestra.</li>
+    <li><b>Desfase temporal calibración–ronda.</b> R2A usa una calibración del 29 de abril para una ronda del 30 de abril: correcto. R3 usa la del 14 de julio para una ronda del 15 de julio: correcto. La vigencia no es un problema en O<sub>3</sub>, a diferencia de CO, cuyo formato es de un año antes.</li>
+    <li><b>Nivel cero sin U relativa</b> y con <code>u_rep</code> de un solo bloque en ambas rondas: <code>s_b</code> no es estimable y el componente sale solo del ruido efectivo.</li>
+    <li><b>Un solo calibrador asumido</b> en todas las rondas y para ambos analistas.</li>
+    <li><b>Sin grados de libertad efectivos.</b> Se usa <code>k = 2</code> fijo, no Welch-Satterthwaite. Con 3 gl en la curva y 2 en la repetibilidad del protocolo, un <code>k</code> calculado sería mayor que 2 y la U crecería.</li>
+    <li><b>Sin término de temperatura ni presión</b> de la celda del fotómetro, ni de sección eficaz de absorción a 254 nm: quedan dentro del certificado del calibrador y no se desagregan aquí.</li>
+  </ul>
+</section>
+
+<footer>
+  <div>Fuentes de datos: F-PSEY-49 (2026-04-29, 2026-07-14) · F-PSEY-51 (2026-07-28) · F-PSMT-01 s/n 554 · Datos R&amp;R Jaison O3 JUN</div>
+  <div>Scripts: data_use_cases/scripts/07_u_repetibilidad.R · 08_u_calibracion.R · 09_presupuesto_incertidumbre.R · 10_aplicar_u_a_rondas.R</div>
+  <div>Marco: JCGM 100:2008 (GUM) · EN 14211 · ISO 13528:2022 · ISO/IEC 17043:2023</div>
+</footer>
+
+</div>

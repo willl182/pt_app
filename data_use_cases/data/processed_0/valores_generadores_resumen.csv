@@ -1,0 +1,11 @@
+"archivo","ronda_id","contaminante","unidad","columna","valores_generador","n_niveles"
+"datos_ronda_1_p.csv","p1","co","ppm","co_gen_ppm","0, 1.4, 2.8, 4.2, 6.3",5
+"datos_ronda_1_p.csv","p1","so2","ppb","so2_gen_ppb","0, 40, 80, 119, 179",5
+"datos_ronda_1_r.csv","ronda_1_r","co","ppm","co_gen_ppm","0, 1.4, 2.8, 4.2, 6.3",5
+"datos_ronda_1_r.csv","ronda_1_r","so2","ppb","so2_gen_ppb","0, 40, 80, 119, 179",5
+"datos_ronda_2a_p.csv","p1","o3","ppb","o3_gen_ppb","0, 40, 80, 120, 180",5
+"datos_ronda_2a_r.csv","ronda_2a_r","o3","ppb","o3_gen_ppb","0, 40, 80, 120, 180",5
+"datos_ronda_2b_p.csv","p1","no","ppb","no_gen_ppb","0, 37, 78, 119, 180",5
+"datos_ronda_2b_r.csv","ronda_2b_r","no","ppb","no_gen_ppb","0, 37, 78, 119, 180",5
+"datos_ronda_2c_p.csv","p1","no2","ppb","no2_gen_ppb","0, 30, 60, 105, 140",5
+"datos_ronda_2c_r.csv","ronda_2c_r","no2","ppb","no2_gen_ppb","0, 30, 60, 105, 140",5
